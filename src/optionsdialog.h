@@ -222,14 +222,13 @@ private slots:
   void selectionDownloadLocation();
 
 private:
-  void showEvent(QShowEvent*);
+  void showEvent(QShowEvent *) override;
 
   QSqlDatabase db_;
 
   QLabel *contentLabel_;
   QTreeWidget *categoriesTree_;
   QStackedWidget *contentStack_;
-  QScrollArea *scrollArea_;
 
   //stack widgets
   QFrame *generalWidget_;

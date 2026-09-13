@@ -21,6 +21,7 @@
 #include "optionsdialog.h"
 #include "backupsettingspage.h"
 #include <QScreen>
+#include <QWindow>
 #include "articlecontent.h"
 #include <QDesktopServices>
 
@@ -34,6 +35,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
+  setSizeGripEnabled(true);
 
   db_ = QSqlDatabase::database();
 
@@ -125,30 +127,35 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
-  contentStack_->addWidget(generalWidget_);
-  contentStack_->addWidget(traySystemWidget_);
-  contentStack_->addWidget(networkConnectionsWidget_);
-  contentStack_->addWidget(browserWidget_);
-  contentStack_->addWidget(feedsWidget_);
-  contentStack_->addWidget(labelsWidget_);
-  contentStack_->addWidget(notifierWidget_);
-  contentStack_->addWidget(passwordsWidget_);
-  contentStack_->addWidget(languageWidget_);
-  contentStack_->addWidget(fontsColorsWidget_);
-  contentStack_->addWidget(shortcutWidget_);
+  // Scroll only the current page, not a stack sized for its tallest hidden page.
+  const auto addPage = [this](QWidget *page) {
+    auto *scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameStyle(QFrame::NoFrame);
+    scrollArea->setWidget(page);
+    contentStack_->addWidget(scrollArea);
+  };
+  addPage(generalWidget_);
+  addPage(traySystemWidget_);
+  addPage(networkConnectionsWidget_);
+  addPage(browserWidget_);
+  addPage(feedsWidget_);
+  addPage(labelsWidget_);
+  addPage(notifierWidget_);
+  addPage(passwordsWidget_);
+  addPage(languageWidget_);
+  addPage(fontsColorsWidget_);
+  addPage(shortcutWidget_);
   auto *backupPage = new BackupSettingsPage(this);
-  contentStack_->addWidget(backupPage);
+  addPage(backupPage);
   connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
-
-  scrollArea_ = new QScrollArea(this);
-  scrollArea_->setWidgetResizable(true);
-  scrollArea_->setFrameStyle(QFrame::NoFrame);
-  scrollArea_->setWidget(contentStack_);
 
   QSplitter *splitter = new QSplitter();
   splitter->setChildrenCollapsible(false);
   splitter->addWidget(categoriesTree_);
-  splitter->addWidget(scrollArea_);
+  splitter->addWidget(contentStack_);
+  splitter->setStretchFactor(0, 0);
+  splitter->setStretchFactor(1, 1);
   QList<int> sizes;
   sizes << 150 << 600;
   splitter->setSizes(sizes);
@@ -169,23 +176,36 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->installEventFilter(this);
 
   setMinimumSize(500, 400);
-  resize(700, 580);
+  // Use native font/style metrics; a tall page can still scroll independently.
+  ensurePolished();
+  const QSize pageSize = generalWidget_->sizeHint().expandedTo(generalWidget_->minimumSizeHint());
+  const QSize surroundingSize = sizeHint() - contentStack_->sizeHint();
+  resize(QSize(700, 580).expandedTo(pageSize + surroundingSize));
 
   Settings settings;
   restoreGeometry(settings.value("options/geometry").toByteArray());
 }
 
-void OptionsDialog::showEvent(QShowEvent*event)
+void OptionsDialog::showEvent(QShowEvent *event)
 {
-  if (QScreen *screen = QGuiApplication::primaryScreen()) {
-    const QRect available = screen->availableGeometry();
-    const int maxWidth = available.width() - (frameSize().width() - width());
-    const int maxHeight = available.height() - (frameSize().height() - height());
-    setMaximumSize(maxWidth, maxHeight);
-    if (frameSize().height() >= available.height()) move(available.topLeft());
-  }
-
   Dialog::showEvent(event);
+
+  QScreen *screen = windowHandle() ? windowHandle()->screen() : QGuiApplication::primaryScreen();
+  if (!screen) return;
+  const QRect available = screen->availableGeometry();
+  const QSize frameMargins = frameSize() - size();
+  const QSize availableSize = (available.size() - frameMargins).expandedTo(QSize(1, 1));
+  setMinimumSize(QSize(500, 400).boundedTo(availableSize));
+  resize(size().boundedTo(availableSize));
+
+  // Keep the whole frame accessible after restoring on a smaller/different screen.
+  // Do not impose a lasting maximum that prevents resizing on a larger monitor.
+  const QRect frame = frameGeometry();
+  const int x = qBound(available.left(), frame.left(),
+                       qMax(available.left(), available.right() - frame.width() + 1));
+  const int y = qBound(available.top(), frame.top(),
+                       qMax(available.top(), available.bottom() - frame.height() + 1));
+  move(pos() + QPoint(x, y) - frame.topLeft());
 }
 
 void OptionsDialog::acceptDialog()
