@@ -26,10 +26,26 @@
 #include "articlecontent.h"
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QTextBlock>
+#include <QTextBlockFormat>
+#include <QTextCursor>
 
 #if defined(Q_OS_WIN)
 #include <qt_windows.h>
 #endif
+
+namespace {
+void makeRtlAlignmentAbsolute(QTextDocument *document)
+{
+  for (QTextBlock block = document->begin(); block.isValid(); block = block.next()) {
+    QTextBlockFormat format = block.blockFormat();
+    if (format.alignment() & Qt::AlignRight) {
+      format.setAlignment(format.alignment() | Qt::AlignAbsolute);
+      QTextCursor(block).setBlockFormat(format);
+    }
+  }
+}
+}
 
 NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feedParId)
   : QWidget(parent)
@@ -1355,6 +1371,8 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
 
     htmlStr.replace("<body>", "<body><a name=\"article-" + newsId + "\">&#8203;</a>");
     articleView_->setArticleHtml(htmlStr, preservePosition);
+    if (feedsModel_->dataField(feedIndex, "layoutDirection").toInt())
+      makeRtlAlignmentAbsolute(articleView_->document());
 }
 
 void NewsTabWidget::loadNewspaper(int refresh)
@@ -1584,6 +1602,8 @@ void NewsTabWidget::loadNewspaper(int refresh)
   QString html = newspaperHeadHtml_.arg(cssStr);
   html.replace("</body>", body + "</body>");
   articleView_->setArticleHtml(html, refresh != RefreshAll);
+  if (!ltr)
+    makeRtlAlignmentAbsolute(articleView_->document());
 }
 
 /** @brief Asynchorous update web view
