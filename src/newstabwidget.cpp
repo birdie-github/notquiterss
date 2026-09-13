@@ -457,15 +457,6 @@ void NewsTabWidget::setSettings(bool init, bool newTab)
   }
   setAutoLoadImages(false);
 
-  if (type_ == TabTypeFeed) {
-    int layoutDirection = feedsModel_->dataField(feedIndex, "layoutDirection").toInt();
-    if (!layoutDirection) {
-      newsView_->setLayoutDirection(Qt::LeftToRight);
-    } else {
-      newsView_->setLayoutDirection(Qt::RightToLeft);
-    }
-  }
-
   if (type_ < TabTypeDownloads) {
     newsView_->setAlternatingRowColors(mainWindow_->alternatingRowColorsNews_);
 

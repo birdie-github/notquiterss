@@ -168,6 +168,14 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       if (index.data(Qt::EditRole).toString().isEmpty())
         return tr("(no title)");
     }
+  } else if (role == Qt::TextAlignmentRole) {
+    int feedId = QSqlTableModel::index(index.row(), fieldIndex("feedId"))
+        .data(Qt::EditRole).toInt();
+    QModelIndex feedIndex = mainWindow->feedsModel_->indexById(feedId);
+    if (feedIndex.isValid() &&
+        mainWindow->feedsModel_->dataField(feedIndex, "layoutDirection").toInt()) {
+      return int(Qt::AlignRight | Qt::AlignAbsolute | Qt::AlignVCenter);
+    }
   } else if (role == Qt::FontRole) {
     QFont font = view_->font();
     if (0 == QSqlTableModel::index(index.row(), fieldIndex("read")).data(Qt::EditRole).toInt())
