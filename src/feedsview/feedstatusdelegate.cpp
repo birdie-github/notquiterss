@@ -40,7 +40,7 @@ void FeedStatusDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
   painter->translate(rtl ? opt.rect.left()+size/2.0+2 : opt.rect.right()-size/2.0-2,
                      opt.rect.center().y());
   // A flat sign rotating about its vertical axis: one revolution in 4 seconds.
-  const double width = std::cos((clock_.elapsed()%4000) * 6.283185307179586 / 4000.0);
+  const double width = std::cos((clock_.elapsed()%4000) * 6.283185307179586 / 8000.0);
   if (std::abs(width) > 0.015) {
     painter->scale(width * size/20.0, size/20.0);
     painter->setPen(QPen(QColor("#563d00"), 1));
