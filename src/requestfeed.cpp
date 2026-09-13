@@ -229,9 +229,12 @@ void RequestFeed::finished(QNetworkReply *reply)
     } else if (reply->error() != QNetworkReply::NoError) {
       qDebug() << "  error retrieving RSS feed:" << reply->error() << reply->errorString();
       const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-      const QString diagnostic = httpStatus > 0
+      QString diagnostic = httpStatus > 0
           ? tr("HTTP %1: %2").arg(httpStatus).arg(reply->errorString())
           : tr("Network error: %1").arg(reply->errorString());
+      const QString certificateErrors = reply->property("tlsCertificateErrors").toString();
+      if (!certificateErrors.isEmpty())
+        diagnostic = tr("TLS certificate error: %1").arg(certificateErrors);
       if (reply->error() == QNetworkReply::ProtocolUnknownError) {
         emit getUrlDone(-1, feedId, feedUrl, diagnostic);
       } else if (!headOk) {

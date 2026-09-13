@@ -42,19 +42,6 @@ private slots:
   void slotProxyAuthentication(const QNetworkProxy &proxy, QAuthenticator *auth);
   void slotSslError(QNetworkReply *reply, QList<QSslError> errors);
 
-private:
-  void addRejectedCerts(const QList<QSslCertificate> &certs);
-  bool containsRejectedCerts(const QList<QSslCertificate> &certs);
-  void addLocalCertificate(const QSslCertificate &cert);
-  void removeLocalCertificate(const QSslCertificate &cert);
-
-  QStringList certPaths_;
-  QList<QSslCertificate> caCerts_;
-  QList<QSslCertificate> localCerts_;
-  QList<QSslCertificate> tempAllowedCerts_;
-  bool ignoreAllWarnings_;
-  QList<QSslCertificate> rejectedSslCerts_;
-
 };
 
 #endif // NETWORKMANAGER_H

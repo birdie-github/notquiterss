@@ -130,7 +130,6 @@ HEADERS += \
     src/newsfilters/newsfiltersdialog.h \
     src/newsfilters/itemcondition.h \
     src/newsfilters/itemaction.h \
-    src/network/sslerrordialog.h \
     src/network/networkmanagerproxy.h \
     src/feedsview/feedsproxymodel.h \
     src/main/globals.h \
@@ -192,7 +191,6 @@ SOURCES += \
     src/newsfilters/newsfiltersdialog.cpp \
     src/newsfilters/itemcondition.cpp \
     src/newsfilters/itemaction.cpp \
-    src/network/sslerrordialog.cpp \
     src/network/networkmanagerproxy.cpp \
     src/feedsview/feedsproxymodel.cpp
 
