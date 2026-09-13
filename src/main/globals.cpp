@@ -24,6 +24,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QSettings>
 #include <QStringBuilder>
 
 #include "settings.h"
@@ -80,11 +82,23 @@ void Globals::init()
   // settings ...
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QString settingsFileName;
-  const QString configDirectory = isPortable_ ? dataDir_ :
-      QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation))
-          .filePath(QCoreApplication::applicationName());
-  QDir().mkpath(configDirectory);
-  settingsFileName = QDir(configDirectory).filePath(QCoreApplication::applicationName() + ".ini");
+  const QString appName = QCoreApplication::applicationName();
+  if (isPortable_) {
+    settingsFileName = QDir(dataDir_).filePath(appName + ".ini");
+  } else {
+#if defined(Q_OS_WIN)
+    // Let Qt resolve the roaming settings folder, including redirected profiles.
+    // Using appName for both components gives <Roaming>/<appName>/<appName>.ini.
+    settingsFileName = QSettings(QSettings::IniFormat, QSettings::UserScope,
+                                 appName, appName).fileName();
+#else
+    const QString configDirectory =
+        QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation))
+            .filePath(appName);
+    settingsFileName = QDir(configDirectory).filePath(appName + ".ini");
+#endif
+  }
+  QDir().mkpath(QFileInfo(settingsFileName).absolutePath());
   Settings::createSettings(settingsFileName);
 
   Settings settings("Settings");
