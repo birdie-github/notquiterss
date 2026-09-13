@@ -27,6 +27,7 @@
 #include <qcoreapplication.h>
 #include <qvariant.h>
 #include <QDateTime>
+#include <QThread>
 #include <qsqlerror.h>
 #include <qsqlfield.h>
 #include <qsqlindex.h>
@@ -98,6 +99,7 @@ public:
   inline SQLiteDriverPrivate() : access(0) {}
   sqlite3 *access;
   QList <SQLiteResult *> results;
+  bool immediateTransactions = false;
 };
 
 
@@ -311,6 +313,7 @@ bool SQLiteResultPrivate::fetchNext(SqlCachedResult::ValueCache &values, int idx
 SQLiteResult::SQLiteResult(const SQLiteDriver* db)
   : SqlCachedResult(db)
 {
+  Q_ASSERT(QThread::currentThread() == db->thread());
   d = new SQLiteResultPrivate(this);
   d->access = db->d->access;
   db->d->results.append(this);
@@ -319,6 +322,7 @@ SQLiteResult::SQLiteResult(const SQLiteDriver* db)
 SQLiteResult::~SQLiteResult()
 {
   const SQLiteDriver * sqlDriver = qobject_cast<const SQLiteDriver *>(driver());
+  Q_ASSERT(!sqlDriver || QThread::currentThread() == sqlDriver->thread());
   if (sqlDriver)
     sqlDriver->d->results.removeOne(this);
   d->cleanup();
@@ -575,6 +579,8 @@ bool SQLiteDriver::open(const QString & db, const QString &, const QString &, co
 
   bool sharedCache = false;
   int openMode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, timeOut=5000;
+  bool uri = false;
+  d->immediateTransactions = false;
   QStringList opts=QString(conOpts).remove(QLatin1Char(' ')).split(QLatin1Char(';'));
   foreach(const QString &option, opts) {
     if (option.startsWith(QLatin1String("QSQLITE_BUSY_TIMEOUT="))) {
@@ -587,9 +593,15 @@ bool SQLiteDriver::open(const QString & db, const QString &, const QString &, co
       openMode = SQLITE_OPEN_READONLY;
     if (option == QLatin1String("QSQLITE_ENABLE_SHARED_CACHE"))
       sharedCache = true;
+    if (option == QLatin1String("QSQLITE_OPEN_URI"))
+      uri = true;
+    if (option == QLatin1String("QSQLITE_IMMEDIATE_TRANSACTIONS"))
+      d->immediateTransactions = true;
   }
 
-  sqlite3_enable_shared_cache(sharedCache);
+  // Configure this connection only; never change SQLite's process-wide default.
+  openMode |= sharedCache ? SQLITE_OPEN_SHAREDCACHE : SQLITE_OPEN_PRIVATECACHE;
+  if (uri) openMode |= SQLITE_OPEN_URI;
 
   if (sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, NULL) == SQLITE_OK) {
     sqlite3_busy_timeout(d->access, timeOut);
@@ -610,6 +622,7 @@ bool SQLiteDriver::open(const QString & db, const QString &, const QString &, co
 
 void SQLiteDriver::close()
 {
+  Q_ASSERT(QThread::currentThread() == thread());
   if (isOpen()) {
     foreach (SQLiteResult *result, d->results)
       result->d->finalize();
@@ -634,7 +647,7 @@ bool SQLiteDriver::beginTransaction()
     return false;
 
   QSqlQuery q(createResult());
-  if (!q.exec(QLatin1String("BEGIN"))) {
+  if (!q.exec(d->immediateTransactions ? QLatin1String("BEGIN IMMEDIATE") : QLatin1String("BEGIN"))) {
     setLastError(QSqlError(tr("Unable to begin transaction"),
                            q.lastError().databaseText(), QSqlError::TransactionError));
     return false;

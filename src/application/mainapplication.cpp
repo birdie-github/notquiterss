@@ -96,7 +96,12 @@ MainApplication::MainApplication(int &argc, char **argv)
   setTranslateApplication();
   showSplashScreen();
 
-  connectDatabase();
+  if (!connectDatabase()) {
+    startupExitCode_ = 1;
+    isClosing_ = true;
+    closeSplashScreen();
+    return;
+  }
   setProgressSplashScreen(30);
   qWarning() << "Run application 2";
   mainWindow_ = new MainWindow();
@@ -182,7 +187,7 @@ void MainApplication::createSettings()
   proxyLoadSettings();
 }
 
-void MainApplication::connectDatabase()
+bool MainApplication::connectDatabase()
 {
   QString fileName(dbFileName() % ".bak");
   if (QFile(fileName).exists()) {
@@ -202,7 +207,7 @@ void MainApplication::connectDatabase()
     dbFileExists_ = true;
   }
 
-  Database::initialization();
+  return Database::initialization();
 }
 
 void MainApplication::quitApplication()

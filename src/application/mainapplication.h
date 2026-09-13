@@ -102,7 +102,7 @@ private slots:
 
 private:
   void createSettings();
-  void connectDatabase();
+  bool connectDatabase();
   void setStyleApplication();
   void showSplashScreen();
   void closeSplashScreen();

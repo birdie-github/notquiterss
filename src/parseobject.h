@@ -80,6 +80,7 @@ public:
   ~ParseObject();
 
   void disconnectObjects();
+  void setDatabase(const QSqlDatabase &database);
 
 public slots:
   void parseXml(QByteArray data, int feedId,

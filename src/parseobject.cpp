@@ -28,6 +28,7 @@
 #include "settings.h"
 
 #include <QDebug>
+#include <QThread>
 #include <QDesktopServices>
 #include <QTextDocumentFragment>
 #if defined(Q_OS_WIN)
@@ -39,8 +40,6 @@ ParseObject::ParseObject(QObject *parent)
   : QObject(parent)
 {
   setObjectName("parseObject_");
-
-  db_ = Database::connection("secondConnection");
 
   parseTimer_ = new QTimer(this);
   parseTimer_->setSingleShot(true);
@@ -55,6 +54,13 @@ ParseObject::ParseObject(QObject *parent)
 ParseObject::~ParseObject()
 {
 
+}
+
+void ParseObject::setDatabase(const QSqlDatabase &database)
+{
+  Q_ASSERT(QThread::currentThread() == thread());
+  Q_ASSERT(database.driver()->thread() == thread());
+  db_ = database;
 }
 
 void ParseObject::disconnectObjects()

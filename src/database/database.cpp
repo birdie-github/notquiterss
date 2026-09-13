@@ -27,6 +27,12 @@
 
 #include <sqlite3.h>
 
+namespace {
+// Set once during startup, before any SQL workers exist, then read-only.
+QString liveDatabaseName;
+QString liveDatabaseOptions;
+}
+
 const int versionDB = 17;
 
 const QString kCreateFeedsTableQuery(
@@ -223,23 +229,44 @@ int Database::version()
   return versionDB;
 }
 
-void Database::initialization()
+bool Database::initialization()
 {
+  if (mainApp->storeDBMemory()) {
+    if (!sqlite3_vfs_find("memdb")) {
+      qCritical() << "The linked SQLite library does not provide the memdb VFS.";
+      QMessageBox::critical(nullptr, tr("Error"),
+                            tr("This SQLite build cannot share an in-memory database. "
+                               "Install SQLite 3.36.0 or newer with memdb support."));
+      return false;
+    }
+    // A leading slash shares this RAM store across private-cache connections.
+    // The unique name cannot collide with another instance or create a file.
+    liveDatabaseName = "file:/notquiterss-" + QUuid::createUuid().toString(QUuid::WithoutBraces)
+        + "?vfs=memdb";
+    // Reserve the writer at transaction entry, before taking read locks. This
+    // avoids two RAM connections deadlocking while upgrading read transactions.
+    liveDatabaseOptions = "QSQLITE_OPEN_URI;QSQLITE_IMMEDIATE_TRANSACTIONS";
+  } else {
+    liveDatabaseName = mainApp->dbFileName();
+    liveDatabaseOptions.clear();
+  }
   prepareDatabase();
 
   SQLiteDriver *driver = new SQLiteDriver();
   QSqlDatabase db = QSqlDatabase::addDatabase(driver);
-  if (mainApp->storeDBMemory())
-    db.setDatabaseName(":memory:");
-  else
-    db.setDatabaseName(mainApp->dbFileName());
+  db.setDatabaseName(liveDatabaseName);
+  db.setConnectOptions(liveDatabaseOptions);
   if (db.open()) {
     setPragma(db);
 
     if (mainApp->storeDBMemory()) {
       sqliteDBMemFile(db, false);
     }
+    return true;
   }
+  qCritical() << "Cannot open live database:" << db.lastError();
+  QMessageBox::critical(nullptr, tr("Error"), db.lastError().text());
+  return false;
 }
 
 void Database::setPragma(QSqlDatabase &db)
@@ -433,20 +460,14 @@ void Database::addColumnsToFeedsTables(QSqlDatabase &db)
 
 QSqlDatabase Database::connection(const QString &connectionName)
 {
-  QSqlDatabase db;
-  if (mainApp->storeDBMemory()) {
-    db = QSqlDatabase::database();
-  }
-  else {
-    db = QSqlDatabase::database(connectionName, true);
-    if (!db.isValid()) {
-      SQLiteDriver *driver = new SQLiteDriver();
-      db = QSqlDatabase::addDatabase(driver, connectionName);
-      db.setDatabaseName(mainApp->dbFileName());
-      db.open();
-      setPragma(db);
-    }
-  }
+  Q_ASSERT(!connectionName.isEmpty());
+  Q_ASSERT(!QSqlDatabase::contains(connectionName));
+  Q_ASSERT(!liveDatabaseName.isEmpty());
+  QSqlDatabase db = QSqlDatabase::addDatabase(new SQLiteDriver(), connectionName);
+  db.setDatabaseName(liveDatabaseName);
+  db.setConnectOptions(liveDatabaseOptions);
+  if (db.open()) setPragma(db);
+  else qCritical() << "Cannot open SQL worker connection:" << db.lastError();
   return db;
 }
 

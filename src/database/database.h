@@ -27,8 +27,9 @@ class Database : public QObject
   Q_OBJECT
 public:
   static int version();
-  static void initialization();
-  static QSqlDatabase connection(const QString &connectionName = QString());
+  static bool initialization();
+  // Create a new connection in the calling thread. The caller owns its removal.
+  static QSqlDatabase connection(const QString &connectionName);
   static void sqliteDBMemFile(QSqlDatabase &db, bool save = true);
   static void setVacuum();
 

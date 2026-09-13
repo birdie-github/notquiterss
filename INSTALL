@@ -6,7 +6,7 @@ Precompiled .qm files can also be installed or added by users without rebuilding
 See resources/translations/README.md for discovery paths, optional metadata and installation.
 
   C++17-capable GCC or Clang and make (Windows recipe: MSYS2 UCRT64 GCC)
-  SQLite 3.30.1 or newer, including development headers and sqlite3.pc
+  SQLite 3.36.0 or newer with the memdb VFS, including development headers and sqlite3.pc
   libxml2 development headers and libxml-2.0.pc
   pkg-config (pkgconf is supported)
   Qt 5.15.x (default) or Qt 6.2+ development packages and matching qmake
@@ -237,7 +237,7 @@ If qmake reports a missing dependency, verify in the SAME build environment:
   qmake -query QT_VERSION
   pkg-config --modversion sqlite3 libxml-2.0
   pkg-config --cflags --libs sqlite3 libxml-2.0
-  pkg-config --atleast-version=3.30.1 sqlite3
+  pkg-config --atleast-version=3.36.0 sqlite3
 Also check QMAKEFEATURES and that its qtsingleapplication.prf refers to installed
 headers/libraries. An existing packaged feature may be used instead of the
 helper. Match the Qt version, compiler, architecture and debug/release ABI.

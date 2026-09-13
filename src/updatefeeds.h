@@ -23,9 +23,11 @@
 #include <QtSql>
 #include <QQueue>
 #include <QSet>
+#include <atomic>
 
 #include "requestfeed.h"
 #include "parseobject.h"
+#include "feedreadstate.h"
 #include "faviconobject.h"
 #include "newstabwidget.h"
 
@@ -62,16 +64,14 @@ private:
 
 };
 
-class UpdateObject : public QObject
+class UpdateObject : public FeedReadState
 {
   Q_OBJECT
 public:
   explicit UpdateObject(QObject *parent = 0);
   ~UpdateObject();
 
-  static QList<int> getIdFeedsInList(QSqlDatabase &db, int idFolder);
-
-  bool isSaveMemoryDatabase;
+  std::atomic_bool isSaveMemoryDatabase;
 
 public slots:
   void slotGetFeedTimer(int feedId);
@@ -86,9 +86,6 @@ public slots:
                   QDateTime dtReply, QString codecName);
   void finishUpdate(int feedId, bool changed, int newCount, QString status);
   void slotNextUpdateFeed(bool finish);
-  void slotRecountCategoryCounts();
-  void slotRecountFeedCounts(int feedId, bool updateViewport = true);
-  void slotSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList);
   void slotMarkFeedRead(int id, bool isFolder, bool openFeed);
   void slotUpdateStatus(int feedId, bool changed);
   void slotMarkAllFeedsRead();
@@ -96,7 +93,6 @@ public slots:
   void slotIconSave(QString feedUrl, QByteArray faviconData);
   void slotSqlQueryExec(QString query);
   void slotMarkAllFeedsOld();
-  void slotRefreshInfoTray();
   void saveMemoryDatabase();
   void startCleanUp(bool isShutdown, QStringList feedsIdList, QList<int> foldersIdList);
   void cleanUpShutdown();
@@ -116,14 +112,8 @@ signals:
   void signalUpdateModel(bool checkFilter = true);
   void signalUpdateNews(int refresh = NewsTabWidget::RefreshInsert);
   void signalCountsStatusBar(int unreadCount, int allCount);
-  void signalRecountCategoryCounts(QList<int> deletedList, QList<int> starredList,
-                                   QList<int> readList, QStringList labelList);
-  void feedCountsUpdate(FeedCountStruct counts);
-  void signalFeedsViewportUpdate();
-  void signalRefreshInfoTray(int newCount, int unreadCount);
   void signalMarkAllFeedsRead(int nextUnread = -1);
   void signalIconUpdate(int feedId, QByteArray faviconData);
-  void signalSetFeedsFilter(bool clicked = false);
   void signalFinishCleanUp(int countDeleted);
 
 private slots:
@@ -131,12 +121,9 @@ private slots:
                       const QDateTime &date, int auth, bool manual = false);
 
 private:
-  QString getIdFeedsString(int idFolder, int idException = -1);
   void queueAllFeeds(bool manual);
 
   QSet<int> manualFeeds_;
-  MainWindow *mainWindow_;
-  QSqlDatabase db_;
   QList<int> feedIdList_;
   int updateFeedsCount_;
   QTimer *updateModelTimer_;

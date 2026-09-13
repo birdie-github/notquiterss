@@ -51,6 +51,8 @@ unix:!mac:qtHaveModule(dbus) {
 }
 HEADERS += src/application/commandline.h
 SOURCES += src/application/commandline.cpp
+HEADERS += src/feedreadstate.h
+SOURCES += src/feedreadstate.cpp
 equals(QT_MAJOR_VERSION, 6): QT += core5compat
 CONFIG += c++17 link_pkgconfig
 !packagesExist(libxml-2.0) {

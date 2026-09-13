@@ -304,5 +304,13 @@ bool NewsModel::select()
   palette.setColor(QPalette::AlternateBase, mainApp->mainWindow()->alternatingRowColors_);
   view_->setPalette(palette);
 
-  return QSqlTableModel::select();
+  const bool selected = QSqlTableModel::select();
+  if (selected && mainApp->storeDBMemory()) {
+    // A partially fetched result holds a read lock in the shared RAM store.
+    // Keep the model's cached rows, but release SQLite's statement read lock
+    // before the GUI goes idle so background connections can commit writes.
+    while (canFetchMore()) fetchMore();
+    return !lastError().isValid();
+  }
+  return selected;
 }
