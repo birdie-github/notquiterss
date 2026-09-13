@@ -1,4 +1,4 @@
-name: Qt builds (Qt 5 Linux/macOS, Qt 6 Windows)
+name: Qt builds (Qt 5 Linux, Qt 6 Windows/macOS)
 on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
@@ -129,21 +129,76 @@ jobs:
           retention-days: 14
 
   macos:
+    name: macOS Apple Silicon package (Qt 6)
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install qt@5 sqlite libxml2 pkgconf python
+        run: brew install qt sqlite libxml2 pkgconf python
       - name: Prepare external QtSingleApplication and build
         run: |
-          export PATH="$(brew --prefix qt@5)/bin:$PATH"
+          set -euo pipefail
+          qt_bin="$(brew --prefix qt)/bin"
+          export PATH="$qt_bin:$PATH"
           export PKG_CONFIG_PATH="$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig"
           dep_work="$RUNNER_TEMP/app-deps"
-          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work"
+          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake "$qt_bin/qmake"
           export QMAKEFEATURES="$dep_work/install/features"
           python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
           export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
-          qmake ../app.pro CONFIG+=release CONFIG-=debug_and_release
+          "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
           make -j2
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"]); print("PROJECT_EXECUTABLE="+d["executable"])' >> "$GITHUB_ENV"
+
+      - name: Deploy, sign and package macOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          qt_bin="$(brew --prefix qt)/bin"
+          export PATH="$qt_bin:$PATH"
+          cd _build/release/target
+          bundle="$PROJECT_NAME.app"
+          test -d "$bundle"
+          test "$(uname -m)" = arm64
+          lipo -verify_arch arm64 "$bundle/Contents/MacOS/$PROJECT_EXECUTABLE"
+
+          # Include the notices supplied by our external dependency helpers.
+          mkdir -p "$bundle/Contents/Resources/licenses"
+          cp -R "$RUNNER_TEMP/app-deps/install/share/licenses/qtsingleapplication" "$bundle/Contents/Resources/licenses/"
+          cp -R "$RUNNER_TEMP/app-deps/miniaudio/share/licenses/miniaudio" "$bundle/Contents/Resources/licenses/"
+
+          # Deploy Qt/plugins and linked dylibs before signing. '-' is ad-hoc
+          # signing: this beta artifact is not Developer ID signed or notarized.
+          "$qt_bin/macdeployqt" "$bundle" \
+            -libpath="$(brew --prefix sqlite)/lib" \
+            -libpath="$(brew --prefix libxml2)/lib" \
+            -always-overwrite -verbose=2 -codesign=- -dmg
+          test -f "$bundle/Contents/PlugIns/platforms/libqcocoa.dylib"
+          test -f "$bundle/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
+
+          # Reject binaries still linked to Homebrew or another build-host path.
+          # System libraries and bundle-relative install names are allowed.
+          while IFS= read -r -d '' binary; do
+            if file -b "$binary" | grep -q 'Mach-O'; then
+              otool -L "$binary" | tail -n +2 | awk '
+                $1 ~ /^\// && $1 !~ /^\/(System\/Library|usr\/lib)\// {
+                  print "Unbundled dependency: " $0; bad=1
+                }
+                END { exit bad }
+              '
+            fi
+          done < <(find "$bundle" -type f -print0)
+          codesign --verify --deep --strict --verbose=2 "$bundle"
+          hdiutil verify "$PROJECT_NAME.dmg"
+          mkdir -p ../../artifacts
+          mv "$PROJECT_NAME.dmg" "../../artifacts/$PROJECT_NAME-$PROJECT_VERSION-macOS-arm64.dmg"
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-macOS-arm64-${{ github.sha }}
+          path: _build/artifacts/*.dmg
+          if-no-files-found: error
+          retention-days: 14

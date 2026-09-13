@@ -210,10 +210,10 @@ C++ archive into an MSVC application.
 macOS (Homebrew, native architecture)
 ====================================
 Install Xcode Command Line Tools and Homebrew (https://brew.sh/) first.
-  brew install qt@5 sqlite libxml2 pkgconf python
+  brew install qt sqlite libxml2 pkgconf python
 
 From the application source directory:
-  export PATH="$(brew --prefix qt@5)/bin:$PATH"
+  export PATH="$(brew --prefix qt)/bin:$PATH"
   export PKG_CONFIG_PATH="$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig"
   dep_work="$HOME/app-deps-macos"
   python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work"
@@ -222,14 +222,31 @@ From the application source directory:
   export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
   mkdir _build
   cd _build
-  qmake ../app.pro CONFIG+=release CONFIG-=debug_and_release
+  qmake ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
   make -j2
   open release/target/NotQuiteRSS.app
 
-This default recipe uses qt@5; see the Qt 6 opt-in instructions above.
+This recipe uses Homebrew Qt 6.
 The explicit pkg-config paths select
 Homebrew SQLite/libxml2 rather than SDK libraries. Use one native Homebrew
 architecture consistently; this recipe does not produce a universal binary.
+
+macOS CI package
+================
+The macos job builds a native Apple Silicon (arm64) Qt 6 application on macos-15,
+deploys Qt/plugins and linked dylibs with macdeployqt, applies an ad-hoc code
+signature, and uploads a compressed DMG as a GitHub Actions artifact (14 days).
+Download it from the workflow run's Artifacts section and extract the DMG.
+The package is not universal and does not support Intel Macs. Its macOS minimum
+is constrained by the Homebrew libraries bundled by that run; older macOS
+versions are not validated by CI.
+
+No signing secrets are required. These beta packages are not Developer ID signed
+or notarized, so Gatekeeper may require approval through Privacy & Security.
+The job checks for required Cocoa/SQLite plugins, remaining absolute non-system
+library dependencies, signature validity and DMG integrity. It does not launch
+the application or publish a GitHub Release. Test a downloaded package on a Mac
+without Homebrew/Qt, including HTTPS feeds, images, sound and database access.
 
 Configuration and deployment notes
 ==================================

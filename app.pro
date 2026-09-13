@@ -223,7 +223,7 @@ OBJECTS_DIR = $${BUILD_DIR}/obj
 MOC_DIR = $${BUILD_DIR}/moc
 RCC_DIR = $${BUILD_DIR}/rcc
 
-# Require the installed Qt 5 QtSingleApplication library and qmake feature.
+# Require QtSingleApplication built for the selected Qt and its qmake feature.
 !load(qtsingleapplication, true) {
   error("QtSingleApplication built with the selected Qt is required, including qtsingleapplication.prf. See INSTALL for the preparation helper and QMAKEFEATURES setup.")
 }
