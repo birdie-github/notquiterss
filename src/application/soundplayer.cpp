@@ -91,7 +91,10 @@ private:
         config.noAutoStart = MA_TRUE;
         ma_result result = ma_engine_init(&config, engine.get());
         if (result != MA_SUCCESS) {
-          report(QStringLiteral("Initialize audio output"), result);
+          // A disconnected remote session may have no audio backend. Skip this
+          // sound silently; the next request will retry initialization normally.
+          if (result != MA_NO_BACKEND)
+            report(QStringLiteral("Initialize audio output"), result);
           continue;
         }
         engine_ = std::move(engine);
