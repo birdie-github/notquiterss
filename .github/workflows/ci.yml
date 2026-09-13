@@ -169,28 +169,73 @@ jobs:
           cp -R "$RUNNER_TEMP/app-deps/install/share/licenses/qtsingleapplication" "$bundle/Contents/Resources/licenses/"
           cp -R "$RUNNER_TEMP/app-deps/miniaudio/share/licenses/miniaudio" "$bundle/Contents/Resources/licenses/"
 
-          # Deploy Qt/plugins and linked dylibs before signing. '-' is ad-hoc
-          # signing: this beta artifact is not Developer ID signed or notarized.
+          # Homebrew installs Qt modules separately; plugins can reference
+          # frameworks outside qtbase. Do not overwrite already-fixed libraries
+          # when macdeployqt encounters them again through another plugin.
+          brew_prefix="$(brew --prefix)"
           "$qt_bin/macdeployqt" "$bundle" \
+            -libpath="$brew_prefix/lib" \
+            -libpath="$(brew --prefix qt)/lib" \
             -libpath="$(brew --prefix sqlite)/lib" \
             -libpath="$(brew --prefix libxml2)/lib" \
-            -always-overwrite -verbose=2 -codesign=- -dmg
+            -verbose=2 -no-codesign
           test -f "$bundle/Contents/PlugIns/platforms/libqcocoa.dylib"
           test -f "$bundle/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
+
+          # Some transitive Homebrew references survive deployment even when
+          # their libraries were copied. Repair only references with an existing
+          # bundle counterpart; never leave a dependency on the build machine.
+          while IFS= read -r -d '' binary; do
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            install_id="$(otool -D "$binary" | tail -n +2)"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                "$brew_prefix"/*)
+                  case "$dependency" in
+                    *.framework/*)
+                      relative="${dependency#*/lib/}"
+                      ;;
+                    *) relative="${dependency##*/}" ;;
+                  esac
+                  target="$bundle/Contents/Frameworks/$relative"
+                  if [ ! -f "$target" ]; then
+                    echo "Missing bundled dependency for $binary: $dependency" >&2
+                    exit 1
+                  fi
+                  replacement="@executable_path/../Frameworks/$relative"
+                  if [ "$dependency" = "$install_id" ]; then
+                    install_name_tool -id "$replacement" "$binary"
+                  else
+                    install_name_tool -change "$dependency" "$replacement" "$binary"
+                  fi
+                  ;;
+              esac
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
+          done < <(find "$bundle" -type f -print0)
 
           # Reject binaries still linked to Homebrew or another build-host path.
           # System libraries and bundle-relative install names are allowed.
           while IFS= read -r -d '' binary; do
             if file -b "$binary" | grep -q 'Mach-O'; then
-              otool -L "$binary" | tail -n +2 | awk '
+              otool -L "$binary" | tail -n +2 | awk -v binary="$binary" '
                 $1 ~ /^\// && $1 !~ /^\/(System\/Library|usr\/lib)\// {
-                  print "Unbundled dependency: " $0; bad=1
+                  print "Unbundled dependency in " binary ": " $0; bad=1
                 }
                 END { exit bad }
               '
             fi
           done < <(find "$bundle" -type f -print0)
+          # All binary edits must precede signing. Deep signing is intentional
+          # for this ad-hoc beta bundle, not a Developer ID/notarization workflow.
+          codesign --force --deep --sign - "$bundle"
           codesign --verify --deep --strict --verbose=2 "$bundle"
+          dmg_stage="$(mktemp -d "$RUNNER_TEMP/notquiterss-dmg.XXXXXX")"
+          ditto "$bundle" "$dmg_stage/$bundle"
+          ln -s /Applications "$dmg_stage/Applications"
+          hdiutil create -volname "$PROJECT_NAME" -srcfolder "$dmg_stage" \
+            -format UDZO "$PROJECT_NAME.dmg"
           hdiutil verify "$PROJECT_NAME.dmg"
           mkdir -p ../../artifacts
           mv "$PROJECT_NAME.dmg" "../../artifacts/$PROJECT_NAME-$PROJECT_VERSION-macOS-arm64.dmg"
