@@ -162,7 +162,7 @@ jobs:
           bundle="$PROJECT_NAME.app"
           test -d "$bundle"
           test "$(uname -m)" = arm64
-          lipo -verify_arch arm64 "$bundle/Contents/MacOS/$PROJECT_EXECUTABLE"
+          lipo "$bundle/Contents/MacOS/$PROJECT_EXECUTABLE" -verify_arch arm64
 
           # Include the notices supplied by our external dependency helpers.
           mkdir -p "$bundle/Contents/Resources/licenses"
