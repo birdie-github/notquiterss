@@ -4,8 +4,8 @@
     "bundle_namespace": "io.github.birdie-github"
   },
   "release": {
-    "version": "0.91.0",
-    "date": "2026-09-12"
+    "version": "0.92.0",
+    "date": "2026-09-14"
   },
   "project": {
     "repository": "https://github.com/birdie-github/notquiterss",

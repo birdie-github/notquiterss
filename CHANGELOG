@@ -1,3 +1,14 @@
+Version 0.92.0 (2026-09-14)
+* NEW FEATURE: Detect and properly warn about Cloudflare and Anubis challenge protections.
+* NEW FEATURE: Produce MacOS build artifacts (package)
+* CHANGE: Store Windows INI settings in the roaming profile
+* CHANGE: Silently skip notification sounds when no audio backend is available
+* CHANGE: Enforce TLS certificate validation. Remove the SSL modal dialog for SSL exceptions. Report any issues with SSL certificates.
+* BUG FIX: Hopefully a fix for a class of SQLite errors that resulted in the app crashing.
+* BUG FIX: Fix Settings page unecessary scrolling
+* BUG FIX: Fix RTL article alignment in QTextDocument
+* BUG FIX: Fix RTL article list without mirroring the entire view
+
 Version 0.91.0 (2026-09-12)
 
 * NEW FEATURE: Check GitHub Releases for updates and display release notes.
