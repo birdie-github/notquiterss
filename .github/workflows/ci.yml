@@ -112,7 +112,7 @@ jobs:
 
             if [ -f "$src" ]; then
               if [ ! -f "$DEPLOY_DIR/$dll" ]; then
-                cp "$src" "$DEPLOY_DIR/"
+                cp -a "$src" "$DEPLOY_DIR/"
                 echo "Copied $dll"
               fi
             else
