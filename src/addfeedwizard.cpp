@@ -132,6 +132,7 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   QLabel *iconWarning = new QLabel(this);
   iconWarning->setPixmap(QPixmap(":/images/warning"));
   textWarning = new QLabel(this);
+  textWarning->setWordWrap(true);
   QFont font = textWarning->font();
   font.setBold(true);
   textWarning->setFont(font);

@@ -28,6 +28,47 @@
 
 #define REPLY_MAX_COUNT 10
 
+namespace {
+QString browserChallengeProvider(QNetworkReply *reply)
+{
+  if (reply->rawHeader("cf-mitigated").trimmed().toLower() == "challenge")
+    return QStringLiteral("Cloudflare");
+
+  const QByteArray contentType = reply->rawHeader("Content-Type")
+                                    .split(';').value(0).trimmed().toLower();
+  if (contentType != "text/html") return {};
+
+  // Anubis has no equivalent challenge header. Inspect a bounded prefix
+  // without consuming the reply, and require its generated HTML/script
+  // markers rather than matching the product name in article text.
+  const QString html = QString::fromUtf8(reply->peek(256 * 1024));
+  static const QRegularExpression document(
+      QStringLiteral(R"(^\s*(?:<!doctype\s+html[^>]*>\s*)?<html(?:\s|>))"),
+      QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression challenge(
+      QStringLiteral(R"(<script\b[^>]*\sid\s*=\s*["']anubis_challenge["'][^>]*>)"),
+      QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression runner(
+      QStringLiteral(R"(<script\b[^>]*\ssrc\s*=\s*["'][^"']*/\.within\.website/x/cmd/anubis/static/js/main\.mjs(?:\?[^"']*)?["'][^>]*>)"),
+      QRegularExpression::CaseInsensitiveOption);
+  // The alternate Preact challenge embeds its runner and uses preact_info.
+  static const QRegularExpression preact(
+      QStringLiteral(R"(<script\b[^>]*\sid\s*=\s*["']preact_info["'][^>]*>\s*\{)"),
+      QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression version(
+      QStringLiteral(R"(<script\b[^>]*\sid\s*=\s*["']anubis_version["'][^>]*>)"),
+      QRegularExpression::CaseInsensitiveOption);
+  const bool preactChallenge = preact.match(html).hasMatch() &&
+      version.match(html).hasMatch() &&
+      html.contains(QStringLiteral("/.within.website/x/cmd/anubis/static/img/pensive.webp"));
+  if (document.match(html).hasMatch() &&
+      ((challenge.match(html).hasMatch() && runner.match(html).hasMatch()) ||
+       preactChallenge))
+    return QStringLiteral("Anubis");
+  return {};
+}
+}
+
 RequestFeed::RequestFeed(int timeoutRequest, int numberRequests,
                          int numberRepeats, QObject *parent)
   : QObject(parent)
@@ -223,9 +264,20 @@ void RequestFeed::finished(QNetworkReply *reply)
     QDateTime feedDate = currentDates_.takeAt(currentReplyIndex);
     int count = currentCount_.takeAt(currentReplyIndex) + 1;
     bool headOk = currentHead_.takeAt(currentReplyIndex);
+    const QString challengeProvider = browserChallengeProvider(reply);
 
     if (reply->error() == QNetworkReply::OperationCanceledError) {
       emit getUrlDone(-7, feedId, feedUrl);
+    } else if (!challengeProvider.isEmpty()) {
+      // Finish once, without retrying or passing the challenge HTML to parsing.
+      emit getUrlDone(-1, feedId, feedUrl,
+                     tr("%1 is blocking access to this feed.\n\n"
+                        "This website requires browser verification before allowing access. "
+                        "%2 cannot complete this verification because it does not include "
+                        "a full web browser.\n\n"
+                        "Please contact the website operator and ask them to exempt their "
+                        "RSS/Atom feed URLs from browser challenges.")
+                         .arg(challengeProvider, QCoreApplication::applicationName()));
     } else if (reply->error() != QNetworkReply::NoError) {
       qDebug() << "  error retrieving RSS feed:" << reply->error() << reply->errorString();
       const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
