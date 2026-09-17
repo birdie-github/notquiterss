@@ -105,7 +105,7 @@ void Globals::init()
   noDebugOutput_ = settings.value("noDebugOutput", true).toBool() && !LogFile::consoleLoggingEnabled();
   LogFile::configure(QDir(dataDir_).filePath(ProjectMetadata::log()),
                      settings.value("logFileOutput", true).toBool(), noDebugOutput_);
-  userAgent_ = settings.value("userAgent", "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36").toString();
+  userAgent_ = settings.value("userAgent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1").toString();
 
   isInit_ = true;
 }
