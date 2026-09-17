@@ -1,3 +1,8 @@
+Version 0.92.1 (2026-09-17)
+* NEW FEATURE: Add an OLED-friendly theme (currently bugged, a fix is incoming)
+* CHANGE: Update the user-agent (will be made fully configurable later on)
+* CHANGE: Make Windows builds more reproducible
+
 Version 0.92.0 (2026-09-14)
 * NEW FEATURE: Detect and properly warn about Cloudflare and Anubis challenge protections.
 * NEW FEATURE: Produce MacOS build artifacts (package)
