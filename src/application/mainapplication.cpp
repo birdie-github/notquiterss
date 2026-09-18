@@ -332,7 +332,7 @@ void MainApplication::applyApplicationStyle(const QString &id)
     if (style.id == wantedId) { selected = style; found = true; break; }
   }
   if (!found)
-    qWarning() << "Application style unavailable; using Automatic:" << wantedId;
+    qWarning() << "Application style unavailable; using System:" << wantedId;
 
   const bool wasSystem = applicationStyle_.followsSystem();
   if (wasSystem) systemPalette_ = palette();

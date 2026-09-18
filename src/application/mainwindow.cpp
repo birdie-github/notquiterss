@@ -52,6 +52,7 @@
 #include <QRegularExpression>
 #include <QScreen>
 #include <QStyle>
+#include <algorithm>
 
 namespace {
 QSize virtualDesktopSize()
@@ -5379,9 +5380,17 @@ void MainWindow::rebuildStyleMenu()
     applyThemeColors(false);
   }
   // Actions belong only to this menu/group, never to toolbar customization.
+  styleMenu_->clear();
   const auto oldActions = styleGroup_->actions();
   for (QAction *action : oldActions) delete action;
-  for (const ApplicationStyle &style : mainApp->applicationStyles()) {
+
+  const QStringList builtInIds = {
+    ApplicationStyles::automaticId(),
+    QStringLiteral("lightStyle_"),
+    QStringLiteral("darkStyle_")
+  };
+
+  auto addStyleAction = [this](const ApplicationStyle &style) {
     QAction *action = new QAction(
           QCoreApplication::translate("MainWindow", style.name.toUtf8().constData()), styleGroup_);
     action->setObjectName(style.id);
@@ -5390,7 +5399,29 @@ void MainWindow::rebuildStyleMenu()
     action->setChecked(style.id == mainApp->applicationStyle().id);
     styleGroup_->addAction(action);
     styleMenu_->addAction(action);
+  };
+
+  for (const QString &id : builtInIds) {
+    for (const ApplicationStyle &style : styles) {
+      if (style.id == id) {
+        addStyleAction(style);
+        break;
+      }
+    }
   }
+
+  QList<ApplicationStyle> otherStyles;
+  for (const ApplicationStyle &style : styles) {
+    if (!builtInIds.contains(style.id)) otherStyles.append(style);
+  }
+  std::sort(otherStyles.begin(), otherStyles.end(),
+            [](const ApplicationStyle &a, const ApplicationStyle &b) {
+              return QString::localeAwareCompare(a.name, b.name) < 0;
+            });
+
+  if (!otherStyles.isEmpty() && !styleMenu_->actions().isEmpty())
+    styleMenu_->addSeparator();
+  for (const ApplicationStyle &style : otherStyles) addStyleAction(style);
 }
 
 void MainWindow::setStyleApp(QAction *action)

@@ -203,7 +203,7 @@ ApplicationStyle ApplicationStyles::automaticDefault()
 {
   ApplicationStyle style;
   style.id = automaticId();
-  style.name = QStringLiteral("Automatic");
+  style.name = QStringLiteral("System");
   style.fileName = QStringLiteral(":/style/automaticStyle");
   style.mode = ApplicationStyle::System;
   style.isDefault = true;
