@@ -29,6 +29,8 @@ public:
   void init();
 
   QString userAgent() const { return userAgent_; }
+  static QString defaultUserAgent();
+  void setUserAgent(bool useCustom, const QString &customUserAgent);
 
   // public on purpose
   bool noDebugOutput_;

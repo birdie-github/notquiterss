@@ -32,6 +32,17 @@
 
 Globals globals;
 
+QString Globals::defaultUserAgent()
+{
+  return QStringLiteral("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1");
+}
+
+void Globals::setUserAgent(bool useCustom, const QString &customUserAgent)
+{
+  const QString value = customUserAgent.trimmed();
+  userAgent_ = useCustom && !value.isEmpty() ? value : defaultUserAgent();
+}
+
 Globals::Globals()
   : noDebugOutput_(true)
   , isInit_(false)
@@ -105,7 +116,12 @@ void Globals::init()
   noDebugOutput_ = settings.value("noDebugOutput", true).toBool() && !LogFile::consoleLoggingEnabled();
   LogFile::configure(QDir(dataDir_).filePath(ProjectMetadata::log()),
                      settings.value("logFileOutput", true).toBool(), noDebugOutput_);
-  userAgent_ = settings.value("userAgent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1").toString();
+  const bool hasCustomUserAgent = settings.contains("userAgent");
+  const bool useCustomUserAgent = settings.contains("useCustomUserAgent")
+      ? settings.value("useCustomUserAgent", false).toBool()
+      : hasCustomUserAgent;
+  setUserAgent(useCustomUserAgent,
+               settings.value("userAgent", defaultUserAgent()).toString());
 
   isInit_ = true;
 }

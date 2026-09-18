@@ -28,10 +28,13 @@
 #include "mainapplication.h"
 #include "labeldialog.h"
 #include "settings.h"
+#include "globals.h"
 
 OptionsDialog::OptionsDialog(QWidget *parent)
   : Dialog(parent)
   , notificationWidget_(NULL)
+  , hadStoredCustomUserAgent_(false)
+  , userAgentWarningAccepted_(false)
 {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
@@ -72,7 +75,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   treeItem << "1" << tr("System Tray");
   categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << "2" << tr("Network Connections");
+  treeItem << "2" << tr("Network");
   categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
   treeItem << "3" << tr("Article View");
@@ -210,6 +213,12 @@ void OptionsDialog::showEvent(QShowEvent *event)
 
 void OptionsDialog::acceptDialog()
 {
+  if (customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
+    QMessageBox::warning(this, tr("Custom User-Agent"),
+                         tr("Enter a custom User-Agent or disable the custom User-Agent option."));
+    return;
+  }
+
   if (customExternalBrowser_->isChecked() && externalBrowser_->text().trimmed().isEmpty()) {
     QMessageBox::warning(this, tr("External Browser"), tr("Enter a custom browser or select the system default browser."));
     return;
@@ -230,6 +239,14 @@ void OptionsDialog::acceptDialog()
       autoRunSettings_->remove(QCoreApplication::applicationName());
   }
 #endif
+
+  Settings userAgentSettings("Settings");
+  const bool useCustomUserAgent = customUserAgent_->isChecked();
+  const QString customUserAgent = userAgentEdit_->text().trimmed();
+  userAgentSettings.setValue("useCustomUserAgent", useCustomUserAgent);
+  if (useCustomUserAgent || hadStoredCustomUserAgent_ || userAgentWarningAccepted_)
+    userAgentSettings.setValue("userAgent", customUserAgent);
+  globals.setUserAgent(useCustomUserAgent, customUserAgent);
 
   applyProxy();
   applyLabels();
@@ -508,6 +525,50 @@ void OptionsDialog::createNetworkConnectionsWidget()
 
   networkConnectionsLayout->addWidget(manualWidget_);
   networkConnectionsLayout->addSpacing(20);
+
+  customUserAgent_ = new QCheckBox(tr("Use custom User-Agent"));
+  userAgentEdit_ = new LineEdit();
+
+  Settings userAgentSettings("Settings");
+  hadStoredCustomUserAgent_ = userAgentSettings.contains("userAgent");
+  const bool useCustomUserAgent = userAgentSettings.contains("useCustomUserAgent")
+      ? userAgentSettings.value("useCustomUserAgent", false).toBool()
+      : hadStoredCustomUserAgent_;
+  userAgentEdit_->setText(hadStoredCustomUserAgent_
+      ? userAgentSettings.value("userAgent").toString()
+      : Globals::defaultUserAgent());
+  customUserAgent_->setChecked(useCustomUserAgent);
+  userAgentEdit_->setEnabled(useCustomUserAgent);
+
+  QVBoxLayout *userAgentLayout = new QVBoxLayout();
+  userAgentLayout->setContentsMargins(15, 0, 5, 0);
+  userAgentLayout->addWidget(userAgentEdit_);
+
+  networkConnectionsLayout->addWidget(customUserAgent_);
+  networkConnectionsLayout->addLayout(userAgentLayout);
+  networkConnectionsLayout->addSpacing(20);
+
+  connect(customUserAgent_, &QCheckBox::toggled, this, [this](bool checked) {
+    if (checked && !hadStoredCustomUserAgent_ && !userAgentWarningAccepted_) {
+      QMessageBox warning(QMessageBox::Warning, tr("Custom User-Agent"),
+                          tr("A custom User-Agent can make this application's requests more distinctive "
+                             "and may make them easier to identify or fingerprint. Only change it if "
+                             "you understand the implications."),
+                          QMessageBox::NoButton, this);
+      QPushButton *continueButton = warning.addButton(tr("Continue"), QMessageBox::AcceptRole);
+      warning.addButton(QMessageBox::Cancel);
+      warning.setDefaultButton(QMessageBox::Cancel);
+      warning.exec();
+      if (warning.clickedButton() != continueButton) {
+        QSignalBlocker blocker(customUserAgent_);
+        customUserAgent_->setChecked(false);
+        userAgentEdit_->setEnabled(false);
+        return;
+      }
+      userAgentWarningAccepted_ = true;
+    }
+    userAgentEdit_->setEnabled(checked);
+  });
 
   timeoutRequest_ = new QSpinBox();
   timeoutRequest_->setRange(0, 300);

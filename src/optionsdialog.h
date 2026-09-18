@@ -71,6 +71,8 @@ public:
   QSpinBox *timeoutRequest_;
   QSpinBox *numberRequests_;
   QSpinBox *numberRepeats_;
+  QCheckBox *customUserAgent_;
+  LineEdit *userAgentEdit_;
 
   // browser
   QCheckBox *autoLoadImages_;
@@ -268,6 +270,8 @@ private:
   LineEdit *editUser_;
   LineEdit *editPassword_;
   QNetworkProxy networkProxy_;
+  bool hadStoredCustomUserAgent_;
+  bool userAgentWarningAccepted_;
 
   // browser
   void createBrowserWidget();
