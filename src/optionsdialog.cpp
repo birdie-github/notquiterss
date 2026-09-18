@@ -536,17 +536,16 @@ void OptionsDialog::createNetworkConnectionsWidget()
       : hadStoredCustomUserAgent_;
   userAgentEdit_->setText(hadStoredCustomUserAgent_
       ? userAgentSettings.value("userAgent").toString()
-      : Globals::defaultUserAgent());
+      : QString());
+  userAgentEdit_->setPlaceholderText(tr("Enter a custom User-Agent"));
+  userAgentEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  userAgentEdit_->setMinimumWidth(0);
   customUserAgent_->setChecked(useCustomUserAgent);
   userAgentEdit_->setEnabled(useCustomUserAgent);
 
   QVBoxLayout *userAgentLayout = new QVBoxLayout();
   userAgentLayout->setContentsMargins(15, 0, 5, 0);
   userAgentLayout->addWidget(userAgentEdit_);
-
-  networkConnectionsLayout->addWidget(customUserAgent_);
-  networkConnectionsLayout->addLayout(userAgentLayout);
-  networkConnectionsLayout->addSpacing(20);
 
   connect(customUserAgent_, &QCheckBox::toggled, this, [this](bool checked) {
     if (checked && !hadStoredCustomUserAgent_ && !userAgentWarningAccepted_) {
@@ -587,8 +586,11 @@ void OptionsDialog::createNetworkConnectionsWidget()
   requestLayout->addWidget(new QLabel(tr("Number of retries:")), 2, 0);
   requestLayout->addWidget(numberRepeats_, 2, 1, 1, 1, Qt::AlignLeft);
 
-  networkConnectionsLayout->addWidget(new QLabel(tr("Options network requests when updating feeds (requires program restart):")));
+  networkConnectionsLayout->addWidget(new QLabel(tr("Network options for feed updates (requires program restart):")));
   networkConnectionsLayout->addLayout(requestLayout);
+  networkConnectionsLayout->addSpacing(20);
+  networkConnectionsLayout->addWidget(customUserAgent_);
+  networkConnectionsLayout->addLayout(userAgentLayout);
   networkConnectionsLayout->addStretch(1);
 
   networkConnectionsWidget_ = new QFrame();
