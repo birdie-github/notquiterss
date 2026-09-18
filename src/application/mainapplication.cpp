@@ -92,9 +92,10 @@ MainApplication::MainApplication(int &argc, char **argv)
 
   qWarning() << "Run application!";
 
-  // Keep the native Qt style/palette as the source for Automatic. Fixed themes
-  // replace the application palette, but never the platform widget style.
-  setStyle(new QProxyStyle);
+  // Keep the real platform style/palette as the source for System. Fixed themes
+  // use Fusion so their palette is authoritative instead of being mixed with
+  // platform-specific light/dark rendering.
+  systemStyleName_ = style()->objectName();
   systemPalette_ = palette();
   setStyleApplication();
   setTranslateApplication();
@@ -338,16 +339,30 @@ void MainApplication::applyApplicationStyle(const QString &id)
   if (wasSystem) systemPalette_ = palette();
 
   applicationStyle_ = selected;
-  // Remove the previous QSS before changing palettes so stale selectors cannot
-  // participate while Qt repolishes widgets for the new theme.
+  // Remove the previous QSS before changing styles/palettes so stale selectors
+  // cannot participate while Qt repolishes widgets for the new theme.
   setStyleSheet(QString());
+
   if (selected.followsSystem()) {
-    // Do not set an application palette while Automatic is already active:
-    // leaving it native lets Qt propagate later platform palette changes.
-    // Returning from a fixed theme needs one explicit restoration first.
-    if (!wasSystem)
+    if (!wasSystem) {
+      // Recreate the platform style after a fixed theme used Fusion. Keep the
+      // cached platform palette as the authoritative System palette.
+      if (QStyle *platformStyle = QStyleFactory::create(systemStyleName_))
+        setStyle(platformStyle);
+      else
+        qWarning() << "Unable to restore platform style:" << systemStyleName_;
       setPalette(systemPalette_);
+    }
   } else {
+    // Native styles can use OS theme state for subcontrols (checkbox borders,
+    // button faces, menus, etc.) even after an application palette is set.
+    // Fusion is palette-driven, so fixed themes remain independent of the OS.
+    if (style()->objectName().compare(QStringLiteral("fusion"), Qt::CaseInsensitive) != 0) {
+      if (QStyle *fusion = QStyleFactory::create(QStringLiteral("Fusion")))
+        setStyle(fusion);
+      else
+        qWarning() << "Unable to create Fusion style for fixed application theme";
+    }
     setPalette(ApplicationStyles::palette(selected, systemPalette_));
   }
 

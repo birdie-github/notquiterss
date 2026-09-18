@@ -118,6 +118,7 @@ private:
   bool dbFileExists_;
   bool isSaveDataLastFeed_;
   ApplicationStyle applicationStyle_;
+  QString systemStyleName_;
   QPalette systemPalette_;
   bool showSplashScreen_;
   bool updateFeedsStartUp_;

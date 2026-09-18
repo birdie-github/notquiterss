@@ -22,16 +22,6 @@ Palette.BrightText=#ffffff
 */
 /* NotQuiteRSS OLED Style */
 
-QWidget {
-    background-color: #000000; /* dark */
-    alternate-background-color: #101010; /* veryDark */
-    color: #e1e0e1; /* veryLight */
-    selection-background-color: #242424;
-    selection-color: #F8FD99;
-}
-QWidget:disabled {
-    color: gray;
-}
 
 QMenuBar {
     background: #101010;
