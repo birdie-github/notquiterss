@@ -59,6 +59,28 @@ QSize virtualDesktopSize()
   QScreen *screen = QGuiApplication::primaryScreen();
   return screen ? screen->virtualGeometry().size() : QSize();
 }
+
+QColor mixColor(const QColor &a, const QColor &b, int aPercent)
+{
+  const int bPercent = 100 - aPercent;
+  return QColor((a.red() * aPercent + b.red() * bPercent) / 100,
+                (a.green() * aPercent + b.green() * bPercent) / 100,
+                (a.blue() * aPercent + b.blue() * bPercent) / 100);
+}
+
+const char *colorSettingKey(int row)
+{
+  static const char *keys[] = {
+    "feedsListTextColor", "feedsListBackgroundColor", "newsListTextColor",
+    "newsListBackgroundColor", "focusedNewsTextColor", "focusedNewsBGColor",
+    "linkColor", "titleColor", "dateColor", "authorColor", "newsTextColor",
+    "newsTitleBackgroundColor", "newsBackgroundColor", "feedWithNewNewsColor",
+    "countNewsUnreadColor", "newNewsTextColor", "unreadNewsTextColor",
+    "focusedFeedTextColor", "focusedFeedBGColor", "feedDisabledUpdateColor",
+    "alternatingRowColors", "notifierTextColor", "notifierBackgroundColor"
+  };
+  return row >= 0 && row < int(sizeof(keys) / sizeof(keys[0])) ? keys[row] : "";
+}
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +302,14 @@ void MainWindow::changeEvent(QEvent *event)
     }
   } else if (event->type() == QEvent::LanguageChange) {
     retranslateStrings();
+  } else if ((event->type() == QEvent::PaletteChange ||
+              event->type() == QEvent::ApplicationPaletteChange) &&
+             mainApp->applicationStyle().followsSystem()) {
+    // Automatic follows the palette supplied by Qt's platform integration.
+    // Recompute only theme-derived colors; explicit user overrides remain.
+    QTimer::singleShot(0, this, [this]() {
+      if (mainApp->applicationStyle().followsSystem()) applyThemeColors(false);
+    });
   }
   QMainWindow::changeEvent(event);
 }
@@ -1932,33 +1962,20 @@ void MainWindow::loadSettings()
   showMenuBarAct_->setChecked(true);
 #endif
 
+  // [Color] stores only values that differ from the active theme defaults.
+  // Older versions wrote every color, so those values are preserved as
+  // overrides until the user changes theme (which clears the group).
+  setThemeColorDefaults();
   Settings colorSettings("Color");
-  QString windowTextColor = qApp->palette().brush(QPalette::WindowText).color().name();
-  QString linkTextColor = qApp->palette().brush(QPalette::Link).color().name();
-  feedsModel_->textColor_ = colorSettings.value("feedsListTextColor", windowTextColor).toString();
-  feedsModel_->backgroundColor_ = colorSettings.value("feedsListBackgroundColor", "").toString();
-  feedsView_->setStyleSheet(QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
-  newsListTextColor_ = colorSettings.value("newsListTextColor", windowTextColor).toString();
-  newsListBackgroundColor_ = colorSettings.value("newsListBackgroundColor", "").toString();
-  newNewsTextColor_ = colorSettings.value("newNewsTextColor", windowTextColor).toString();
-  unreadNewsTextColor_ = colorSettings.value("unreadNewsTextColor", windowTextColor).toString();
-  focusedNewsTextColor_ = colorSettings.value("focusedNewsTextColor", windowTextColor).toString();
-  focusedNewsBGColor_ = colorSettings.value("focusedNewsBGColor", "").toString();
-  linkColor_ = colorSettings.value("linkColor", "#0066CC").toString();
-  titleColor_ = colorSettings.value("titleColor", "#0066CC").toString();
-  dateColor_ = colorSettings.value("dateColor", "#666666").toString();
-  authorColor_ = colorSettings.value("authorColor", "#666666").toString();
-  newsTextColor_ = colorSettings.value("newsTextColor", "#000000").toString();
-  newsTitleBackgroundColor_ = colorSettings.value("newsTitleBackgroundColor", "#FFFFFF").toString();
-  newsBackgroundColor_ = colorSettings.value("newsBackgroundColor", "#FFFFFF").toString();
-  feedsModel_->feedWithNewNewsColor_ = colorSettings.value("feedWithNewNewsColor", linkTextColor).toString();
-  feedsModel_->countNewsUnreadColor_ = colorSettings.value("countNewsUnreadColor", linkTextColor).toString();
-  feedsModel_->focusedFeedTextColor_ = colorSettings.value("focusedFeedTextColor", windowTextColor).toString();
-  feedsModel_->focusedFeedBGColor_ = colorSettings.value("focusedFeedBGColor", "").toString();
-  feedsModel_->feedDisabledUpdateColor_ = colorSettings.value("feedDisabledUpdateColor", "#999999").toString();
-  alternatingRowColors_ = colorSettings.value("alternatingRowColors", qApp->palette().color(QPalette::AlternateBase).name()).toString();
-  notifierTextColor_ = colorSettings.value("notifierTextColor", windowTextColor).toString();
-  notifierBackgroundColor_ = colorSettings.value("notifierBackgroundColor", "#FFFFFF").toString();
+  for (int row = 0; row < 23; ++row) {
+    const QString key = QString::fromLatin1(colorSettingKey(row));
+    if (!colorSettings.contains(key)) continue;
+    customColorRows_.insert(row);
+    setColorValueForOption(row, colorSettings.value(key, colorValueForOption(row)).toString());
+  }
+  feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
+      ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
+
 
   Settings stateSettings;
   resize(800, 600);
@@ -2130,30 +2147,13 @@ void MainWindow::saveSettings()
 
   settings.setValue("showMenuBar", showMenuBarAct_->isChecked());
 
-  Settings colorSettings("Color");
-  colorSettings.setValue("feedsListTextColor", feedsModel_->textColor_);
-  colorSettings.setValue("feedsListBackgroundColor", feedsModel_->backgroundColor_);
-  colorSettings.setValue("newsListTextColor", newsListTextColor_);
-  colorSettings.setValue("newsListBackgroundColor", newsListBackgroundColor_);
-  colorSettings.setValue("newNewsTextColor", newNewsTextColor_);
-  colorSettings.setValue("unreadNewsTextColor", unreadNewsTextColor_);
-  colorSettings.setValue("focusedNewsTextColor", focusedNewsTextColor_);
-  colorSettings.setValue("focusedNewsBGColor", focusedNewsBGColor_);
-  colorSettings.setValue("linkColor", linkColor_);
-  colorSettings.setValue("titleColor", titleColor_);
-  colorSettings.setValue("dateColor", dateColor_);
-  colorSettings.setValue("authorColor", authorColor_);
-  colorSettings.setValue("newsTextColor", newsTextColor_);
-  colorSettings.setValue("newsTitleBackgroundColor", newsTitleBackgroundColor_);
-  colorSettings.setValue("newsBackgroundColor", newsBackgroundColor_);
-  colorSettings.setValue("feedWithNewNewsColor", feedsModel_->feedWithNewNewsColor_);
-  colorSettings.setValue("countNewsUnreadColor", feedsModel_->countNewsUnreadColor_);
-  colorSettings.setValue("focusedFeedTextColor", feedsModel_->focusedFeedTextColor_);
-  colorSettings.setValue("focusedFeedBGColor", feedsModel_->focusedFeedBGColor_);
-  colorSettings.setValue("feedDisabledUpdateColor", feedsModel_->feedDisabledUpdateColor_);
-  colorSettings.setValue("alternatingRowColors", alternatingRowColors_);
-  colorSettings.setValue("notifierTextColor", notifierTextColor_);
-  colorSettings.setValue("notifierBackgroundColor", notifierBackgroundColor_);
+  Settings().remove("Color");
+  if (!customColorRows_.isEmpty()) {
+    Settings colorSettings("Color");
+    for (int row : customColorRows_)
+      colorSettings.setValue(QString::fromLatin1(colorSettingKey(row)), colorValueForOption(row));
+  }
+
 
   Settings stateSettings;
   stateSettings.setValue("GeometryState", saveGeometry());
@@ -3424,7 +3424,8 @@ void MainWindow::showOptionDlg(int index)
 
   feedsModel_->textColor_ = optionsDialog_->colorsTree_->topLevelItem(0)->text(1);
   feedsModel_->backgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(1)->text(1);
-  feedsView_->setStyleSheet(QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
+  feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
+      ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
   newsListTextColor_ = optionsDialog_->colorsTree_->topLevelItem(2)->text(1);
   newsListBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(3)->text(1);
   focusedNewsTextColor_ = optionsDialog_->colorsTree_->topLevelItem(4)->text(1);
@@ -3446,6 +3447,12 @@ void MainWindow::showOptionDlg(int index)
   alternatingRowColors_ = optionsDialog_->colorsTree_->topLevelItem(20)->text(1);
   notifierTextColor_ = optionsDialog_->colorsTree_->topLevelItem(21)->text(1);
   notifierBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(22)->text(1);
+  for (int row = 0; row < optionsDialog_->colorsTree_->topLevelItemCount(); ++row) {
+    if (colorValueForOption(row) == defaultColorForOption(row))
+      customColorRows_.remove(row);
+    else
+      customColorRows_.insert(row);
+  }
 
   delete optionsDialog_;
   optionsDialog_ = NULL;
@@ -3460,6 +3467,7 @@ void MainWindow::showOptionDlg(int index)
       currentNewsTab->newsHeader_->saveStateColumns(currentNewsTab);
     currentNewsTab->setSettings(false);
   }
+  refreshApplicationAppearance();
 }
 
 void MainWindow::showSettingPageLabels()
@@ -5361,95 +5369,176 @@ void MainWindow::rebuildStyleMenu()
 {
   const auto styles = mainApp->applicationStyles();
   const QString activeId = mainApp->applicationStyle().id;
-  bool available = activeId.isEmpty();
+  bool available = false;
   for (const ApplicationStyle &style : styles) available = available || style.id == activeId;
   if (!available) {
     qWarning() << "Selected application style no longer available:" << activeId;
-    mainApp->applyApplicationStyle(QString());
+    mainApp->applyApplicationStyle(ApplicationStyles::automaticId());
+    // This is a fallback, not an explicit user theme choice. Preserve color
+    // overrides rather than discarding them without the confirmation dialog.
+    applyThemeColors(false);
   }
   // Actions belong only to this menu/group, never to toolbar customization.
   const auto oldActions = styleGroup_->actions();
   for (QAction *action : oldActions) delete action;
-  auto addStyle = [this](const QString &id, const QString &name) {
-    QAction *action = new QAction(name, styleGroup_);
-    action->setObjectName(id);
-    action->setData(id);
+  for (const ApplicationStyle &style : mainApp->applicationStyles()) {
+    QAction *action = new QAction(
+          QCoreApplication::translate("MainWindow", style.name.toUtf8().constData()), styleGroup_);
+    action->setObjectName(style.id);
+    action->setData(style.id);
     action->setCheckable(true);
-    action->setChecked(id == mainApp->applicationStyle().id);
+    action->setChecked(style.id == mainApp->applicationStyle().id);
     styleGroup_->addAction(action);
     styleMenu_->addAction(action);
-  };
-  addStyle(QString(), tr("System default"));
-  for (const ApplicationStyle &style : styles) {
-    addStyle(style.id, QCoreApplication::translate("MainWindow", style.name.toUtf8().constData()));
   }
 }
 
 void MainWindow::setStyleApp(QAction *action)
 {
-  const QPalette previousPalette = qApp->palette();
-  mainApp->applyApplicationStyle(action->data().toString());
-  applyStyleColors(mainApp->applicationStyle().darkColors, previousPalette);
+  const QString id = action->data().toString();
+  if (id == mainApp->applicationStyle().id) return;
+
+  if (!customColorRows_.isEmpty()) {
+    const int answer = QMessageBox::question(
+          this, tr("Change application theme"),
+          tr("Changing the application theme will reset your custom colors. Continue?"),
+          QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+      for (QAction *candidate : styleGroup_->actions())
+        candidate->setChecked(candidate->data().toString() == mainApp->applicationStyle().id);
+      return;
+    }
+  }
+
+  mainApp->applyApplicationStyle(id);
+  applyThemeColors(true);
   for (QAction *candidate : styleGroup_->actions())
     candidate->setChecked(candidate->data().toString() == mainApp->applicationStyle().id);
 }
 
-// Application-specific colors remain separate from QSS and the native QStyle.
-// As before, explicit style selection resets these preferences; startup does not.
-void MainWindow::applyStyleColors(bool dark, const QPalette &palette)
+QString MainWindow::defaultColorForOption(int row) const
 {
-  Settings settings;
-  if (dark) {
-    feedsModel_->textColor_ = "#e1e0e1";
-    newsListTextColor_ = "#e1e0e1";
-    newsListBackgroundColor_ = "#464546";
-    newNewsTextColor_ = "#e1e0e1";
-    unreadNewsTextColor_ = "#e1e0e1";
-    newsBackgroundColor_ = "#464546";
-    newsTitleBackgroundColor_ = "#464546";
-    titleColor_ = "#e1e0e1";
-    newsTextColor_ = "#e1e0e1";
-    dateColor_ = "#a5a5a5";
-    authorColor_ = "#a5a5a5";
-    notifierTextColor_ = "#e1e0e1";
-    notifierBackgroundColor_ = "#464546";
-    transparencyNotify_ = 40;
-    alternatingRowColors_ = "#3a393a";
-  } else {
-    QString windowTextColor = palette.brush(QPalette::WindowText).color().name();
-    feedsModel_->textColor_ = windowTextColor;
-    newsListTextColor_ = windowTextColor;
-    newsListBackgroundColor_ = "";
-    newNewsTextColor_ = windowTextColor;
-    unreadNewsTextColor_ = windowTextColor;
-    newsBackgroundColor_ = "#FFFFFF";
-    newsTitleBackgroundColor_ = "#FFFFFF";
-    titleColor_ = "#0066CC";
-    newsTextColor_ = "#000000";
-    dateColor_ = "#666666";
-    authorColor_ = "#666666";
-    notifierTextColor_ = windowTextColor;
-    notifierBackgroundColor_ = "#FFFFFF";
-    transparencyNotify_ = 60;
-    alternatingRowColors_ = palette.color(QPalette::AlternateBase).name();
-  }
+  const QPalette palette = qApp->palette();
+  const QColor text = palette.color(QPalette::Text);
+  const QColor base = palette.color(QPalette::Base);
+  const QString muted = mixColor(text, base, 62).name();
 
-  settings.setValue("Settings/transparencyNotify", transparencyNotify_);
-  Settings colorSettings("Color");
-  colorSettings.setValue("feedsListTextColor", feedsModel_->textColor_);
-  colorSettings.setValue("newsListTextColor", newsListTextColor_);
-  colorSettings.setValue("newsListBackgroundColor", newsListBackgroundColor_);
-  colorSettings.setValue("newNewsTextColor", newNewsTextColor_);
-  colorSettings.setValue("unreadNewsTextColor", unreadNewsTextColor_);
-  colorSettings.setValue("titleColor", titleColor_);
-  colorSettings.setValue("newsTextColor", newsTextColor_);
-  colorSettings.setValue("newsTitleBackgroundColor", newsTitleBackgroundColor_);
-  colorSettings.setValue("newsBackgroundColor", newsBackgroundColor_);
-  colorSettings.setValue("dateColor", dateColor_);
-  colorSettings.setValue("authorColor", authorColor_);
-  colorSettings.setValue("notifierTextColor", notifierTextColor_);
-  colorSettings.setValue("notifierBackgroundColor", notifierBackgroundColor_);
-  colorSettings.setValue("alternatingRowColors", alternatingRowColors_);
+  switch (row) {
+  case 1: case 3:
+    // Empty means "let the active theme/QSS paint the view background".
+    return QString();
+  case 4: case 17:
+    return palette.color(QPalette::HighlightedText).name();
+  case 5: case 18:
+    return palette.color(QPalette::Highlight).name();
+  case 6: case 7: case 13: case 14:
+    return palette.color(QPalette::Link).name();
+  case 8: case 9: case 19:
+    return muted;
+  case 11: case 12:
+    return palette.color(QPalette::Base).name();
+  case 20:
+    return palette.color(QPalette::AlternateBase).name();
+  case 21:
+    return palette.color(QPalette::WindowText).name();
+  case 22:
+    return palette.color(QPalette::Window).name();
+  default:
+    return text.name();
+  }
+}
+
+QString MainWindow::colorValueForOption(int row) const
+{
+  switch (row) {
+  case 0: return feedsModel_->textColor_;
+  case 1: return feedsModel_->backgroundColor_;
+  case 2: return newsListTextColor_;
+  case 3: return newsListBackgroundColor_;
+  case 4: return focusedNewsTextColor_;
+  case 5: return focusedNewsBGColor_;
+  case 6: return linkColor_;
+  case 7: return titleColor_;
+  case 8: return dateColor_;
+  case 9: return authorColor_;
+  case 10: return newsTextColor_;
+  case 11: return newsTitleBackgroundColor_;
+  case 12: return newsBackgroundColor_;
+  case 13: return feedsModel_->feedWithNewNewsColor_;
+  case 14: return feedsModel_->countNewsUnreadColor_;
+  case 15: return newNewsTextColor_;
+  case 16: return unreadNewsTextColor_;
+  case 17: return feedsModel_->focusedFeedTextColor_;
+  case 18: return feedsModel_->focusedFeedBGColor_;
+  case 19: return feedsModel_->feedDisabledUpdateColor_;
+  case 20: return alternatingRowColors_;
+  case 21: return notifierTextColor_;
+  case 22: return notifierBackgroundColor_;
+  default: return QString();
+  }
+}
+
+void MainWindow::setColorValueForOption(int row, const QString &value)
+{
+  switch (row) {
+  case 0: feedsModel_->textColor_ = value; break;
+  case 1: feedsModel_->backgroundColor_ = value; break;
+  case 2: newsListTextColor_ = value; break;
+  case 3: newsListBackgroundColor_ = value; break;
+  case 4: focusedNewsTextColor_ = value; break;
+  case 5: focusedNewsBGColor_ = value; break;
+  case 6: linkColor_ = value; break;
+  case 7: titleColor_ = value; break;
+  case 8: dateColor_ = value; break;
+  case 9: authorColor_ = value; break;
+  case 10: newsTextColor_ = value; break;
+  case 11: newsTitleBackgroundColor_ = value; break;
+  case 12: newsBackgroundColor_ = value; break;
+  case 13: feedsModel_->feedWithNewNewsColor_ = value; break;
+  case 14: feedsModel_->countNewsUnreadColor_ = value; break;
+  case 15: newNewsTextColor_ = value; break;
+  case 16: unreadNewsTextColor_ = value; break;
+  case 17: feedsModel_->focusedFeedTextColor_ = value; break;
+  case 18: feedsModel_->focusedFeedBGColor_ = value; break;
+  case 19: feedsModel_->feedDisabledUpdateColor_ = value; break;
+  case 20: alternatingRowColors_ = value; break;
+  case 21: notifierTextColor_ = value; break;
+  case 22: notifierBackgroundColor_ = value; break;
+  default: break;
+  }
+}
+
+void MainWindow::setThemeColorDefaults()
+{
+  for (int row = 0; row < 23; ++row) {
+    if (!customColorRows_.contains(row))
+      setColorValueForOption(row, defaultColorForOption(row));
+  }
+}
+
+void MainWindow::refreshApplicationAppearance()
+{
+  const QString dark = qApp->palette().color(QPalette::Dark).name();
+  const QString window = qApp->palette().color(QPalette::Window).name();
+
+  feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
+      ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
+  feedsPanel_->setStyleSheet(
+        QString("#feedsPanel_ {border-bottom: 1px solid %1;}").arg(dark));
+  feedsSplitter_->setStyleSheet(
+        QString("QSplitter::handle {background: %1;}").arg(dark));
+  categoriesTree_->setStyleSheet(
+        QString("#newsCategoriesTree_ {border-top: 1px solid %1;}").arg(dark));
+  tabBar_->setStyleSheet(
+        QString("#tabBar_ QToolButton {border: 1px solid %1; border-radius: 2px; background: %2;}").
+        arg(dark).arg(window));
+#if defined(HAVE_X11) || defined(Q_OS_MAC)
+  statusBar()->setStyleSheet(
+        QString("QStatusBar::item {border-right: 1px solid %1; margin: 1px;}").arg(dark));
+#endif
+
+  feedsView_->viewport()->update();
+  categoriesTree_->viewport()->update();
 
   mainSplitter_->setStyleSheet(
         QString("QSplitter::handle {background: qlineargradient("
@@ -5458,11 +5547,20 @@ void MainWindow::applyStyleColors(bool dark, const QPalette &palette)
         arg(feedsPanel_->palette().window().color().name()).
         arg(qApp->palette().color(QPalette::Dark).name()));
 
-  if (currentNewsTab != NULL) {
-    if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)
-      currentNewsTab->newsHeader_->saveStateColumns(currentNewsTab);
-    currentNewsTab->setSettings(false);
+  for (int i = 0; i < stackedWidget_->count(); ++i) {
+    NewsTabWidget *tab = qobject_cast<NewsTabWidget*>(stackedWidget_->widget(i));
+    if (tab) tab->refreshAppearance(true);
   }
+}
+
+void MainWindow::applyThemeColors(bool clearOverrides)
+{
+  if (clearOverrides) {
+    Settings().remove("Color");
+    customColorRows_.clear();
+  }
+  setThemeColorDefaults();
+  refreshApplicationAppearance();
 }
 
 /** Switch focus forward between feed tree, news list and browser

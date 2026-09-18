@@ -1613,36 +1613,8 @@ void OptionsDialog::slotColorChange()
 //----------------------------------------------------------------------------
 void OptionsDialog::slotColorReset()
 {
-  QString colorName;
-  int row = colorsTree_->currentIndex().row();
-  switch (row) {
-  case 1: case 3: case 5: case 18:
-    colorName = "";
-    break;
-  case 6: case 7:
-    colorName = "#0066CC";
-    break;
-  case 8: case 9:
-    colorName = "#666666";
-    break;
-  case 10:
-    colorName = "#000000";
-    break;
-  case 11: case 12: case 22:
-    colorName = "#FFFFFF";
-    break;
-  case 13: case 14:
-    colorName = qApp->palette().brush(QPalette::Link).color().name();
-    break;
-  case 19:
-    colorName = "#999999";
-    break;
-  case 20:
-    colorName = qApp->palette().color(QPalette::AlternateBase).name();
-    break;
-  default:
-    colorName = qApp->palette().brush(QPalette::WindowText).color().name();
-  }
+  const int row = colorsTree_->currentIndex().row();
+  const QString colorName = mainApp->mainWindow()->defaultColorForOption(row);
   QPixmap pixmapColor(14, 14);
   if (colorName.isEmpty())
     pixmapColor.fill(QColor(0, 0, 0, 0));

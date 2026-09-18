@@ -1,9 +1,33 @@
 /* ApplicationStyle
 Name=Purple
 Id=purpleStyle_
-Colors=standard
+Mode=fixed
+Palette.Window=#f0f0fa
+Palette.WindowText=#000000
+Palette.Base=#ffffff
+Palette.AlternateBase=#f6f6fc
+Palette.Text=#000000
+Palette.Button=#ddddf0
+Palette.ButtonText=#000000
+Palette.Highlight=#7070c8
+Palette.HighlightedText=#ffffff
+Palette.Link=#0066cc
+Palette.LinkVisited=#551a8b
+Palette.ToolTipBase=#ffffdc
+Palette.ToolTipText=#000000
 */
 /* QuiteRSS Purple Style */
+
+QWidget {
+	background-color: #f0f0fa;
+	alternate-background-color: #f6f6fc;
+	color: #000000;
+	selection-background-color: #7070c8;
+	selection-color: #ffffff;
+}
+QWidget:disabled {
+	color: #808080;
+}
 
 QMenuBar {
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,

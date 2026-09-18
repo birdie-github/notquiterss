@@ -94,7 +94,7 @@
         <file alias="loading_dark">resources/images/loading_dark.gif</file>
     </qresource>
     <qresource prefix="/style">
-        <file alias="systemStyle">resources/styles/system.qss</file>
+        <file alias="automaticStyle">resources/styles/automatic.qss</file>
         <file alias="newsStyle">resources/styles/news.css</file>
     </qresource>
     <qresource prefix="/file">

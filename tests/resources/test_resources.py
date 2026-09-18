@@ -79,7 +79,7 @@ class ResourceTests(unittest.TestCase):
                     self.assertIsNotNone(file.get('alias'))
         self.assertIn('/images/images/logo.png', seen)
         self.assertIn('/html/description', seen)
-        self.assertIn('/style/systemStyle', seen)
+        self.assertIn('/style/automaticStyle', seen)
 
 
 if __name__ == '__main__':

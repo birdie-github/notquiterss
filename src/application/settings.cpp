@@ -90,6 +90,11 @@ bool Settings::contains(const QString &key)
   return storage()->contains(fullKey(key));
 }
 
+void Settings::remove(const QString &key)
+{
+  storage()->remove(fullKey(key));
+}
+
 namespace AppSettings {
 const Setting<QString> externalBrowser = {"Settings/externalBrowser", QString()};
 const Setting<QString> toolBarStyle = {"Settings/toolBarStyle", QStringLiteral("toolBarStyleTuI_")};

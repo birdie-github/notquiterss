@@ -1,9 +1,33 @@
 /* ApplicationStyle
 Name=Orange
 Id=orangeStyle_
-Colors=standard
+Mode=fixed
+Palette.Window=#fff1e8
+Palette.WindowText=#000000
+Palette.Base=#ffffff
+Palette.AlternateBase=#fff7f2
+Palette.Text=#000000
+Palette.Button=#ffe1c8
+Palette.ButtonText=#000000
+Palette.Highlight=#de951c
+Palette.HighlightedText=#000000
+Palette.Link=#0066cc
+Palette.LinkVisited=#551a8b
+Palette.ToolTipBase=#ffffdc
+Palette.ToolTipText=#000000
 */
 /* QuiteRSS Orange Style */
+
+QWidget {
+	background-color: #fff1e8;
+	alternate-background-color: #fff7f2;
+	color: #000000;
+	selection-background-color: #de951c;
+	selection-color: #000000;
+}
+QWidget:disabled {
+	color: #808080;
+}
 
 QMenuBar {
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,

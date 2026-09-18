@@ -1,0 +1,60 @@
+/* ApplicationStyle
+Name=Automatic
+Id=automaticStyle_
+Mode=system
+Default=true
+*/
+/* Follow the palette and widget style supplied by Qt's platform integration. */
+
+#feedsView_::item, #newsView_::item, #newsCategoriesTree_::item {
+    min-height: 20px;
+}
+
+#tabBar_ QTabWidget::tab-bar {
+    bottom: -1px;
+}
+
+QToolBar {
+    border-style: none;
+}
+
+QHeaderView::down-arrow {
+    subcontrol-origin: padding;
+    subcontrol-position: center top;
+    image: url(:/images/images/sortIndicatorD.png);
+}
+
+QHeaderView::up-arrow {
+    subcontrol-origin: padding;
+    subcontrol-position: center top;
+    image: url(:/images/images/sortIndicatorA.png);
+}
+
+#categoriesTree {
+    padding: 1px;
+}
+
+#categoriesTree::item, #fontTree::item,
+#languageFileList_::item, #filtersTree::item,
+#shortcutTree::item, #labelsTree_::item,
+#colorsTree_::item {
+    min-height: 20px;
+}
+
+#foldersTree_::item, #feedsTreeFR::item, #feedsTreeNotify_::item {
+    min-height: 18px;
+}
+
+QStatusBar #progressBar_ {
+    margin-right: 5px;
+}
+
+QMainWindow::separator {
+    border: none;
+}
+
+#pushButtonNull {
+    border: none;
+    padding: 0px;
+    min-width: 6px;
+}

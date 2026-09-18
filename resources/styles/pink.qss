@@ -1,9 +1,33 @@
 /* ApplicationStyle
 Name=Pink
 Id=pinkStyle_
-Colors=standard
+Mode=fixed
+Palette.Window=#fff0f0
+Palette.WindowText=#000000
+Palette.Base=#ffffff
+Palette.AlternateBase=#fff5f5
+Palette.Text=#000000
+Palette.Button=#ffdada
+Palette.ButtonText=#000000
+Palette.Highlight=#cc7070
+Palette.HighlightedText=#000000
+Palette.Link=#0066cc
+Palette.LinkVisited=#551a8b
+Palette.ToolTipBase=#ffffdc
+Palette.ToolTipText=#000000
 */
-/* QuiteRSS Green Style */
+/* NotQuiteRSS Pink Style */
+
+QWidget {
+	background-color: #fff0f0;
+	alternate-background-color: #fff5f5;
+	color: #000000;
+	selection-background-color: #cc7070;
+	selection-color: #000000;
+}
+QWidget:disabled {
+	color: #808080;
+}
 
 QMenuBar {
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,

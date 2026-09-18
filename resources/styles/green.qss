@@ -1,10 +1,33 @@
 /* ApplicationStyle
 Name=Green
 Id=greenStyle_
-Colors=standard
-Default=true
+Mode=fixed
+Palette.Window=#edf7ed
+Palette.WindowText=#000000
+Palette.Base=#ffffff
+Palette.AlternateBase=#f2faf2
+Palette.Text=#000000
+Palette.Button=#dcefdc
+Palette.ButtonText=#000000
+Palette.Highlight=#70b870
+Palette.HighlightedText=#000000
+Palette.Link=#0066cc
+Palette.LinkVisited=#551a8b
+Palette.ToolTipBase=#ffffdc
+Palette.ToolTipText=#000000
 */
 /* QuiteRSS Green Style */
+
+QWidget {
+	background-color: #edf7ed;
+	alternate-background-color: #f2faf2;
+	color: #000000;
+	selection-background-color: #70b870;
+	selection-color: #000000;
+}
+QWidget:disabled {
+	color: #808080;
+}
 
 QMenuBar {
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,

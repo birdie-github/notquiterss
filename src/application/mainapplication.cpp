@@ -92,6 +92,10 @@ MainApplication::MainApplication(int &argc, char **argv)
 
   qWarning() << "Run application!";
 
+  // Keep the native Qt style/palette as the source for Automatic. Fixed themes
+  // replace the application palette, but never the platform widget style.
+  setStyle(new QProxyStyle);
+  systemPalette_ = palette();
   setStyleApplication();
   setTranslateApplication();
   showSplashScreen();
@@ -310,22 +314,47 @@ bool MainApplication::storeDBMemory() const
 
 QList<ApplicationStyle> MainApplication::applicationStyles() const
 {
-  return ApplicationStyles::discover(QDir(resourcesDir()).filePath(ProjectMetadata::styles()));
+  QList<ApplicationStyle> styles =
+      ApplicationStyles::discover(QDir(resourcesDir()).filePath(ProjectMetadata::styles()));
+  bool hasAutomatic = false;
+  for (const ApplicationStyle &style : styles)
+    hasAutomatic = hasAutomatic || style.id == ApplicationStyles::automaticId();
+  if (!hasAutomatic) styles.prepend(ApplicationStyles::automaticDefault());
+  return styles;
 }
 
 void MainApplication::applyApplicationStyle(const QString &id)
 {
-  ApplicationStyle selected = ApplicationStyles::systemDefault();
-  if (!id.isEmpty()) {
-    bool found = false;
-    for (const ApplicationStyle &style : applicationStyles()) {
-      if (style.id == id) { selected = style; found = true; break; }
-    }
-    if (!found) qWarning() << "Application style unavailable; using system default:" << id;
+  const QString wantedId = id.isEmpty() ? ApplicationStyles::automaticId() : id;
+  ApplicationStyle selected = ApplicationStyles::automaticDefault();
+  bool found = false;
+  for (const ApplicationStyle &style : applicationStyles()) {
+    if (style.id == wantedId) { selected = style; found = true; break; }
   }
+  if (!found)
+    qWarning() << "Application style unavailable; using Automatic:" << wantedId;
+
+  const bool wasSystem = applicationStyle_.followsSystem();
+  if (wasSystem) systemPalette_ = palette();
+
+  applicationStyle_ = selected;
+  // Remove the previous QSS before changing palettes so stale selectors cannot
+  // participate while Qt repolishes widgets for the new theme.
+  setStyleSheet(QString());
+  if (selected.followsSystem()) {
+    // Do not set an application palette while Automatic is already active:
+    // leaving it native lets Qt propagate later platform palette changes.
+    // Returning from a fixed theme needs one explicit restoration first.
+    if (!wasSystem) {
+      systemPalette_ = style()->standardPalette();
+      setPalette(systemPalette_);
+    }
+  } else {
+    setPalette(ApplicationStyles::palette(selected, systemPalette_));
+  }
+
   qInfo() << "Applying application QSS:" << selected.fileName;
   setStyleSheet(selected.sheet);
-  applicationStyle_ = selected;
   Settings().setValue("Settings/styleApplication", selected.id);
 }
 
@@ -339,8 +368,6 @@ void MainApplication::setStyleApplication()
     }
   }
   applyApplicationStyle(id);
-  // Native widget style/proxy lifetime is independent of stylesheet selection.
-  setStyle(new QProxyStyle);
 }
 
 LanguageCatalog MainApplication::languageCatalog() const

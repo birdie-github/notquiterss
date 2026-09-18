@@ -1,7 +1,20 @@
 /* ApplicationStyle
 Name=Dark
 Id=darkStyle_
-Colors=dark
+Mode=fixed
+Palette.Window=#464546
+Palette.WindowText=#e1e0e1
+Palette.Base=#464546
+Palette.AlternateBase=#3a393a
+Palette.Text=#e1e0e1
+Palette.Button=#3a393a
+Palette.ButtonText=#e1e0e1
+Palette.Highlight=#3a393b
+Palette.HighlightedText=#f8fd99
+Palette.Link=#58a6ff
+Palette.LinkVisited=#c58af9
+Palette.ToolTipBase=#555555
+Palette.ToolTipText=#e1e0e1
 */
 /* QuiteRSS Dark Style */
 
@@ -162,30 +175,22 @@ QHeaderView::up-arrow {
 }
 
 #webViewProgress_ {
-	border: 1px solid #D5D5D5;
+	border: 1px solid #555555;
 	border-left: none;
 	border-right: none;
 	border-bottom: none;
 	text-align: center;
-	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-								stop:0 #f9f9f9,
-								stop:0.4 #f1f1f1,
-								stop:0.6 #e9e9e9,
-								stop:1 #f1f1f1);
-	color: #000000;
+	background: #464546;
+	color: #e1e0e1;
 }
 
 #webViewProgress_::chunk {
-	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-								stop:0 #f1f1f1,
-								stop:0.4 #d9d9d9,
-								stop:0.6 #d1d1d1,
-								stop:1 #d9d9d9);
+	background: #3a393a;
 	width: 10px;
 }
 
 #webViewProgressLabel_ {
-	color: #000000;
+	color: #e1e0e1;
 }
 
 #contentLabel_ {

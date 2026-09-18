@@ -8,91 +8,98 @@ root's style directory. With the supplied project metadata:
 - macOS: `NotQuiteRSS.app/Contents/Resources/styles`.
 
 All three platforms deploy this directory through qmake's normal install/bundle
-rules. Windows CI runs `mingw32-make install` and verifies every external staged resource
-against its deployed copy before creating the release artifact. Article `.css`
-files also remain deployed, but do not appear in Application Style.
+rules. Article `.css` files remain deployed, but do not appear in Application
+Style.
 
-Add a UTF-8 `.qss` file, then open View > Application Style. The menu refreshes
-on each opening, so adding/removing files requires no restart or rebuild.
-Selecting a style loads its current contents immediately. Editing an already
-selected file requires selecting it again. Use absolute or `:/` resource URLs
-for images; relative URLs retain Qt's normal working-directory semantics.
+The bundled choices deliberately have simple semantics:
 
-An optional header at the beginning of the file supplies metadata:
+- **Automatic** follows the palette exposed by Qt's platform integration.
+- **Light** and **Dark** are fixed application themes and ignore the OS color
+  scheme.
+- **OLED** and the accent themes are also fixed and self-contained.
+
+`System`, `System default`, and `System2` no longer exist as separate choices.
+
+## Metadata
+
+An optional header at the beginning of a QSS file supplies metadata. A style
+without a header is treated as a `Mode=system` overlay and therefore may depend
+on the current platform palette.
 
 ```css
 /* ApplicationStyle
-Name=My dark style
-Id=my-dark-style
-Colors=dark
+Name=My theme
+Id=my-theme
+Mode=fixed
+Palette.Window=#202020
+Palette.WindowText=#eeeeee
+Palette.Base=#181818
+Palette.AlternateBase=#242424
+Palette.Text=#eeeeee
+Palette.Button=#303030
+Palette.ButtonText=#eeeeee
+Palette.Highlight=#365f91
+Palette.HighlightedText=#ffffff
+Palette.Link=#58a6ff
+Palette.LinkVisited=#c58af9
+Palette.ToolTipBase=#303030
+Palette.ToolTipText=#ffffff
 Default=false
 */
-QWidget {
-    background-color: #464546;
-    color: #e1e0e1;
-}
 ```
 
-Keys and values are case-sensitive. Each key may appear once; unknown keys,
-empty values, and invalid Colors/Default values reject the file with a warning.
-With no header (or omitted fields), Name and Id default to the filename without
-`.qss`, Colors to `standard`, and Default to `false`. IDs must be unique and
-nonempty. Keep an explicit Id stable if you rename a file. Duplicate IDs are
-skipped deterministically in filename order. Names use the existing MainWindow
-translation context where a translation is available; otherwise they display
-as written.
+Keys and values are case-sensitive. Each key may appear once. Unknown keys,
+empty values, invalid colors, and invalid `Mode`/`Default` values reject the
+file with a warning.
 
-`Default=true` selects a file only when no style preference has been saved.
-If multiple files declare it, the first in filename order wins with a warning.
-The bundled Green file retains the previous fresh-install default. Bundled IDs
-are preserved in their headers so existing selections continue to resolve.
+`Name` and `Id` default to the filename without `.qss`. Keep an explicit `Id`
+stable if a file is renamed. IDs must be unique and nonempty. `Mode` defaults
+to `system`; `Default` defaults to `false`.
 
-The always-available **System default** entry uses the embedded system QSS and
-has an empty saved ID. Missing, unreadable or rejected selected files fall back
-to this entry and normalize `Settings/styleApplication`. A missing style does
-not silently select an unrelated external file. User color preferences remain
-independent and are not overwritten during startup or automatic fallback.
+`Mode=system` must not define `Palette.*` values. It is intended for Automatic
+or for an overlay that deliberately follows the current OS/desktop palette.
 
-# Appearance responsibilities
+`Mode=fixed` is independent of the OS theme. It must define these palette roles:
 
-- The native Qt widget style / QProxyStyle is initialized once, as before.
-  Selecting QSS does not replace it or select Fusion/another Qt widget style.
-- The QSS loader owns directory discovery, metadata and file reading. It does
-  not access MainWindow widgets or settings.
-- Explicit style selection still resets application-specific article, list and
-  notification colors, matching the old behavior. `Colors=dark` chooses the
-  existing dark profile and loading animation; `standard` chooses the existing
-  standard profile. MainWindow applies those colors separately from QSS.
-  Startup preserves saved/customized colors.
+- `Window`, `WindowText`, `Base`, `AlternateBase`, `Text`
+- `Button`, `ButtonText`
+- `Highlight`, `HighlightedText`
+- `Link`, `LinkVisited`
+- `ToolTipBase`, `ToolTipText`
 
-# Diagnostics and verification
+`Light`, `Midlight`, `Dark`, `Mid`, `Shadow`, and `BrightText` may also be
+specified. When omitted they are derived from the fixed palette, never from the
+OS palette. Qt 5.12+ placeholder text and Qt 6.6+ accent are likewise derived.
+This gives application code one effective palette without hardcoding theme IDs.
 
-Missing directories, file read failures, malformed metadata, duplicate IDs,
-and empty/unbalanced QSS produce warnings. The applied file path is logged.
-Qt's own QSS syntax/property warnings continue through the application logger.
-The structural check handles comments, quoted strings and brace balance; it
-is not a complete QSS parser. Qt's public `setStyleSheet()` API returns no
-success status, so arbitrary grammar/property errors cannot reliably trigger
-an automatic fallback without using private Qt APIs or intercepting logging.
-No private Qt API or process-wide message-handler replacement is used.
+`Default=true` selects a style only when no preference has been saved. The
+bundled Automatic style is the fresh-install default. The embedded Automatic
+QSS is also used as the always-available fallback when the external file or
+style directory is missing.
 
-The optional `tests/applicationstyle/applicationstyle.pro` Qt Test project
-supports both Qt5 and Qt6. It covers discovery, refresh after adding/removing
-files, metadata, duplicate IDs and malformed input. It is separate from the
-application build and requires the matching Qt Test development package.
+## Color overrides
 
-Manual checks for each Qt major version/platform:
+Application-specific article/list/notification colors are derived from the
+effective theme palette. The C++ code no longer has separate `dark` and
+`standard` color tables.
 
-1. Build and install to a clean destination. Launch from a different working
-   directory and select every bundled style; check immediate visible changes.
-2. Add a new QSS file with a distinctive widget color. Reopen the menu, select
-   it, restart, and verify its selection persists.
-3. Remove the selected file, then reopen the menu or restart. Verify System
-   default is selected; also test an absent style directory and malformed QSS.
-4. Switch Dark/standard profiles and check article/list/notification colors,
-   loading animation, and customized colors surviving an ordinary restart.
-5. Reopen the menu several times and select once: one application-QSS log entry
-   should appear, with no duplicate dispatch or crash on shutdown.
+The `[Color]` settings group contains only values that differ from the active
+theme defaults. Changing to a different application theme warns first and then
+removes those overrides, so stale colors cannot leak from one theme into
+another. Resetting an individual color in Settings resets it to the current
+theme's derived default.
 
-The patch was checked statically; application compilation/runtime tests and
-these Qt Test executables were not run during patch preparation.
+Automatic is the only style that responds to platform palette changes at
+runtime. Fixed themes remain unchanged when the OS switches between light and
+dark appearance.
+
+## Runtime discovery
+
+Open View > Application Style to refresh the file list. Adding/removing files
+requires no restart or rebuild. Selecting a style reloads its current contents
+immediately. Use absolute or `:/` resource URLs for images; relative URLs keep
+Qt's normal working-directory semantics.
+
+Malformed metadata, duplicate IDs, missing files/directories, invalid UTF-8,
+and empty/unbalanced QSS produce warnings. Qt reports its own stylesheet syntax
+and unsupported-property warnings when the sheet is applied.

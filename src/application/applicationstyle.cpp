@@ -4,9 +4,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QStringList>
 #include <QRegularExpression>
 #include <QSet>
+#include <QStringList>
 
 namespace {
 // Catch truncated files without depending on Qt's private stylesheet parser.
@@ -36,6 +36,58 @@ bool balanced(const QString &sheet)
     }
   }
   return braces == 0 && quote.isNull() && !comment;
+}
+
+bool paletteRole(const QString &name, QPalette::ColorRole &role)
+{
+  static const QHash<QString, int> roles = {
+    {QStringLiteral("Window"), QPalette::Window},
+    {QStringLiteral("WindowText"), QPalette::WindowText},
+    {QStringLiteral("Base"), QPalette::Base},
+    {QStringLiteral("AlternateBase"), QPalette::AlternateBase},
+    {QStringLiteral("Text"), QPalette::Text},
+    {QStringLiteral("Button"), QPalette::Button},
+    {QStringLiteral("ButtonText"), QPalette::ButtonText},
+    {QStringLiteral("Highlight"), QPalette::Highlight},
+    {QStringLiteral("HighlightedText"), QPalette::HighlightedText},
+    {QStringLiteral("Link"), QPalette::Link},
+    {QStringLiteral("LinkVisited"), QPalette::LinkVisited},
+    {QStringLiteral("ToolTipBase"), QPalette::ToolTipBase},
+    {QStringLiteral("ToolTipText"), QPalette::ToolTipText},
+    {QStringLiteral("Light"), QPalette::Light},
+    {QStringLiteral("Midlight"), QPalette::Midlight},
+    {QStringLiteral("Dark"), QPalette::Dark},
+    {QStringLiteral("Mid"), QPalette::Mid},
+    {QStringLiteral("Shadow"), QPalette::Shadow},
+    {QStringLiteral("BrightText"), QPalette::BrightText}
+  };
+  const auto it = roles.constFind(name);
+  if (it == roles.constEnd()) return false;
+  role = static_cast<QPalette::ColorRole>(it.value());
+  return true;
+}
+
+bool hasRequiredPalette(const ApplicationStyle &style)
+{
+  static const int required[] = {
+    QPalette::Window, QPalette::WindowText, QPalette::Base,
+    QPalette::AlternateBase, QPalette::Text, QPalette::Button,
+    QPalette::ButtonText, QPalette::Highlight, QPalette::HighlightedText,
+    QPalette::Link, QPalette::LinkVisited, QPalette::ToolTipBase,
+    QPalette::ToolTipText
+  };
+  for (int role : required) {
+    if (!style.paletteColors.contains(role)) return false;
+  }
+  return true;
+}
+
+QColor mix(const QColor &a, const QColor &b, int aPercent)
+{
+  const int bPercent = 100 - aPercent;
+  return QColor((a.red() * aPercent + b.red() * bPercent) / 100,
+                (a.green() * aPercent + b.green() * bPercent) / 100,
+                (a.blue() * aPercent + b.blue() * bPercent) / 100);
 }
 
 bool readStyle(const QFileInfo &info, ApplicationStyle &style)
@@ -83,18 +135,31 @@ bool readStyle(const QFileInfo &info, ApplicationStyle &style)
       keys.insert(key);
       if (key == "Name") style.name = value;
       else if (key == "Id") style.id = value;
-      else if (key == "Colors") {
-        valid = valid && (value == "dark" || value == "standard");
-        style.darkColors = value == "dark";
+      else if (key == "Mode") {
+        valid = valid && (value == "system" || value == "fixed");
+        style.mode = value == "fixed" ? ApplicationStyle::Fixed : ApplicationStyle::System;
       } else if (key == "Default") {
         valid = valid && (value == "true" || value == "false");
         style.isDefault = value == "true";
+      } else if (key.startsWith("Palette.")) {
+        QPalette::ColorRole role;
+        const QColor color(value);
+        valid = valid && paletteRole(key.mid(8), role) && color.isValid();
+        if (valid) style.paletteColors.insert(int(role), color);
       } else valid = false;
       if (!valid) {
         qWarning() << "Application style: invalid metadata" << file.fileName() << line;
         return false;
       }
     }
+  }
+  if (style.mode == ApplicationStyle::Fixed && !hasRequiredPalette(style)) {
+    qWarning() << "Application style: fixed style has incomplete palette" << file.fileName();
+    return false;
+  }
+  if (style.mode == ApplicationStyle::System && !style.paletteColors.isEmpty()) {
+    qWarning() << "Application style: system style must not define Palette.* colors" << file.fileName();
+    return false;
   }
   return true;
 }
@@ -129,14 +194,55 @@ QList<ApplicationStyle> ApplicationStyles::discover(const QString &directory)
   return result;
 }
 
-ApplicationStyle ApplicationStyles::systemDefault()
+QString ApplicationStyles::automaticId()
+{
+  return QStringLiteral("automaticStyle_");
+}
+
+ApplicationStyle ApplicationStyles::automaticDefault()
 {
   ApplicationStyle style;
-  // Empty ID is reserved for this always-available fallback.
-  style.name = QStringLiteral("System default");
-  style.fileName = QStringLiteral(":/style/systemStyle");
+  style.id = automaticId();
+  style.name = QStringLiteral("Automatic");
+  style.fileName = QStringLiteral(":/style/automaticStyle");
+  style.mode = ApplicationStyle::System;
+  style.isDefault = true;
   QFile file(style.fileName);
   if (file.open(QIODevice::ReadOnly)) style.sheet = QString::fromUtf8(file.readAll());
-  else qWarning() << "Application style: cannot read built-in fallback" << file.errorString();
+  else qWarning() << "Application style: cannot read built-in automatic fallback" << file.errorString();
   return style;
+}
+
+QPalette ApplicationStyles::palette(const ApplicationStyle &style, const QPalette &fallback)
+{
+  if (style.followsSystem()) return fallback;
+
+  QPalette result = fallback;
+  for (auto it = style.paletteColors.constBegin(); it != style.paletteColors.constEnd(); ++it)
+    result.setColor(static_cast<QPalette::ColorRole>(it.key()), it.value());
+
+  const QColor button = result.color(QPalette::Button);
+  const QColor text = result.color(QPalette::Text);
+  const QColor base = result.color(QPalette::Base);
+  if (!style.paletteColors.contains(QPalette::Light))
+    result.setColor(QPalette::Light, button.lighter(150));
+  if (!style.paletteColors.contains(QPalette::Midlight))
+    result.setColor(QPalette::Midlight, button.lighter(120));
+  if (!style.paletteColors.contains(QPalette::Dark))
+    result.setColor(QPalette::Dark, button.darker(150));
+  if (!style.paletteColors.contains(QPalette::Mid))
+    result.setColor(QPalette::Mid, button.darker(120));
+  if (!style.paletteColors.contains(QPalette::Shadow))
+    result.setColor(QPalette::Shadow, button.darker(200));
+  if (!style.paletteColors.contains(QPalette::BrightText))
+    result.setColor(QPalette::BrightText,
+                    text.lightness() > base.lightness() ? QColor(Qt::white) : QColor(Qt::black));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+  QColor placeholder = mix(text, base, 55);
+  result.setColor(QPalette::PlaceholderText, placeholder);
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+  result.setColor(QPalette::Accent, result.color(QPalette::Highlight));
+#endif
+  return result;
 }

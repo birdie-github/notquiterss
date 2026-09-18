@@ -370,6 +370,90 @@ void NewsTabWidget::createArticleWidget()
   connect(mainWindow_->autoLoadImagesToggle_, SIGNAL(triggered()), this, SLOT(setAutoLoadImages()));
 }
 
+/** @brief Reapply all visual state derived from the active theme/settings.
+ *----------------------------------------------------------------------------*/
+void NewsTabWidget::refreshAppearance(bool reloadArticle)
+{
+  if (type_ == TabTypeDownloads) return;
+
+  const QColor background = qApp->palette().color(QPalette::Base);
+  const QString dark = qApp->palette().color(QPalette::Dark).name();
+  newsIconMovie_->setFileName(background.lightness() < 128
+      ? ":/images/loading_dark" : ":/images/loading");
+
+  newsPanelWidget_->setStyleSheet(
+        QString("#newsPanelWidget_ {border-bottom: 1px solid %1;}").arg(dark));
+  if ((mainWindow_->browserPosition_ == RIGHT_POSITION) ||
+      (mainWindow_->browserPosition_ == LEFT_POSITION)) {
+    newsTabWidgetSplitter_->setStyleSheet(
+          QString("QSplitter::handle {background: qlineargradient("
+                  "x1: 0, y1: 0, x2: 0, y2: 1,"
+                  "stop: 0 %1, stop: 0.07 %2);}").
+          arg(newsPanelWidget_->palette().window().color().name()).
+          arg(dark));
+  } else {
+    newsTabWidgetSplitter_->setStyleSheet(
+          QString("QSplitter::handle {background: %1; margin-top: 1px; margin-bottom: 1px;}").
+          arg(dark));
+  }
+
+  newsView_->setFont(QFont(mainWindow_->newsListFontFamily_, mainWindow_->newsListFontSize_));
+  newsModel_->formatDate_ = mainWindow_->formatDate_;
+  newsModel_->formatTime_ = mainWindow_->formatTime_;
+  newsModel_->simplifiedDateTime_ = mainWindow_->simplifiedDateTime_;
+  newsModel_->textColor_ = mainWindow_->newsListTextColor_;
+  newsView_->setStyleSheet(mainWindow_->newsListBackgroundColor_.isEmpty()
+      ? QString() : QString("#newsView_ {background: %1;}").arg(mainWindow_->newsListBackgroundColor_));
+  newsModel_->newNewsTextColor_ = mainWindow_->newNewsTextColor_;
+  newsModel_->unreadNewsTextColor_ = mainWindow_->unreadNewsTextColor_;
+  newsModel_->focusedNewsTextColor_ = mainWindow_->focusedNewsTextColor_;
+  newsModel_->focusedNewsBGColor_ = mainWindow_->focusedNewsBGColor_;
+
+  Settings settings;
+  const QString styleSheetNews = settings.value(
+        "Settings/styleSheetNews", mainApp->styleSheetNewsDefaultFile()).toString();
+  QFile file(styleSheetNews);
+  const QByteArray styleData = file.open(QFile::ReadOnly)
+      ? file.readAll() : Common::readAllFileByteContents(":/style/newsStyle");
+  cssString_ = QString::fromUtf8(styleData).
+      arg(mainWindow_->newsTextFontFamily_).
+      arg(mainWindow_->newsTextFontSize_).
+      arg(mainWindow_->newsTitleFontFamily_).
+      arg(mainWindow_->newsTitleFontSize_).
+      arg(0).
+      arg(qApp->palette().color(QPalette::Dark).name()).
+      arg(mainWindow_->newsBackgroundColor_).
+      arg(mainWindow_->newsTitleBackgroundColor_).
+      arg(mainWindow_->linkColor_).
+      arg(mainWindow_->titleColor_).
+      arg(mainWindow_->dateColor_).
+      arg(mainWindow_->authorColor_).
+      arg(mainWindow_->newsTextColor_);
+  file.close();
+  // Older installed/custom article styles may still contain this selector.
+  // Qt's rich-text CSS parser stops at :not(), losing subsequent rules.
+  cssString_.remove(QRegularExpression("img:not\\(\\.quiterss-img\\)\\s*\\{[^}]*\\}"));
+  cssString_.replace(QRegularExpression("\\.title\\s*\\{"), ".title, .title a {");
+
+  articleView_->setFont(QFont(mainWindow_->newsTextFontFamily_, mainWindow_->newsTextFontSize_));
+  QPalette articlePalette = qApp->palette();
+  articlePalette.setColor(QPalette::Base, QColor(mainWindow_->newsBackgroundColor_));
+  articlePalette.setColor(QPalette::Text, QColor(mainWindow_->newsTextColor_));
+  articleView_->setPalette(articlePalette);
+
+  newsView_->setAlternatingRowColors(mainWindow_->alternatingRowColorsNews_);
+  QPalette newsPalette = qApp->palette();
+  newsPalette.setColor(QPalette::AlternateBase, mainWindow_->alternatingRowColors_);
+  newsView_->setPalette(newsPalette);
+  newsView_->viewport()->update();
+
+  if (!reloadArticle) return;
+  if (mainWindow_->newsLayout_ == 1)
+    loadNewspaper(RefreshWithPos);
+  else if (newsView_->currentIndex().isValid())
+    updateArticleView(newsView_->currentIndex(), true);
+}
+
 /** @brief Read settings from ini-file
  *----------------------------------------------------------------------------*/
 void NewsTabWidget::setSettings(bool init, bool newTab)
@@ -378,107 +462,47 @@ void NewsTabWidget::setSettings(bool init, bool newTab)
 
   if (type_ == TabTypeDownloads) return;
 
-  if (mainApp->applicationStyle().darkColors)
-    newsIconMovie_->setFileName(":/images/loading_dark");
-  else
-    newsIconMovie_->setFileName(":/images/loading");
-
   if (newTab) {
-    if (type_ < TabTypeDownloads) {
-      newsTabWidgetSplitter_->restoreState(settings.value("NewsTabSplitterState").toByteArray());
-      QString iconStr = AppSettings::newsToolBarIconSize.get();
-      mainWindow_->setToolBarIconSize(newsToolBar_, iconStr);
-
-      newsView_->setFont(
-            QFont(mainWindow_->newsListFontFamily_, mainWindow_->newsListFontSize_));
-      newsModel_->formatDate_ = mainWindow_->formatDate_;
-      newsModel_->formatTime_ = mainWindow_->formatTime_;
-      newsModel_->simplifiedDateTime_ = mainWindow_->simplifiedDateTime_;
-
-      newsModel_->textColor_ = mainWindow_->newsListTextColor_;
-      newsView_->setStyleSheet(QString("#newsView_ {background: %1;}").arg(mainWindow_->newsListBackgroundColor_));
-      newsModel_->newNewsTextColor_ = mainWindow_->newNewsTextColor_;
-      newsModel_->unreadNewsTextColor_ = mainWindow_->unreadNewsTextColor_;
-      newsModel_->focusedNewsTextColor_ = mainWindow_->focusedNewsTextColor_;
-      newsModel_->focusedNewsBGColor_ = mainWindow_->focusedNewsBGColor_;
-
-      QString styleSheetNews = settings.value("Settings/styleSheetNews",
-                                              mainApp->styleSheetNewsDefaultFile()).toString();
-      QFile file(styleSheetNews);
-      const QByteArray styleData = file.open(QFile::ReadOnly)
-          ? file.readAll() : Common::readAllFileByteContents(":/style/newsStyle");
-      cssString_ = QString::fromUtf8(styleData).
-          arg(mainWindow_->newsTextFontFamily_).
-          arg(mainWindow_->newsTextFontSize_).
-          arg(mainWindow_->newsTitleFontFamily_).
-          arg(mainWindow_->newsTitleFontSize_).
-          arg(0).
-          arg(qApp->palette().color(QPalette::Dark).name()). // color separator
-          arg(mainWindow_->newsBackgroundColor_). // news background
-          arg(mainWindow_->newsTitleBackgroundColor_). // title background
-          arg(mainWindow_->linkColor_). // link color
-          arg(mainWindow_->titleColor_). // title color
-          arg(mainWindow_->dateColor_). // date color
-          arg(mainWindow_->authorColor_). // author color
-          arg(mainWindow_->newsTextColor_); // text color
-      file.close();
-      // Older installed/custom article styles may still contain this selector.
-      // Qt's rich-text CSS parser stops at :not(), losing subsequent rules.
-      cssString_.remove(QRegularExpression("img:not\\(\\.quiterss-img\\)\\s*\\{[^}]*\\}"));
-      cssString_.replace(QRegularExpression("\\.title\\s*\\{"), ".title, .title a {");
-
-    }
-
+    newsTabWidgetSplitter_->restoreState(settings.value("NewsTabSplitterState").toByteArray());
+    const QString iconStr = AppSettings::newsToolBarIconSize.get();
+    mainWindow_->setToolBarIconSize(newsToolBar_, iconStr);
   }
 
   QModelIndex feedIndex = feedsModel_->indexById(feedId_);
 
   if (init) {
-
     if (type_ == TabTypeFeed) {
-      int displayEmbeddedImages = feedsModel_->dataField(feedIndex, "displayEmbeddedImages").toInt();
-      if (displayEmbeddedImages == 2) {
+      const int displayEmbeddedImages =
+          feedsModel_->dataField(feedIndex, "displayEmbeddedImages").toInt();
+      if (displayEmbeddedImages == 2)
         autoLoadImages_ = true;
-      } else if (displayEmbeddedImages == 1) {
+      else if (displayEmbeddedImages == 1)
         autoLoadImages_ = mainWindow_->autoLoadImages_;
-      } else {
+      else
         autoLoadImages_ = false;
-      }
     } else {
       autoLoadImages_ = mainWindow_->autoLoadImages_;
     }
-
-    articleView_->setFont(QFont(mainWindow_->newsTextFontFamily_, mainWindow_->newsTextFontSize_));
-    QPalette palette = articleView_->palette();
-    palette.setColor(QPalette::Base, QColor(mainWindow_->newsBackgroundColor_));
-    palette.setColor(QPalette::Text, QColor(mainWindow_->newsTextColor_));
-    articleView_->setPalette(palette);
     articleView_->setZoomFactor(qreal(mainWindow_->defaultZoomPages_)/100.0);
   }
+
+  refreshAppearance(!init);
   setAutoLoadImages(false);
 
-  if (type_ < TabTypeDownloads) {
-    newsView_->setAlternatingRowColors(mainWindow_->alternatingRowColorsNews_);
+  if (!newTab)
+    newsModel_->setFilter("feedId=-1");
+  newsHeader_->setColumns(feedIndex);
+  mainWindow_->slotUpdateStatus(feedId_, false);
+  mainWindow_->newsFilter_->setEnabled(type_ == TabTypeFeed);
+  separatorRAct_->setVisible(type_ == TabTypeDel);
+  mainWindow_->restoreNewsAct_->setVisible(type_ == TabTypeDel);
 
-    QPalette palette = newsView_->palette();
-    palette.setColor(QPalette::AlternateBase, mainWindow_->alternatingRowColors_);
-    newsView_->setPalette(palette);
-
-    if (!newTab)
-      newsModel_->setFilter("feedId=-1");
-    newsHeader_->setColumns(feedIndex);
-    mainWindow_->slotUpdateStatus(feedId_, false);
-    mainWindow_->newsFilter_->setEnabled(type_ == TabTypeFeed);
-    separatorRAct_->setVisible(type_ == TabTypeDel);
-    mainWindow_->restoreNewsAct_->setVisible(type_ == TabTypeDel);
-
-    switch (mainWindow_->newsLayout_) {
-    case 1:
-      newsWidget_->setVisible(false);
-      break;
-    default:
-      newsWidget_->setVisible(true);
-    }
+  switch (mainWindow_->newsLayout_) {
+  case 1:
+    newsWidget_->setVisible(false);
+    break;
+  default:
+    newsWidget_->setVisible(true);
   }
 }
 

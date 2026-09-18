@@ -25,6 +25,7 @@
 #include <QPrintDialog>
 #include <QPrintPreviewDialog>
 #include <QPrinter>
+#include <QSet>
 
 #include "categoriestreewidget.h"
 #include "feedsmodel.h"
@@ -71,6 +72,7 @@ public:
   void loadSettings();
   void saveSettings();
   void updateNewsActionStates(bool hasSelection, bool hasNews, bool hasArticle);
+  QString defaultColorForOption(int row) const;
 
   bool showSplashScreen_;
   bool showTrayIcon_;
@@ -181,6 +183,7 @@ public:
   QString alternatingRowColors_;
   QString notifierTextColor_;
   QString notifierBackgroundColor_;
+  QSet<int> customColorRows_;
   QString formatDate_;
   QString formatTime_;
 
@@ -338,7 +341,11 @@ private slots:
   void slotFeedNext();
   void setStyleApp(QAction*);
   void rebuildStyleMenu();
-  void applyStyleColors(bool dark, const QPalette &palette);
+  void applyThemeColors(bool clearOverrides);
+  void setThemeColorDefaults();
+  QString colorValueForOption(int row) const;
+  void setColorValueForOption(int row, const QString &value);
+  void refreshApplicationAppearance();
   void slotSwitchFocus();
   void slotSwitchPrevFocus();
   void slotOpenFeedNewTab();
