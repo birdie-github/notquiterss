@@ -15,6 +15,10 @@ Palette.Link=#58a6ff
 Palette.LinkVisited=#c58af9
 Palette.ToolTipBase=#202020
 Palette.ToolTipText=#f0f0f0
+Palette.Dark=#555555
+Palette.Mid=#3a393a
+Palette.Shadow=#202020
+Palette.BrightText=#ffffff
 */
 /* NotQuiteRSS OLED Style */
 
@@ -247,8 +251,8 @@ QMainWindow::separator {
 }
 
 QLineEdit {
-    border: 1px solid #101010;
-    background-color: #181818;
+    border: 1px solid #3a393a;
+    background-color: #555555;
     border-radius: 2px;
 }
 
@@ -258,15 +262,15 @@ QLineEdit:focus {
 }
 
 #pushButtonNull {
-    background: #101010;
+    background: #3a393a;
     border: none; 
     padding: 0px;
     min-width: 6px;
 }
 
 QPushButton {
-    border: 1px solid #101010;
-    background-color: #181818;
+    border: 1px solid #3a393a;
+    background-color: #555555;
     padding: 4px;
     border-radius: 2px;
     min-width: 80px;
@@ -278,8 +282,8 @@ QPushButton:focus {
 }
 
 #ToolButton {
-    border: 1px solid #101010;
-    background-color: #181818;
+    border: 1px solid #3a393a;
+    background-color: #555555;
     padding: 2px;
     border-radius: 2px;
 }
@@ -348,8 +352,8 @@ QGroupBox::title {
 }
 
 QComboBox {
-    border: 1px solid #101010;
-    background-color: #181818;
+    border: 1px solid #3a393a;
+    background-color: #555555;
     border-radius: 2px;
     padding: 2px;
     padding-left: 4px;
@@ -377,8 +381,8 @@ QComboBox::down-arrow:on {
 }
 
 QSpinBox {
-    border: 1px solid #101010;
-    background-color: #181818;
+    border: 1px solid #3a393a;
+    background-color: #555555;
     border-radius: 2px;
     padding: 2px;
     padding-left: 4px;

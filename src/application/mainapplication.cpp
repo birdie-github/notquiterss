@@ -345,10 +345,8 @@ void MainApplication::applyApplicationStyle(const QString &id)
     // Do not set an application palette while Automatic is already active:
     // leaving it native lets Qt propagate later platform palette changes.
     // Returning from a fixed theme needs one explicit restoration first.
-    if (!wasSystem) {
-      systemPalette_ = style()->standardPalette();
+    if (!wasSystem)
       setPalette(systemPalette_);
-    }
   } else {
     setPalette(ApplicationStyles::palette(selected, systemPalette_));
   }
