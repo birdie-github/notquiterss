@@ -20,6 +20,11 @@
 #include "aboutdialog.h"
 #include "articlecontent.h"
 #include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
+#include <QTextCharFormat>
+#include <QTextCursor>
+#include <QTextDocument>
 #include "mainapplication.h"
 #include "settings.h"
 #include "projectmetadata.h"
@@ -104,6 +109,19 @@ AboutDialog::AboutDialog(QWidget *parent) :
       portable = "(PortableApps)";
   }
   Settings settings;
+  const QString overridesPath = globals.overrides().path();
+  const bool overridesMissing = !QFileInfo::exists(overridesPath);
+  QString overridesTooltip;
+  if (overridesMissing) {
+    const QString sample = QDir::cleanPath(
+        QDir(mainApp->resourcesDir()).filePath("overrides.ini.sample"));
+    overridesTooltip = tr("File not found. Copy %1 to %2, then edit it and restart the application.")
+        .arg(QDir::toNativeSeparators(sample), QDir::toNativeSeparators(overridesPath));
+  } else if (!globals.overrides().error().isEmpty()) {
+    overridesTooltip = globals.overrides().error();
+  } else if (!globals.overrides().loaded()) {
+    overridesTooltip = tr("Restart the application to load this file.");
+  }
   QString information =
       "<table border=\"0\"><tr>"
       "<td>" + tr("Version") + " </td>"
@@ -128,12 +146,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
       "<td>" + settings.fileName() + "</td>"
       "</tr><tr>"
       "<td>" + tr("Using Overrides") + " </td>"
-      "<td>" + globals.overrides().path().toHtmlEscaped() + "</td>"
-      "</tr><tr>"
-      "<td>" + tr("Overrides status") + " </td>"
-      "<td>" + (globals.overrides().error().isEmpty()
-          ? (globals.overrides().loaded() ? tr("Loaded") : tr("No user file"))
-          : globals.overrides().error()).toHtmlEscaped() + "</td>"
+      "<td>" + overridesPath.toHtmlEscaped() + "</td>"
       "</tr><tr>"
       "<td>" + tr("Log file:") + " </td>"
       "<td>" + mainApp->dataDir() + ("/" + ProjectMetadata::log()) + "</td>"
@@ -142,6 +155,17 @@ AboutDialog::AboutDialog(QWidget *parent) :
   QTextEdit *informationTextEdit = new QTextEdit();
   informationTextEdit->setReadOnly(true);
   informationTextEdit->setText(information);
+  // QTextEdit displays character-format tooltips on hover. Keep the path
+  // selectable and avoid making it a link merely to provide a tooltip.
+  QTextCursor overridesCursor = informationTextEdit->document()->find(overridesPath);
+  if (!overridesCursor.isNull()) {
+    QTextCharFormat format;
+    format.setFontStrikeOut(overridesMissing);
+    if (!overridesTooltip.isEmpty())
+      format.setToolTip(QStringLiteral("<qt>") +
+                        overridesTooltip.toHtmlEscaped() + QStringLiteral("</qt>"));
+    overridesCursor.mergeCharFormat(format);
+  }
 
   QHBoxLayout *informationLayout = new QHBoxLayout();
   informationLayout->addWidget(informationTextEdit);
