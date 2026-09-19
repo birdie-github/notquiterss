@@ -86,3 +86,32 @@ Linux desktop launch/icon; and the macOS bundle's executable and version.
 Check that translations, styles, sharing icons and notification sounds still
 load from installed resources. No application build/runtime tests were performed
 when preparing this patch.
+
+## Initial subscriptions
+
+`default_feeds` is a build-time array in `project.json`. Each entry requires
+`enabled` (a JSON boolean), `title`, and `feed_url`. `website_url` is optional.
+URLs must be absolute HTTP(S) URLs without credentials. For example:
+
+```json
+"default_feeds": [
+  {
+    "enabled": true,
+    "title": "Hacker News: Best",
+    "feed_url": "https://hnrss.org/best",
+    "website_url": "https://news.ycombinator.com/best"
+  }
+]
+```
+
+The generator omits disabled entries from the compiled list. Enabled entries
+are inserted in array order at the root only when the database file was absent
+at startup. An empty array, or disabling every entry, creates no subscriptions.
+Existing databases, including those with no subscriptions, are left alone.
+Rebuild after changing the definitions; the application does not read this JSON
+at runtime. Duplicate enabled feed URLs are rejected at generation time.
+
+Icons are not configured here. After insertion, the existing favicon worker
+asynchronously inspects `website_url` (or `feed_url` when omitted). Feeds use the
+generic icon until discovery succeeds; failures do not block startup. No icon
+retry mechanism or database-to-disk save trigger is added.

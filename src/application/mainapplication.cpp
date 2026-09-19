@@ -115,6 +115,8 @@ MainApplication::MainApplication(int &argc, char **argv)
 
   qWarning() << "Run application 4";
   updateFeeds_ = new UpdateFeeds(mainWindow_);
+  // Favicon requests need the worker connections installed above.
+  mainWindow_->requestDefaultFeedIcons();
   setProgressSplashScreen(90);
   qWarning() << "Run application 5";
   mainWindow_->restoreFeedsOnStartUp();

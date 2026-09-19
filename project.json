@@ -23,6 +23,14 @@
     "sharing_icons": "social-networks",
     "root": "resources"
   },
+  "default_feeds": [
+    {
+      "enabled": true,
+      "title": "Hacker News: Best",
+      "feed_url": "https://hnrss.org/best",
+      "website_url": "https://news.ycombinator.com/best"
+    }
+  ],
   "files": {
     "database": "feeds.db",
     "log": "debug.log",

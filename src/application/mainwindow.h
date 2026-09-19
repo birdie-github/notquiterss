@@ -68,6 +68,7 @@ class MainWindow : public QMainWindow
 public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
+  void requestDefaultFeedIcons();
 
   void loadSettings();
   void saveSettings();
@@ -476,6 +477,7 @@ private:
   void creatFeedTab(int feedId, int feedParId);
   void initUpdateFeeds();
   void addDefaultFeed();
+  bool defaultFeedIconsPending_ = false;
 
   int addTab(NewsTabWidget *widget);
 

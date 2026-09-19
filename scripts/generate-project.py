@@ -31,9 +31,45 @@ def url(value, key):
     return value.rstrip('/')
 
 
+def default_feeds(entries):
+    if not isinstance(entries, list):
+        raise ValueError('default_feeds: expected an array')
+    result = []
+    urls = set()
+    for index, entry in enumerate(entries):
+        key = f'default_feeds[{index}]'
+        required = {'enabled', 'title', 'feed_url'}
+        if (not isinstance(entry, dict) or not required <= entry.keys()
+                or entry.keys() - (required | {'website_url'})):
+            raise ValueError(f'{key}: unexpected or missing key')
+        if type(entry['enabled']) is not bool:
+            raise ValueError(f'{key}.enabled: expected a boolean')
+        title = string(entry['title'], key + '.title')
+        urls_for_entry = []
+        for field in ('feed_url', 'website_url'):
+            value = entry.get(field, '')
+            if field == 'website_url' and value == '':
+                urls_for_entry.append('')
+                continue
+            string(value, key + '.' + field)
+            parsed = urlsplit(value)
+            if (parsed.scheme not in ('http', 'https') or not parsed.hostname
+                    or parsed.username is not None or parsed.password is not None
+                    or any(c.isspace() for c in value)):
+                raise ValueError(f'{key}.{field}: expected an HTTP(S) URL without credentials')
+            urls_for_entry.append(value)
+        if entry['enabled']:
+            feed_url, website_url = urls_for_entry
+            if feed_url in urls:
+                raise ValueError(f'{key}.feed_url: duplicate enabled feed')
+            urls.add(feed_url)
+            result.append(dict(title=title, feedUrl=feed_url, websiteUrl=website_url))
+    return result
+
+
 def load(source):
     data = json.loads((source / 'project.json').read_text(encoding='utf-8'))
-    allowed = {'identity', 'release', 'project', 'resources', 'files'}
+    allowed = {'identity', 'release', 'project', 'resources', 'files', 'default_feeds'}
     if set(data) != allowed:
         raise ValueError('project.json: unexpected or missing section')
     keys = {
@@ -46,6 +82,8 @@ def load(source):
         'files': {'database', 'log', 'cookies', 'last_feed', 'portable_marker', 'cache', 'backup'}
     }
     for section, values in data.items():
+        if section == 'default_feeds':
+            continue
         if not isinstance(values, dict) or set(values) - keys[section]:
             raise ValueError(f'{section}: unexpected key')
     identity, release, project = (data[k] for k in ('identity', 'release', 'project'))
@@ -80,6 +118,7 @@ def load(source):
         for key in sorted(keys[section]):
             output = ''.join([key.split('_')[0]] + [part.title() for part in key.split('_')[1:]])
             result[output] = component(data[section][key], section + '.' + key)
+    result['defaultFeeds'] = default_feeds(data['default_feeds'])
     return result
 
 
@@ -128,9 +167,17 @@ def generate(source, output):
     except (OSError, subprocess.CalledProcessError):
         revision = ''
     values['revision'] = revision
-    header = '#pragma once\n#include <QString>\n\nnamespace ProjectMetadata {\n'
+    feeds = values.pop('defaultFeeds')
+    header = '#pragma once\n#include <QString>\n#include <QList>\n\nnamespace ProjectMetadata {\n'
     for key, value in values.items():
         header += f'inline QString {key}() {{ return QStringLiteral({cpp(value)}); }}\n'
+    header += 'struct DefaultFeed { QString title; QString feedUrl; QString websiteUrl; };\n'
+    header += 'inline QList<DefaultFeed> defaultFeeds() { return {\n'
+    for feed in feeds:
+        fields = ', '.join(f'QStringLiteral({cpp(feed[key])})' for key in
+                           ('title', 'feedUrl', 'websiteUrl'))
+        header += '  {' + fields + '},\n'
+    header += '}; }\n'
     header += '} // namespace ProjectMetadata\n'
     write(output / 'projectmetadata.h', header)
     rc = '#pragma once\n'

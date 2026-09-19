@@ -7452,29 +7452,55 @@ void MainWindow::addDefaultFeed()
 {
   if (mainApp->dbFileExists()) return;
 
-  QPixmap icon(":/images/ycombinator256");
-  QByteArray iconData;
-  QBuffer buffer(&iconData);
-  buffer.open(QIODevice::WriteOnly);
-  icon.save(&buffer, "PNG");
-  buffer.close();
+  const auto feeds = ProjectMetadata::defaultFeeds();
+  if (feeds.isEmpty()) return;
+  if (!db_.transaction()) {
+    qWarning() << "Cannot begin default feed transaction:" << db_.lastError().text();
+    return;
+  }
 
-  QString xmlUrl = "https://hnrss.org/best";
-
-  QSqlQuery q;
-  q.prepare("INSERT INTO feeds(text, title, xmlUrl, htmlUrl, created, parentId, rowToParent, image) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
-  q.addBindValue("Hacker News: Best");
-  q.addBindValue("Hacker News: Best");
-  q.addBindValue(xmlUrl);
-  q.addBindValue("https://news.ycombinator.com/best");
-  q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-  q.addBindValue(0);
-  q.addBindValue(0);
-  q.addBindValue(iconData.toBase64());
-  q.exec();
-
+  QSqlQuery q(db_);
+  if (!q.prepare("INSERT INTO feeds(text, title, xmlUrl, htmlUrl, created, parentId, rowToParent) "
+                 "VALUES(?, ?, ?, ?, ?, ?, ?)")) {
+    qWarning() << "Cannot prepare default feed insertion:" << q.lastError().text();
+    db_.rollback();
+    return;
+  }
+  const QString created = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+  int row = 0;
+  for (const auto &feed : feeds) {
+    q.bindValue(0, feed.title);
+    q.bindValue(1, feed.title);
+    q.bindValue(2, feed.feedUrl);
+    q.bindValue(3, feed.websiteUrl);
+    q.bindValue(4, created);
+    q.bindValue(5, 0);
+    q.bindValue(6, row++);
+    if (!q.exec()) {
+      qWarning() << "Cannot insert default feed:" << q.lastError().text();
+      q.finish();
+      db_.rollback();
+      return;
+    }
+  }
+  q.finish();
+  if (!db_.commit()) {
+    qWarning() << "Cannot commit default feeds:" << db_.lastError().text();
+    db_.rollback();
+    return;
+  }
+  defaultFeedIconsPending_ = true;
   feedsModelReload();
+}
+
+void MainWindow::requestDefaultFeedIcons()
+{
+  if (!defaultFeedIconsPending_) return;
+  defaultFeedIconsPending_ = false;
+  for (const auto &feed : ProjectMetadata::defaultFeeds()) {
+    const QString website = feed.websiteUrl.isEmpty() ? feed.feedUrl : feed.websiteUrl;
+    emit faviconRequestUrl(website, feed.feedUrl);
+  }
 }
 
 void MainWindow::createBackup()

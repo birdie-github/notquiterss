@@ -69,6 +69,40 @@ class GeneratorTests(unittest.TestCase):
         self.generate()
         self.assertEqual(before, {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before})
 
+    def test_default_feeds(self):
+        self.data['default_feeds'] = [
+            {'enabled': True, 'title': 'First "feed"',
+             'feed_url': 'https://example.org/rss/?a=1&b=2'},
+            {'enabled': False, 'title': 'Disabled feed',
+             'feed_url': 'https://disabled.example/rss'},
+            {'enabled': True, 'title': 'Second feed',
+             'feed_url': 'http://example.net/rss',
+             'website_url': 'https://example.net/'}]
+        self.generate()
+        header = (self.output / 'projectmetadata.h').read_text()
+        self.assertIn('https://example.org/rss/?a=1&b=2', header)
+        self.assertIn('https://example.net/', header)
+        self.assertNotIn('Disabled feed', header)
+        self.assertNotIn('disabled.example', header)
+        self.assertLess(header.index('example.org/rss'), header.index('example.net/rss'))
+        for entries in ([], [dict(self.data['default_feeds'][0], enabled=False)]):
+            self.data['default_feeds'] = entries
+            self.generate()
+            header = (self.output / 'projectmetadata.h').read_text()
+            self.assertIn('defaultFeeds() { return {\n}; }', header)
+
+    def test_invalid_default_feeds(self):
+        valid = {'enabled': True, 'title': 'Feed', 'feed_url': 'https://example.org/rss'}
+        for entries in ({}, [dict(valid, enabled='false')],
+                        [dict(valid, feed_url='file:///tmp/feed')],
+                        [dict(valid, website_url='https://user:pass@example.org/')],
+                        [dict(valid, title='')], [dict(valid, unexpected=True)],
+                        [valid, valid]):
+            with self.subTest(entries=entries):
+                self.data['default_feeds'] = entries
+                with self.assertRaises(ValueError):
+                    self.generate()
+
     def test_invalid_metadata(self):
         original = json.loads(json.dumps(self.data))
         for section, key, value in [('identity', 'name', '../bad'),
