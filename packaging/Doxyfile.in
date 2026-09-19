@@ -45,7 +45,7 @@ PROJECT_BRIEF          = "@META_name@ is an open-source cross-platform RSS/Atom 
 # exceed 55 pixels and the maximum width should not exceed 200 pixels. 
 # Doxygen will copy the logo to the output directory.
 
-PROJECT_LOGO           = @META_root@/images/logo.png
+PROJECT_LOGO           = @META_root@/embedded/icons/logo.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 

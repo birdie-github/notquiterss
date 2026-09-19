@@ -35,7 +35,7 @@ include($$PROJECT_GENERATED_DIR/project.pri)
 INCLUDEPATH += $$PROJECT_GENERATED_DIR
 VERSION = $$PROJECT_VERSION
 # qmake includes these inputs in its Makefile regeneration dependencies.
-QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in) $$files($$PWD/$${PROJECT_RESOURCE_ROOT}/images/*/quiterss.png) $$PWD/$${PROJECT_RESOURCE_ROOT}/images/application.ico
+QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in) $$files($$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/*/quiterss.png) $$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/application.ico
 DISTFILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in)
 
 # Invoke the matching qmake; this option validates, rather than switches, its Qt.
@@ -301,7 +301,7 @@ mac {
   QMAKE_APPLICATION_BUNDLE_NAME = $$PROJECT_NAME
 
   QMAKE_INFO_PLIST = $$PROJECT_GENERATED_DIR/Info.plist
-  ICON = $$PWD/$${PROJECT_RESOURCE_ROOT}/images/application.icns
+  ICON = $$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/application.icns
 
   bundle_target.files += AUTHORS
   bundle_target.files += COPYING

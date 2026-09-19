@@ -8,8 +8,10 @@ root's style directory. With the supplied project metadata:
 - macOS: `NotQuiteRSS.app/Contents/Resources/styles`.
 
 All three platforms deploy this directory through qmake's normal install/bundle
-rules. Article `.css` files remain deployed, but do not appear in Application
-Style.
+rules. Source themes live in `resources/external/themes/`; staging maps them
+to the existing installed `styles/` directory. Mandatory System QSS,
+indicator CSS and article CSS live in `resources/embedded/styles/` and
+are embedded only.
 
 The bundled choices deliberately have simple semantics:
 
@@ -73,9 +75,8 @@ OS palette. Qt 5.12+ placeholder text and Qt 6.6+ accent are likewise derived.
 This gives application code one effective palette without hardcoding theme IDs.
 
 `Default=true` selects a style only when no preference has been saved. The
-bundled System style is the fresh-install default. The embedded System
-QSS is also used as the always-available fallback when the external file or
-style directory is missing.
+built-in System style is the fresh-install default and always-available
+fallback when the external style directory is missing.
 
 ## Color overrides
 

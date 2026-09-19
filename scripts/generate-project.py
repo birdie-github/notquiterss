@@ -73,7 +73,7 @@ def load(source):
         ('issues', 'issuesUrl', repository + '/issues'),
         ('releases', 'releasesUrl', repository + '/releases'),
         ('original_project', 'originalProjectUrl', project['original_project']),
-        ('translations', 'translationsUrl', repository + '/tree/HEAD/' + data['resources']['root'] + '/' + data['resources']['translations']),
+        ('translations', 'translationsUrl', repository + '/tree/HEAD/' + data['resources']['root'] + '/external/' + data['resources']['translations']),
         ('update_endpoint', 'updateEndpoint', 'https://api.github.com/repos' + parsed.path + '/releases/latest')):
         result[output] = url(project.get(key, default), 'project.' + key)
     for section in ('resources', 'files'):
@@ -153,10 +153,10 @@ def generate(source, output):
         template = (source / 'packaging' / (filename + '.in')).read_text(encoding='utf-8')
         write(output / filename, render(template, values, transform))
     template = (source / 'packaging/application.rc.in').read_text(encoding='utf-8')
-    write(output / 'application.rc', template.replace('@ICON_FILE@', str(source / values['root'] / 'images' / 'application.ico').replace('\\', '/').replace('"', '\\"')))
+    write(output / 'application.rc', template.replace('@ICON_FILE@', str(source / values['root'] / 'external' / 'icons' / 'application.ico').replace('\\', '/').replace('"', '\\"')))
     for size in (16, 32, 48, 64, 128, 256):
         write(output / 'icons' / str(size) / (values['name'] + '.png'),
-              (source / values['root'] / 'images' / f'{size}x{size}' / 'quiterss.png').read_bytes())
+              (source / values['root'] / 'external' / 'icons' / f'{size}x{size}' / 'quiterss.png').read_bytes())
     # Give install sets the desired public filenames without renaming source templates.
     write(output / (values['name'] + '.desktop'), (output / 'application.desktop').read_bytes())
     write(output / (values['bundleId'] + '.metainfo.xml'), (output / 'appdata.xml').read_bytes())

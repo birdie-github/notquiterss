@@ -9,17 +9,19 @@ import shutil
 def resource_files(source, build, allow_missing=False):
     metadata = json.loads((source / 'project.json').read_text(encoding='utf-8'))
     names = metadata['resources']
-    root = source / names['root']
+    root = source / names['root'] / 'external'
     files = {}
     files[Path('overrides.ini.sample')] = root / 'overrides.ini.sample'
-    # HTML and UI images are compiled by app.qrc. Every other resource directory
-    # is external; new files/subdirectories need no per-platform packaging list.
+    # Only this subtree is installed. Keep existing runtime directory names;
+    # source themes are still discovered in the installed styles directory.
     for directory in sorted(root.iterdir()):
-        if not directory.is_dir() or directory.name in ('html', 'images', names['translations']):
+        if not directory.is_dir() or directory.name == names['translations']:
             continue
         for path in sorted(directory.rglob('*')):
             if path.is_file() and path.suffix.lower() not in ('.md', '.pri', '.bat'):
-                files[path.relative_to(root)] = path
+                relative = path.relative_to(directory)
+                destination = names['styles'] if directory.name == 'themes' else directory.name
+                files[Path(destination) / relative] = path
     translations = root / names['translations']
     files[Path(names['translations']) / 'languages.ini'] = translations / 'languages.ini'
     for path in translations.glob('*.qm'):

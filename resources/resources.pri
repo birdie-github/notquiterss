@@ -1,5 +1,5 @@
 # One external resource stage, shared by Linux install, Windows and macOS bundles.
-RESOURCE_SOURCE_DIR = $$PWD
+RESOURCE_SOURCE_DIR = $$PWD/external
 PROJECT_SOURCE_DIR = $$clean_path($$PWD/..)
 RESOURCE_STAGE_DIR = $$BUILD_DIR/$$PROJECT_RESOURCE_ROOT
 RESOURCE_STAMP = $$BUILD_DIR/resources.stamp
@@ -31,7 +31,7 @@ runtime_stage.depends = $$files($$RESOURCE_SOURCE_DIR/*, true) $$LANG_QM_FILES $
 runtime_stage.commands = $$RESOURCE_COMMAND --stamp $$shell_quote($$RESOURCE_STAMP)
 QMAKE_EXTRA_TARGETS += runtime_stage
 PRE_TARGETDEPS += $$RESOURCE_STAMP
-DISTFILES += $$RESOURCE_SCRIPT $$files($$RESOURCE_SOURCE_DIR/*, true)
+DISTFILES += $$RESOURCE_SCRIPT $$files($$PWD/*, true)
 
 runtime_resources.files = $$files($$RESOURCE_STAGE_DIR/*)
 unix:!mac {

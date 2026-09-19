@@ -1,9 +1,9 @@
 Build dependencies
 ==================
 Translation catalogs are external runtime files. Restore NotQuiteRSS_*.ts into
-resources/translations/ before running qmake to build them with the matching Qt lrelease tool.
+resources/external/translations/ before running qmake to build them with the matching Qt lrelease tool.
 Precompiled .qm files can also be installed or added by users without rebuilding.
-See resources/translations/README.md for discovery paths, optional metadata and installation.
+See resources/external/translations/README.md for discovery paths, optional metadata and installation.
 
   C++17-capable GCC or Clang and make (Windows recipe: MSYS2 UCRT64 GCC)
   SQLite 3.36.0 or newer with the memdb VFS, including development headers and sqlite3.pc
@@ -288,4 +288,4 @@ need these runtime checks; compilation alone cannot establish them.
 Application styles
 ==================
 The normal install/bundle targets deploy the style directory on every platform.
-For runtime discovery, QSS metadata, paths and testing, see resources/styles/README.md.
+For runtime discovery, QSS metadata, paths and testing, see resources/external/themes/README.md.

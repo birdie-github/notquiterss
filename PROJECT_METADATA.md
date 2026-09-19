@@ -63,7 +63,7 @@ history requests and Windows updater-launch path have been removed.
 `resources` contains shared directory/file names, not lists of resources.
 Translations and sharing remain runtime-discoverable external resources;
 existing styles and sounds retain their current installation/loading behavior.
-Application Style discovers QSS files at runtime; see `resources/styles/README.md`. Renaming a
+Application Style discovers QSS files at runtime; see `resources/external/themes/README.md`. Renaming a
 resource directory in the definition requires renaming its source directory too.
 User choices and preference keys remain in the settings system.
 

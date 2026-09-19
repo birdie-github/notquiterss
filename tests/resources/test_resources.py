@@ -24,10 +24,10 @@ class ResourceTests(unittest.TestCase):
         shutil.copytree(ROOT / 'resources', self.source / 'resources')
 
     def test_external_resources_and_deployment(self):
-        root = self.source / 'resources'
-        (root / 'styles/extra').mkdir()
-        (root / 'styles/extra/decoration.png').write_bytes(b'extra image')
-        (root / 'styles/added.qss').write_text('QWidget {color: red;}')
+        root = self.source / 'resources/external'
+        (root / 'themes/extra').mkdir()
+        (root / 'themes/extra/decoration.png').write_bytes(b'extra image')
+        (root / 'themes/added.qss').write_text('QWidget {color: red;}')
         output = stage.stage(self.source, self.build)
         self.assertTrue((output / 'sounds/notification.wav').is_file())
         self.assertEqual((output / 'overrides.ini.sample').read_bytes(),
@@ -37,6 +37,13 @@ class ResourceTests(unittest.TestCase):
         self.assertTrue((output / 'styles/extra/decoration.png').is_file())
         self.assertFalse((output / 'images').exists())
         self.assertFalse((output / 'html').exists())
+        self.assertFalse((output / 'embedded').exists())
+        self.assertFalse((output / 'external').exists())
+        self.assertFalse((output / 'styles/automatic.qss').exists())
+        self.assertFalse((output / 'styles/news.css').exists())
+        self.assertFalse((output / 'styles/fixed-indicators.css').exists())
+        self.assertTrue((output / 'styles/light.qss').is_file())
+        self.assertTrue((output / 'icons/application.ico').is_file())
         self.assertFalse(list(output.rglob('*.md')))
         installed = Path(self.temp.name) / 'installed'
         shutil.copytree(output, installed / 'resources')
@@ -44,12 +51,12 @@ class ResourceTests(unittest.TestCase):
         (installed / 'resources/styles/added.qss').unlink()
         with self.assertRaises(ValueError):
             stage.verify(self.source, self.build, installed)
-        (root / 'styles/added.qss').unlink()
+        (root / 'themes/added.qss').unlink()
         stage.stage(self.source, self.build)
         self.assertFalse((output / 'styles/added.qss').exists())
 
     def test_translation_compilation_contract(self):
-        translations = self.source / 'resources/translations'
+        translations = self.source / 'resources/external/translations'
         (translations / 'NotQuiteRSS_xx.qm').write_bytes(b'prebuilt')
         (translations / 'NotQuiteRSS_yy.qm').write_bytes(b'old prebuilt')
         (translations / 'NotQuiteRSS_yy.ts').write_text('<TS/>')
@@ -65,10 +72,10 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse(list(output.rglob('*.ts')))
 
     def test_source_guard(self):
-        before = (self.source / 'resources/images/logo.png').read_bytes()
+        before = (self.source / 'resources/embedded/icons/logo.png').read_bytes()
         with self.assertRaises(ValueError):
             stage.stage(self.source, self.source)
-        self.assertEqual((self.source / 'resources/images/logo.png').read_bytes(), before)
+        self.assertEqual((self.source / 'resources/embedded/icons/logo.png').read_bytes(), before)
 
     def test_qrc_paths_and_aliases(self):
         seen = set()
