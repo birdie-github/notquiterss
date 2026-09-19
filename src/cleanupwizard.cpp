@@ -146,24 +146,24 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   QWizardPage *page = new QWizardPage;
   page->setTitle(tr("Clean Up Options"));
 
-  dayCleanUpOn_ = new QCheckBox(tr("Maximum age of news in days to keep:"));
+  dayCleanUpOn_ = new QCheckBox(tr("Maximum article age to keep (days):"));
   maxDayCleanUp_ = new QSpinBox();
   maxDayCleanUp_->setEnabled(false);
   maxDayCleanUp_->setRange(0, 9999);
   connect(dayCleanUpOn_, SIGNAL(toggled(bool)),
           maxDayCleanUp_, SLOT(setEnabled(bool)));
 
-  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of news to keep:"));
+  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
   maxNewsCleanUp_ = new QSpinBox();
   maxNewsCleanUp_->setEnabled(false);
   maxNewsCleanUp_->setRange(0, 9999);
   connect(newsCleanUpOn_, SIGNAL(toggled(bool)),
           maxNewsCleanUp_, SLOT(setEnabled(bool)));
 
-  readCleanUp_ = new QCheckBox(tr("Delete read news"));
-  neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread news"));
-  neverStarCleanUp_ = new QCheckBox(tr("Never delete starred news"));
-  neverLabelCleanUp_ = new QCheckBox(tr("Never delete labeled news"));
+  readCleanUp_ = new QCheckBox(tr("Delete read articles"));
+  neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread articles"));
+  neverStarCleanUp_ = new QCheckBox(tr("Never delete starred articles"));
+  neverLabelCleanUp_ = new QCheckBox(tr("Never delete labeled articles"));
 
   QGridLayout *cleanUpFeedsLayout = new QGridLayout();
   cleanUpFeedsLayout->setColumnStretch(1, 1);
@@ -177,12 +177,12 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   cleanUpFeedsLayout->addWidget(neverLabelCleanUp_, 5, 0, 1, 1);
 
   cleanUpDeleted_ = new QCheckBox(tr("Clean up 'Deleted'"));
-  fullCleanUp_ = new QCheckBox(tr("Purge DB"));
+  fullCleanUp_ = new QCheckBox(tr("Purge database"));
   QVBoxLayout *fullCleanUpDescriptionLayout = new QVBoxLayout;
   fullCleanUpDescriptionLayout->setContentsMargins(15, 0, 0, 0);
   fullCleanUpDescriptionLayout->addWidget(
-        new QLabel(tr("Totally remove records that had marked 'deleted' from DB.\n"
-                      "Ancient news could reappear")));
+        new QLabel(tr("Permanently remove records marked as deleted from the database.\n"
+                      "Deleted articles may be downloaded again.")));
 
   progressBar_ = new QProgressBar(this);
   progressBar_->setObjectName("progressBar_");
@@ -330,6 +330,6 @@ void CleanUpWizard::finishCleanUp(int countDeleted)
   accept();
 
   QMessageBox::information(this, tr("Information"),
-                           tr("Clean Up wizard deleted %1 news").
+                           tr("Cleanup wizard deleted %1 articles").
                            arg(countDeleted));
 }

@@ -1580,7 +1580,7 @@ void NewsTabWidget::loadNewspaper(int refresh)
       QString starAction = QString("<span class=\"star-action\">"
                                    "<a href=\"quiterss://star.action.ui?#%1\" title='%3'>"
                                    "<img width='16' height='16' class='quiterss-img' id=\"starAction%1\" src=\"%2\"/></a></span>").
-          arg(newsId).arg(iconStr).arg(tr("Mark News Star"));
+          arg(newsId).arg(iconStr).arg(tr("Star Article"));
       QString labelsMenu = QString("<span class=\"labels-menu\">"
                                    "<a href=\"quiterss://labels.menu.ui?#%1\" title='%2'>"
                                    "<img width='16' height='16' class='quiterss-img' id=\"labelsMenu%1\" src=\"qrc:/images/label_5\"/></a></span>").

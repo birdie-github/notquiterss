@@ -430,7 +430,7 @@ void RequestFeed::slotRequestTimeout()
         if (count < numberRepeats_) {
           emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
         } else {
-          emit getUrlDone(-3, feedId, feedUrl, tr("Request timeout!"));
+          emit getUrlDone(-3, feedId, feedUrl, tr("Request timed out"));
         }
       }
     } else {

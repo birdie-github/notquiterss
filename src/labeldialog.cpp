@@ -154,7 +154,7 @@ void LabelDialog::loadIcon()
   if (fileName.isNull()) return;
 
   QMessageBox msgBox(this);
-  msgBox.setText(tr("Load icon: can't open a file!"));
+  msgBox.setText(tr("Could not open the icon file."));
   msgBox.setIcon(QMessageBox::Warning);
 
   QFile file(fileName);

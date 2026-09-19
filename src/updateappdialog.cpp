@@ -57,7 +57,7 @@ UpdateAppDialog::UpdateAppDialog(QWidget *parent, bool show)
       if (ArticleContent::isExternalLink(url)) mainApp->openExternalUrl(url);
     });
 
-    remindAboutVersion_ = new QCheckBox(tr("Don't remind about this version"), this);
+    remindAboutVersion_ = new QCheckBox(tr("Don't remind me about this version"), this);
     remindAboutVersion_->setChecked(settings.value("remindAboutVersion", false).toBool());
     remindAboutVersion_->hide();
 
@@ -114,18 +114,18 @@ void UpdateAppDialog::finishUpdatesChecking()
           + QString("<p><a href=\"%1\">%2</a></p>")
               .arg(ProjectMetadata::releasesUrl().toHtmlEscaped(), tr("Click here to go to the download page"));
     } else {
-      info = tr("You already have the latest version");
+      info = tr("You already have the latest version.");
     }
     info.prepend(QString("<p>%1 <b>%2</b><br>%3 <b>%4</b></p>")
-                     .arg(tr("Your version is:"), QCoreApplication::applicationVersion().toHtmlEscaped(),
-                          tr("Current version is:"), release.version.toHtmlEscaped()));
+                     .arg(tr("You're running version"), QCoreApplication::applicationVersion().toHtmlEscaped(),
+                          tr("The latest version is"), release.version.toHtmlEscaped()));
     if (showDialog_) history_->setPlainText(release.notes);
   } else if (status == 404) {
     info = tr("No published release is available at the configured update endpoint.");
     if (showDialog_) history_->clear();
   } else {
     qWarning() << "Error checking updates" << status << reply_->errorString();
-    info = tr("Error checking updates");
+    info = tr("Error checking for updates");
     if (showDialog_) history_->clear();
   }
 

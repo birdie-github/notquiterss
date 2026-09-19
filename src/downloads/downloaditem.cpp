@@ -281,7 +281,7 @@ void DownloadItem::finished()
 QString DownloadItem::remaingTimeToString(QTime time)
 {
   if (time < QTime(0, 0, 10)) {
-    return tr("few seconds");
+    return tr("a few seconds");
   } else if (time < QTime(0, 1)) {
     return time.toString("s") + " " + tr("seconds");
   } else if (time < QTime(1, 0)) {
@@ -340,9 +340,9 @@ void DownloadItem::updateInfo()
   QString fileSize = fileSizeToString(total_);
 
   if (fileSize == tr("Unknown size")) {
-    downloadInfo_->setText(tr("%2 - unknown size (%3)").arg(curSize, speed));
+    downloadInfo_->setText(tr("%2 - size unknown (%3)").arg(curSize, speed));
   } else {
-    downloadInfo_->setText(tr("Remaining %1 - %2 of %3 (%4)").arg(remTime, curSize, fileSize, speed));
+    downloadInfo_->setText(tr("%1 remaining - %2 of %3 (%4)").arg(remTime, curSize, fileSize, speed));
   }
 }
 
@@ -372,7 +372,7 @@ void DownloadItem::stop(bool askForDeleteFile)
     QMessageBox::StandardButton button =
         QMessageBox::question(item_->listWidget()->parentWidget(),
                               tr("Delete file"),
-                              tr("Do you want to also delete downloaded file?"),
+                              tr("Do you also want to delete the downloaded file?"),
                               QMessageBox::Yes | QMessageBox::No);
     if (button == QMessageBox::Yes) {
       QFile::remove(outputfile);
@@ -395,7 +395,7 @@ void DownloadItem::customContextMenuRequested(const QPoint &pos)
   menu.addSeparator();
   menu.addAction(tr("Copy Download Link"), this, SLOT(copyDownloadLink()));
   menu.addSeparator();
-  menu.addAction(tr("Cancel Downloading"), this, SLOT(stop()))->setEnabled(downloading_);
+  menu.addAction(tr("Cancel Download"), this, SLOT(stop()))->setEnabled(downloading_);
   menu.addAction(tr("Remove"), this, SLOT(clear()))->setEnabled(!downloading_);
 
   if (downloading_ || downloadInfo_->text().startsWith(tr("Cancelled")) || downloadInfo_->text().startsWith(tr("Error"))) {
@@ -426,7 +426,7 @@ void DownloadItem::openFile()
   } else {
     QMessageBox::warning(item_->listWidget()->parentWidget(),
                          tr("Not found"),
-                         tr("Sorry, the file \n %1 \n was not found!").arg(info.absoluteFilePath()));
+                         tr("The file was not found:\n%1").arg(info.absoluteFilePath()));
   }
 }
 

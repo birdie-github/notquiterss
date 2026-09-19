@@ -310,7 +310,7 @@ void FilterRulesDialog::acceptDialog()
 {
   if (filterName_->text().isEmpty()) {
     filterName_->setFocus();
-    textWarning_->setText(tr("Please enter name for the filter."));
+    textWarning_->setText(tr("Please enter a name for the filter."));
     warningWidget_->setVisible(true);
     return;
   }
@@ -322,7 +322,7 @@ void FilterRulesDialog::acceptDialog()
       if ((itemCondition->comboBox1_->currentIndex() != 4) &&
           itemCondition->lineEdit_->text().isEmpty()) {
         itemCondition->lineEdit_->setFocus();
-        textWarning_->setText(tr("Please enter search condition for the news filter."));
+        textWarning_->setText(tr("Please enter a search condition for the article filter."));
         warningWidget_->setVisible(true);
         return;
       }

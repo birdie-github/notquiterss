@@ -2300,7 +2300,7 @@ void MainWindow::deleteItemFeedsTree()
   QMessageBox msgBox(this);
   msgBox.setIcon(QMessageBox::Question);
   msgBox.setWindowTitle(tr("Confirm Delete"));
-  msgBox.setText(tr("Are you sure to delete selected elements?"));
+  msgBox.setText(tr("Are you sure you want to delete the selected items?"));
   msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
   msgBox.setDefaultButton(QMessageBox::No);
 
@@ -2405,9 +2405,9 @@ void MainWindow::deleteItemFeedsTree()
  *---------------------------------------------------------------------------*/
 void MainWindow::slotImportFeeds()
 {
-  QString fileName = QFileDialog::getOpenFileName(this, tr("Select OPML-File"),
+  QString fileName = QFileDialog::getOpenFileName(this, tr("Select OPML File"),
                                                   QDir::homePath(),
-                                                  QString(tr("OPML-Files (*.%1 *.%2)"))
+                                                  QString(tr("OPML Files (*.%1 *.%2)"))
                                                   .arg("opml").arg("xml"));
 
   if (fileName.isNull()) {
@@ -2419,7 +2419,7 @@ void MainWindow::slotImportFeeds()
 
   QFile file(fileName);
   if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    statusBar()->showMessage(tr("Import: can't open a file"), 3000);
+    statusBar()->showMessage(tr("Import: could not open file"), 3000);
     return;
   }
 
@@ -2434,9 +2434,9 @@ void MainWindow::slotImportFeeds()
  *---------------------------------------------------------------------------*/
 void MainWindow::slotExportFeeds()
 {
-  QString fileName = QFileDialog::getSaveFileName(this, tr("Select OPML-File"),
+  QString fileName = QFileDialog::getSaveFileName(this, tr("Select OPML File"),
                                                   QDir::homePath(),
-                                                  QString(tr("OPML-Files (*.%1)"))
+                                                  QString(tr("OPML Files (*.%1)"))
                                                   .arg("opml"));
 
   if (fileName.isNull()) {
@@ -2446,7 +2446,7 @@ void MainWindow::slotExportFeeds()
 
   QFile file(fileName);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-    statusBar()->showMessage(tr("Export: can't open a file"), 3000);
+    statusBar()->showMessage(tr("Export: could not open file"), 3000);
     return;
   }
 
@@ -4247,9 +4247,9 @@ void MainWindow::retranslateStrings()
   str = trayIconController_->toolTip();
   QString info =
       QGuiApplication::applicationDisplayName() + "\n" +
-      QString(tr("New News: %1")).arg(str.section(": ", 1).section("\n", 0, 0)) +
+      QString(tr("New Articles: %1")).arg(str.section(": ", 1).section("\n", 0, 0)) +
       QString("\n") +
-      QString(tr("Unread News: %1")).arg(str.section(": ", 2));
+      QString(tr("Unread Articles: %1")).arg(str.section(": ", 2));
   trayIconController_->setToolTip(info);
 
   mainMenuButton_->setToolTip(tr("Menu"));
@@ -4287,23 +4287,23 @@ void MainWindow::retranslateStrings()
   updateAllFeedsAct_->setText(tr("Update All"));
   updateAllFeedsAct_->setToolTip(tr("Update All Feeds"));
 
-  stopUpdateAct_->setText(tr("Stop Update Feeds"));
-  stopUpdateAct_->setToolTip(tr("Stop Update Feeds"));
+  stopUpdateAct_->setText(tr("Stop Updating Feeds"));
+  stopUpdateAct_->setToolTip(tr("Stop Updating Feeds"));
 
   markAllFeedsRead_->setText(tr("Mark All Feeds Read"));
 
-  markNewsRead_->setText(tr("Mark Read/Unread"));
-  markNewsRead_->setToolTip(tr("Mark Current News Read/Unread"));
+  markNewsRead_->setText(tr("Mark Article Read/Unread"));
+  markNewsRead_->setToolTip(tr("Mark Current Article Read/Unread"));
 
-  markAllNewsRead_->setText(tr("Mark All News Read"));
-  markAllNewsRead_->setToolTip(tr("Mark All News Read"));
+  markAllNewsRead_->setText(tr("Mark All Articles Read"));
+  markAllNewsRead_->setToolTip(tr("Mark All Articles Read"));
 
   showDownloadManagerAct_->setText(tr("Downloads"));
 
   showCleanUpWizardAct_->setText(tr("Clean Up..."));
 
-  setNewsFiltersAct_->setText(tr("News Filters..."));
-  setFilterNewsAct_->setText(tr("Filter News..."));
+  setNewsFiltersAct_->setText(tr("Article Filters..."));
+  setFilterNewsAct_->setText(tr("Filter Articles..."));
 
   optionsAct_->setText(tr("Options..."));
   optionsAct_->setToolTip(tr("Open Options Dialog"));
@@ -4331,22 +4331,22 @@ void MainWindow::retranslateStrings()
   updateAppAct_->setText(tr("Check for Updates..."));
   reportProblemAct_->setText(tr("Report a Problem..."));
 
-  openDescriptionNewsAct_->setText(tr("Open News"));
-  openDescriptionNewsAct_->setToolTip(tr("Open News Description"));
+  openDescriptionNewsAct_->setText(tr("Open Article"));
+  openDescriptionNewsAct_->setToolTip(tr("Open Article Description"));
   openInExternalBrowserAct_->setText(tr("Open"));
   openInExternalBrowserAct_->setToolTip(tr("Open"));
   markStarAct_->setText(tr("Star"));
-  markStarAct_->setToolTip(tr("Mark News Star"));
+  markStarAct_->setToolTip(tr("Star Article"));
   deleteNewsAct_->setText(tr("Delete"));
-  deleteNewsAct_->setToolTip(tr("Delete Selected News"));
-  deleteAllNewsAct_->setText(tr("Delete All News"));
-  deleteAllNewsAct_->setToolTip(tr("Delete All News from List"));
+  deleteNewsAct_->setToolTip(tr("Delete Selected Articles"));
+  deleteAllNewsAct_->setText(tr("Delete All Articles"));
+  deleteAllNewsAct_->setToolTip(tr("Delete All Articles from List"));
   restoreNewsAct_->setText(tr("Restore"));
-  restoreNewsAct_->setToolTip(tr("Restore News"));
+  restoreNewsAct_->setToolTip(tr("Restore Article"));
   copyLinkAct_->setText(tr("Copy Link"));
-  copyLinkAct_->setToolTip(tr("Copy News Link"));
+  copyLinkAct_->setToolTip(tr("Copy Article Link"));
 
-  restoreLastNewsAct_->setText(tr("Restore last deleted news"));
+  restoreLastNewsAct_->setText(tr("Restore Last Deleted Article"));
 
   markFeedRead_->setText(tr("Mark Read"));
   markFeedRead_->setToolTip(tr("Mark Feed Read"));
@@ -4389,29 +4389,29 @@ void MainWindow::retranslateStrings()
 
   feedKeyUpAct_->setText(tr("Previous Feed"));
   feedKeyDownAct_->setText(tr("Next Feed"));
-  newsKeyUpAct_->setText(tr("Previous News"));
-  newsKeyDownAct_->setText(tr("Next News"));
-  newsKeyPageUpAct_->setText(tr("News Page Up"));
-  newsKeyPageDownAct_->setText(tr("News Page Down"));
+  newsKeyUpAct_->setText(tr("Previous Article"));
+  newsKeyDownAct_->setText(tr("Next Article"));
+  newsKeyPageUpAct_->setText(tr("Article Page Up"));
+  newsKeyPageDownAct_->setText(tr("Article Page Down"));
 
-  nextUnreadNewsAct_->setText(tr("Next Unread News"));
-  prevUnreadNewsAct_->setText(tr("Previous Unread News"));
+  nextUnreadNewsAct_->setText(tr("Next Unread Article"));
+  prevUnreadNewsAct_->setText(tr("Previous Unread Article"));
 
   switchFocusAct_->setText(tr("Switch Focus to Next Panel"));
   switchFocusAct_->setToolTip(
-        tr("Switch Focus to Next Panel (Tree Feeds, List News, Browser)"));
+        tr("Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)"));
   switchFocusPrevAct_->setText(tr("Switch Focus to Previous Panel"));
   switchFocusPrevAct_->setToolTip(
-        tr("Switch Focus to Previous Panel (Tree Feeds, Browser, List News)"));
+        tr("Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)"));
 
-  feedsWidgetVisibleAct_->setText(tr("Show/Hide Tree Feeds"));
+  feedsWidgetVisibleAct_->setText(tr("Show/Hide Feed Tree"));
 
   placeToTrayAct_->setText(tr("Minimize to Tray"));
   placeToTrayAct_->setToolTip(tr("Minimize Application to Tray"));
 
   feedsColumnsMenu_->setTitle(tr("Columns"));
-  showUnreadCount_->setText(tr("Count Unread News"));
-  showUndeleteCount_->setText(tr("Count All News"));
+  showUnreadCount_->setText(tr("Count Unread Articles"));
+  showUndeleteCount_->setText(tr("Count All Articles"));
   showLastUpdated_->setText(tr("Last Update"));
 
   indentationFeedsTreeAct_->setText(tr("Show Indentation"));
@@ -4421,16 +4421,16 @@ void MainWindow::retranslateStrings()
 
   browserZoomMenu_->setTitle(tr("Zoom"));
   zoomInAct_->setText(tr("Zoom In"));
-  zoomInAct_->setToolTip(tr("Zoom in in browser"));
+  zoomInAct_->setToolTip(tr("Zoom in"));
   zoomOutAct_->setText(tr("Zoom Out"));
-  zoomOutAct_->setToolTip(tr("Zoom out in browser"));
+  zoomOutAct_->setToolTip(tr("Zoom out"));
   zoomTo100Act_->setText(tr("100%"));
-  zoomTo100Act_->setToolTip(tr("Reset browser zoom"));
+  zoomTo100Act_->setToolTip(tr("Reset zoom"));
 
   printAct_->setText(tr("Print..."));
-  printAct_->setToolTip(tr("Print Web Page"));
+  printAct_->setToolTip(tr("Print Article"));
   printPreviewAct_->setText(tr("Print Preview..."));
-  printPreviewAct_->setToolTip(tr("Preview Web Page"));
+  printPreviewAct_->setToolTip(tr("Preview Article"));
 
   pageUpWebViewAct_->setText(tr("Page up (Article)"));
   pageDownWebViewAct_->setText(tr("Page down (Article)"));
@@ -4472,12 +4472,12 @@ void MainWindow::retranslateStrings()
   categoriesTree_->topLevelItem(CategoriesTreeWidget::DeletedItem)->setText(0, tr("Deleted"));
   categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem)->setText(0, tr("Labels"));
 
-  reduceNewsListAct_->setText(tr("Decrease news list/increase article pane"));
-  increaseNewsListAct_->setText(tr("Increase news list/decrease article pane"));
+  reduceNewsListAct_->setText(tr("Decrease article list / increase article pane"));
+  increaseNewsListAct_->setText(tr("Increase article list / decrease article pane"));
 
   findTextAct_->setText(tr("Find"));
 
-  openHomeFeedAct_->setText(tr("Open Homepage Feed"));
+  openHomeFeedAct_->setText(tr("Open Feed Homepage"));
   sortedByTitleFeedsTreeAct_->setText(tr("Sort by Name"));
   collapseAllFoldersAct_->setText(tr("Collapse All Folders"));
   expandAllFoldersAct_->setText(tr("Expand All Folders"));
@@ -4485,7 +4485,7 @@ void MainWindow::retranslateStrings()
   prevFolderAct_->setText(tr("Previous Folder"));
   expandFolderAct_->setText(tr("Expand Folder"));
 
-  settingPageLabelsAct_->setText(tr("Setting Page: Labels"));
+  settingPageLabelsAct_->setText(tr("Settings Page: Labels"));
 
   shareMenuAct_->setText(tr("Share"));
 
@@ -5175,9 +5175,9 @@ void MainWindow::slotRefreshInfoTray(int newCount, int unreadCount)
   // Setting tooltip text
   QString info =
       QGuiApplication::applicationDisplayName() + "\n" +
-      QString(tr("New News: %1")).arg(newCount) +
+      QString(tr("New Articles: %1")).arg(newCount) +
       QString("\n") +
-      QString(tr("Unread News: %1")).arg(unreadCount);
+      QString(tr("Unread Articles: %1")).arg(unreadCount);
   trayIconController_->setToolTip(info);
 
   // Display new number or unread number of news
@@ -6990,13 +6990,13 @@ void MainWindow::slotSavePageAs()
   fileName = QDir::toNativeSeparators(QDir::homePath() + "/" + fileName);
   fileName = QFileDialog::getSaveFileName(this, tr("Save As"),
                                           fileName,
-                                          QString(tr("HTML-Files (*.%1)") + ";;" + tr("Text files (*.%2)"))
+                                          QString(tr("HTML Files (*.%1)") + ";;" + tr("Text files (*.%2)"))
                                           .arg("html").arg("txt"));
   if (fileName.isNull()) return;
 
   QFile file(fileName);
   if (!file.open(QIODevice::WriteOnly)) {
-    statusBar()->showMessage(tr("Save As: can't open a file"), 3000);
+    statusBar()->showMessage(tr("Save As: could not open file"), 3000);
     return;
   }
   QFileInfo fileInfo(fileName);

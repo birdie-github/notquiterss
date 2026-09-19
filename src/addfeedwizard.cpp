@@ -109,7 +109,7 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   urlFeedEdit_->setText("http://");
 
   titleFeedAsName_ = new QCheckBox(
-        tr("Use title of the feed as displayed name"), this);
+        tr("Use the feed title as the display name"), this);
   titleFeedAsName_->setChecked(true);
 
   authentication_ = new QGroupBox(this);
@@ -339,7 +339,7 @@ void AddFeedWizard::addFeed()
   urlFeedEdit_->setText(feedUrlString_);
 
   if (feedUrl.host().isEmpty() && !feedUrl.isLocalFile()) {
-    textWarning->setText(tr("URL error!"));
+    textWarning->setText(tr("Invalid URL"));
     warningWidget_->setVisible(true);
     return;
   }
@@ -353,7 +353,7 @@ void AddFeedWizard::addFeed()
     duplicateFoundId = q.value(0).toInt();
 
   if (0 <= duplicateFoundId) {
-    textWarning->setText(tr("Duplicate feed!"));
+    textWarning->setText(tr("Duplicate feed"));
     warningWidget_->setVisible(true);
   } else {
     button(QWizard::NextButton)->setEnabled(false);
@@ -531,7 +531,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
             if (feedUrlString_ != linkFeedString)
               textWarning->setText(tr("Duplicate feed!"));
             else
-              textWarning->setText(tr("Can't find feed URL!"));
+              textWarning->setText(tr("Could not find a feed URL."));
             warningWidget_->setVisible(true);
 
             deleteFeed();
@@ -553,7 +553,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
         }
       }
       if (pos < 0) {
-        textWarning->setText(tr("Can't find feed URL!"));
+        textWarning->setText(tr("Could not find a feed URL."));
         warningWidget_->setVisible(true);
 
         deleteFeed();
@@ -572,7 +572,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
     if ((result >= -5) && (result <= -1))
       textWarning->setText(error);
     else
-      textWarning->setText(tr("Request failed!"));
+      textWarning->setText(tr("Request failed"));
     warningWidget_->setVisible(true);
     qWarning() << QString("Request failed: result = %1, error - %2, url - %3").
                   arg(result).arg(error).arg(feedUrlStr);

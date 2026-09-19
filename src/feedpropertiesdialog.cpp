@@ -87,7 +87,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   layoutGeneralTitle->addWidget(selectIconButton_);
   editURL = new LineEdit();
 
-  disableUpdate_ = new QCheckBox(tr("Disable update"));
+  disableUpdate_ = new QCheckBox(tr("Disable updates"));
   disableUpdate_->setChecked(false);
 
   updateEnable_ = new QCheckBox(tr("Automatically update every"));
@@ -121,7 +121,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
 
   starredOn_ = new QCheckBox(tr("Starred"));
   displayOnStartup = new QCheckBox(tr("Display in new tab on startup"));
-  duplicateNewsMode_ = new QCheckBox(tr("Automatically delete duplicate news"));
+  duplicateNewsMode_ = new QCheckBox(tr("Automatically delete duplicate articles"));
 
   QHBoxLayout *layoutGeneralHomepage = new QHBoxLayout();
   labelHomepage = new QLabel();
@@ -138,7 +138,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   layoutGeneralGrid->addWidget(labelURLCapt, 1, 0);
   layoutGeneralGrid->addWidget(editURL, 1, 1);
 
-  addSingleNewsAnyDateOn_ = new QCheckBox(tr("Add news with any date into the database"));
+  addSingleNewsAnyDateOn_ = new QCheckBox(tr("Add articles regardless of publication date"));
   addSingleNewsAnyDateOn_->setCheckable(true);
   addSingleNewsAnyDateOn_->setChecked(false);
 
@@ -151,7 +151,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   avoidedOldNewsDateLayout->addWidget(avoidedOldSingleNewsDate_);
   avoidedOldNewsDateLayout->addStretch();
 
-  avoidedOldSingleNewsDateOn_ = new QGroupBox(tr("Avoid adding news before this date into the database:"));
+  avoidedOldSingleNewsDateOn_ = new QGroupBox(tr("Do not add articles published before this date to the database:"));
   avoidedOldSingleNewsDateOn_->setCheckable(true);
   avoidedOldSingleNewsDateOn_->setChecked(false);
   avoidedOldSingleNewsDateOn_->setLayout(avoidedOldNewsDateLayout);
@@ -346,7 +346,7 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   lastUpdateFeed_ = new QLabel();
   newsCount_ = new QLabel();
 
-  QLabel *feedsCountLabel = new QLabel(tr("Feeds count:"));
+  QLabel *feedsCountLabel = new QLabel(tr("Feed count:"));
   feedsCount_ = new QLabel();
 
   QLabel *descriptionLabel = new QLabel(tr("Description:"));
@@ -362,7 +362,7 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   layoutGrid->addWidget(createdFeed_, 1, 1);
   layoutGrid->addWidget(new QLabel(tr("Last update:")), 2, 0);
   layoutGrid->addWidget(lastUpdateFeed_, 2, 1);
-  layoutGrid->addWidget(new QLabel(tr("News count:")), 3, 0);
+  layoutGrid->addWidget(new QLabel(tr("Article count:")), 3, 0);
   layoutGrid->addWidget(newsCount_, 3, 1);
   layoutGrid->addWidget(feedsCountLabel, 4, 0);
   layoutGrid->addWidget(feedsCount_, 4, 1);
@@ -485,7 +485,7 @@ void FeedPropertiesDialog::selectIcon()
   if (fileName.isNull()) return;
 
   QMessageBox msgBox(this);
-  msgBox.setText(tr("Load icon: can't open a file!"));
+  msgBox.setText(tr("Could not open the icon file."));
   msgBox.setIcon(QMessageBox::Warning);
 
   QFile file(fileName);

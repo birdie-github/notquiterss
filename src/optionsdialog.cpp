@@ -338,19 +338,19 @@ void OptionsDialog::createGeneralWidget()
   openNewTabNextToActive_ = new QCheckBox(tr("Open new tab next to active"));
   hideFeedsOpenTab_ = new QCheckBox(tr("Hide feeds tree when opening tabs"));
   showToggleFeedsTree_ = new QCheckBox(tr("Show feeds tree toggle"));
-  defaultIconFeeds_ = new QCheckBox(tr("Show default rss-icon instead of favourite one"));
+  defaultIconFeeds_ = new QCheckBox(tr("Show default RSS icon instead of each feed's icon"));
   autocollapseFolder_ = new QCheckBox(tr("Automatically collapse folders"));
   showCloseButtonTab_ = new QCheckBox(tr("Show close button on tab"));
 
   updateCheckEnabled_ = new QCheckBox(tr("Automatically check for updates"));
-  storeDBMemory_ = new QCheckBox(tr("Store a DB in memory (requires program restart)"));
+  storeDBMemory_ = new QCheckBox(tr("Store the database in memory (requires application restart)"));
   storeDBMemory_->setChecked(false);
   saveDBMemFileInterval_ = new QSpinBox();
   saveDBMemFileInterval_->setRange(1, 999);
 
   QHBoxLayout *saveDBMemFileLayout = new QHBoxLayout();
   saveDBMemFileLayout->setContentsMargins(15, 0, 0, 0);
-  saveDBMemFileLayout->addWidget(new QLabel(tr("Save DB stored in memory to file every")));
+  saveDBMemFileLayout->addWidget(new QLabel(tr("Save the in-memory database to disk every")));
   saveDBMemFileLayout->addWidget(saveDBMemFileInterval_);
   saveDBMemFileLayout->addWidget(new QLabel(tr("minutes")));
   saveDBMemFileLayout->addStretch();
@@ -429,9 +429,9 @@ void OptionsDialog::createTraySystemWidget()
   moveTrayLayout->addWidget(closingTray_);
 
   staticIconTray_ = new QRadioButton(tr("Show static icon"));
-  changeIconTray_ = new QRadioButton(tr("Change icon for incoming new news"));
-  newCountTray_ = new QRadioButton(tr("Show count of new news"));
-  unreadCountTray_ = new QRadioButton(tr("Show count of unread news"));
+  changeIconTray_ = new QRadioButton(tr("Change icon when new articles arrive"));
+  newCountTray_ = new QRadioButton(tr("Show number of new articles"));
+  unreadCountTray_ = new QRadioButton(tr("Show number of unread articles"));
   QVBoxLayout *behaviorLayout = new QVBoxLayout();
   behaviorLayout->setContentsMargins(15, 0, 5, 10);
   behaviorLayout->addWidget(staticIconTray_);
@@ -440,9 +440,9 @@ void OptionsDialog::createTraySystemWidget()
   behaviorLayout->addWidget(unreadCountTray_);
 
   singleClickTray_ = new QCheckBox(
-        tr("Single click instead of double click for show window"));
-  clearStatusNew_ = new QCheckBox(tr("Clear new status when minimize to tray"));
-  emptyWorking_ = new QCheckBox(tr("Empty working set on minimize to tray"));
+        tr("Use a single click instead of a double click to show the window"));
+  clearStatusNew_ = new QCheckBox(tr("Clear new status when minimizing to tray"));
+  emptyWorking_ = new QCheckBox(tr("Empty working set when minimizing to tray"));
 
   QVBoxLayout *trayLayout = new QVBoxLayout(showTrayIconBox_);
 #ifndef Q_OS_MAC
@@ -586,7 +586,7 @@ void OptionsDialog::createNetworkConnectionsWidget()
   requestLayout->addWidget(new QLabel(tr("Number of retries:")), 2, 0);
   requestLayout->addWidget(numberRepeats_, 2, 1, 1, 1, Qt::AlignLeft);
 
-  networkConnectionsLayout->addWidget(new QLabel(tr("Network options for feed updates (requires program restart):")));
+  networkConnectionsLayout->addWidget(new QLabel(tr("Network options for feed updates (requires application restart):")));
   networkConnectionsLayout->addLayout(requestLayout);
   networkConnectionsLayout->addSpacing(20);
   networkConnectionsLayout->addWidget(customUserAgent_);
@@ -703,11 +703,11 @@ void OptionsDialog::createFeedsWidget()
   updateFeedsLayout->addWidget(updateIntervalType_);
   updateFeedsLayout->addStretch();
 
-  positionLastNews_ = new QRadioButton(tr("Set focus on the last opened news"));
-  positionFirstNews_ = new QRadioButton(tr("Set focus at the top of news list"));
-  positionUnreadNews_ = new QRadioButton(tr("Set focus on the unread news"));
-  openNewsWebViewOn_ = new QCheckBox(tr("Open the news"));
-  nottoOpenNews_ = new QRadioButton(tr("Nothing to do"));
+  positionLastNews_ = new QRadioButton(tr("Focus the last opened article"));
+  positionFirstNews_ = new QRadioButton(tr("Focus the first article in the list"));
+  positionUnreadNews_ = new QRadioButton(tr("Focus the first unread article"));
+  openNewsWebViewOn_ = new QCheckBox(tr("Open the article"));
+  nottoOpenNews_ = new QRadioButton(tr("Do nothing"));
   connect(nottoOpenNews_, SIGNAL(toggled(bool)),
           openNewsWebViewOn_, SLOT(setDisabled(bool)));
 
@@ -731,7 +731,7 @@ void OptionsDialog::createFeedsWidget()
   avoidedOldNewsDateLayout->addWidget(avoidedOldNewsDate_);
   avoidedOldNewsDateLayout->addStretch();
 
-  avoidedOldNewsDateOn_ = new QGroupBox(tr("Avoid adding news before this date into the database:"));
+  avoidedOldNewsDateOn_ = new QGroupBox(tr("Do not add articles published before this date to the database:"));
   avoidedOldNewsDateOn_->setCheckable(true);
   avoidedOldNewsDateOn_->setChecked(false);
   avoidedOldNewsDateOn_->setLayout(avoidedOldNewsDateLayout);
@@ -777,7 +777,7 @@ void OptionsDialog::createFeedsWidget()
 
   QHBoxLayout *formatDateLayout = new QHBoxLayout();
   formatDateLayout->setContentsMargins(0, 0, 0, 0);
-  formatDateLayout->addWidget(new QLabel(tr("Display format for date:")));
+  formatDateLayout->addWidget(new QLabel(tr("Date display format:")));
   formatDateLayout->addWidget(formatDate_);
   formatDateLayout->addSpacing(10);
   formatDateLayout->addWidget(new QLabel(tr("time:")));
@@ -805,7 +805,7 @@ void OptionsDialog::createFeedsWidget()
 
   QHBoxLayout *mainNewsFilterLayout = new QHBoxLayout();
   mainNewsFilterLayout->setContentsMargins(0, 0, 0, 0);
-  mainNewsFilterLayout->addWidget(new QLabel(tr("Default news filter:")));
+  mainNewsFilterLayout->addWidget(new QLabel(tr("Default article filter:")));
   mainNewsFilterLayout->addWidget(mainNewsFilter_);
   mainNewsFilterLayout->addStretch();
 
@@ -827,7 +827,7 @@ void OptionsDialog::createFeedsWidget()
   displayFeedsLayout->addSpacing(10);
   displayFeedsLayout->addLayout(mainNewsFilterLayout);
   displayFeedsLayout->addSpacing(10);
-  displayFeedsLayout->addWidget(new QLabel(tr("Style sheet for news:")));
+  displayFeedsLayout->addWidget(new QLabel(tr("Article style sheet:")));
   displayFeedsLayout->addLayout(styleSheetNewsLayout);
   displayFeedsLayout->addStretch();
 
@@ -838,7 +838,7 @@ void OptionsDialog::createFeedsWidget()
   QVBoxLayout* readingMainLayout = new QVBoxLayout();
 
   {
-    markNewsReadOn_ = new QGroupBox(tr("Mark news as read:"));
+    markNewsReadOn_ = new QGroupBox(tr("Mark articles as read:"));
 
     markNewsReadOn_->setCheckable(true);
 
@@ -848,7 +848,7 @@ void OptionsDialog::createFeedsWidget()
       {
         QHBoxLayout* curLayout = new QHBoxLayout();
 
-        markCurNewsRead_ = new QRadioButton(tr("on selecting. With timeout"));
+        markCurNewsRead_ = new QRadioButton(tr("when selected, after a delay"));
 
         markNewsReadTime_ = new QSpinBox();
         markNewsReadTime_->setEnabled(false);
@@ -865,7 +865,7 @@ void OptionsDialog::createFeedsWidget()
         radioLayout->addLayout(curLayout);
       }
 
-      markPrevNewsRead_ = new QRadioButton(tr("after switching to another news"));
+      markPrevNewsRead_ = new QRadioButton(tr("after switching to another article"));
 
       radioLayout->addWidget(markPrevNewsRead_);
       markNewsReadOn_->setLayout(radioLayout);
@@ -884,7 +884,7 @@ void OptionsDialog::createFeedsWidget()
     curLayout->addWidget(notDeleteStarred_, 0, 0, 1, 1);
     curLayout->addWidget(notDeleteLabeled_, 1, 0, 1, 1);
 
-    changeBehaviorActionNUN_ = new QCheckBox(tr("Change behavior of action 'Next Unread News'"));
+    changeBehaviorActionNUN_ = new QCheckBox(tr("Change behavior of the 'Next Unread Article' action"));
 
     readingMainLayout->addWidget(markNewsReadOn_);
     readingMainLayout->addWidget(markReadSwitchingFeed_);
@@ -906,7 +906,7 @@ void OptionsDialog::createFeedsWidget()
   cleanupOnShutdownBox_ = new QGroupBox(tr("Enable cleanup on shutdown"));
   cleanupOnShutdownBox_->setCheckable(true);
 
-  dayCleanUpOn_ = new QCheckBox(tr("Maximum publication age in days to keep:"));
+  dayCleanUpOn_ = new QCheckBox(tr("Maximum article age to keep (days):"));
   dayCleanUpOn_->setToolTip(tr(
       "Removes expired articles on shutdown and ignores expired incoming articles on later updates. "
       "The first successful fetch of a new feed is exempt. Unread, starred and labeled articles "
@@ -918,7 +918,7 @@ void OptionsDialog::createFeedsWidget()
   connect(dayCleanUpOn_, SIGNAL(toggled(bool)),
           maxDayCleanUp_, SLOT(setEnabled(bool)));
 
-  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of news to keep:"));
+  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
   maxNewsCleanUp_ = new QSpinBox();
   maxNewsCleanUp_->setEnabled(false);
   maxNewsCleanUp_->setRange(0, 9999);
@@ -931,7 +931,7 @@ void OptionsDialog::createFeedsWidget()
   neverLabelCleanUp_ = new QCheckBox(tr("Never delete labeled news"));
 
   cleanUpDeleted_ = new QCheckBox(tr("Clean up 'Deleted'"));
-  optimizeDB_ = new QCheckBox(tr("Enable DB optimization (slower shutdown)"));
+  optimizeDB_ = new QCheckBox(tr("Optimize database on shutdown (slower shutdown)"));
 
   QGridLayout *cleanUpFeedsLayout = new QGridLayout();
   cleanUpFeedsLayout->setColumnStretch(1, 1);
@@ -1023,7 +1023,7 @@ void OptionsDialog::createLabelsWidget()
  *----------------------------------------------------------------------------*/
 void OptionsDialog::createNotifierWidget()
 {
-  showNotifyOn_ = new QGroupBox(tr("Display notification for incoming news"));
+  showNotifyOn_ = new QGroupBox(tr("Show notifications for incoming articles"));
   showNotifyOn_->setCheckable(true);
   showNotifyOn_->setChecked(false);
 
@@ -1044,8 +1044,8 @@ void OptionsDialog::createNotifierWidget()
 #if !defined(Q_OS_WIN)
   fullscreenModeNotify_->hide();
 #endif
-  showNotifyInactiveApp_ = new QCheckBox(tr("Show when inactive main window"));
-  closeNotify_ = new QCheckBox(tr("Close notification after opening news"));
+  showNotifyInactiveApp_ = new QCheckBox(tr("Show when the main window is inactive"));
+  closeNotify_ = new QCheckBox(tr("Close notification after opening an article"));
 
   transparencyNotify_ = new QSpinBox();
   transparencyNotify_->setRange(0, 100);
@@ -1073,18 +1073,18 @@ void OptionsDialog::createNotifierWidget()
   notifierLayout2->addWidget(new QLabel(tr("Transparency")), 0, 0);
   notifierLayout2->addWidget(transparencyNotify_, 0, 1);
   notifierLayout2->addWidget(new QLabel("%"), 0, 2);
-  notifierLayout2->addWidget(new QLabel(tr("Show maximum of")), 1, 0);
+  notifierLayout2->addWidget(new QLabel(tr("Show at most")), 1, 0);
   notifierLayout2->addWidget(countShowNewsNotify_, 1, 1);
-  notifierLayout2->addWidget(new QLabel(tr("item on page notification")), 1, 2);
-  notifierLayout2->addWidget(new QLabel(tr("Width list items")), 2, 0);
+  notifierLayout2->addWidget(new QLabel(tr("items per notification page")), 1, 2);
+  notifierLayout2->addWidget(new QLabel(tr("List item width")), 2, 0);
   notifierLayout2->addWidget(widthTitleNewsNotify_, 2, 1);
   notifierLayout2->addWidget(new QLabel(tr("pixels")), 2, 2);
   notifierLayout2->addWidget(new QLabel(tr("Close notification after")), 3, 0);
   notifierLayout2->addWidget(timeShowNewsNotify_, 3, 1);
   notifierLayout2->addWidget(new QLabel(tr("seconds")), 3, 2);
 
-  showTitlesFeedsNotify_ = new QCheckBox(tr("Show titles feeds"));
-  showIconFeedNotify_ = new QCheckBox(tr("Show icon feed"));
+  showTitlesFeedsNotify_ = new QCheckBox(tr("Show feed titles"));
+  showIconFeedNotify_ = new QCheckBox(tr("Show feed icons"));
   showButtonMarkAllNotify_ = new QCheckBox(tr("Show button 'Mark All News Read'"));
   showButtonMarkReadNotify_ = new QCheckBox(tr("Show button 'Mark Read/Unread'"));
   showButtonExBrowserNotify_ = new QCheckBox(tr("Show button 'Open in External Browser'"));
@@ -1134,7 +1134,7 @@ void OptionsDialog::createNotifierWidget()
   QVBoxLayout *notificationLayout = new QVBoxLayout(notificationWidget);
   notificationLayout->addWidget(showNotifyOn_);
 
-  soundNotifyBox_ = new QGroupBox(tr("Play sound for incoming new news"));
+  soundNotifyBox_ = new QGroupBox(tr("Play a sound for incoming articles"));
   soundNotifyBox_->setCheckable(true);
   soundNotifyBox_->setChecked(false);
 
@@ -1278,7 +1278,7 @@ void OptionsDialog::createLanguageWidget()
   setLanguage(mainApp->language());
 
   QString linkWikiStr =
-      QString("<a href=\"%1\">%2</a>").arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), tr("Link for translators"));
+      QString("<a href=\"%1\">%2</a>").arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), tr("Translation website"));
   QLabel *linkTranslators = new QLabel(linkWikiStr);
   linkTranslators->setOpenExternalLinks(false);
   connect(linkTranslators, &QLabel::linkActivated, this, [](const QString &link) {
@@ -1313,16 +1313,16 @@ void OptionsDialog::createFontsColorsWidget()
   fontsTree_->setHeaderLabels(treeItem);
 
   treeItem.clear();
-  treeItem << "0" << tr("Feeds list font");
+  treeItem << "0" << tr("Feed list font");
   fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << "1" << tr("News list font");
+  treeItem << "1" << tr("Article list font");
   fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << "2" << tr("News title font");
+  treeItem << "2" << tr("Article title font");
   fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << "3" << tr("News text font");
+  treeItem << "3" << tr("Article text font");
   fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
   treeItem << "4" << tr("Notification font");
@@ -1359,22 +1359,22 @@ void OptionsDialog::createFontsColorsWidget()
   colorsTree_->setHeaderHidden(true);
 
   treeItem.clear();
-  treeItem << tr("Feeds list color");
+  treeItem << tr("Feed list text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
   treeItem << tr("Feeds list background");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("News list color");
+  treeItem << tr("Article list text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("News list background");
+  treeItem << tr("Article list background");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Focused news color");
+  treeItem << tr("Focused article text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Focused news background color");
+  treeItem << tr("Focused article background");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
   treeItem << tr("Link color");
@@ -1389,25 +1389,25 @@ void OptionsDialog::createFontsColorsWidget()
   treeItem << tr("Author color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("News text color");
+  treeItem << tr("Article text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("News title background");
+  treeItem << tr("Article title background");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("News background");
+  treeItem << tr("Article background");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Feed with new news");
+  treeItem << tr("Feed with new articles");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Count of unread news in feeds tree");
+  treeItem << tr("Unread article count in feed tree");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Text color of new news");
+  treeItem << tr("New article text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
-  treeItem << tr("Text color of unread news");
+  treeItem << tr("Unread article text color");
   colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
   treeItem.clear();
   treeItem << tr("Focused feed color");
@@ -1731,7 +1731,7 @@ void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringLi
         }
       } else if (i == 1) {
         if (pAction->objectName() == "autoLoadImagesToggle") {
-          item->setText(tr("Auto load images in news view"));
+          item->setText(tr("Automatically load images in article view"));
         }
       }
       if (i >= 0 && i <= 2) {
@@ -1840,7 +1840,7 @@ void OptionsDialog::slotResetShortcut()
     treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
     for (int i = 0; i < treeItems.count(); i++) {
       if (treeItems.at(i)->row() != row) {
-        warningShortcut_->setText(tr("Warning: key is already assigned to") +
+        warningShortcut_->setText(tr("Warning: key is already assigned to ") +
                                   " '" +
                                   shortcutModel_->item(treeItems.at(i)->row(), 0)->text() +
                                   "'");
