@@ -363,11 +363,11 @@ void MainApplication::applyApplicationStyle(const QString &id)
       else
         qWarning() << "Unable to create Fusion style for fixed application theme";
     }
-    setPalette(ApplicationStyles::palette(selected, systemPalette_));
+    setPalette(ApplicationStyles::palette(selected, style()->standardPalette()));
   }
 
   qInfo() << "Applying application QSS:" << selected.fileName;
-  setStyleSheet(selected.sheet);
+  setStyleSheet(ApplicationStyles::styleSheet(selected, palette()));
   Settings().setValue("Settings/styleApplication", selected.id);
 }
 

@@ -29,6 +29,8 @@ namespace ApplicationStyles {
 QList<ApplicationStyle> discover(const QString &directory);
 ApplicationStyle automaticDefault();
 QPalette palette(const ApplicationStyle &style, const QPalette &fallback);
+// Fixed themes prepend shared, palette-derived controls; System keeps its QSS.
+QString styleSheet(const ApplicationStyle &style, const QPalette &palette);
 QString automaticId();
 }
 

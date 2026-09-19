@@ -1,0 +1,77 @@
+/* Shared fixed-theme controls. %1 = outline, %2 = mark tone,
+   %3 = disabled outline, %4 = disabled text. Loaded from app.qrc, not discovered
+   as a theme. Keep theme-specific accents in the external QSS.
+
+   Fusion derives indicator outlines from Window (black stays black), and
+   recent Qt6 also consults the platform color scheme for checkbox borders.
+   Own the complete indicator here, including the glyph and all check states. */
+QCheckBox::indicator, QGroupBox::indicator, QRadioButton::indicator,
+QMenu::indicator {
+    width: 12px;
+    height: 12px;
+    border: 1px solid %1;
+    background-color: palette(base);
+    image: none;
+}
+QCheckBox::indicator, QGroupBox::indicator, QMenu::indicator:non-exclusive {
+    border-radius: 2px;
+}
+QRadioButton::indicator, QMenu::indicator:exclusive {
+    border-radius: 7px;
+}
+QCheckBox::indicator:checked, QGroupBox::indicator:checked,
+QMenu::indicator:non-exclusive:checked {
+    image: url(:/style/indicators/check-%2.png);
+}
+QRadioButton::indicator:checked, QMenu::indicator:exclusive:checked {
+    image: url(:/style/indicators/dot-%2.png);
+}
+QCheckBox::indicator:indeterminate {
+    image: url(:/style/indicators/mixed-%2.png);
+}
+QCheckBox::indicator:hover, QGroupBox::indicator:hover,
+QRadioButton::indicator:hover {
+    border-color: palette(text);
+}
+QCheckBox::indicator:focus, QGroupBox::indicator:focus,
+QRadioButton::indicator:focus {
+    border-color: palette(text);
+    border-style: dashed;
+}
+QCheckBox::indicator:disabled, QGroupBox::indicator:disabled,
+QRadioButton::indicator:disabled, QMenu::indicator:disabled {
+    border-color: %3;
+}
+QCheckBox::indicator:checked:disabled, QGroupBox::indicator:checked:disabled,
+QMenu::indicator:non-exclusive:checked:disabled {
+    image: url(:/style/indicators/check-%2-disabled.png);
+}
+QRadioButton::indicator:checked:disabled, QMenu::indicator:exclusive:checked:disabled {
+    image: url(:/style/indicators/dot-%2-disabled.png);
+}
+QCheckBox::indicator:indeterminate:disabled {
+    image: url(:/style/indicators/mixed-%2-disabled.png);
+}
+
+/* Styling just QMenu::indicator selects Qt's legacy shaded-check-column path.
+   Supply the item box too, so Qt draws the indicator without that extra panel.
+   Leave icon/shortcut/submenu-arrow handling to Qt's stylesheet renderer. */
+QMenu::item {
+    border: 1px solid transparent;
+    padding: 3px 20px 3px 4px;
+    background-color: transparent;
+    color: palette(text);
+}
+QMenu::item:selected {
+    background-color: palette(highlight);
+    color: palette(highlighted-text);
+}
+QMenu::item:disabled {
+    color: %4;
+}
+QMenu::indicator {
+    left: 3px;
+}
+QMenu::indicator:selected:enabled {
+    border-color: palette(highlighted-text);
+}

@@ -244,5 +244,44 @@ QPalette ApplicationStyles::palette(const ApplicationStyle &style, const QPalett
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
   result.setColor(QPalette::Accent, result.color(QPalette::Highlight));
 #endif
+  // setColor(role, color) above deliberately initializes every color group.
+  // Disabled foregrounds need their own contrast, independent of the OS.
+  for (QPalette::ColorRole role : {QPalette::WindowText, QPalette::Text,
+                                 QPalette::ButtonText, QPalette::Link,
+                                 QPalette::LinkVisited}) {
+    const QPalette::ColorRole background = role == QPalette::WindowText
+        ? QPalette::Window : role == QPalette::ButtonText ? QPalette::Button : QPalette::Base;
+    result.setColor(QPalette::Disabled, role,
+                    mix(result.color(QPalette::Active, role), result.color(background), 45));
+  }
+  result.setColor(QPalette::Disabled, QPalette::Highlight,
+                  mix(result.color(QPalette::Highlight), base, 45));
+  result.setColor(QPalette::Disabled, QPalette::HighlightedText,
+                  mix(result.color(QPalette::HighlightedText),
+                      result.color(QPalette::Disabled, QPalette::Highlight), 55));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+  result.setColor(QPalette::Disabled, QPalette::Accent,
+                  result.color(QPalette::Disabled, QPalette::Highlight));
+#endif
   return result;
+}
+
+QString ApplicationStyles::styleSheet(const ApplicationStyle &style, const QPalette &palette)
+{
+  if (style.followsSystem()) return style.sheet;
+
+  QFile file(QStringLiteral(":/style/fixedIndicators"));
+  if (!file.open(QIODevice::ReadOnly)) {
+    qWarning() << "Application style: cannot read shared indicators" << file.errorString();
+    return style.sheet;
+  }
+  const QColor base = palette.color(QPalette::Active, QPalette::Base);
+  const QColor text = palette.color(QPalette::Active, QPalette::Text);
+  // Marks are neutral, embedded PNGs; no SVG plugin or native theme is needed.
+  const QString mark = qGray(base.rgb()) < 128 ? QStringLiteral("light") : QStringLiteral("dark");
+  const QString controls = QString::fromUtf8(file.readAll())
+      .arg(mix(text, base, 65).name(), mark,
+           mix(text, base, 30).name(),
+           palette.color(QPalette::Disabled, QPalette::Text).name());
+  return controls + QLatin1Char('\n') + style.sheet;
 }

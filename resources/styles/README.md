@@ -13,12 +13,12 @@ Style.
 
 The bundled choices deliberately have simple semantics:
 
-- **Automatic** follows the palette exposed by Qt's platform integration.
+- **System** follows the palette exposed by Qt's platform integration.
 - **Light** and **Dark** are fixed application themes and ignore the OS color
   scheme.
 - **OLED** and the accent themes are also fixed and self-contained.
 
-`System`, `System default`, and `System2` no longer exist as separate choices.
+The former System Default/System2 alternatives are consolidated into System.
 
 ## Metadata
 
@@ -56,7 +56,7 @@ file with a warning.
 stable if a file is renamed. IDs must be unique and nonempty. `Mode` defaults
 to `system`; `Default` defaults to `false`.
 
-`Mode=system` must not define `Palette.*` values. It is intended for Automatic
+`Mode=system` must not define `Palette.*` values. It is intended for System
 or for an overlay that deliberately follows the current OS/desktop palette.
 
 `Mode=fixed` is independent of the OS theme. It must define these palette roles:
@@ -73,7 +73,7 @@ OS palette. Qt 5.12+ placeholder text and Qt 6.6+ accent are likewise derived.
 This gives application code one effective palette without hardcoding theme IDs.
 
 `Default=true` selects a style only when no preference has been saved. The
-bundled Automatic style is the fresh-install default. The embedded Automatic
+bundled System style is the fresh-install default. The embedded System
 QSS is also used as the always-available fallback when the external file or
 style directory is missing.
 
@@ -89,7 +89,7 @@ removes those overrides, so stale colors cannot leak from one theme into
 another. Resetting an individual color in Settings resets it to the current
 theme's derived default.
 
-Automatic is the only style that responds to platform palette changes at
+System is the bundled style that responds to platform palette changes at
 runtime. Fixed themes remain unchanged when the OS switches between light and
 dark appearance.
 
@@ -103,3 +103,28 @@ Qt's normal working-directory semantics.
 Malformed metadata, duplicate IDs, missing files/directories, invalid UTF-8,
 and empty/unbalanced QSS produce warnings. Qt reports its own stylesheet syntax
 and unsupported-property warnings when the sheet is applied.
+
+## Fixed-theme widget primitives
+
+Fixed themes use Fusion's standard palette as their starting point. All
+supported color roles are initialized for Active, Inactive and Disabled;
+disabled foregrounds and selection colors are then muted against the theme's
+own backgrounds. System keeps the platform style and palette.
+
+`fixed-indicators.css` is embedded in `app.qrc` and prepended only for fixed
+themes. It supplies shared checkbox, checkable group-box, radio and menu
+indicators, including checked, mixed, disabled and keyboard-focus states.
+Outlines derive from Text/Base; embedded neutral PNG marks are selected for
+contrast with Base, without an SVG plugin. Menu item boxes are styled alongside
+indicators to avoid Qt's legacy shaded check-column fallback. Theme QSS follows
+the shared rules and can override them using normal QSS specificity.
+
+This is needed because Fusion derives some outlines by darkening Window,
+which cannot give a visible outline on OLED black. Recent Qt6 Fusion checkbox
+borders also depend on the platform color scheme. System does not receive the
+shared rules: a native menu may show only a checkmark, with no empty box.
+
+Leave QSpinBox borders/padding to Fusion unless supplying a complete set of
+subcontrols. A partial QSS border switches button painting to a legacy fallback
+while retaining Fusion geometry, which can leave insufficient room for arrows.
+The supplied Dark and OLED themes therefore use Fusion spinboxes directly.

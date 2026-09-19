@@ -369,16 +369,3 @@ QComboBox::down-arrow:on {
 	top: 1px;
 	left: 1px;
 }
-
-QSpinBox {
-	border: 1px solid #3a393a;
-	background-color: #555555;
-	border-radius: 2px;
-	padding: 2px;
-	padding-left: 4px;
-}
-
-QSpinBox:focus {
-	border: 1px solid #2a82da;
-	color: #e1e0e1;
-}
