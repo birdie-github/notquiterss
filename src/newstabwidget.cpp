@@ -82,7 +82,8 @@ NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feed
           this, SLOT(slotTabClose()));
 
   QHBoxLayout *newsTitleLayout = new QHBoxLayout();
-  newsTitleLayout->setContentsMargins(0, 0, 0, 0);
+  // Layout margins use logical pixels; Qt applies the display scale factor.
+  newsTitleLayout->setContentsMargins(4, 0, 4, 0);
   newsTitleLayout->setSpacing(0);
   newsTitleLayout->addWidget(newsIconTitle_);
   newsTitleLayout->addSpacing(3);
@@ -2048,8 +2049,10 @@ void NewsTabWidget::setTextTab(const QString &text)
   if (closeButton_->isHidden())
     padding = 0;
 
+  const QMargins margins = newsTitleLabel_->layout()->contentsMargins();
   QString textTab = newsTextTitle_->fontMetrics().elidedText(
-        text, Qt::ElideRight, newsTitleLabel_->width() - 16 - 3 - padding);
+        text, Qt::ElideRight, newsTitleLabel_->width() - 16 - 3 - padding
+        - margins.left() - margins.right());
   newsTextTitle_->setText(textTab);
   newsTitleLabel_->setToolTip(text);
 

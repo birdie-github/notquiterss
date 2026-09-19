@@ -38,6 +38,10 @@ QMenuBar::item:selected {
     background: #181818;
 }
 
+QMenu {
+    border: 1px solid palette(dark);
+}
+
 #feedsView_, #newsCategoriesTree_ {
     background: #000000;
     color: #e1e0e1;
