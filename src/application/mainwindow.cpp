@@ -4410,9 +4410,9 @@ void MainWindow::retranslateStrings()
   placeToTrayAct_->setToolTip(tr("Minimize Application to Tray"));
 
   feedsColumnsMenu_->setTitle(tr("Columns"));
-  showUnreadCount_->setText(tr("Count Unread Articles"));
-  showUndeleteCount_->setText(tr("Count All Articles"));
-  showLastUpdated_->setText(tr("Last Update"));
+  showUnreadCount_->setText(tr("Number of unread articles"));
+  showUndeleteCount_->setText(tr("Total number of articles"));
+  showLastUpdated_->setText(tr("Last update"));
 
   indentationFeedsTreeAct_->setText(tr("Show Indentation"));
 
