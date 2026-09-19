@@ -1,3 +1,11 @@
+Version 0.93.0 (2026-09-20)
+* NEW FEATURE: Add User-Agent configuration in Settings
+* NEW FEATURE: Per website user-agent overrides and GET/POST requirements (e.g. for Reddit) - check overrides.ini.sample
+* CHANGE: A mammoth theming/styling rework - your theme will be reset on a first start
+* BUG FIX: Grammar fixes 
+* BUG FIX: The OLED theme is hopefully fixed for good now 
+* BUG FIX: Multiple minor fixes and dropping redundant files
+
 Version 0.92.1 (2026-09-17)
 * NEW FEATURE: Add an OLED-friendly theme (currently bugged, a fix is incoming)
 * CHANGE: Update the user-agent (will be made fully configurable later on)
