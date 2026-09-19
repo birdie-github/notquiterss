@@ -38,7 +38,7 @@ QMenuBar::item:selected {
     background: #181818;
 }
 
-QMenu {
+QMenu, #AboutDialog QTextEdit {
     border: 1px solid palette(dark);
 }
 
