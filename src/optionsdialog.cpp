@@ -32,9 +32,9 @@
 
 OptionsDialog::OptionsDialog(QWidget *parent)
   : Dialog(parent)
-  , notificationWidget_(NULL)
   , hadStoredCustomUserAgent_(false)
   , userAgentWarningAccepted_(false)
+  , notificationWidget_(NULL)
 {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
