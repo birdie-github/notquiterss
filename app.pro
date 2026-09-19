@@ -52,6 +52,8 @@ unix:!mac:qtHaveModule(dbus) {
 HEADERS += src/application/commandline.h
 SOURCES += src/application/commandline.cpp
 HEADERS += src/feedreadstate.h
+HEADERS += src/network/websiteoverrides.h
+SOURCES += src/network/websiteoverrides.cpp
 SOURCES += src/feedreadstate.cpp
 equals(QT_MAJOR_VERSION, 6): QT += core5compat
 CONFIG += c++17 link_pkgconfig

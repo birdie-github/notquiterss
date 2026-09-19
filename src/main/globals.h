@@ -20,6 +20,7 @@
 #define GLOBALS_H
 
 #include <QString>
+#include "websiteoverrides.h"
 
 class Globals
 {
@@ -29,6 +30,8 @@ public:
   void init();
 
   QString userAgent() const { return userAgent_; }
+  QString feedUserAgent(const QUrl &url) const { return overrides_.userAgent(url, userAgent()); }
+  const WebsiteOverrides &overrides() const { return overrides_; }
   static QString defaultUserAgent();
   void setUserAgent(bool useCustom, const QString &customUserAgent);
 
@@ -43,6 +46,7 @@ public:
 
 private:
   QString userAgent_;
+  WebsiteOverrides overrides_;
 
 };
 

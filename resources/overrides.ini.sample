@@ -1,0 +1,40 @@
+; Copy this UTF-8 file to overrides.ini beside the application's settings INI.
+; Help -> About -> Information -> Using Overrides shows the exact destination.
+; Restart the application after editing. This sample is NEVER loaded automatically.
+; The Settings UI controls the default User-Agent. Host overrides take priority.
+;
+; UI default -> matching parent domain -> more-specific host.
+; A host section matches that exact host unless IncludeSubdomains=true.
+; Hostnames are case-insensitive; query parameter names are case-sensitive.
+; Do not include a scheme, port, path or wildcard in a host section.
+; Rules cover every feed HEAD/GET request, including discovery and redirects.
+; Host rules do not cover favicons, article images or external browser links.
+; Wildcards, including [*], are not supported.
+;
+; Supported keys:
+; UserAgent: nonempty single-line string. Omit it to inherit.
+;   Quote values containing INI punctuation such as commas or semicolons.
+; IncludeSubdomains: true or false (default false).
+; RequiredQueryParameters: comma-separated parameter names with nonempty values.
+;   An empty value clears inherited requirements. Values are not generated or
+;   validated as credentials. Duplicate query keys containing empty values fail.
+; MissingParametersMessage: additional explanation, not HTML.
+;   Omit to inherit; an empty value clears an inherited explanation.
+; Unknown keys or malformed settings disable this whole file and are reported
+; in About and the log. No bundled override rules are used as a fallback.
+;
+; All examples below are commented out. Uncomment only rules you want.
+
+; [example.com]
+; IncludeSubdomains=true
+; UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0"
+
+; Reddit example: enable ONLY if the feeds you use require authenticated URLs.
+; This is not a claim that all public Reddit feeds require these parameters.
+; "user" and "feed" below are parameter NAMES, not literal required values.
+; Obtain your own complete feed URL; do not put a shared token in this sample.
+; This host-wide rule also blocks Reddit discovery URLs without the parameters.
+; [reddit.com]
+; IncludeSubdomains=true
+; RequiredQueryParameters=user,feed
+; MissingParametersMessage=Copy the complete authenticated feed URL from Reddit, including its user and feed query parameters.

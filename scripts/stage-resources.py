@@ -11,6 +11,7 @@ def resource_files(source, build, allow_missing=False):
     names = metadata['resources']
     root = source / names['root']
     files = {}
+    files[Path('overrides.ini.sample')] = root / 'overrides.ini.sample'
     # HTML and UI images are compiled by app.qrc. Every other resource directory
     # is external; new files/subdirectories need no per-platform packaging list.
     for directory in sorted(root.iterdir()):

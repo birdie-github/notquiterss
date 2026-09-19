@@ -27,6 +27,7 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QStringBuilder>
+#include <QDebug>
 
 #include "settings.h"
 
@@ -122,6 +123,10 @@ void Globals::init()
       : hasCustomUserAgent;
   setUserAgent(useCustomUserAgent,
                settings.value("userAgent", defaultUserAgent()).toString());
+
+  overrides_.load(QDir(QFileInfo(settingsFileName).absolutePath()).filePath("overrides.ini"));
+  if (!overrides_.error().isEmpty())
+    qWarning() << overrides_.path() << overrides_.error();
 
   isInit_ = true;
 }

@@ -192,12 +192,17 @@ void RequestFeed::getQueuedUrl()
 void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &feedUrl,
                             const QDateTime &date, const int &count)
 {
+  const QString overrideError = globals.overrides().validationError(getUrl);
+  if (!overrideError.isEmpty()) {
+    emit getUrlDone(-1, id, feedUrl, overrideError);
+    return;
+  }
   if (count)
     Common::sleep(30);
 
   qDebug() << objectName() << "::head:" << getUrl.toEncoded() << "feed:" << feedUrl << "countRepeats:" << count;
   QNetworkRequest request(getUrl);
-  request.setRawHeader("User-Agent", globals.userAgent().toUtf8());
+  request.setRawHeader("User-Agent", globals.feedUserAgent(getUrl).toUtf8());
 
   currentUrls_.append(getUrl);
   currentIds_.append(id);
@@ -218,13 +223,18 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
 void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feedUrl,
                            const QDateTime &date, const int &count)
 {
+  const QString overrideError = globals.overrides().validationError(getUrl);
+  if (!overrideError.isEmpty()) {
+    emit getUrlDone(-1, id, feedUrl, overrideError);
+    return;
+  }
   if (count)
     Common::sleep(30);
 
   qDebug() << objectName() << "::get:" << getUrl.toEncoded() << "feed:" << feedUrl << "countRepeats:" <<count;
   QNetworkRequest request(getUrl);
   request.setRawHeader("Accept", "application/atom+xml,application/rss+xml;q=0.9,application/xml;q=0.8,text/xml;q=0.7,*/*;q=0.6");
-  request.setRawHeader("User-Agent", globals.userAgent().toUtf8());
+  request.setRawHeader("User-Agent", globals.feedUserAgent(getUrl).toUtf8());
 
   currentUrls_.append(getUrl);
   currentIds_.append(id);

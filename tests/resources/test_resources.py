@@ -30,6 +30,9 @@ class ResourceTests(unittest.TestCase):
         (root / 'styles/added.qss').write_text('QWidget {color: red;}')
         output = stage.stage(self.source, self.build)
         self.assertTrue((output / 'sounds/notification.wav').is_file())
+        self.assertEqual((output / 'overrides.ini.sample').read_bytes(),
+                         (root / 'overrides.ini.sample').read_bytes())
+        self.assertFalse((output / 'overrides.ini').exists())
         self.assertTrue((output / 'social-networks/configuration.ini').is_file())
         self.assertTrue((output / 'styles/extra/decoration.png').is_file())
         self.assertFalse((output / 'images').exists())

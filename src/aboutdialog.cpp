@@ -23,6 +23,7 @@
 #include "mainapplication.h"
 #include "settings.h"
 #include "projectmetadata.h"
+#include "globals.h"
 
 #include <sqlite3.h>
 
@@ -125,6 +126,14 @@ AboutDialog::AboutDialog(QWidget *parent) :
       "</tr><tr>"
       "<td>" + tr("Settings file:") + " </td>"
       "<td>" + settings.fileName() + "</td>"
+      "</tr><tr>"
+      "<td>" + tr("Using Overrides") + " </td>"
+      "<td>" + globals.overrides().path().toHtmlEscaped() + "</td>"
+      "</tr><tr>"
+      "<td>" + tr("Overrides status") + " </td>"
+      "<td>" + (globals.overrides().error().isEmpty()
+          ? (globals.overrides().loaded() ? tr("Loaded") : tr("No user file"))
+          : globals.overrides().error()).toHtmlEscaped() + "</td>"
       "</tr><tr>"
       "<td>" + tr("Log file:") + " </td>"
       "<td>" + mainApp->dataDir() + ("/" + ProjectMetadata::log()) + "</td>"
