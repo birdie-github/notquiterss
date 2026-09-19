@@ -340,7 +340,7 @@ void OptionsDialog::createGeneralWidget()
   showToggleFeedsTree_ = new QCheckBox(tr("Show feeds tree toggle"));
   defaultIconFeeds_ = new QCheckBox(tr("Show default RSS icon instead of each feed's icon"));
   autocollapseFolder_ = new QCheckBox(tr("Automatically collapse folders"));
-  showCloseButtonTab_ = new QCheckBox(tr("Show close button on tab"));
+  showCloseButtonTab_ = new QCheckBox(tr("Show a close button on each tab"));
 
   updateCheckEnabled_ = new QCheckBox(tr("Automatically check for updates"));
   storeDBMemory_ = new QCheckBox(tr("Store the database in memory (requires application restart)"));
@@ -428,7 +428,7 @@ void OptionsDialog::createTraySystemWidget()
   moveTrayLayout->addWidget(minimizingTray_);
   moveTrayLayout->addWidget(closingTray_);
 
-  staticIconTray_ = new QRadioButton(tr("Show static icon"));
+  staticIconTray_ = new QRadioButton(tr("Show a static icon"));
   changeIconTray_ = new QRadioButton(tr("Change icon when new articles arrive"));
   newCountTray_ = new QRadioButton(tr("Show number of new articles"));
   unreadCountTray_ = new QRadioButton(tr("Show number of unread articles"));
@@ -848,7 +848,7 @@ void OptionsDialog::createFeedsWidget()
       {
         QHBoxLayout* curLayout = new QHBoxLayout();
 
-        markCurNewsRead_ = new QRadioButton(tr("when selected, after a delay"));
+        markCurNewsRead_ = new QRadioButton(tr("when selected, after "));
 
         markNewsReadTime_ = new QSpinBox();
         markNewsReadTime_->setEnabled(false);
@@ -978,7 +978,7 @@ void OptionsDialog::createLabelsWidget()
   labelsTree_->setColumnHidden(4, true);
   labelsTree_->header()->hide();
 
-  newLabelButton_ = new QPushButton(tr("New..."), this);
+  newLabelButton_ = new QPushButton(tr("Create..."), this);
   connect(newLabelButton_, SIGNAL(clicked()), this, SLOT(newLabel()));
   editLabelButton_ = new QPushButton(tr("Edit..."), this);
   editLabelButton_->setEnabled(false);

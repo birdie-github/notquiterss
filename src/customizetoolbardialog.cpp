@@ -162,7 +162,7 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   moveDownButton_->setEnabled(false);
   connect(moveDownButton_, SIGNAL(clicked()), this, SLOT(moveDownShortcut()));
 
-  QPushButton *defaultButton = new QPushButton(tr("Default"));
+  QPushButton *defaultButton = new QPushButton(tr("Restore Defaults"));
   connect(defaultButton, SIGNAL(clicked()), this, SLOT(defaultShortcut()));
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
