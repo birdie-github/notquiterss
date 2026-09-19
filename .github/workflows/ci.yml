@@ -56,6 +56,8 @@ jobs:
             mingw-w64-ucrt-x86_64-libxml2
             mingw-w64-ucrt-x86_64-openssl
             mingw-w64-ucrt-x86_64-ntldd
+      - name: Test resource staging
+        run: python3 tests/resources/test_resources.py
       - name: Prepare external QtSingleApplication and build
         run: |
           export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"

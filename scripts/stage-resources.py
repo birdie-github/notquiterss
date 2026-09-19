@@ -2,6 +2,7 @@
 """Stage external application data once for every platform; never compile resources."""
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 
@@ -14,7 +15,10 @@ def resource_files(source, build, allow_missing=False):
     files[Path('overrides.ini.sample')] = root / 'overrides.ini.sample'
     # Only this subtree is installed. Keep existing runtime directory names;
     # source themes are still discovered in the installed styles directory.
-    for directory in sorted(root.iterdir()):
+    # Construct paths through pathlib instead of retaining iterdir() paths:
+    # MSYS2 can return mixed separators that break relative_to() after rglob().
+    for name in sorted(os.listdir(root)):
+        directory = root / name
         if not directory.is_dir() or directory.name == names['translations']:
             continue
         for path in sorted(directory.rglob('*')):

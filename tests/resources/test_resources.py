@@ -44,6 +44,8 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse((output / 'styles/fixed-indicators.css').exists())
         self.assertTrue((output / 'styles/light.qss').is_file())
         self.assertTrue((output / 'icons/application.ico').is_file())
+        self.assertEqual((output / 'icons/128x128/quiterss.png').read_bytes(),
+                         (root / 'icons/128x128/quiterss.png').read_bytes())
         self.assertFalse(list(output.rglob('*.md')))
         installed = Path(self.temp.name) / 'installed'
         shutil.copytree(output, installed / 'resources')
