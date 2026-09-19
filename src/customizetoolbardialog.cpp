@@ -90,6 +90,7 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   }
 
   styleBox_ = new QComboBox(this);
+  styleBox_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
   treeItem.clear();
   treeItem << tr("Icon") << tr("Text") << tr("Text Beside Icon") << tr("Text Under Icon");
   styleBox_->addItems(treeItem);
@@ -105,6 +106,7 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   }
 
   iconBox_ = new QComboBox(this);
+  iconBox_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
   treeItem.clear();
   treeItem << tr("Big") << tr("Normal") << tr("Small");
   iconBox_->addItems(treeItem);
@@ -141,7 +143,6 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
 
   QVBoxLayout *mainVLayout = new QVBoxLayout();
   mainVLayout->addWidget(shortcutTree_, 1);
-  mainVLayout->addLayout(settingsLayout);
 
   addButtonMenu_ = new QMenu(this);
   addButton_ = new QPushButton(tr("Add"));
@@ -179,6 +180,8 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   mainlayout->addLayout(buttonsVLayout);
 
   pageLayout->addLayout(mainlayout);
+  // Let the options use the full dialog width, not just the action-list column.
+  pageLayout->addLayout(settingsLayout);
 
   buttonsLayout->insertWidget(0, defaultButton);
 
@@ -190,6 +193,10 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
           this, SLOT(slotCurrentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
   connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
 
+  // Respect translated text, font metrics and theme sizing even when restoring
+  // geometry saved with a smaller font or a different display scale.
+  ensurePolished();
+  setMinimumSize(minimumSizeHint().expandedTo(QSize(400, 400)));
   restoreGeometry(settings.value("customizeToolbarDlg/geometry").toByteArray());
 }
 
