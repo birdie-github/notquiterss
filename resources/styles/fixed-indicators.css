@@ -5,6 +5,14 @@
    Fusion derives indicator outlines from Window (black stays black), and
    recent Qt6 also consults the platform color scheme for checkbox borders.
    Own the complete indicator here, including the glyph and all check states. */
+/* Settings' category tree and framed pages use QFrame::StyledPanel (6).
+   Fusion also derives these frames from Window, making them black on OLED.
+   Match only existing panels: leave NoFrame scroll areas and child controls
+   alone. Numeric enum selectors work with both Qt5 and Qt6. */
+OptionsDialog QFrame[frameShape="6"] {
+    border: 1px solid %1;
+}
+
 QCheckBox::indicator, QGroupBox::indicator, QRadioButton::indicator,
 QMenu::indicator {
     width: 12px;
