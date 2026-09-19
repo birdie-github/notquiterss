@@ -1,6 +1,6 @@
 /* ApplicationStyle
 Name=Gray
-Id=grayStyle_
+Id=gray
 Mode=fixed
 Palette.Window=#f0f0f0
 Palette.WindowText=#000000

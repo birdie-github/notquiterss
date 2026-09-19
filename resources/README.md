@@ -11,7 +11,7 @@ All source assets live here. `project.json` defines runtime directory names;
   The same source PNGs are also referenced by QRC where needed. Linux desktop
   icons continue to install into the standard hicolor directories.
 - `external/themes/`: editable application QSS, staged into the existing
-  runtime `styles/` directory. No theme IDs, metadata or fallback behavior change.
+  runtime `styles/` directory. Light/Dark also provide embedded fallbacks.
 - `external/sounds/`: notification sounds.
 - `external/social-networks/`: `configuration.ini` and service icons together.
 - `external/overrides.ini.sample`: annotated sample, never loaded automatically.
@@ -70,3 +70,6 @@ After building with Qt5/Qt6, check a clean installation/artifact: application an
 article styles, notification playback, sharing menus/icons, application and Qt
 translations, About/UI images, newspaper/article templates, Linux desktop icons,
 and macOS/Windows native icons. Verify Windows away from the source checkout.
+
+Light and Dark are also embedded directly from their external theme source
+files as fallbacks. Installed versions override them by metadata ID.

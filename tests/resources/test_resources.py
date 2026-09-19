@@ -39,7 +39,7 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse((output / 'html').exists())
         self.assertFalse((output / 'embedded').exists())
         self.assertFalse((output / 'external').exists())
-        self.assertFalse((output / 'styles/automatic.qss').exists())
+        self.assertFalse((output / 'styles/system.qss').exists())
         self.assertFalse((output / 'styles/news.css').exists())
         self.assertFalse((output / 'styles/fixed-indicators.css').exists())
         self.assertTrue((output / 'styles/light.qss').is_file())
@@ -89,7 +89,7 @@ class ResourceTests(unittest.TestCase):
                     self.assertIsNotNone(file.get('alias'))
         self.assertIn('/images/images/logo.png', seen)
         self.assertIn('/html/description', seen)
-        self.assertIn('/style/automaticStyle', seen)
+        self.assertIn('/style/system', seen)
 
 
 if __name__ == '__main__':

@@ -9,35 +9,6 @@
 #include <QStringList>
 
 namespace {
-// Catch truncated files without depending on Qt's private stylesheet parser.
-// Qt itself reports unsupported properties and other grammar errors on apply.
-bool balanced(const QString &sheet)
-{
-  int braces = 0;
-  QChar quote;
-  bool comment = false;
-  for (int i = 0; i < sheet.size(); ++i) {
-    const QChar c = sheet.at(i);
-    const QChar next = i + 1 < sheet.size() ? sheet.at(i + 1) : QChar();
-    if (comment) {
-      if (c == '*' && next == '/') { comment = false; ++i; }
-    } else if (!quote.isNull()) {
-      if (c == '\\') ++i;
-      else if (c == quote) quote = QChar();
-    } else if (c == '/' && next == '*') {
-      comment = true;
-      ++i;
-    } else if (c == '\'' || c == '"') {
-      quote = c;
-    } else if (c == '{') {
-      ++braces;
-    } else if (c == '}' && --braces < 0) {
-      return false;
-    }
-  }
-  return braces == 0 && quote.isNull() && !comment;
-}
-
 bool paletteRole(const QString &name, QPalette::ColorRole &role)
 {
   static const QHash<QString, int> roles = {
@@ -108,8 +79,8 @@ bool readStyle(const QFileInfo &info, ApplicationStyle &style)
     qWarning() << "Application style: invalid UTF-8" << file.fileName();
     return false;
   }
-  if (style.sheet.trimmed().isEmpty() || !balanced(style.sheet)) {
-    qWarning() << "Application style: empty or unbalanced QSS" << file.fileName();
+  if (style.sheet.trimmed().isEmpty()) {
+    qWarning() << "Application style: empty QSS" << file.fileName();
     return false;
   }
   style.id = info.completeBaseName();
@@ -194,9 +165,39 @@ QList<ApplicationStyle> ApplicationStyles::discover(const QString &directory)
   return result;
 }
 
+QList<ApplicationStyle> ApplicationStyles::available(const QString &directory)
+{
+  QList<ApplicationStyle> result = {automaticDefault()};
+  // Embed the same source files that are shipped for editing. Their metadata
+  // supplies the IDs; filenames only locate the built-in resources.
+  for (const QString &path : {QStringLiteral(":/style/light"),
+                              QStringLiteral(":/style/dark")}) {
+    ApplicationStyle style;
+    if (readStyle(QFileInfo(path), style)) {
+      style.builtIn = true;
+      result.append(style);
+    }
+  }
+  for (ApplicationStyle style : discover(directory)) {
+    // System is an internal resource, never an external replacement.
+    if (style.id == automaticId()) continue;
+    bool replaced = false;
+    for (ApplicationStyle &existing : result) {
+      if (existing.id == style.id) {
+        style.builtIn = existing.builtIn;
+        existing = style;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) result.append(style);
+  }
+  return result;
+}
+
 QString ApplicationStyles::automaticId()
 {
-  return QStringLiteral("automaticStyle_");
+  return QStringLiteral("system");
 }
 
 ApplicationStyle ApplicationStyles::automaticDefault()
@@ -204,12 +205,13 @@ ApplicationStyle ApplicationStyles::automaticDefault()
   ApplicationStyle style;
   style.id = automaticId();
   style.name = QStringLiteral("System");
-  style.fileName = QStringLiteral(":/style/automaticStyle");
+  style.fileName = QStringLiteral(":/style/system");
   style.mode = ApplicationStyle::System;
   style.isDefault = true;
+  style.builtIn = true;
   QFile file(style.fileName);
   if (file.open(QIODevice::ReadOnly)) style.sheet = QString::fromUtf8(file.readAll());
-  else qWarning() << "Application style: cannot read built-in automatic fallback" << file.errorString();
+  else qWarning() << "Application style: cannot read built-in System fallback" << file.errorString();
   return style;
 }
 

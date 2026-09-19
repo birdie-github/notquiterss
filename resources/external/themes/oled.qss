@@ -1,6 +1,6 @@
 /* ApplicationStyle
 Name=OLED
-Id=oledStyle_
+Id=oled
 Mode=fixed
 Palette.Window=#000000
 Palette.WindowText=#e8e8e8

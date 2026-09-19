@@ -2127,7 +2127,7 @@ void MainWindow::saveSettings()
   settings.setValue("categoriesPanelShow", categoriesPanelToggle_->isChecked());
   settings.setValue("statusBarShow", statusBarToggle_->isChecked());
 
-  settings.setValue("styleApplication", mainApp->applicationStyle().id);
+  settings.setValue("theme", mainApp->applicationStyle().id);
 
   settings.setValue("showUnreadCount", showUnreadCount_->isChecked());
   settings.setValue("showUndeleteCount", showUndeleteCount_->isChecked());
@@ -4376,7 +4376,7 @@ void MainWindow::retranslateStrings()
   newspaperLayoutAct_->setText(tr("Newspaper"));
   layoutToggle_->setText(tr("Layout"));
 
-  styleMenu_->setTitle(tr("Application Style"));
+  styleMenu_->setTitle(tr("Application Theme"));
   rebuildStyleMenu();
 
   browserPositionMenu_->setTitle(tr("Article Pane Position"));
@@ -5384,12 +5384,6 @@ void MainWindow::rebuildStyleMenu()
   const auto oldActions = styleGroup_->actions();
   for (QAction *action : oldActions) delete action;
 
-  const QStringList builtInIds = {
-    ApplicationStyles::automaticId(),
-    QStringLiteral("lightStyle_"),
-    QStringLiteral("darkStyle_")
-  };
-
   auto addStyleAction = [this](const ApplicationStyle &style) {
     QAction *action = new QAction(
           QCoreApplication::translate("MainWindow", style.name.toUtf8().constData()), styleGroup_);
@@ -5401,18 +5395,10 @@ void MainWindow::rebuildStyleMenu()
     styleMenu_->addAction(action);
   };
 
-  for (const QString &id : builtInIds) {
-    for (const ApplicationStyle &style : styles) {
-      if (style.id == id) {
-        addStyleAction(style);
-        break;
-      }
-    }
-  }
-
   QList<ApplicationStyle> otherStyles;
   for (const ApplicationStyle &style : styles) {
-    if (!builtInIds.contains(style.id)) otherStyles.append(style);
+    if (style.builtIn) addStyleAction(style);
+    else otherStyles.append(style);
   }
   std::sort(otherStyles.begin(), otherStyles.end(),
             [](const ApplicationStyle &a, const ApplicationStyle &b) {

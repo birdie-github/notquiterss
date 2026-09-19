@@ -5,3 +5,4 @@ TEMPLATE = app
 TARGET = applicationstyle-test
 SOURCES += test_applicationstyle.cpp ../../src/application/applicationstyle.cpp
 INCLUDEPATH += ../../src/application
+RESOURCES += ../../app.qrc

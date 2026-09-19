@@ -1,6 +1,6 @@
-# Application styles
+# Application themes
 
-The Application Style menu enumerates `.qss` files in the installed resource
+The Application Theme menu enumerates `.qss` files in the installed resource
 root's style directory. With the supplied project metadata:
 
 - Linux: `<PREFIX>/share/NotQuiteRSS/styles` (normally `/usr/local/share/NotQuiteRSS/styles`).
@@ -21,6 +21,18 @@ The bundled choices deliberately have simple semantics:
 - **OLED** and the accent themes are also fixed and self-contained.
 
 The former System Default/System2 alternatives are consolidated into System.
+
+System, Light and Dark are always embedded. Light and Dark use the same source
+files as their installed, editable versions. External files with IDs `light`
+or `dark` replace the corresponding embedded theme, regardless of filename.
+Missing or unreadable files leave the embedded version available. Existing
+metadata checks still apply; stylesheet syntax is left to Qt. There is only
+one menu entry per ID. System (`system`) is internal and cannot be replaced.
+
+The preference is stored as `theme=oled`, for example, in the INI's `[Settings]`
+section. The old `styleApplication` key and old IDs are not migrated.
+Shipped IDs are `system`, `light`, `dark`, `oled`, `gray`, `green`, `orange`,
+`pink` and `purple`. The metadata header remains `ApplicationStyle`.
 
 ## Metadata
 
@@ -55,7 +67,7 @@ empty values, invalid colors, and invalid `Mode`/`Default` values reject the
 file with a warning.
 
 `Name` and `Id` default to the filename without `.qss`. Keep an explicit `Id`
-stable if a file is renamed. IDs must be unique and nonempty. `Mode` defaults
+stable if a file is renamed. Use lowercase IDs. IDs must be unique and nonempty. `Mode` defaults
 to `system`; `Default` defaults to `false`.
 
 `Mode=system` must not define `Palette.*` values. It is intended for System
@@ -96,13 +108,13 @@ dark appearance.
 
 ## Runtime discovery
 
-Open View > Application Style to refresh the file list. Adding/removing files
+Open View > Application Theme to refresh the file list. Adding/removing files
 requires no restart or rebuild. Selecting a style reloads its current contents
 immediately. Use absolute or `:/` resource URLs for images; relative URLs keep
 Qt's normal working-directory semantics.
 
 Malformed metadata, duplicate IDs, missing files/directories, invalid UTF-8,
-and empty/unbalanced QSS produce warnings. Qt reports its own stylesheet syntax
+and empty QSS produce warnings. Qt reports its own stylesheet syntax
 and unsupported-property warnings when the sheet is applied.
 
 ## Fixed-theme widget primitives

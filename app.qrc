@@ -94,7 +94,9 @@
         <file alias="loading_dark">resources/embedded/icons/loading_dark.gif</file>
     </qresource>
     <qresource prefix="/style">
-        <file alias="automaticStyle">resources/embedded/styles/automatic.qss</file>
+        <file alias="system">resources/embedded/styles/system.qss</file>
+        <file alias="light">resources/external/themes/light.qss</file>
+        <file alias="dark">resources/external/themes/dark.qss</file>
         <file alias="newsStyle">resources/embedded/styles/news.css</file>
         <file alias="fixedIndicators">resources/embedded/styles/fixed-indicators.css</file>
         <file alias="indicators/check-dark-disabled.png">resources/embedded/icons/indicators/check-dark-disabled.png</file>

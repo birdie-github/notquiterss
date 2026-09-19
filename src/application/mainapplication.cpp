@@ -315,13 +315,8 @@ bool MainApplication::storeDBMemory() const
 
 QList<ApplicationStyle> MainApplication::applicationStyles() const
 {
-  QList<ApplicationStyle> styles =
-      ApplicationStyles::discover(QDir(resourcesDir()).filePath(ProjectMetadata::styles()));
-  bool hasAutomatic = false;
-  for (const ApplicationStyle &style : styles)
-    hasAutomatic = hasAutomatic || style.id == ApplicationStyles::automaticId();
-  if (!hasAutomatic) styles.prepend(ApplicationStyles::automaticDefault());
-  return styles;
+  return ApplicationStyles::available(
+      QDir(resourcesDir()).filePath(ProjectMetadata::styles()));
 }
 
 void MainApplication::applyApplicationStyle(const QString &id)
@@ -368,14 +363,14 @@ void MainApplication::applyApplicationStyle(const QString &id)
 
   qInfo() << "Applying application QSS:" << selected.fileName;
   setStyleSheet(ApplicationStyles::styleSheet(selected, palette()));
-  Settings().setValue("Settings/styleApplication", selected.id);
+  Settings().setValue("Settings/theme", selected.id);
 }
 
 void MainApplication::setStyleApplication()
 {
   Settings settings("Settings");
-  QString id = settings.value("styleApplication").toString();
-  if (!settings.contains("styleApplication")) {
+  QString id = settings.value("theme").toString();
+  if (!settings.contains("theme")) {
     for (const ApplicationStyle &style : applicationStyles()) {
       if (style.isDefault) { id = style.id; break; }
     }
