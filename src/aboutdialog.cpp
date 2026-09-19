@@ -145,7 +145,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
       "<td>" + tr("Settings file:") + " </td>"
       "<td>" + settings.fileName() + "</td>"
       "</tr><tr>"
-      "<td>" + tr("Using Overrides") + " </td>"
+      "<td>" + tr("Website overrides:") + " </td>"
       "<td>" + overridesPath.toHtmlEscaped() + "</td>"
       "</tr><tr>"
       "<td>" + tr("Log file:") + " </td>"

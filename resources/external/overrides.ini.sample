@@ -1,5 +1,5 @@
 ; Copy this UTF-8 file to overrides.ini beside the application's settings INI.
-; Help -> About -> Information -> Using Overrides shows the exact destination.
+; Help -> About -> Information -> "Website overrides" shows the exact destination.
 ; Restart the application after editing. This sample is NEVER loaded automatically.
 ; The Settings UI controls the default User-Agent. Host overrides take priority.
 ;
