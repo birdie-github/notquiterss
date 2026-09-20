@@ -80,7 +80,7 @@ public slots:
   void slotGetFeedsFolder(QString query);
   void slotGetAllFeeds();
   void slotGetAllFeedsStartup();
-  void slotImportFeeds(QByteArray xmlData);
+  void slotImportFeeds(QByteArray xmlData, bool upgradeHttp);
   void getUrlDone(int result, int feedId, QString feedUrlStr,
                   QString error, QByteArray data,
                   QDateTime dtReply, QString codecName);

@@ -16,6 +16,8 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "opmlinput.h"
+#include "../network/feedurl.h"
 #include "databasebackup.h"
 #include "feedhealth.h"
 #include "projectmetadata.h"
@@ -2426,8 +2428,29 @@ void MainWindow::slotImportFeeds()
   QByteArray xmlData = file.readAll();
   file.close();
 
+  xmlData = OpmlInput::prepare(xmlData);
+  int httpCount = 0;
+  QString error;
+  if (!OpmlInput::inspect(xmlData, httpCount, error)) {
+    QMessageBox::warning(this, tr("Import failed"), error);
+    return;
+  }
+  bool upgradeHttp = true;
+  if (httpCount > 0) {
+    QMessageBox options(QMessageBox::Question, tr("Import feeds"),
+        tr("This file contains %1 HTTP feed URLs. HTTPS will be tried without falling back to HTTP. "
+           "Nonstandard ports are preserved; port 80 becomes the HTTPS default.").arg(httpCount),
+        QMessageBox::Ok | QMessageBox::Cancel, this);
+    auto *upgrade = new QCheckBox(tr("Upgrade HTTP feed URLs to HTTPS"), &options);
+    upgrade->setChecked(true);
+    options.setCheckBox(upgrade);
+    options.setDefaultButton(QMessageBox::Ok);
+    if (options.exec() != QMessageBox::Ok) return;
+    upgradeHttp = upgrade->isChecked();
+    if (!upgradeHttp && !FeedUrl::confirmImportHttp(this, httpCount)) return;
+  }
   isStartImportFeed_ = true;
-  emit signalImportFeeds(xmlData);
+  emit signalImportFeeds(xmlData, upgradeHttp);
 }
 
 /** @brief Export feeds to OPML-file

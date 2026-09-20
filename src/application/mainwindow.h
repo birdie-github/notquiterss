@@ -282,7 +282,7 @@ signals:
   void signalGetAllFeeds();
   void signalGetAllFeedsStartup();
   void signalStopUpdate();
-  void signalImportFeeds(QByteArray xmlData);
+  void signalImportFeeds(QByteArray xmlData, bool upgradeHttp);
   void signalRequestUrl(int feedId, QString urlString,
                         QDateTime date, QString userInfo);
   void faviconRequestUrl(QString urlString, QString feedUrl);

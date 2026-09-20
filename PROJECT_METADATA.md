@@ -115,3 +115,22 @@ Icons are not configured here. After insertion, the existing favicon worker
 asynchronously inspects `website_url` (or `feed_url` when omitted). Feeds use the
 generic icon until discovery succeeds; failures do not block startup. No icon
 retry mechanism or database-to-disk save trigger is added.
+
+## Subscription URL policy
+
+New scheme-less URLs and `feed://` links default to HTTPS. Explicit HTTP URLs
+require confirmation in Add Feed or when changing a subscription URL in
+Properties. Keeping an existing HTTP URL while editing other properties does
+not prompt again. The saved URL records the choice; background updates never
+prompt or fall back to HTTP after an HTTPS error.
+
+OPML import previews the number of HTTP URLs, with upgrading enabled by default.
+Disabling upgrading requires one confirmation for the whole import. Only feed
+URLs change, not website metadata or article links. Port 80 is removed during
+upgrading; other explicit ports are preserved. Malformed OPML is rejected before
+writes, after the existing compatibility repairs. Duplicate detection compares
+normalized HTTP/HTTPS identities, within the import and against subscriptions;
+existing subscriptions are neither changed nor upgraded by import.
+
+An HTTP feed discovered inside a webpage also requires confirmation before it
+is fetched. There is no new persistent HTTP permission flag and no TLS bypass.

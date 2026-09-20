@@ -16,6 +16,8 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "network/feedurl.h"
+#include "network/networkpolicy.h"
 #include "addfeedwizard.h"
 
 #include "mainapplication.h"
@@ -85,7 +87,8 @@ void AddFeedWizard::changeEvent(QEvent *event)
       isActiveWindow() && (currentId() == 0) && urlFeedEdit_->isEnabled()) {
     QClipboard *clipboard_ = QApplication::clipboard();
     QString clipboardStr = clipboard_->text().left(8);
-    if (clipboardStr.contains("http://", Qt::CaseInsensitive) ||
+    if (clipboardStr.startsWith("feed:", Qt::CaseInsensitive) ||
+        clipboardStr.contains("http://", Qt::CaseInsensitive) ||
         clipboardStr.contains("https://", Qt::CaseInsensitive) ||
         clipboardStr.contains("www.", Qt::CaseInsensitive) ||
         clipboardStr.contains("feed://", Qt::CaseInsensitive) ||
@@ -106,7 +109,7 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   finishOn = false;
 
   urlFeedEdit_ = new LineEdit(this);
-  urlFeedEdit_->setText("http://");
+  urlFeedEdit_->setPlaceholderText("https://example.org/feed");
 
   titleFeedAsName_ = new QCheckBox(
         tr("Use the feed title as the display name"), this);
@@ -268,11 +271,10 @@ void AddFeedWizard::setUrlFeed(const QString &feedUrl)
 void AddFeedWizard::urlFeedEditChanged(const QString& text)
 {
   button(QWizard::NextButton)->setEnabled(
-        !text.isEmpty() && (text != "http://"));
+        NetworkPolicy::isRequestUrl(FeedUrl::normalize(text)));
 
   bool buttonEnable = false;
-  if (titleFeedAsName_->isChecked() && (text != "http://") &&
-      !text.isEmpty()) {
+  if (titleFeedAsName_->isChecked() && NetworkPolicy::isRequestUrl(FeedUrl::normalize(text))) {
     buttonEnable = true;
   }
   warningWidget_->setVisible(false);
@@ -282,8 +284,7 @@ void AddFeedWizard::urlFeedEditChanged(const QString& text)
 void AddFeedWizard::titleFeedAsNameStateChanged(int state)
 {
   bool buttonEnable = false;
-  if ((state == Qt::Checked) && (urlFeedEdit_->text() != "http://") &&
-      !urlFeedEdit_->text().isEmpty()) {
+  if ((state == Qt::Checked) && NetworkPolicy::isRequestUrl(FeedUrl::normalize(urlFeedEdit_->text()))) {
     buttonEnable = true;
   }
   button(QWizard::FinishButton)->setEnabled(buttonEnable);
@@ -320,21 +321,8 @@ void AddFeedWizard::finishButtonClicked()
 
 void AddFeedWizard::addFeed()
 {
-  // Set URL-schema for URL-address "http://" or leave it "https://"
-  feedUrlString_ = urlFeedEdit_->text().simplified();
-  if (feedUrlString_.contains("feed:", Qt::CaseInsensitive)) {
-    if (feedUrlString_.contains("https://", Qt::CaseInsensitive)) {
-      feedUrlString_.remove(0, 5);
-      urlFeedEdit_->setText(feedUrlString_);
-    } else {
-      feedUrlString_.remove(0, 7);
-      urlFeedEdit_->setText("http://" + feedUrlString_);
-    }
-  }
-  QUrl feedUrl(urlFeedEdit_->text().simplified());
-  if (feedUrl.scheme().isEmpty()) {
-    feedUrl.setUrl("http://" % urlFeedEdit_->text().simplified());
-  }
+  QUrl feedUrl = FeedUrl::normalize(urlFeedEdit_->text());
+  if (!FeedUrl::confirm(this, feedUrl)) return;
   feedUrlString_ = feedUrl.toString();
   urlFeedEdit_->setText(feedUrlString_);
 
@@ -346,7 +334,7 @@ void AddFeedWizard::addFeed()
 
   QSqlQuery q;
   int duplicateFoundId = -1;
-  q.prepare("SELECT id FROM feeds WHERE xmlUrl LIKE :xmlUrl");
+  q.prepare("SELECT id FROM feeds WHERE xmlUrl = :xmlUrl");
   q.bindValue(":xmlUrl", feedUrlString_);
   q.exec();
   if (q.first())
@@ -506,23 +494,22 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
         if (pos > -1) {
           QString linkFeedString = match.captured(1);
           linkFeedString.replace("&amp;", "&", Qt::CaseInsensitive);
-          QUrl url(linkFeedString);
-          QUrl feedUrl(feedUrlStr);
-          if (url.host().isEmpty()) {
-            url.setScheme(feedUrl.scheme());
-            url.setHost(feedUrl.host());
-            if (feedUrl.toString().indexOf('?') > -1) {
-              str = feedUrl.path();
-              str = str.left(str.lastIndexOf('/')+1);
-              url.setPath(str+url.path());
-            }
+          QUrl url = QUrl(feedUrlStr).resolved(QUrl(linkFeedString));
+          if (!FeedUrl::confirm(this, url)) {
+            deleteFeed();
+            progressBar_->hide();
+            page(0)->setEnabled(true);
+            selectedPage = false;
+            button(QWizard::CancelButton)->setEnabled(true);
+            urlFeedEditChanged(urlFeedEdit_->text());
+            return;
           }
           linkFeedString = url.toString();
           qDebug() << "Parse feed URL, valid:" << linkFeedString;
 
           QSqlQuery q;
           int duplicateFoundId = -1;
-          q.prepare("SELECT id FROM feeds WHERE xmlUrl LIKE :xmlUrl");
+          q.prepare("SELECT id FROM feeds WHERE xmlUrl = :xmlUrl");
           q.bindValue(":xmlUrl", linkFeedString);
           q.exec();
           if (q.next()) duplicateFoundId = q.value(0).toInt();

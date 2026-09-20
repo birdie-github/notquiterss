@@ -167,13 +167,7 @@ void MainApplication::receiveMessage(const QString &message)
       if (param == "--exit") { mainWindow_->quitApp(); return; }
       if (param.startsWith("feed:", Qt::CaseInsensitive)) {
         QClipboard *clipboard = QApplication::clipboard();
-        if (param.contains("https://", Qt::CaseInsensitive)) {
-          param.remove(0, 5);
-          clipboard->setText(param);
-        } else {
-          param.remove(0, 7);
-          clipboard->setText("http://" + param);
-        }
+        clipboard->setText(param); // The Add Feed wizard normalizes and confirms the URL.
         mainWindow_->addFeed();
       }
     }

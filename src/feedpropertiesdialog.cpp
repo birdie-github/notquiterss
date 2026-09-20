@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 /*This file is prepared for Doxygen automatic documentation generation.*/
+#include "network/feedurl.h"
 #include "feedpropertiesdialog.h"
 #include "articlecontent.h"
 #include "mainapplication.h"
@@ -44,7 +45,14 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent)
 
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, [this] {
+    if (isFeed_ && editURL->text().trimmed() != feedProperties.general.url) {
+      QUrl url = FeedUrl::normalize(editURL->text());
+      if (!FeedUrl::confirm(this, url)) return;
+      editURL->setText(url.toString());
+    }
+    accept();
+  });
 
   connect(this, SIGNAL(signalLoadIcon(QString,QString)),
           parent, SIGNAL(faviconRequestUrl(QString,QString)));

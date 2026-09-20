@@ -325,3 +325,6 @@ OTHER_FILES += \
     CHANGELOG \
     INSTALL \
     $$PWD/$${PROJECT_RESOURCE_ROOT}/$${PROJECT_SHARING_ICONS}/$${PROJECT_SHARING_CONFIG}
+
+HEADERS += src/network/feedurl.h src/application/opmlinput.h
+SOURCES += src/network/feedurl.cpp src/application/opmlinput.cpp

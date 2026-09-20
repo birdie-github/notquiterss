@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "network/feedurl.h"
 #include "databasebackup.h"
 #include "feedhealth.h"
 #include <QTextCodec>
@@ -149,8 +150,8 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotGetFeed(int,QString,QDateTime,int)));
     connect(parent, SIGNAL(signalGetFeedsFolder(QString)),
             updateObject_, SLOT(slotGetFeedsFolder(QString)));
-    connect(parent, SIGNAL(signalImportFeeds(QByteArray)),
-            updateObject_, SLOT(slotImportFeeds(QByteArray)));
+    connect(parent, SIGNAL(signalImportFeeds(QByteArray,bool)),
+            updateObject_, SLOT(slotImportFeeds(QByteArray,bool)));
     connect(updateObject_, SIGNAL(showProgressBar(int)),
             parent, SLOT(showProgressBar(int)));
     connect(updateObject_, SIGNAL(loadProgress(int)),
@@ -415,51 +416,33 @@ void UpdateObject::queueAllFeeds(bool manual)
  * Calls open file system dialog with filter *.opml.
  * Adds all feeds to DB include hierarchy, ignore duplicate feeds
  *---------------------------------------------------------------------------*/
-void UpdateObject::slotImportFeeds(QByteArray xmlData)
+void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 {
   int outlineCount = 0;
   QSqlQuery q(db_);
   QList<int> idsList;
   QList<QString> urlsList;
   QXmlStreamReader xml;
-  QString convertData;
-  bool codecOk = false;
+  xml.addData(xmlData);
 
-  QRegularExpression rx("&(?!([a-z0-9#]+;))",
-      QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-  int pos = 0;
-  // Latin-1 keeps match offsets aligned with the QByteArray being edited.
-  while ((pos = rx.match(QString::fromLatin1(xmlData), pos).capturedStart()) != -1) {
-    xmlData.replace(pos, 1, "&amp;");
-    pos += 1;
+  QHash<QString, int> knownUrls;
+  if (!q.exec("SELECT id, xmlUrl FROM feeds WHERE xmlUrl != ''")) {
+    emit signalMessageStatusBar(tr("Could not check existing subscriptions."), 5000);
+    return;
   }
+  while (q.next()) knownUrls.insert(FeedUrl::identity(FeedUrl::normalize(q.value(1).toString())), q.value(0).toInt());
+  q.finish();
 
-  rx.setPattern("encoding=\"([^\"]+)");
-  pos = rx.match(QString::fromUtf8(xmlData)).capturedStart();
-  if (pos == -1) {
-    rx.setPattern("encoding='([^']+)");
-    pos = rx.match(QString::fromUtf8(xmlData)).capturedStart();
+  if (!db_.transaction()) {
+    emit signalMessageStatusBar(tr("Could not start the import transaction."), 5000);
+    return;
   }
-  if (pos == -1) {
-    QStringList codecNameList;
-    codecNameList << "UTF-8" << "Windows-1251" << "KOI8-R" << "KOI8-U"
-                  << "ISO 8859-5" << "IBM 866";
-    foreach (QString codecNameT, codecNameList) {
-      QTextCodec *codec = QTextCodec::codecForName(codecNameT.toUtf8());
-      if (codec && codec->canEncode(xmlData)) {
-        convertData = codec->toUnicode(xmlData);
-        codecOk = true;
-        break;
-      }
-    }
-  }
-  if (codecOk) {
-    xml.addData(convertData);
-  } else {
-    xml.addData(xmlData);
-  }
-
-  db_.transaction();
+  auto failImport = [this, &q] {
+    const QString error = q.lastError().text();
+    q.finish();
+    db_.rollback();
+    emit signalMessageStatusBar(tr("Import failed: %1").arg(error), 5000);
+  };
 
   // Store hierarchy of "outline" tags. Next nested outline is pushed to stack.
   // When it closes, pop it out from stack. Top of stack is the root outline.
@@ -481,8 +464,8 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData)
         //Folder finded
         if (xmlUrlString.isEmpty()) {
           int rowToParent = 0;
-          q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
-                 arg(parentIdsStack.top()));
+          if (!q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
+                      arg(parentIdsStack.top()))) { failImport(); return; }
           if (q.next()) rowToParent = q.value(0).toInt();
 
           q.prepare("INSERT INTO feeds(text, title, xmlUrl, created, f_Expanded, parentId, rowToParent) "
@@ -494,33 +477,24 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData)
                       QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
           q.bindValue(":parentId", parentIdsStack.top());
           q.bindValue(":rowToParent", rowToParent);
-          q.exec();
+          if (!q.exec()) { failImport(); return; }
           parentIdsStack.push(q.lastInsertId().toInt());
         }
         // Feed finded
         else {
-          if (xmlUrlString.contains("feed:", Qt::CaseInsensitive)) {
-            if (xmlUrlString.contains("https://", Qt::CaseInsensitive)) {
-              xmlUrlString.remove(0, 5);
-            } else {
-              xmlUrlString.remove(0, 7);
-              xmlUrlString = "http://" + xmlUrlString;
-            }
-          }
-
-          bool isFeedDuplicated = false;
-          q.prepare("SELECT id FROM feeds WHERE xmlUrl LIKE :xmlUrl");
-          q.bindValue(":xmlUrl", xmlUrlString);
-          q.exec();
-          if (q.next())
-            isFeedDuplicated = true;
-
+          QUrl url = FeedUrl::normalize(xmlUrlString);
+          if (upgradeHttp) url = FeedUrl::upgrade(url);
+          xmlUrlString = url.toString();
+          // Compare normalized identities, including HTTP/HTTPS equivalents,
+          // without modifying any existing subscription.
+          const QString identity = FeedUrl::identity(url);
+          const bool isFeedDuplicated = knownUrls.contains(identity);
           if (isFeedDuplicated) {
             qDebug() << "duplicate feed:" << xmlUrlString << textString;
           } else {
             int rowToParent = 0;
-            q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
-                   arg(parentIdsStack.top()));
+            if (!q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
+                        arg(parentIdsStack.top()))) { failImport(); return; }
             if (q.next()) rowToParent = q.value(0).toInt();
 
             q.prepare("INSERT INTO feeds(text, title, description, xmlUrl, htmlUrl, created, parentId, rowToParent) "
@@ -533,12 +507,13 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData)
             q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
             q.addBindValue(parentIdsStack.top());
             q.addBindValue(rowToParent);
-            q.exec();
+            if (!q.exec()) { failImport(); return; }
 
+            knownUrls.insert(identity, q.lastInsertId().toInt());
             idsList.append(q.lastInsertId().toInt());
             urlsList.append(xmlUrlString);
           }
-          parentIdsStack.push(q.lastInsertId().toInt());
+          parentIdsStack.push(knownUrls.value(identity));
         }
       }
     } else if (xml.isEndElement()) {
@@ -553,12 +528,21 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData)
     QString error = QString("Import error: Line = %1, Column = %2; Error = %3").
         arg(xml.lineNumber()).arg(xml.columnNumber()).arg(xml.errorString());
     qCritical() << error;
+    q.finish();
+    db_.rollback();
     emit signalMessageStatusBar(error, 3000);
-  } else {
-    emit signalMessageStatusBar(QString("Import: file read done"), 3000);
+    return;
   }
 
-  if (db_.commit()) DatabaseBackup::subscriptionsChanged();
+  q.finish();
+  if (!db_.commit()) {
+    const QString error = db_.lastError().text();
+    db_.rollback();
+    emit signalMessageStatusBar(tr("Import failed: %1").arg(error), 5000);
+    return;
+  }
+  DatabaseBackup::subscriptionsChanged();
+  emit signalMessageStatusBar(tr("Import complete"), 3000);
 
   emit signalUpdateFeedsModel();
 
