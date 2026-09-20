@@ -67,6 +67,7 @@ public:
 
   void retranslateStrings();
   void setSettings(bool init = true, bool newTab = true);
+  void refreshFeedDisplay(bool images);
   void refreshAppearance(bool reloadArticle = false);
   void setNewsLayout();
   void setBrowserPosition();

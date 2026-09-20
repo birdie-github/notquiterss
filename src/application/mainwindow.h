@@ -58,6 +58,7 @@ enum FeedReedType {
   FeedReadSwitchingTab
 };
 
+class FeedPropertiesDialog;
 class StatusBarController;
 class TrayIconController;
 class SoundPlayer;
@@ -455,6 +456,12 @@ private slots:
   void createBackup();
 
 private:
+  void showBulkFeedSettings();
+  QString updateScheduleDescription() const;
+  void applyBulkFeedSettings(FeedPropertiesDialog *dialog);
+  void saveFolderProperties(FeedPropertiesDialog *dialog, int folderId);
+  void refreshFeedSettings(const QList<int> &ids, bool columns, bool images, bool direction);
+  bool bulkFeedSettingsConfirmed_ = false;
   void setStatusCounts(int unreadCount, int allCount);
   void closeEvent(QCloseEvent *event);
   bool eventFilter(QObject *obj, QEvent *event);
@@ -521,6 +528,7 @@ private:
   QAction *showCleanUpWizardAct_;
   QAction *showDownloadManagerAct_;
   QAction *setNewsFiltersAct_;
+  QAction *bulkFeedSettingsAct_;
   QAction *setFilterNewsAct_;
   QAction *optionsAct_;
   QAction *updateAllFeedsAct_;

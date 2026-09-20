@@ -20,6 +20,7 @@
 #define FEEDPROPERTIESDIALOG_H
 
 #include "dialog.h"
+#include "feedbulksettings.h"
 #include "lineedit.h"
 #include "toolbutton.h"
 
@@ -125,7 +126,14 @@ class FeedPropertiesDialog : public Dialog
 {
   Q_OBJECT
 public:
-  explicit FeedPropertiesDialog(bool isFeed, QWidget *parent);
+  explicit FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bulk = false);
+
+  FeedBulkSettings::Columns columnSettings() const;
+  FeedBulkSettings::Changes bulkChanges();
+  bool loadBulkTargets(QSqlDatabase db, bool defaultIcons, QString &error);
+  QList<int> bulkFeedIds() const;
+  QString bulkActionName() const;
+  void bulkApplySucceeded(int count);
 
   FEED_PROPERTIES getFeedProperties(); //!< Get feed properties from dialog
   void setFeedProperties(FEED_PROPERTIES properties); //!< Set feed properties into dialog
@@ -134,6 +142,7 @@ public slots:
   void slotFaviconUpdate(const QString &feedUrl, const QByteArray &faviconData);
 
 signals:
+  void applyRequested();
   void signalLoadIcon(const QString &urlString, const QString &feedUrl);
 
 protected:
@@ -174,9 +183,11 @@ private:
   QCalendarWidget *avoidedOldSingleNewsDate_;
 
   QWidget *createGeneralTab();
+  QGroupBox *createUpdateSchedule();
+  QWidget *createImageEditor();
 
   // Tab "Display"
-  QCheckBox *loadImagesOn_;
+  QComboBox *imagePolicy_;
   QCheckBox *layoutDirection_;
 
   QWidget *createDisplayTab();
@@ -212,6 +223,15 @@ private:
   FEED_PROPERTIES feedProperties;
 
   bool isFeed_;
+  bool bulk_;
+  bool initialized_ = false;
+  QLabel *bulkScope_ = nullptr;
+  QLabel *bulkResult_ = nullptr;
+  QComboBox *bulkAction_ = nullptr;
+  QComboBox *bulkState_ = nullptr;
+  QTreeWidget *bulkTargets_ = nullptr;
+  QList<QWidget *> bulkEditors_;
+  void updateBulkApplyButton();
 
 };
 

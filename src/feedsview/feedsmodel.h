@@ -82,6 +82,10 @@ public slots:
   void refresh();
 
 private:
+  // Derived presentation only: folders never disable their children.
+  QPair<int, int> folderDisabledCounts(int folderId) const;
+  mutable bool disabledCountsDirty_ = true;
+  mutable QHash<int, QPair<int, int>> disabledCounts_;
   void clear();
   int rowById(int id) const;
   int rowByParid(int parid) const;

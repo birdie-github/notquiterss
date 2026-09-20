@@ -23,6 +23,7 @@
 
 #include <QtCore>
 #include <QPainter>
+#include <QSet>
 
 FeedsModel::FeedsModel(QObject *parent)
   : QAbstractItemModel(parent)
@@ -42,6 +43,8 @@ FeedsModel::~FeedsModel()
 
 void FeedsModel::clear()
 {
+  disabledCounts_.clear();
+  disabledCountsDirty_ = true;
   id2RowList_.clear();
   parid2RowList_.clear();
   columnsList_.clear();
@@ -201,16 +204,18 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
     }
 
     if (indexColumnOf("text") == index.column()) {
+      const auto counts = isFolder(index) ? folderDisabledCounts(idByIndex(index)) : QPair<int, int>();
+      const bool disabled = isFolder(index) ? counts.first > 0 && counts.first == counts.second :
+          indexSibling(index, "disableUpdate").data(Qt::EditRole).toBool();
+      if (disabled) return QColor(feedDisabledUpdateColor_);
+    }
+
+    if (indexColumnOf("text") == index.column()) {
       if (indexSibling(index, "newCount").data(Qt::EditRole).toInt() > 0) {
         return QColor(feedWithNewNewsColor_);
       }
     }
 
-    if (indexColumnOf("text") == index.column()) {
-      if (indexSibling(index, "disableUpdate").data(Qt::EditRole).toBool()) {
-        return QColor(feedDisabledUpdateColor_);
-      }
-    }
 
     return QColor(textColor_);
   } else if (role == Qt::BackgroundRole) {
@@ -271,6 +276,12 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
   } else if (role == Qt::ToolTipRole) {
     if (indexColumnOf("text") == index.column()) {
       QString title = index.data(Qt::EditRole).toString();
+      if (isFolder(index)) {
+        const auto counts = folderDisabledCounts(idByIndex(index));
+        if (counts.first > 0 && counts.first == counts.second)
+          return tr("%1\nAll %2 feeds in this folder are disabled.").arg(title).arg(counts.first);
+        return tr("%1\n%2 of %3 feeds disabled.").arg(title).arg(counts.second).arg(counts.first);
+      }
       const QString failure = FeedHealth::tooltip(title,
           indexSibling(index, "status").data(Qt::EditRole).toString(),
           indexSibling(index, "updated").data(Qt::EditRole).toDateTime());
@@ -302,7 +313,11 @@ bool FeedsModel::setData(const QModelIndex &index, const QVariant &value, int)
     return false;
 
   QSqlRecord *record = &static_cast<UserData*>(index.internalPointer())->record;
-  record->setValue(indexColumnOf(index.column()), value);
+  const int field = indexColumnOf(index.column());
+  const QString name = record->fieldName(field);
+  if (name == "disableUpdate" || name == "xmlUrl" || name == "parentId")
+    disabledCountsDirty_ = true;
+  record->setValue(field, value);
   return true;
 }
 
@@ -384,4 +399,28 @@ bool FeedsModel::isFolder(const QModelIndex &index) const
 QModelIndex FeedsModel::indexSibling(const QModelIndex &index, const QString &fieldName) const
 {
   return this->index(index.row(), indexColumnOf(fieldName), index.parent());
+}
+
+QPair<int, int> FeedsModel::folderDisabledCounts(int folderId) const
+{
+  if (disabledCountsDirty_) {
+    disabledCounts_.clear();
+    for (const UserData *feed : userDataList_) {
+      if (feed->record.value("xmlUrl").toString().isEmpty()) continue;
+      const bool disabled = feed->record.value("disableUpdate").toBool();
+      int parent = feed->record.value("parentId").toInt();
+      QSet<int> seen;
+      while (parent != 0 && !seen.contains(parent)) {
+        seen.insert(parent);
+        const UserData *folder = userDataList_.value(parent, nullptr);
+        if (!folder) break;
+        auto &counts = disabledCounts_[parent];
+        ++counts.first;
+        if (disabled) ++counts.second;
+        parent = folder->record.value("parentId").toInt();
+      }
+    }
+    disabledCountsDirty_ = false;
+  }
+  return disabledCounts_.value(folderId);
 }

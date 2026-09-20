@@ -945,6 +945,10 @@ void MainWindow::createActions()
   setNewsFiltersAct_->setIcon(QIcon(":/images/filterOff"));
   this->addAction(setNewsFiltersAct_);
   connect(setNewsFiltersAct_, SIGNAL(triggered()), this, SLOT(showNewsFiltersDlg()));
+  bulkFeedSettingsAct_ = new QAction(this);
+  bulkFeedSettingsAct_->setObjectName("bulkFeedSettingsAct");
+  this->addAction(bulkFeedSettingsAct_);
+  connect(bulkFeedSettingsAct_, &QAction::triggered, this, &MainWindow::showBulkFeedSettings);
   setFilterNewsAct_ = new QAction(this);
   setFilterNewsAct_->setObjectName("setFilterNewsAct");
   setFilterNewsAct_->setIcon(QIcon(":/images/filterOff"));
@@ -1372,6 +1376,7 @@ void MainWindow::createShortcut()
   shortcutRegistry_.append(showDownloadManagerAct_);
   shortcutRegistry_.append(showCleanUpWizardAct_);
   shortcutRegistry_.append(setNewsFiltersAct_);
+  shortcutRegistry_.append(bulkFeedSettingsAct_);
   shortcutRegistry_.append(setFilterNewsAct_);
   optionsAct_->setShortcut(QKeySequence(Qt::Key_F8));
   shortcutRegistry_.append(optionsAct_);
@@ -1667,6 +1672,7 @@ void MainWindow::createMenu()
   toolsMenu_->addSeparator();
   toolsMenu_->addAction(showCleanUpWizardAct_);
   toolsMenu_->addAction(setNewsFiltersAct_);
+  toolsMenu_->addAction(bulkFeedSettingsAct_);
   toolsMenu_->addSeparator();
   toolsMenu_->addAction(optionsAct_);
 
@@ -4326,6 +4332,7 @@ void MainWindow::retranslateStrings()
   showCleanUpWizardAct_->setText(tr("Clean Up..."));
 
   setNewsFiltersAct_->setText(tr("Article Filters..."));
+  bulkFeedSettingsAct_->setText(tr("Bulk configure feeds..."));
   setFilterNewsAct_->setText(tr("Filter Articles..."));
 
   optionsAct_->setText(tr("Options..."));
@@ -4662,8 +4669,8 @@ void MainWindow::showFeedPropertiesDlg()
 
   FeedPropertiesDialog *feedPropertiesDialog = new FeedPropertiesDialog(isFeed, this);
 
-  FEED_PROPERTIES properties;
-  FEED_PROPERTIES properties_tmp;
+  FEED_PROPERTIES properties{};
+  FEED_PROPERTIES properties_tmp{};
 
   QByteArray byteArray = feedsModel_->dataField(index, "image").toByteArray();
   if (!byteArray.isNull()) {
@@ -4707,18 +4714,7 @@ void MainWindow::showFeedPropertiesDlg()
   properties.general.useGlobalUpdate =
       feedsModel_->dataField(index, "updateIntervalEnable").isNull() ||
       feedsModel_->dataField(index, "updateIntervalEnable").toInt() == -1;
-  if (!updateFeedsEnable_) {
-    properties.general.globalUpdateDescription = tr("automatic updates disabled");
-  } else if (updateFeedsIntervalType_ == -1) {
-    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every second") :
-        tr("every %1 seconds").arg(updateFeedsInterval_));
-  } else if (updateFeedsIntervalType_ == 0) {
-    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every minute") :
-        tr("every %1 minutes").arg(updateFeedsInterval_));
-  } else {
-    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every hour") :
-        tr("every %1 hours").arg(updateFeedsInterval_));
-  }
+  properties.general.globalUpdateDescription = updateScheduleDescription();
   if (properties.general.useGlobalUpdate) {
     properties.general.updateEnable = updateFeedsEnable_;
     properties.general.updateInterval = updateFeedsInterval_;
@@ -4865,9 +4861,16 @@ void MainWindow::showFeedPropertiesDlg()
     return;
   }
 
+  if (!isFeed) {
+    saveFolderProperties(feedPropertiesDialog, feedId);
+    delete feedPropertiesDialog;
+    return;
+  }
+
   if (!mainApp->storeDBMemory())
     db_.transaction();
 
+  const auto columns = feedPropertiesDialog->columnSettings();
   properties = feedPropertiesDialog->getFeedProperties();
   delete feedPropertiesDialog;
 
@@ -4898,20 +4901,9 @@ void MainWindow::showFeedPropertiesDlg()
   q.addBindValue(feedId);
   q.exec();
 
-  indexColumnsStr = "";
-  if ((properties.column.columns != properties.columnDefault.columns) ||
-      (properties.column.sortBy != properties.columnDefault.sortBy) ||
-      (properties.column.sortType != properties.columnDefault.sortType)) {
-    for (int i = 0; i < properties.column.columns.count(); ++i) {
-      int index = properties.column.columns.at(i);
-      indexColumnsStr.append(",");
-      indexColumnsStr.append(QString::number(index));
-    }
-    indexColumnsStr.append(",");
-  } else {
-    properties.column.sortBy = 0;
-    properties.column.sortType = 0;
-  }
+  indexColumnsStr = columns.columns;
+  properties.column.sortBy = columns.sortBy;
+  properties.column.sortType = columns.sortOrder;
 
   q.prepare("UPDATE feeds SET columns = ?, sort = ?, sortType = ? WHERE id == ?");
   q.addBindValue(indexColumnsStr);
@@ -4926,42 +4918,6 @@ void MainWindow::showFeedPropertiesDlg()
   feedsModel_->setData(indexColumns, indexColumnsStr);
   feedsModel_->setData(indexSort, properties.column.sortBy);
   feedsModel_->setData(indexSortType, properties.column.sortType);
-
-  if (!isFeed) {
-    QQueue<int> parentIds;
-    parentIds.enqueue(feedId);
-    while (!parentIds.empty()) {
-      int parentId = parentIds.dequeue();
-      q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").
-             arg(parentId));
-      while (q.next()) {
-        int id = q.value(0).toInt();
-        QString xmlUrl = q.value(1).toString();
-
-        QSqlQuery q1;
-        q1.prepare("UPDATE feeds SET columns = ?, sort = ?, sortType = ? WHERE id == ?");
-        q1.addBindValue(indexColumnsStr);
-        q1.addBindValue(properties.column.sortBy);
-        q1.addBindValue(properties.column.sortType);
-        q1.addBindValue(id);
-        q1.exec();
-
-        QPersistentModelIndex index1 = feedsModel_->indexById(id);
-        indexColumns = feedsModel_->indexSibling(index1, "columns");
-        indexSort = feedsModel_->indexSibling(index1, "sort");
-        indexSortType = feedsModel_->indexSibling(index1, "sortType");
-        feedsModel_->setData(indexColumns, indexColumnsStr);
-        feedsModel_->setData(indexSort, properties.column.sortBy);
-        feedsModel_->setData(indexSortType, properties.column.sortType);
-
-        if (currentNewsTab->feedId_ == id)
-          currentNewsTab->newsHeader_->setColumns(index1);
-
-        if (xmlUrl.isEmpty())
-          parentIds.enqueue(id);
-      }
-    }
-  }
 
   if (currentNewsTab->feedId_ == feedId)
     currentNewsTab->newsHeader_->setColumns(index);
@@ -5040,61 +4996,12 @@ void MainWindow::showFeedPropertiesDlg()
   else if (updateIntervalType == 1)
     updateInterval = updateInterval*60*60;
 
-  const bool scheduleChanged =
-      properties.general.useGlobalUpdate != properties_tmp.general.useGlobalUpdate ||
-      (!properties.general.useGlobalUpdate &&
-       (properties.general.updateEnable != properties_tmp.general.updateEnable ||
-        properties.general.updateInterval != properties_tmp.general.updateInterval ||
-        properties.general.intervalType != properties_tmp.general.intervalType));
-  if (!isFeed && scheduleChanged) {
-    QQueue<int> parentIds;
-    parentIds.enqueue(feedId);
-    while (!parentIds.empty()) {
-      int parentId = parentIds.dequeue();
-      q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").
-             arg(parentId));
-      while (q.next()) {
-        int id = q.value(0).toInt();
-        QString xmlUrl = q.value(1).toString();
-
-        QSqlQuery q1;
-        q1.prepare("UPDATE feeds SET updateIntervalEnable = ?, updateInterval = ?, "
-                   "updateIntervalType = ? WHERE id == ?");
-        q1.addBindValue(updateMode);
-        q1.addBindValue(properties.general.updateInterval);
-        q1.addBindValue(properties.general.intervalType);
-        q1.addBindValue(id);
-        q1.exec();
-
-        QPersistentModelIndex index1 = feedsModel_->indexById(id);
-        indexUpdateEnable   = feedsModel_->indexSibling(index1, "updateIntervalEnable");
-        indexUpdateInterval = feedsModel_->indexSibling(index1, "updateInterval");
-        indexIntervalType   = feedsModel_->indexSibling(index1, "updateIntervalType");
-        feedsModel_->setData(indexUpdateEnable, updateMode);
-        feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
-        feedsModel_->setData(indexIntervalType, properties.general.intervalType);
-
-        if (!xmlUrl.isEmpty()) {
-          if (updateMode == 1) {
-            updateFeedsIntervalSec_.insert(id, updateInterval);
-            updateFeedsTimeCount_.insert(id, 0);
-          } else {
-            updateFeedsIntervalSec_.remove(id);
-            updateFeedsTimeCount_.remove(id);
-          }
-        } else {
-          parentIds.enqueue(id);
-        }
-      }
-    }
-  } else if (isFeed) {
-    if (updateMode == 1) {
-      updateFeedsIntervalSec_.insert(feedId, updateInterval);
-      updateFeedsTimeCount_.insert(feedId, 0);
-    } else {
-      updateFeedsIntervalSec_.remove(feedId);
-      updateFeedsTimeCount_.remove(feedId);
-    }
+  if (updateMode == 1) {
+    updateFeedsIntervalSec_.insert(feedId, updateInterval);
+    updateFeedsTimeCount_.insert(feedId, 0);
+  } else {
+    updateFeedsIntervalSec_.remove(feedId);
+    updateFeedsTimeCount_.remove(feedId);
   }
 
   if (properties.general.image != properties_tmp.general.image) {
@@ -5105,83 +5012,20 @@ void MainWindow::showFeedPropertiesDlg()
     slotIconFeedUpdate(feedId, properties.general.image);
   }
 
-  if ((properties.display.layoutDirection  != properties_tmp.display.layoutDirection) &&
-      !isFeed) {
-    QQueue<int> parentIds;
-    parentIds.enqueue(feedId);
-    while (!parentIds.empty()) {
-      int parentId = parentIds.dequeue();
-      q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").arg(parentId));
-      while (q.next()) {
-        int id = q.value(0).toInt();
-        QString xmlUrl = q.value(1).toString();
-
-        QSqlQuery q1;
-        q1.prepare("UPDATE feeds SET layoutDirection = ? WHERE id == ?");
-        q1.addBindValue(properties.display.layoutDirection);
-        q1.addBindValue(id);
-        q1.exec();
-
-        QPersistentModelIndex index1 = feedsModel_->indexById(id);
-        indexRTL = feedsModel_->indexSibling(index1, "layoutDirection");
-        feedsModel_->setData(indexRTL, properties.display.layoutDirection);
-
-        for (int i = 0; i < stackedWidget_->count(); i++) {
-          NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
-          if (widget->feedId_ == id) {
-            widget->setSettings();
-          }
-        }
-
-        if (xmlUrl.isEmpty())
-          parentIds.enqueue(id);
-      }
-    }
-  }
-
   for (int i = 0; i < stackedWidget_->count(); i++) {
     NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
     if (widget->feedId_ == feedId) {
       if (properties.general.text != properties_tmp.general.text) {
         widget->setTextTab(properties.general.text);
       }
-      if ((properties.display.layoutDirection != properties_tmp.display.layoutDirection) ||
-          (properties.display.javaScriptEnable != properties_tmp.display.javaScriptEnable)) {
-        widget->setSettings();
-      }
-    }
-  }
-
-  if ((properties.general.disableUpdate != properties_tmp.general.disableUpdate) &&
-      !isFeed) {
-    QQueue<int> parentIds;
-    parentIds.enqueue(feedId);
-    while (!parentIds.empty()) {
-      int parentId = parentIds.dequeue();
-      q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").arg(parentId));
-      while (q.next()) {
-        int id = q.value(0).toInt();
-        QString xmlUrl = q.value(1).toString();
-
-        QSqlQuery q1;
-        q1.prepare("UPDATE feeds SET disableUpdate = ? WHERE id == ?");
-        q1.addBindValue(properties.general.disableUpdate ? 1 : 0);
-        q1.addBindValue(id);
-        q1.exec();
-
-        QPersistentModelIndex index1 = feedsModel_->indexById(id);
-        indexDisableUpdate = feedsModel_->indexSibling(index1, "disableUpdate");
-        feedsModel_->setData(indexDisableUpdate, properties.general.disableUpdate ? 1 : 0);
-
-        if (xmlUrl.isEmpty())
-          parentIds.enqueue(id);
-      }
     }
   }
 
   if (!mainApp->storeDBMemory())
     db_.commit();
-  // Folder properties also change descendant flags; repaint every visible row.
+  refreshFeedSettings({feedId}, false,
+                      properties.display.displayEmbeddedImages != properties_tmp.display.displayEmbeddedImages,
+                      properties.display.layoutDirection != properties_tmp.display.layoutDirection);
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged();
 }

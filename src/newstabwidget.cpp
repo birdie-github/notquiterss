@@ -524,6 +524,22 @@ void NewsTabWidget::retranslateStrings() {
   closeButton_->setToolTip(tr("Close Tab"));
 }
 
+
+void NewsTabWidget::refreshFeedDisplay(bool images)
+{
+  if (type_ == TabTypeDownloads) return;
+  if (images && type_ == TabTypeFeed) {
+    const QModelIndex index = feedsModel_->indexById(feedId_);
+    const int policy = feedsModel_->dataField(index, "displayEmbeddedImages").toInt();
+    autoLoadImages_ = policy == 2 || (policy == 1 && mainWindow_->autoLoadImages_);
+    setAutoLoadImages(false);
+  }
+  if (mainWindow_->newsLayout_ == 1)
+    loadNewspaper(RefreshWithPos);
+  else if (newsView_->currentIndex().isValid())
+    updateArticleView(newsView_->currentIndex(), true);
+}
+
 void NewsTabWidget::setAutoLoadImages(bool apply)
 {
   if (type_ == TabTypeDownloads || mainWindow_->currentNewsTab != this) return;
@@ -1207,6 +1223,8 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
 
   QString feedId = newsModel_->dataField(index.row(), "feedId").toString();
   QModelIndex feedIndex = feedsModel_->indexById(feedId.toInt());
+  const QModelIndex directionIndex = type_ == TabTypeFeed
+      ? feedsModel_->indexById(feedId_) : feedIndex;
   QString htmlStr;
     QString content = newsModel_->dataField(index.row(), "content").toString();
     {
@@ -1372,7 +1390,7 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
       content = articleView_->prepareArticle(
           content, articleUrl(index.row()), "feed-" + newsId + "-", autoLoadImages_);
 
-      bool ltr = !feedsModel_->dataField(feedIndex, "layoutDirection").toInt();
+      bool ltr = !feedsModel_->dataField(directionIndex, "layoutDirection").toInt();
       QString cssStr = cssString_.
           arg(ltr ? "left" : "right").  // text-align
           arg(ltr ? "ltr" : "rtl").    // direction
@@ -1387,7 +1405,7 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
 
     htmlStr.replace("<body>", "<body><a name=\"article-" + newsId + "\">&#8203;</a>");
     articleView_->setArticleHtml(htmlStr, preservePosition);
-    if (feedsModel_->dataField(feedIndex, "layoutDirection").toInt())
+    if (feedsModel_->dataField(directionIndex, "layoutDirection").toInt())
       makeRtlAlignmentAbsolute(articleView_->document());
 }
 
@@ -1399,7 +1417,7 @@ void NewsTabWidget::loadNewspaper(int refresh)
   bool ltr = true;
 
   if (type_ == TabTypeFeed) {
-    QModelIndex feedIndex = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
+    QModelIndex feedIndex = feedsModel_->indexById(feedId_);
     ltr = !feedsModel_->dataField(feedIndex, "layoutDirection").toInt();
   }
 

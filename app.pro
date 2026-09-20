@@ -86,6 +86,7 @@ HEADERS += \
     src/aboutdialog.h \
     src/updateappdialog.h \
     src/feedpropertiesdialog.h \
+    src/feedsview/feedselectiontree.h \
     src/addfeedwizard.h \
     src/newstabwidget.h \
     src/findtext.h \
@@ -123,6 +124,7 @@ HEADERS += \
     src/network/networkmanager.h \
     src/articleview/articleview.h \
     src/database/database.h \
+    src/database/feedbulksettings.h \
     src/common/common.h \
     src/common/delegatewithoutfocus.h \
     src/common/dialog.h \
@@ -145,11 +147,14 @@ SOURCES += \
     src/aboutdialog.cpp \
     src/updateappdialog.cpp \
     src/feedpropertiesdialog.cpp \
+    src/database/feedbulksettings.cpp \
+    src/application/feedsettings.cpp \
     src/addfeedwizard.cpp \
     src/newstabwidget.cpp \
     src/findtext.cpp \
     src/findfeed.cpp \
     src/feedsview/feedsview.cpp \
+    src/feedsview/feedselectiontree.cpp \
     src/feedsview/feedhealth.cpp \
     src/feedsview/feedstatusdelegate.cpp \
     src/feedsview/feedsmodel.cpp \

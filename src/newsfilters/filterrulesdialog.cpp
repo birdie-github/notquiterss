@@ -20,6 +20,7 @@
 
 #include "mainapplication.h"
 #include "settings.h"
+#include "feedselectiontree.h"
 
 FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   : Dialog(parent, Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
@@ -42,57 +43,12 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   treeItem << tr("Feeds") << "Id";
   feedsTree_->setHeaderLabels(treeItem);
 
-  treeItem.clear();
-  treeItem << tr("All Feeds") << "0";
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-  treeWidgetItem->setCheckState(0, Qt::Unchecked);
-  feedsTree_->addTopLevelItem(treeWidgetItem);
-
-  QSqlQuery q;
-  QQueue<int> parentIds;
-  parentIds.enqueue(0);
-  while (!parentIds.empty()) {
-    int parentId = parentIds.dequeue();
-    QString qStr = QString("SELECT text, id, image, xmlUrl FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-        arg(parentId);
-    q.exec(qStr);
-    while (q.next()) {
-      QString feedText = q.value(0).toString();
-      QString feedIdT = q.value(1).toString();
-      QByteArray byteArray = q.value(2).toByteArray();
-      QString xmlUrl = q.value(3).toString();
-
-      treeItem.clear();
-      treeItem << feedText << feedIdT;
-      treeWidgetItem = new QTreeWidgetItem(treeItem);
-
-      if ((feedId == feedIdT.toInt()) || (feedId == parentId))
-        treeWidgetItem->setCheckState(0, Qt::Checked);
-      else
-        treeWidgetItem->setCheckState(0, Qt::Unchecked);
-
-      QPixmap iconItem;
-      if (xmlUrl.isEmpty()) {
-        iconItem.load(":/images/folder");
-      } else {
-        if (byteArray.isNull() || mainApp->mainWindow()->defaultIconFeeds_) {
-          iconItem.load(":/images/feed");
-        } else {
-          iconItem.loadFromData(QByteArray::fromBase64(byteArray));
-        }
-      }
-      treeWidgetItem->setIcon(0, iconItem);
-
-      QList<QTreeWidgetItem *> treeItems =
-          feedsTree_->findItems(QString::number(parentId),
-                                Qt::MatchFixedString | Qt::MatchRecursive,
-                                1);
-      treeItems.at(0)->addChild(treeWidgetItem);
-      if (xmlUrl.isEmpty())
-        parentIds.enqueue(feedIdT.toInt());
-    }
+  QString treeError;
+  if (!FeedSelectionTree::populate(feedsTree_, QSqlDatabase::database(),
+                                  mainApp->mainWindow()->defaultIconFeeds_,
+                                  tr("All Feeds"), feedId, treeError)) {
+    QMessageBox::warning(this, tr("Could not load feeds"), treeError);
   }
-  feedsTree_->expandAll();
 
   if (feedId != -1) {
     int rowCount = 0;
