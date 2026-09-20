@@ -42,7 +42,7 @@ bool FeedUrl::confirm(QWidget *parent, QUrl &url)
   }
   if (url.scheme() != "http") return true;
   QMessageBox box(QMessageBox::Warning, QObject::tr("Unencrypted feed connection"),
-      QObject::tr("This feed uses HTTP. Feed contents could be read or modified in transit.\n\n%1")
+      QObject::tr("This feed is unprotected (uses HTTP). Your reading activity is exposed, and the content could be altered or blocked before it reaches you.\n\n%1")
           .arg(url.toDisplayString(QUrl::RemoveUserInfo)), QMessageBox::Cancel, parent);
   box.setTextFormat(Qt::PlainText);
   auto *secure = box.addButton(QObject::tr("Use HTTPS"), QMessageBox::AcceptRole);
@@ -56,7 +56,7 @@ bool FeedUrl::confirm(QWidget *parent, QUrl &url)
 bool FeedUrl::confirmImportHttp(QWidget *parent, int count)
 {
   QMessageBox box(QMessageBox::Warning, QObject::tr("Unencrypted feed connections"),
-      QObject::tr("Import %1 feeds using HTTP? Feed contents could be read or modified in transit.")
+      QObject::tr("Import %1 feeds using an insecure connection (HTTP)? Your reading activity is exposed, and the content could be altered or blocked before it reaches you.")
           .arg(count), QMessageBox::Cancel, parent);
   auto *accept = box.addButton(QObject::tr("Import HTTP feeds"), QMessageBox::DestructiveRole);
   box.setDefaultButton(QMessageBox::Cancel);
