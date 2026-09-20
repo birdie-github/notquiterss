@@ -12,8 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def check(qmake, make):
     with tempfile.TemporaryDirectory() as temp:
-        source = Path(temp) / 'source'
-        build = Path(temp) / 'build'
+        # Match qmake's canonical paths (macOS /var resolves to /private/var).
+        root = Path(temp).resolve()
+        source = root / 'source'
+        build = root / 'build'
         source.mkdir()
         build.mkdir()
         shutil.copy(ROOT / 'project.json', source)

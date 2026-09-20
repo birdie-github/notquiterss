@@ -12,7 +12,8 @@ LANG_QM_FILES =
   qtPrepareTool(QMAKE_LRELEASE, lrelease)
   updateqm.input = TRANSLATIONS
   updateqm.output = $$BUILD_DIR/qm/${QMAKE_FILE_IN_BASE}.qm
-  updateqm.commands = $$shell_quote($$QMAKE_LRELEASE) "${QMAKE_FILE_IN}" -qm "${QMAKE_FILE_OUT}"
+  # qtPrepareTool already quotes the command for the target shell.
+  updateqm.commands = $$QMAKE_LRELEASE "${QMAKE_FILE_IN}" -qm "${QMAKE_FILE_OUT}"
   updateqm.CONFIG += no_link target_predeps
   QMAKE_EXTRA_COMPILERS += updateqm
   for(tsfile, TRANSLATIONS) {
