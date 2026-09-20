@@ -95,10 +95,15 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   layoutGeneralTitle->addWidget(selectIconButton_);
   editURL = new LineEdit();
 
-  disableUpdate_ = new QCheckBox(tr("Disable updates"));
+  disableUpdate_ = new QCheckBox(tr("Disable"));
+  disableUpdate_->setToolTip(tr("Disabled feeds are excluded from all updates, including manual updates."));
   disableUpdate_->setChecked(false);
 
-  updateEnable_ = new QCheckBox(tr("Automatically update every"));
+  QGroupBox *updateSchedule = new QGroupBox(tr("Update schedule"));
+  useGlobalUpdate_ = new QRadioButton(updateSchedule);
+  updateEnable_ = new QRadioButton(tr("Update every"), updateSchedule);
+  noScheduledUpdates_ = new QRadioButton(tr("No scheduled updates"), updateSchedule);
+  noScheduledUpdates_->setToolTip(tr("Startup updates and manual updates, including Update All, are still allowed."));
   updateInterval_ = new QSpinBox();
   updateInterval_->setEnabled(false);
   updateInterval_->setRange(1, 9999);
@@ -120,12 +125,12 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   updateFeedsLayout->addWidget(updateIntervalType_);
   updateFeedsLayout->addStretch();
 
-  connect(disableUpdate_, SIGNAL(toggled(bool)),
-          updateEnable_, SLOT(setDisabled(bool)));
-  connect(disableUpdate_, SIGNAL(toggled(bool)),
-          updateInterval_, SLOT(setDisabled(bool)));
-  connect(disableUpdate_, SIGNAL(toggled(bool)),
-          updateIntervalType_, SLOT(setDisabled(bool)));
+  QVBoxLayout *scheduleLayout = new QVBoxLayout(updateSchedule);
+  scheduleLayout->addWidget(useGlobalUpdate_);
+  scheduleLayout->addLayout(updateFeedsLayout);
+  scheduleLayout->addWidget(noScheduledUpdates_);
+  connect(disableUpdate_, &QCheckBox::toggled,
+          updateSchedule, &QWidget::setDisabled);
 
   starredOn_ = new QCheckBox(tr("Starred"));
   displayOnStartup = new QCheckBox(tr("Display in new tab on startup"));
@@ -171,7 +176,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   tabLayout->addLayout(layoutGeneralHomepage);
   tabLayout->addSpacing(15);
   tabLayout->addWidget(disableUpdate_);
-  tabLayout->addLayout(updateFeedsLayout);
+  tabLayout->addWidget(updateSchedule);
   tabLayout->addSpacing(15);
   tabLayout->addWidget(starredOn_);
   tabLayout->addWidget(displayOnStartup);
@@ -403,7 +408,13 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   labelHomepage->setText(QString("<a href='%1'>%1</a>").arg(feedProperties.general.homepage));
   selectIconButton_->setIcon(windowIcon());
 
-  updateEnable_->setChecked(feedProperties.general.updateEnable);
+  useGlobalUpdate_->setText(tr("Use global settings (%1)")
+                           .arg(feedProperties.general.globalUpdateDescription));
+  useGlobalUpdate_->setChecked(feedProperties.general.useGlobalUpdate);
+  updateEnable_->setChecked(!feedProperties.general.useGlobalUpdate &&
+                           feedProperties.general.updateEnable);
+  noScheduledUpdates_->setChecked(!feedProperties.general.useGlobalUpdate &&
+                                 !feedProperties.general.updateEnable);
   updateInterval_->setValue(feedProperties.general.updateInterval);
   updateIntervalType_->setCurrentIndex(feedProperties.general.intervalType + 1);
   disableUpdate_->setChecked(feedProperties.general.disableUpdate);
@@ -542,6 +553,7 @@ FEED_PROPERTIES FeedPropertiesDialog::getFeedProperties()
   feedProperties.general.url = editURL->text();
 
   feedProperties.general.disableUpdate = disableUpdate_->isChecked();
+  feedProperties.general.useGlobalUpdate = useGlobalUpdate_->isChecked();
   feedProperties.general.updateEnable = updateEnable_->isChecked();
   feedProperties.general.updateInterval = updateInterval_->value();
   feedProperties.general.intervalType = updateIntervalType_->currentIndex() - 1;

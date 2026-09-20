@@ -4704,8 +4704,22 @@ void MainWindow::showFeedPropertiesDlg()
   properties.general.disableUpdate =
       feedsModel_->dataField(index, "disableUpdate").toBool();
 
-  if (feedsModel_->dataField(index, "updateIntervalEnable").isNull() ||
-      (feedsModel_->dataField(index, "updateIntervalEnable").toInt() == -1)) {
+  properties.general.useGlobalUpdate =
+      feedsModel_->dataField(index, "updateIntervalEnable").isNull() ||
+      feedsModel_->dataField(index, "updateIntervalEnable").toInt() == -1;
+  if (!updateFeedsEnable_) {
+    properties.general.globalUpdateDescription = tr("automatic updates disabled");
+  } else if (updateFeedsIntervalType_ == -1) {
+    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every second") :
+        tr("every %1 seconds").arg(updateFeedsInterval_));
+  } else if (updateFeedsIntervalType_ == 0) {
+    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every minute") :
+        tr("every %1 minutes").arg(updateFeedsInterval_));
+  } else {
+    properties.general.globalUpdateDescription = (updateFeedsInterval_ == 1 ? tr("every hour") :
+        tr("every %1 hours").arg(updateFeedsInterval_));
+  }
+  if (properties.general.useGlobalUpdate) {
     properties.general.updateEnable = updateFeedsEnable_;
     properties.general.updateInterval = updateFeedsInterval_;
     properties.general.intervalType = updateFeedsIntervalType_;
@@ -5001,92 +5015,86 @@ void MainWindow::showFeedPropertiesDlg()
   feedsModel_->setData(indexDisableUpdate, properties.general.disableUpdate ? 1 : 0);
   feedsModel_->setData(indexJavaScript, properties.display.javaScriptEnable);
 
-  if (!properties.general.updateEnable ||
-      (properties.general.updateEnable != updateFeedsEnable_) ||
-      (properties.general.updateInterval != updateFeedsInterval_) ||
-      (properties.general.intervalType != updateFeedsIntervalType_)) {
-    q.prepare("UPDATE feeds SET updateIntervalEnable = ?, updateInterval = ?, "
-              "updateIntervalType = ? WHERE id == ?");
-    q.addBindValue(properties.general.updateEnable ? 1 : 0);
-    q.addBindValue(properties.general.updateInterval);
-    q.addBindValue(properties.general.intervalType);
-    q.addBindValue(feedId);
-    q.exec();
+  // Store inheritance explicitly; matching the global interval is still custom.
+  const int updateMode = properties.general.useGlobalUpdate ? -1 :
+                         (properties.general.updateEnable ? 1 : 0);
+  q.prepare("UPDATE feeds SET updateIntervalEnable = ?, updateInterval = ?, "
+            "updateIntervalType = ? WHERE id == ?");
+  q.addBindValue(updateMode);
+  q.addBindValue(properties.general.updateInterval);
+  q.addBindValue(properties.general.intervalType);
+  q.addBindValue(feedId);
+  q.exec();
 
-    QPersistentModelIndex indexUpdateEnable   = feedsModel_->indexSibling(index, "updateIntervalEnable");
-    QPersistentModelIndex indexUpdateInterval = feedsModel_->indexSibling(index, "updateInterval");
-    QPersistentModelIndex indexIntervalType   = feedsModel_->indexSibling(index, "updateIntervalType");
-    feedsModel_->setData(indexUpdateEnable, properties.general.updateEnable ? 1 : 0);
-    feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
-    feedsModel_->setData(indexIntervalType, properties.general.intervalType);
+  QPersistentModelIndex indexUpdateEnable   = feedsModel_->indexSibling(index, "updateIntervalEnable");
+  QPersistentModelIndex indexUpdateInterval = feedsModel_->indexSibling(index, "updateInterval");
+  QPersistentModelIndex indexIntervalType   = feedsModel_->indexSibling(index, "updateIntervalType");
+  feedsModel_->setData(indexUpdateEnable, updateMode);
+  feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
+  feedsModel_->setData(indexIntervalType, properties.general.intervalType);
 
-    int updateInterval = properties.general.updateInterval;
-    int updateIntervalType = properties.general.intervalType;
-    if (updateIntervalType == 0)
-      updateInterval = updateInterval*60;
-    else if (updateIntervalType == 1)
-      updateInterval = updateInterval*60*60;
+  int updateInterval = properties.general.updateInterval;
+  int updateIntervalType = properties.general.intervalType;
+  if (updateIntervalType == 0)
+    updateInterval = updateInterval*60;
+  else if (updateIntervalType == 1)
+    updateInterval = updateInterval*60*60;
 
-    if (!isFeed) {
-      QQueue<int> parentIds;
-      parentIds.enqueue(feedId);
-      while (!parentIds.empty()) {
-        int parentId = parentIds.dequeue();
-        q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").
-               arg(parentId));
-        while (q.next()) {
-          int id = q.value(0).toInt();
-          QString xmlUrl = q.value(1).toString();
+  const bool scheduleChanged =
+      properties.general.useGlobalUpdate != properties_tmp.general.useGlobalUpdate ||
+      (!properties.general.useGlobalUpdate &&
+       (properties.general.updateEnable != properties_tmp.general.updateEnable ||
+        properties.general.updateInterval != properties_tmp.general.updateInterval ||
+        properties.general.intervalType != properties_tmp.general.intervalType));
+  if (!isFeed && scheduleChanged) {
+    QQueue<int> parentIds;
+    parentIds.enqueue(feedId);
+    while (!parentIds.empty()) {
+      int parentId = parentIds.dequeue();
+      q.exec(QString("SELECT id, xmlUrl FROM feeds WHERE parentId='%1'").
+             arg(parentId));
+      while (q.next()) {
+        int id = q.value(0).toInt();
+        QString xmlUrl = q.value(1).toString();
 
-          QSqlQuery q1;
-          q1.prepare("UPDATE feeds SET updateIntervalEnable = ?, updateInterval = ?, "
-                     "updateIntervalType = ? WHERE id == ?");
-          q1.addBindValue(properties.general.updateEnable ? 1 : 0);
-          q1.addBindValue(properties.general.updateInterval);
-          q1.addBindValue(properties.general.intervalType);
-          q1.addBindValue(id);
-          q1.exec();
+        QSqlQuery q1;
+        q1.prepare("UPDATE feeds SET updateIntervalEnable = ?, updateInterval = ?, "
+                   "updateIntervalType = ? WHERE id == ?");
+        q1.addBindValue(updateMode);
+        q1.addBindValue(properties.general.updateInterval);
+        q1.addBindValue(properties.general.intervalType);
+        q1.addBindValue(id);
+        q1.exec();
 
-          QPersistentModelIndex index1 = feedsModel_->indexById(id);
-          indexUpdateEnable   = feedsModel_->indexSibling(index1, "updateIntervalEnable");
-          indexUpdateInterval = feedsModel_->indexSibling(index1, "updateInterval");
-          indexIntervalType   = feedsModel_->indexSibling(index1, "updateIntervalType");
-          feedsModel_->setData(indexUpdateEnable, properties.general.updateEnable ? 1 : 0);
-          feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
-          feedsModel_->setData(indexIntervalType, properties.general.intervalType);
+        QPersistentModelIndex index1 = feedsModel_->indexById(id);
+        indexUpdateEnable   = feedsModel_->indexSibling(index1, "updateIntervalEnable");
+        indexUpdateInterval = feedsModel_->indexSibling(index1, "updateInterval");
+        indexIntervalType   = feedsModel_->indexSibling(index1, "updateIntervalType");
+        feedsModel_->setData(indexUpdateEnable, updateMode);
+        feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
+        feedsModel_->setData(indexIntervalType, properties.general.intervalType);
 
-          if (!xmlUrl.isEmpty()) {
-            if (properties.general.updateEnable) {
-              updateFeedsIntervalSec_.insert(id, updateInterval);
-              updateFeedsTimeCount_.insert(id, 0);
-            } else {
-              updateFeedsIntervalSec_.remove(id);
-              updateFeedsTimeCount_.remove(id);
-            }
+        if (!xmlUrl.isEmpty()) {
+          if (updateMode == 1) {
+            updateFeedsIntervalSec_.insert(id, updateInterval);
+            updateFeedsTimeCount_.insert(id, 0);
           } else {
-            parentIds.enqueue(id);
+            updateFeedsIntervalSec_.remove(id);
+            updateFeedsTimeCount_.remove(id);
           }
+        } else {
+          parentIds.enqueue(id);
         }
       }
-    } else {
-      if (properties.general.updateEnable) {
-        updateFeedsIntervalSec_.insert(feedId, updateInterval);
-        updateFeedsTimeCount_.insert(feedId, 0);
-      } else {
-        updateFeedsIntervalSec_.remove(feedId);
-        updateFeedsTimeCount_.remove(feedId);
-      }
     }
-  } else {
-    q.prepare("UPDATE feeds SET updateIntervalEnable = -1 WHERE id == ?");
-    q.addBindValue(feedId);
-    q.exec();
-
-    QPersistentModelIndex indexUpdateEnable = feedsModel_->indexSibling(index, "updateIntervalEnable");
-    feedsModel_->setData(indexUpdateEnable, "-1");
-
-    updateFeedsIntervalSec_.remove(feedId);
-    updateFeedsTimeCount_.remove(feedId);
+  } else if (isFeed) {
+    if (updateMode == 1) {
+      updateFeedsIntervalSec_.insert(feedId, updateInterval);
+      updateFeedsTimeCount_.insert(feedId, 0);
+    } else {
+      updateFeedsIntervalSec_.remove(feedId);
+      updateFeedsTimeCount_.remove(feedId);
+    }
   }
 
   if (properties.general.image != properties_tmp.general.image) {

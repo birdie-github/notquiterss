@@ -33,7 +33,9 @@ typedef struct {
     QString homepage; //!< Homepage field from feed-xml
     QByteArray image;
     bool disableUpdate;
-    bool updateEnable; //!< Flag enabling autoupdate
+    bool useGlobalUpdate; //!< Inherit the global periodic update schedule
+    QString globalUpdateDescription;
+    bool updateEnable; //!< Flag enabling a custom periodic schedule
     int updateInterval; //!< Update interval
     int intervalType; //!< Update interval type (sec, min, day)
     bool updateOnStartup; //!< Flag to update feed on startup
@@ -159,7 +161,9 @@ private:
   QLabel *labelHomepage; //!< Link to feed's homepage
   QToolButton *selectIconButton_;
   QCheckBox *disableUpdate_;
-  QCheckBox *updateEnable_;
+  QRadioButton *useGlobalUpdate_;
+  QRadioButton *updateEnable_;
+  QRadioButton *noScheduledUpdates_;
   QSpinBox *updateInterval_;
   QComboBox *updateIntervalType_;
   QCheckBox *displayOnStartup;

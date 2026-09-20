@@ -557,6 +557,17 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
                                   const QDateTime &date, int auth, bool manual)
 {
+  QSqlQuery enabledQuery(db_);
+  enabledQuery.prepare("SELECT disableUpdate FROM feeds WHERE id = ?");
+  enabledQuery.addBindValue(feedId);
+  if (!enabledQuery.exec()) {
+    qWarning() << "Cannot check whether feed updates are disabled:" << enabledQuery.lastError().text();
+    return false;
+  }
+  if (!enabledQuery.next() || enabledQuery.value(0).toBool())
+    return false;
+  enabledQuery.finish();
+
   int feedIdIndex = feedIdList_.indexOf(feedId);
   if (feedIdIndex > -1) {
     // A manual request can take over a pending automatic refresh without
