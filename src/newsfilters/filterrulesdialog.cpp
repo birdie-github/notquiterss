@@ -22,7 +22,9 @@
 #include "settings.h"
 
 FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
-  : Dialog(parent, Qt::WindowMinMaxButtonsHint)
+  : Dialog(parent, Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
+           Qt::WindowSystemMenuHint | Qt::WindowMaximizeButtonHint |
+           Qt::WindowCloseButtonHint)
   , filterId_(filterId)
 {
   setWindowTitle(tr("Filter Rules"));

@@ -2243,7 +2243,7 @@ Details:
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4440"/>
-        <source>Show Indentation</source>
+        <source>Enable Indentation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

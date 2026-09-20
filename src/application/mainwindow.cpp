@@ -4437,7 +4437,7 @@ void MainWindow::retranslateStrings()
   showUndeleteCount_->setText(tr("Total number of articles"));
   showLastUpdated_->setText(tr("Last update"));
 
-  indentationFeedsTreeAct_->setText(tr("Show Indentation"));
+  indentationFeedsTreeAct_->setText(tr("Enable Indentation"));
 
   findFeedAct_->setText(tr("Search Feed"));
   findFeedAct_->setToolTip(tr("Search Feed"));
