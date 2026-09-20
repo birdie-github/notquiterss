@@ -18,7 +18,9 @@ LANG_QM_FILES =
   for(tsfile, TRANSLATIONS) {
     qmfile = $$basename(tsfile)
     qmfile ~= s/\.ts$/.qm/
-    LANG_QM_FILES += $$BUILD_DIR/qm/$$qmfile
+    # Extra compiler targets are relative to OUT_PWD; extra-target dependencies
+    # are emitted verbatim. Make must see the same path spelling on both sides.
+    LANG_QM_FILES += $$relative_path($$BUILD_DIR/qm/$$qmfile, $$OUT_PWD)
   }
 }
 

@@ -16,6 +16,10 @@ jobs:
         run: |
           dnf install -y git python3 gcc-c++ clang lld make pkgconf-pkg-config qt5-qtbase-devel qt5-qttools-devel qtsingleapplication-qt5-devel sqlite-devel libxml2-devel
       - uses: actions/checkout@v4
+      - name: Test resource staging and translation build
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_translation_build.py --qmake qmake-qt5
       - name: Prepare miniaudio
         run: |
           python3 scripts/prepare-miniaudio.py --prefix "$RUNNER_TEMP/miniaudio-snapshot"
@@ -57,7 +61,9 @@ jobs:
             mingw-w64-ucrt-x86_64-openssl
             mingw-w64-ucrt-x86_64-ntldd
       - name: Test resource staging
-        run: python3 tests/resources/test_resources.py
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_translation_build.py --qmake qmake6 --make mingw32-make
       - name: Prepare external QtSingleApplication and build
         run: |
           export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"
@@ -137,6 +143,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: brew install qt sqlite libxml2 pkgconf python
+      - name: Test resource staging and translation build
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_translation_build.py --qmake "$(brew --prefix qt)/bin/qmake"
       - name: Prepare external QtSingleApplication and build
         run: |
           set -euo pipefail

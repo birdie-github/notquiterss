@@ -61,11 +61,15 @@ flags may appear as letters or missing glyphs. Language names remain visible.
 
 ## Build and install
 
-Restore `.ts` files into this directory, then rerun qmake. `lang.pri` discovers
+Restore `.ts` files into this directory, then rerun qmake. `resources/resources.pri` discovers
 `NotQuiteRSS_*.ts`, uses the selected Qt installation's `lrelease`, and installs
 its generated QM files with `languages.ini`. No language list needs editing
 in C++ or qmake. Precompiled QM files without corresponding TS files can also
 be shipped. Nothing is embedded in the application resources.
+
+The English `NotQuiteRSS_en.ts` catalog can be kept here as the source catalog
+for Weblate. It follows the same build rules as other catalogs; English remains
+available without loading a QM file. Commit editable TS files; CI generates QMs.
 
 For a user translation, Qt Linguist's Release action or the matching Qt
 `lrelease` tool converts the editable TS source into a runtime QM file:

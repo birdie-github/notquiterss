@@ -22,6 +22,12 @@ class ResourceTests(unittest.TestCase):
         self.source.mkdir()
         shutil.copy(ROOT / 'project.json', self.source)
         shutil.copytree(ROOT / 'resources', self.source / 'resources')
+        # Each test owns its catalogs; adding real translations must not change
+        # these isolated staging fixtures or require a prior application build.
+        translations = self.source / 'resources/external/translations'
+        for pattern in ('*.ts', '*.qm'):
+            for catalog in translations.glob(pattern):
+                catalog.unlink()
 
     def test_external_resources_and_deployment(self):
         root = self.source / 'resources/external'
