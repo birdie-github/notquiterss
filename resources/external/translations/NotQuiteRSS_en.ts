@@ -3319,12 +3319,12 @@ Details:
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="683"/>
-        <source>Automatically update the feeds on startup</source>
+        <source>Automatically update feeds on startup</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="684"/>
-        <source>Automatically update the feeds every</source>
+        <source>Automatically update feeds every</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

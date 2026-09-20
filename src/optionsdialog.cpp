@@ -680,8 +680,8 @@ void OptionsDialog::createFeedsWidget()
 {
 //! tab "General"
   updateFeedsStartUp_ = new QCheckBox(
-        tr("Automatically update the feeds on startup"));
-  updateFeedsEnable_ = new QCheckBox(tr("Automatically update the feeds every"));
+        tr("Automatically update feeds on startup"));
+  updateFeedsEnable_ = new QCheckBox(tr("Automatically update feeds every"));
   updateFeedsInterval_ = new QSpinBox();
   updateFeedsInterval_->setEnabled(false);
   updateFeedsInterval_->setRange(1, 9999);
