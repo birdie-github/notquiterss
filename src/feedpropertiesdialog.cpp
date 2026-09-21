@@ -219,6 +219,14 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   tabLayout->addLayout(layoutGeneralHomepage);
   tabLayout->addSpacing(15);
   tabLayout->addWidget(disableUpdate_);
+  if (!isFeed_) {
+    folderDisabledCount_ = new QLabel();
+    tabLayout->addWidget(folderDisabledCount_);
+    auto *hint = new QLabel(tr("Changing this option enables or disables all feeds in this folder and its subfolders, replacing their individual disabled states. Update schedules are unchanged."));
+    hint->setWordWrap(true);
+    tabLayout->addWidget(hint);
+    disableUpdate_->setToolTip(hint->text());
+  }
   tabLayout->addWidget(updateSchedule);
   tabLayout->addSpacing(15);
   tabLayout->addWidget(starredOn_);
@@ -244,7 +252,6 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
 
   if (!isFeed_) {
     labelTitleCapt->setText(tr("Folder name:"));
-    disableUpdate_->hide();
     updateSchedule->hide();
     displayOnStartup->hide();
     loadTitleButton->hide();
@@ -891,4 +898,19 @@ QWidget *FeedPropertiesDialog::createImageEditor()
   imageLayout->addStretch();
 
   return imageEditor;
+}
+
+void FeedPropertiesDialog::setFolderDisabledCounts(int total, int disabled)
+{
+  folderInitiallyDisabled_ = total > 0 && disabled == total;
+  feedProperties.general.disableUpdate = folderInitiallyDisabled_;
+  disableUpdate_->setChecked(folderInitiallyDisabled_);
+  disableUpdate_->setEnabled(total > 0);
+  folderDisabledCount_->setText(tr("%1 of %2 feeds disabled.").arg(disabled).arg(total));
+}
+
+bool FeedPropertiesDialog::folderDisableChanged() const
+{
+  return !isFeed_ && !bulk_ && disableUpdate_->isEnabled() &&
+      disableUpdate_->isChecked() != folderInitiallyDisabled_;
 }

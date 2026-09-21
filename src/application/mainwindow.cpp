@@ -4853,6 +4853,10 @@ void MainWindow::showFeedPropertiesDlg()
   }
 
   feedPropertiesDialog->setFeedProperties(properties);
+  if (!isFeed) {
+    const auto counts = feedsModel_->folderDisabledCounts(feedId);
+    feedPropertiesDialog->setFolderDisabledCounts(counts.first, counts.second);
+  }
   properties_tmp = properties;
 
   int result = feedPropertiesDialog->exec();

@@ -1,9 +1,15 @@
 # Folder properties and bulk feed configuration
 
 Folder Properties configures the folder's own combined article view. General
-contains its name; Display controls image loading and text direction; Columns
-controls its columns and sorting. Status remains informational. Saving Properties
-never changes descendant feeds, even when only the folder name was edited.
+contains its name and a Disable checkbox; Display controls image loading and text
+direction; Columns controls its columns and sorting. Status remains informational.
+Saving Properties leaves descendants unchanged unless the Disable checkbox differs
+from its initial state. It starts checked only when all descendant feeds are disabled;
+mixed folders start unchecked, and empty folders have the control disabled. A count
+and explanation make its scope explicit. Checking it disables all descendant feeds;
+unchecking it enables them all, replacing their individual disabled states. Schedules
+and timer counters are preserved. Folder edits and state changes are atomic. This is
+a one-time operation, not a persistent restriction on newly added or moved feeds.
 
 ## Tools → Bulk configure feeds
 
@@ -49,8 +55,9 @@ untouched. No scheduled updates still permits startup and manual updates.
 A folder is grey only when it contains at least one feed and every descendant
 feed is disabled. Its tooltip reports disabled/total counts. Empty or mixed
 folders remain normal. This is derived presentation, not a stored restriction:
-no child states or schedules are changed. Existing legacy folder disabled flags
-are ignored. Adding/enabling/moving a feed can change the appearance of its
+no child states or schedules are changed by the colour itself. Existing legacy
+folder disabled flags are ignored; the Properties checkbox derives its initial
+value from the actual descendant feeds. Adding/enabling/moving a feed can change the appearance of its
 ancestor folders. A selected row still uses the normal selection colours.
 
 New feeds use database/application defaults rather than copying parent-folder
@@ -87,3 +94,14 @@ Manual checks on Qt5/Qt6 builds:
 - Add a feed to a grey/customized folder: it should use defaults, not a copied
   disabled state or schedule. Repeat persistence checks with Store DB in memory
   enabled, using a normal exit/restart and without adding a save-on-Apply path.
+
+Folder Disable follow-up checks:
+
+- For a mixed nested folder, save a rename without touching Disable. Verify each
+  feed retains its state. Cancel after changing Disable must also leave all states.
+- Check Disable and save: all descendant feeds become disabled, including those in
+  subfolders; outside feeds and all schedules remain unchanged.
+- Reopen, uncheck Disable and save: every descendant feed becomes enabled, including
+  feeds that were individually disabled before. Folder greying updates accordingly.
+- Empty folders show an unchecked, disabled control. Repeat with an in-memory
+  database and confirm the saved states after normal exit/restart.

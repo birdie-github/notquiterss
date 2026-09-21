@@ -60,7 +60,17 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
 {
   const auto properties = dialog->getFeedProperties();
   const auto columns = dialog->columnSettings();
+  const bool changeDisabled = dialog->folderDisableChanged();
+  if (changeDisabled && !db_.transaction()) {
+    QMessageBox::warning(this, tr("Could not save folder properties"), db_.lastError().text());
+    return;
+  }
   QSqlQuery q(db_);
+  auto fail = [&](QString error) {
+    q.finish();
+    if (changeDisabled && !db_.rollback()) error += "\n" + db_.lastError().text();
+    QMessageBox::warning(this, tr("Could not save folder properties"), error);
+  };
   q.prepare("UPDATE feeds SET text = ?, displayEmbeddedImages = ?, layoutDirection = ?, "
             "columns = ?, sort = ?, sortType = ? WHERE id = ? AND COALESCE(xmlUrl, '') = ''");
   q.addBindValue(properties.general.text);
@@ -71,12 +81,44 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
   q.addBindValue(columns.sortOrder);
   q.addBindValue(folderId);
   if (!q.exec() || q.numRowsAffected() != 1) {
-    QMessageBox::warning(this, tr("Could not save folder properties"),
-                        q.lastError().isValid() ? q.lastError().text() : tr("The folder no longer exists."));
+    fail(q.lastError().isValid() ? q.lastError().text() : tr("The folder no longer exists."));
     return;
   }
   q.finish();
 
+  QList<int> affectedFeeds;
+  if (changeDisabled) {
+    const QString subtree =
+        "WITH RECURSIVE subtree(id) AS ("
+        "SELECT id FROM feeds WHERE parentId = ? "
+        "UNION SELECT f.id FROM feeds f JOIN subtree s ON f.parentId = s.id) ";
+    if (!q.prepare(subtree + "SELECT id FROM feeds WHERE id IN (SELECT id FROM subtree) AND xmlUrl != ''")) {
+      fail(q.lastError().text());
+      return;
+    }
+    q.addBindValue(folderId);
+    if (!q.exec()) { fail(q.lastError().text()); return; }
+    while (q.next()) affectedFeeds.append(q.value(0).toInt());
+    if (q.lastError().isValid()) { fail(q.lastError().text()); return; }
+    q.finish();
+    if (!q.prepare(subtree + "UPDATE feeds SET disableUpdate = ? WHERE id IN (SELECT id FROM subtree) AND xmlUrl != ''")) {
+      fail(q.lastError().text());
+      return;
+    }
+    q.addBindValue(folderId);
+    q.addBindValue(properties.general.disableUpdate ? 1 : 0);
+    if (!q.exec()) { fail(q.lastError().text()); return; }
+    q.finish();
+    if (!db_.commit()) { fail(db_.lastError().text()); return; }
+  }
+
+  // Update the cached model only after all database writes succeed. Schedules
+  // and their timer counters are deliberately untouched by this bulk toggle.
+  for (int id : affectedFeeds) {
+    const auto feed = feedsModel_->indexById(id);
+    feedsModel_->setData(feedsModel_->indexSibling(feed, "disableUpdate"),
+                        properties.general.disableUpdate ? 1 : 0);
+  }
   const QPersistentModelIndex index = feedsModel_->indexById(folderId);
   const bool imagesChanged = feedsModel_->dataField(index, "displayEmbeddedImages").toInt()
       != properties.display.displayEmbeddedImages;

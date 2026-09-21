@@ -137,6 +137,8 @@ public:
 
   FEED_PROPERTIES getFeedProperties(); //!< Get feed properties from dialog
   void setFeedProperties(FEED_PROPERTIES properties); //!< Set feed properties into dialog
+  void setFolderDisabledCounts(int total, int disabled);
+  bool folderDisableChanged() const;
 
 public slots:
   void slotFaviconUpdate(const QString &feedUrl, const QByteArray &faviconData);
@@ -170,6 +172,8 @@ private:
   QLabel *labelHomepage; //!< Link to feed's homepage
   QToolButton *selectIconButton_;
   QCheckBox *disableUpdate_;
+  QLabel *folderDisabledCount_ = nullptr;
+  bool folderInitiallyDisabled_ = false;
   QRadioButton *useGlobalUpdate_;
   QRadioButton *updateEnable_;
   QRadioButton *noScheduledUpdates_;

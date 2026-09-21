@@ -48,6 +48,8 @@ public:
 
   QVariant dataField(const QModelIndex &index, const QString &fieldName) const;
   bool isFolder(const QModelIndex &index) const;
+  // Total and disabled descendant feeds; no stored folder restriction.
+  QPair<int, int> folderDisabledCounts(int folderId) const;
   QModelIndex indexSibling(const QModelIndex &index, const QString &fieldName) const;
 
   int rowCount(const QModelIndex &parent = QModelIndex()) const;
@@ -82,8 +84,6 @@ public slots:
   void refresh();
 
 private:
-  // Derived presentation only: folders never disable their children.
-  QPair<int, int> folderDisabledCounts(int folderId) const;
   mutable bool disabledCountsDirty_ = true;
   mutable QHash<int, QPair<int, int>> disabledCounts_;
   void clear();
