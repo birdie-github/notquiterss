@@ -5,6 +5,7 @@
 #include <QDateTime>
 namespace FeedHealth {
 constexpr int WarningRole = Qt::UserRole + 77;
+constexpr int DisabledRole = Qt::UserRole + 78;
 struct State {
   int failures = 0;
   bool warning = false;

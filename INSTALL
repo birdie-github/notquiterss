@@ -10,7 +10,7 @@ See resources/external/translations/README.md for discovery paths, optional meta
   libxml2 development headers and libxml-2.0.pc
   pkg-config (pkgconf is supported)
   Qt 5.15.x (default) or Qt 6.2+ development packages and matching qmake
-  Qt modules: Core, Gui, Widgets, PrintSupport, Network, Sql, Xml
+  Qt modules: Core, Gui, Widgets, PrintSupport, Network, Sql, Xml, Svg
   Qt's QSQLITE plugin (used for initialization and VACUUM)
   Qt 6 additionally requires Core5Compat for the existing QTextCodec decoders
   QtSingleApplication for the selected Qt: headers, library and qtsingleapplication.prf
@@ -29,7 +29,7 @@ Use separate application build directories and QtSingleApplication work director
 for each Qt/toolchain. Prepare the dependency with the SAME qmake as the application.
 The platform recipes below retain Qt 5 defaults. Only Windows CI selects Qt 6.
 
-For Qt 6 on MSYS2, substitute qt6-base, qt6-tools and
+For Qt 6 on MSYS2, substitute qt6-base, qt6-svg, qt6-tools and
 qt6-imageformats for the qt5 packages below, and add
 mingw-w64-ucrt-x86_64-qt6-5compat. Pass --qmake qmake6 to the preparation helper,
 then use the Qt 6 application command above. Deploy with windeployqt6;
@@ -156,7 +156,7 @@ is not an installed-library feature. SYSTEMQTSA is no longer needed.
 Linux (Fedora 44)
 ================
   sudo dnf install python3 gcc-c++ make pkgconf-pkg-config qt5-qtbase-devel \
-    qt5-qttools-devel qtsingleapplication-qt5-devel \
+    qt5-qtsvg-devel qt5-qttools-devel qtsingleapplication-qt5-devel \
     sqlite-devel libxml2-devel qt5-qtimageformats
   python3 scripts/prepare-miniaudio.py --prefix "$HOME/miniaudio-snapshot"
   export MINIAUDIO_INCLUDE_DIR="$HOME/miniaudio-snapshot/include"
@@ -181,7 +181,7 @@ it does not use the Qt online installer's separate MinGW or an MSVC toolchain.
   pacman -S --needed git \
     mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make \
     mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-pkgconf \
-    mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-tools \
+    mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-svg mingw-w64-ucrt-x86_64-qt5-tools \
     mingw-w64-ucrt-x86_64-qt5-imageformats \
     mingw-w64-ucrt-x86_64-sqlite3 mingw-w64-ucrt-x86_64-libxml2 \
     mingw-w64-ucrt-x86_64-openssl

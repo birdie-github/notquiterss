@@ -204,10 +204,7 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
     }
 
     if (indexColumnOf("text") == index.column()) {
-      const auto counts = isFolder(index) ? folderDisabledCounts(idByIndex(index)) : QPair<int, int>();
-      const bool disabled = isFolder(index) ? counts.first > 0 && counts.first == counts.second :
-          indexSibling(index, "disableUpdate").data(Qt::EditRole).toBool();
-      if (disabled) return QColor(feedDisabledUpdateColor_);
+      if (updatesDisabled(index)) return QColor(feedDisabledUpdateColor_);
     }
 
     if (indexColumnOf("text") == index.column()) {
@@ -269,6 +266,8 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
       int flag = Qt::AlignRight|Qt::AlignVCenter;
       return flag;
     }
+  } else if (role == FeedHealth::DisabledRole) {
+    return index.column() == indexColumnOf("text") && updatesDisabled(index);
   } else if (role == FeedHealth::WarningRole) {
     return index.column() == indexColumnOf("text") && !isFolder(index) &&
         !indexSibling(index, "disableUpdate").data(Qt::EditRole).toBool() &&
@@ -423,4 +422,12 @@ QPair<int, int> FeedsModel::folderDisabledCounts(int folderId) const
     disabledCountsDirty_ = false;
   }
   return disabledCounts_.value(folderId);
+}
+
+bool FeedsModel::updatesDisabled(const QModelIndex &index) const
+{
+  if (!isFolder(index))
+    return indexSibling(index, "disableUpdate").data(Qt::EditRole).toBool();
+  const auto counts = folderDisabledCounts(idByIndex(index));
+  return counts.first > 0 && counts.first == counts.second;
 }

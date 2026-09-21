@@ -84,6 +84,7 @@ public slots:
   void refresh();
 
 private:
+  bool updatesDisabled(const QModelIndex &index) const;
   mutable bool disabledCountsDirty_ = true;
   mutable QHash<int, QPair<int, int>> disabledCounts_;
   void clear();

@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/images">
+        <file alias="disabledFeed">resources/embedded/icons/disabled-feed.svg</file>
         <file alias="updateFeed">resources/embedded/icons/updateFeed.png</file>
         <file alias="updateAllFeeds">resources/embedded/icons/updateAllFeeds.png</file>
         <file alias="images/triangleL.png">resources/embedded/icons/triangleL.png</file>

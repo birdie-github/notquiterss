@@ -44,7 +44,7 @@ isEmpty(USE_QT): USE_QT = 5
 !equals(QT_MAJOR_VERSION, $$USE_QT): error("Run qmake from the requested Qt installation. Qt 6 requires USE_QT=6; Qt 5 is the default.")
 equals(QT_MAJOR_VERSION, 5):lessThan(QT_MINOR_VERSION, 15): error("$$PROJECT_NAME requires Qt 5.15 or newer within Qt 5")
 equals(QT_MAJOR_VERSION, 6):lessThan(QT_MINOR_VERSION, 2): error("$$PROJECT_NAME requires Qt 6.2 or newer within Qt 6")
-QT += widgets network xml printsupport sql
+QT += widgets network xml printsupport sql svg
 unix:!mac:qtHaveModule(dbus) {
   QT += dbus
   DEFINES += HAVE_FILEMANAGER_DBUS

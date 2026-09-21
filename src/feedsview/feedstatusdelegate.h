@@ -4,6 +4,7 @@
 #include <QStyledItemDelegate>
 #include <QElapsedTimer>
 #include <QRegion>
+class QSvgRenderer;
 class QTimer;
 class QTreeView;
 class FeedStatusDelegate : public QStyledItemDelegate
@@ -14,6 +15,7 @@ public:
 private:
   QTreeView *view_;
   QTimer *frame_;
+  QSvgRenderer *disabledMarker_;
   QElapsedTimer clock_;
   mutable QRegion pendingFrames_;
 };

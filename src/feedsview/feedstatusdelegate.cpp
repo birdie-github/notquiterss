@@ -2,12 +2,14 @@
 #include "feedstatusdelegate.h"
 #include "feedhealth.h"
 #include <QPainter>
+#include <QSvgRenderer>
 #include <QTimer>
 #include <QTreeView>
 #include <QApplication>
 #include <cmath>
 FeedStatusDelegate::FeedStatusDelegate(QTreeView *view)
-  : QStyledItemDelegate(view), view_(view), frame_(new QTimer(this))
+  : QStyledItemDelegate(view), view_(view), frame_(new QTimer(this)),
+    disabledMarker_(new QSvgRenderer(QStringLiteral(":/images/disabledFeed"), this))
 {
   clock_.start();
   frame_->setSingleShot(true);
@@ -32,6 +34,19 @@ void FeedStatusDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
     opt.text = opt.fontMetrics.elidedText(opt.text, opt.textElideMode, qMax(0, text.width()-size-6));
   }
   style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, opt.widget);
+  if (index.data(FeedHealth::DisabledRole).toBool() && !opt.icon.isNull()) {
+    const QRect icon = style->subElementRect(QStyle::SE_ItemViewItemDecoration, &opt, opt.widget);
+    // Logical coordinates: the painter supplies the screen's device-pixel ratio.
+    // Six logical pixels for a 16-pixel icon; keep the physical bottom-left in RTL too.
+    const qreal side = qMin(icon.width(), icon.height()) * 0.375;
+    if (side > 0) {
+      painter->save();
+      painter->setClipRect(opt.rect, Qt::IntersectClip);
+      painter->setRenderHint(QPainter::Antialiasing);
+      disabledMarker_->render(painter, QRectF(icon.left(), icon.bottom() + 1 - side, side, side));
+      painter->restore();
+    }
+  }
   if (!warning || size <= 0) return;
   painter->save();
   painter->setClipRect(opt.rect);
