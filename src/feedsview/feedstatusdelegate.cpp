@@ -2,6 +2,7 @@
 #include "feedstatusdelegate.h"
 #include "feedhealth.h"
 #include <QPainter>
+#include <QImage>
 #include <QSvgRenderer>
 #include <QTimer>
 #include <QTreeView>
@@ -37,13 +38,39 @@ void FeedStatusDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
   if (index.data(FeedHealth::DisabledRole).toBool() && !opt.icon.isNull()) {
     const QRect icon = style->subElementRect(QStyle::SE_ItemViewItemDecoration, &opt, opt.widget);
     // Logical coordinates: the painter supplies the screen's device-pixel ratio.
-    // Six logical pixels for a 16-pixel icon; keep the physical bottom-left in RTL too.
-    const qreal side = qMin(icon.width(), icon.height()) * 0.375;
+    // Eight logical pixels for a 16-pixel icon; keep the physical bottom-left in RTL too.
+    const qreal side = qMin(icon.width(), icon.height()) * 0.5;
     if (side > 0) {
       painter->save();
       painter->setClipRect(opt.rect, Qt::IntersectClip);
       painter->setRenderHint(QPainter::Antialiasing);
-      disabledMarker_->render(painter, QRectF(icon.left(), icon.bottom() + 1 - side, side, side));
+      // Ask the style to paint just this row's background at the icon centre.
+      // This honours QSS selection/hover colours and model background brushes,
+      // which need not match QPalette::Base or QPalette::Highlight.
+      QStyleOptionViewItem background(opt);
+      background.icon = QIcon();
+      background.text.clear();
+      background.features &= ~(QStyleOptionViewItem::HasDecoration |
+                               QStyleOptionViewItem::HasDisplay |
+                               QStyleOptionViewItem::HasCheckIndicator);
+      QImage sample(1, 1, QImage::Format_ARGB32_Premultiplied);
+      sample.fill(opt.palette.color(QPalette::Base));
+      {
+        QPainter samplePainter(&sample);
+        samplePainter.translate(-icon.center());
+        style->drawControl(QStyle::CE_ItemViewItem, &background, &samplePainter, opt.widget);
+      }
+      const QRectF marker(icon.left(), icon.bottom() + 1 - side, side, side);
+      // Centre lines and stroke widths follow disabled-feed.svg's 100x100
+      // geometry. Add one logical pixel on each side of its red strokes.
+      painter->translate(marker.topLeft());
+      painter->setPen(QPen(sample.pixelColor(0, 0), side * 0.18052 + 2.0,
+                           Qt::SolidLine, Qt::RoundCap));
+      painter->drawLine(QPointF(side * 0.063896, side * 0.064196),
+                        QPointF(side * 0.935804, side * 0.936104));
+      painter->drawLine(QPointF(side * 0.063894, side * 0.936106),
+                        QPointF(side * 0.938302, side * 0.064194));
+      disabledMarker_->render(painter, QRectF(0, 0, side, side));
       painter->restore();
     }
   }
