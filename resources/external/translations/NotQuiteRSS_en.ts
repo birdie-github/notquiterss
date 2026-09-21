@@ -1003,17 +1003,17 @@ Deleted articles may be downloaded again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="863"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="870"/>
         <source>seconds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="863"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="870"/>
         <source>minutes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="863"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="870"/>
         <source>hours</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1044,7 +1044,7 @@ Deleted articles may be downloaded again.</source>
     </message>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="41"/>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="272"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="279"/>
         <source>Right-to-left layout</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1065,7 +1065,7 @@ Deleted articles may be downloaded again.</source>
     </message>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="50"/>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="849"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="856"/>
         <source>Update schedule</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1105,206 +1105,216 @@ Deleted articles may be downloaded again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="246"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="225"/>
+        <source>Changing this option enables or disables all feeds in this folder and its subfolders, replacing their individual disabled states. Update schedules are unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="254"/>
         <source>Folder name:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="278"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="285"/>
         <source>These settings affect this folder&apos;s combined article view, not its contained feeds.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="311"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="318"/>
         <source>Ascending</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="311"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="318"/>
         <source>Descending</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="316"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="323"/>
         <source>Sort by:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="330"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="337"/>
         <source>Add</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="337"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="344"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="341"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="348"/>
         <source>Move up</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="344"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="351"/>
         <source>Move down</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="348"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="355"/>
         <source>Default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="370"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="377"/>
         <source>These columns and sorting affect this folder&apos;s combined article view, not its contained feeds.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="387"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="394"/>
         <source>Server requires authentication:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="396"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="403"/>
         <source>Username:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="398"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="405"/>
         <source>Password:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="422"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="429"/>
         <source>Feed count:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="425"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="432"/>
         <source>Description:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="432"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="439"/>
         <source>Status:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="434"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="441"/>
         <source>Created:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="436"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="443"/>
         <source>Last update:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="438"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="445"/>
         <source>Article count:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="476"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="483"/>
         <source>Use global settings (%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="525"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="532"/>
         <source>Good</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="533"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="540"/>
         <source>Long ago ;-)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="544"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="551"/>
         <source>new</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="546"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="553"/>
         <source>unread</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="567"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="574"/>
         <source>Image files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="569"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="576"/>
         <source>Select Image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="576"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="583"/>
         <source>Could not open the icon file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="777"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="784"/>
         <source>All feeds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="795"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="802"/>
         <source>%1 feeds selected. Only the displayed action will be applied. Folder settings will not change.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="801"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="808"/>
         <source>%1 applied to %2 feeds.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="851"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="858"/>
         <source>Update every</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="852"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="859"/>
         <source>No scheduled updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="853"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="860"/>
         <source>Startup updates and manual updates, including Update All, are still allowed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="887"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="894"/>
         <source>Load images:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="889"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="896"/>
         <source>Never</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="889"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="896"/>
         <source>Use global settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedpropertiesdialog.cpp" line="889"/>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="896"/>
         <source>Always</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../../src/feedpropertiesdialog.cpp" line="909"/>
+        <source>%1 of %2 feeds disabled.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>FeedsModel</name>
     <message>
-        <location filename="../../../src/feedsview/feedsmodel.cpp" line="282"/>
+        <location filename="../../../src/feedsview/feedsmodel.cpp" line="281"/>
         <source>%1
 All %2 feeds in this folder are disabled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/feedsview/feedsmodel.cpp" line="283"/>
+        <location filename="../../../src/feedsview/feedsmodel.cpp" line="282"/>
         <source>%1
 %2 of %3 feeds disabled.</source>
         <translation type="unfinished"></translation>
@@ -1736,15 +1746,15 @@ Details:
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="2010"/>
         <location filename="../../../src/application/mainwindow.cpp" line="4488"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6717"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6739"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6721"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6743"/>
         <source>Hide Categories</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="2014"/>
         <location filename="../../../src/application/mainwindow.cpp" line="4486"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6723"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6727"/>
         <source>Show Categories</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1828,13 +1838,13 @@ Details:
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4279"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="5053"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5057"/>
         <source>New Articles: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4281"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="5055"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5059"/>
         <source>Unread Articles: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1973,9 +1983,9 @@ Details:
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4330"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7293"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7298"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7308"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7297"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7302"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7312"/>
         <source>Downloads</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2661,53 +2671,53 @@ Details:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5187"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5191"/>
         <source>Check for updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5188"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5192"/>
         <source>A new version of %1 is available</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5295"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5299"/>
         <source>Change application theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5296"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5300"/>
         <source>Changing the application theme will reset your custom colors. Continue?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6301"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6312"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6305"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6316"/>
         <source>Article</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6866"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6870"/>
         <source>Save As</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6868"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6872"/>
         <source>HTML Files (*.%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6868"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6872"/>
         <source>Text files (*.%2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6874"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6878"/>
         <source>Save As: could not open file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7087"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7091"/>
         <source>Article sharing</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2762,52 +2772,53 @@ Details:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="74"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="65"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="72"/>
         <source>Could not save folder properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="75"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="84"/>
         <source>The folder no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="127"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="169"/>
         <source>automatic updates disabled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="129"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="171"/>
         <source>every second</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="129"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="171"/>
         <source>every %1 seconds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="131"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="173"/>
         <source>every minute</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="131"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="173"/>
         <source>every %1 minutes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="132"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="174"/>
         <source>every hour</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="132"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="174"/>
         <source>every %1 hours</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../src/application/feedsettings.cpp" line="164"/>
+        <location filename="../../../src/application/feedsettings.cpp" line="206"/>
         <source>Could not load feeds</source>
         <translation type="unfinished"></translation>
     </message>
