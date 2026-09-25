@@ -11,6 +11,7 @@ class WebsiteOverrides
 public:
   void load(const QString &path);
   QString userAgent(const QUrl &url, const QString &fallback) const;
+  QStringList userAgentOverrides() const;
   QString validationError(const QUrl &url) const;
   QString path() const { return path_; }
   QString error() const { return error_; }

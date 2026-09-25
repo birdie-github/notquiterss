@@ -110,6 +110,16 @@ QString WebsiteOverrides::userAgent(const QUrl &url, const QString &fallback) co
   return agent.isEmpty() ? fallback : agent;
 }
 
+QStringList WebsiteOverrides::userAgentOverrides() const
+{
+  QStringList result;
+  for (const Rule &rule : rules_) {
+    if (rule.hasAgent)
+      result.append(QStringLiteral("[%1] %2").arg(rule.host, rule.agent));
+  }
+  return result;
+}
+
 QString WebsiteOverrides::validationError(const QUrl &url) const
 {
   if (url.scheme() != QLatin1String("http") && url.scheme() != QLatin1String("https"))

@@ -128,5 +128,9 @@ void Globals::init()
   if (!overrides_.error().isEmpty())
     qWarning() << overrides_.path() << overrides_.error();
 
+  qInfo().noquote() << "User-Agent (global):" << userAgent_;
+  for (const QString &entry : overrides_.userAgentOverrides())
+    qInfo().noquote() << "User-Agent override:" << entry;
+
   isInit_ = true;
 }
