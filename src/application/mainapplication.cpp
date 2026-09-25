@@ -35,6 +35,7 @@
 #include <QScreen>
 #include <QDesktopServices>
 #include <QProcess>
+#include <QThread>
 #include "articlecontent.h"
 
 MainApplication::MainApplication(int &argc, char **argv)
@@ -114,6 +115,13 @@ MainApplication::MainApplication(int &argc, char **argv)
   setProgressSplashScreen(60);
 
   qWarning() << "Run application 4";
+
+  // Worker NetworkManagers forward authentication requests to the primary
+  // manager with BlockingQueuedConnection.  Construct the shared network
+  // objects here, on the GUI thread, before any feed worker can reference
+  // them.
+  networkManager();
+
   updateFeeds_ = new UpdateFeeds(mainWindow_);
   // Favicon requests need the worker connections installed above.
   mainWindow_->requestDefaultFeedIcons();
@@ -455,6 +463,7 @@ MainWindow *MainApplication::mainWindow()
 NetworkManager *MainApplication::networkManager()
 {
   if (!networkManager_) {
+    Q_ASSERT(QThread::currentThread() == thread());
     networkManager_ = new NetworkManager(false, this);
     setDiskCache();
   }
@@ -464,6 +473,7 @@ NetworkManager *MainApplication::networkManager()
 CookieJar *MainApplication::cookieJar()
 {
   if (!cookieJar_) {
+    Q_ASSERT(QThread::currentThread() == thread());
     cookieJar_ = new CookieJar(this);
   }
   return cookieJar_;

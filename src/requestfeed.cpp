@@ -135,13 +135,27 @@ void RequestFeed::requestUrl(int id, QString urlString,
 
 void RequestFeed::stopRequest()
 {
+  // Do not start more work while cancellation is in progress.
+  getUrlTimer_->stop();
+  timeout_->stop();
+
+  // Cancel requests which have not started yet.  Keep the parallel queues in
+  // sync so the object remains in a valid state if it is reused afterwards.
   while (!feedsQueue_.isEmpty()) {
     int feedId = idsQueue_.dequeue();
     QString feedUrl = feedsQueue_.dequeue();
-    dateQueue_.clear();
-    userInfo_.clear();
+    dateQueue_.dequeue();
+    userInfo_.dequeue();
 
     emit getUrlDone(-7, feedId, feedUrl);
+  }
+
+  // abort() may synchronously cause finished() to run in this thread, which
+  // removes entries from networkReply_.  Iterate over a snapshot accordingly.
+  const QList<QNetworkReply*> replies = networkReply_;
+  for (QNetworkReply *reply : replies) {
+    if (reply)
+      reply->abort();
   }
 }
 
