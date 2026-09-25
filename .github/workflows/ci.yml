@@ -33,7 +33,7 @@ jobs:
           else
             qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release
           fi
-          make -j2
+          make -j"$(nproc)"
 
   appimage:
     name: Linux AppImage (Qt 6, x86_64)
@@ -45,7 +45,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential git python3 wget file pkg-config libxml2-dev libsqlite3-dev \
-            qt6-base-dev libqt6svg6-dev qt6-tools-dev-tools libqt6core5compat6-dev \
+            qt6-base-dev libqt6svg6-dev qt6-tools-dev-tools qt6-l10n-tools libqt6core5compat6-dev \
             qt6-wayland libqt6sql6-sqlite
 
       - name: Prepare dependencies and build
@@ -60,7 +60,7 @@ jobs:
           mkdir _build
           cd _build
           qmake6 ../app.pro USE_QT=6 PREFIX=/usr CONFIG+=release CONFIG-=debug_and_release
-          make -j2
+          make -j"$(nproc)"
           make INSTALL_ROOT="$PWD/AppDir" install
 
           mkdir -p AppDir/usr/share/NotQuiteRSS/licenses
@@ -145,7 +145,7 @@ jobs:
           mkdir _build
           cd _build
           qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
-          mingw32-make -j2
+          mingw32-make -j"$(nproc)"
           mingw32-make install
           python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target
           python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_EXECUTABLE="+d["executable"]); print("PROJECT_QT_TRANSLATIONS="+d["root"]+"/"+d["qtTranslations"])' >> "$GITHUB_ENV"
@@ -231,7 +231,7 @@ jobs:
           mkdir _build
           cd _build
           "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
-          make -j2
+          make -j"$(nproc)"
           python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"]); print("PROJECT_EXECUTABLE="+d["executable"])' >> "$GITHUB_ENV"
 
       - name: Deploy, sign and package macOS app
