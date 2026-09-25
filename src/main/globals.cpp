@@ -74,7 +74,11 @@ void Globals::init()
 #if defined(Q_OS_MAC)
   resourcesDir_ = QCoreApplication::applicationDirPath() + "/../Resources";
 #else
-  resourcesDir_ = RESOURCES_DIR;
+  const QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
+  if (!appDir.isEmpty())
+    resourcesDir_ = QDir(appDir).filePath(QStringLiteral("usr/share/") + QCoreApplication::applicationName());
+  else
+    resourcesDir_ = RESOURCES_DIR;
 #endif
 #endif
 

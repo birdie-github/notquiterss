@@ -1,4 +1,4 @@
-name: Qt builds (Qt 5 Linux, Qt 6 Windows/macOS)
+name: Qt builds and packages
 on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
@@ -34,6 +34,75 @@ jobs:
             qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release
           fi
           make -j2
+
+  appimage:
+    name: Linux AppImage (Qt 6, x86_64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential git python3 wget file pkg-config libxml2-dev libsqlite3-dev \
+            qt6-base-dev libqt6svg6-dev qt6-tools-dev-tools libqt6core5compat6-dev \
+            qt6-wayland libqt6sql6-sqlite
+
+      - name: Prepare dependencies and build
+        run: |
+          set -euo pipefail
+          dep_work="$RUNNER_TEMP/app-deps"
+          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake qmake6
+          export QMAKEFEATURES="$dep_work/install/features"
+          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
+          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
+
+          mkdir _build
+          cd _build
+          qmake6 ../app.pro USE_QT=6 PREFIX=/usr CONFIG+=release CONFIG-=debug_and_release
+          make -j2
+          make INSTALL_ROOT="$PWD/AppDir" install
+
+          mkdir -p AppDir/usr/share/NotQuiteRSS/licenses
+          cp -R "$dep_work/install/share/licenses/qtsingleapplication" AppDir/usr/share/NotQuiteRSS/licenses/
+          cp -R "$dep_work/miniaudio/share/licenses/miniaudio" AppDir/usr/share/NotQuiteRSS/licenses/
+
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"])' >> "$GITHUB_ENV"
+
+      - name: Package AppImage
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/linuxdeploy"
+          mkdir -p "$tools" _build/artifacts
+          wget -q -O "$tools/linuxdeploy-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q -O "$tools/linuxdeploy-plugin-qt-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x "$tools"/*.AppImage
+
+          export PATH="$tools:$PATH"
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QMAKE=qmake6
+          export EXTRA_QT_MODULES=waylandcompositor
+          export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
+          export LDAI_OUTPUT="$PWD/_build/artifacts/$PROJECT_NAME-$PROJECT_VERSION-Linux-x86_64.AppImage"
+
+          "$tools/linuxdeploy-x86_64.AppImage" \
+            --appdir _build/AppDir \
+            --desktop-file "_build/AppDir/usr/share/applications/$PROJECT_NAME.desktop" \
+            --icon-file "_build/AppDir/usr/share/icons/hicolor/256x256/apps/$PROJECT_NAME.png" \
+            --plugin qt \
+            --output appimage
+
+          test -f "$LDAI_OUTPUT"
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-Linux-AppImage-x86_64-${{ github.sha }}
+          path: _build/artifacts/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
 
   windows:
     runs-on: windows-2022
