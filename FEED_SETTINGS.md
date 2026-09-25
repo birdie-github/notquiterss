@@ -24,7 +24,7 @@ targets. A count shows the number of distinct checked feeds.
 
 Actions are:
 
-- Enabled/disabled state: replace only each selected feed's individual state.
+- Enable/disable: replace only each selected feed's individual state.
 - Update schedule: global settings, a custom interval, or no scheduled updates.
 - Image loading: never, global settings, or always.
 - Text direction: enable or disable right-to-left layout.

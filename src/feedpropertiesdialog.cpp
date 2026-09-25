@@ -42,11 +42,12 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     bulkEditors_ << bulkState_ << createUpdateSchedule() << createImageEditor()
                  << layoutDirection_ << createColumnsTab();
     auto *splitter = new QSplitter(this);
-    auto *actions = new QGroupBox(tr("Action to apply"));
+#    auto *actions = new QGroupBox(tr("Action to apply"));
+    auto *actions = new QGroupBox();
     auto *actionsLayout = new QVBoxLayout(actions);
     bulkAction_ = new QComboBox();
     bulkAction_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    bulkAction_->addItems({tr("Choose an action..."), tr("Enabled/disabled state"),
+    bulkAction_->addItems({tr("Choose an action..."), tr("Enable/disable"),
                           tr("Update schedule"), tr("Image loading"),
                           tr("Text direction"), tr("Columns and sorting")});
     actionsLayout->addWidget(bulkAction_);
@@ -61,7 +62,8 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
       pages->addWidget(page);
     }
     actionsLayout->addWidget(pages, 1);
-    auto *targets = new QGroupBox(tr("Feeds and folders"));
+#    auto *targets = new QGroupBox(tr("Feeds and folders"));
+    auto *targets = new QGroupBox();
     auto *targetsLayout = new QVBoxLayout(targets);
     auto *hint = new QLabel(tr("Check feeds to select them. Checking a folder includes its feeds and subfolders."));
     hint->setWordWrap(true);

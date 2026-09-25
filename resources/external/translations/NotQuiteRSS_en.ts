@@ -1060,7 +1060,7 @@ Deleted articles may be downloaded again.</source>
     </message>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="49"/>
-        <source>Enabled/disabled state</source>
+        <source>Enable/disable</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
