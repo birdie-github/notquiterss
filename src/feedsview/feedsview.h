@@ -20,6 +20,7 @@
 #define FEEDSVIEW_H
 
 #include <QtWidgets>
+#include <QTimer>
 #include <feedsmodel.h>
 
 class FeedsView : public QTreeView
@@ -92,11 +93,14 @@ protected:
 private slots:
   void slotExpanded(const QModelIndex&index);
   void slotCollapsed(const QModelIndex&index);
+  void dragAutoScroll();
 
 private:
   FeedsModel *sourceModel_;
   QPoint dragPos_;
   QPoint dragStartPos_;
+  QTimer dragAutoScrollTimer_;
+  QAbstractItemView::ScrollMode dragScrollMode_;
   QList<int> expandedList;
   int expandedOldId_;
   QModelIndex indexClicked_;

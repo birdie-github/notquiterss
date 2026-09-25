@@ -150,6 +150,7 @@ FeedsView::FeedsView(QWidget * parent)
   , sourceModel_(0)
   , dragPos_(QPoint())
   , dragStartPos_(QPoint())
+  , dragScrollMode_(QAbstractItemView::ScrollPerItem)
   , expandedOldId_(-1)
 {
   setObjectName("feedsView_");
@@ -174,6 +175,8 @@ FeedsView::FeedsView(QWidget * parent)
   setAcceptDrops(true);
   setDropIndicatorShown(true);
 
+  connect(&dragAutoScrollTimer_, &QTimer::timeout,
+          this, &FeedsView::dragAutoScroll);
   connect(this, SIGNAL(expanded(QModelIndex)), SLOT(slotExpanded(QModelIndex)));
   connect(this, SIGNAL(collapsed(QModelIndex)), SLOT(slotCollapsed(QModelIndex)));
 }
@@ -617,6 +620,10 @@ void FeedsView::mouseReleaseEvent(QMouseEvent *event)
 // ----------------------------------------------------------------------------
 void FeedsView::dragEnterEvent(QDragEnterEvent *event)
 {
+  dragAutoScrollTimer_.stop();
+  dragScrollMode_ = verticalScrollMode();
+  if (dragScrollMode_ != QAbstractItemView::ScrollPerPixel)
+    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   event->accept();
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   dragPos_ = event->position().toPoint();
@@ -629,6 +636,9 @@ void FeedsView::dragEnterEvent(QDragEnterEvent *event)
 // ----------------------------------------------------------------------------
 void FeedsView::dragLeaveEvent(QDragLeaveEvent *event)
 {
+  dragAutoScrollTimer_.stop();
+  if (verticalScrollMode() != dragScrollMode_)
+    setVerticalScrollMode(dragScrollMode_);
   event->accept();
   dragPos_ = QPoint();
   viewport()->update();
@@ -697,25 +707,69 @@ void FeedsView::dragMoveEvent(QDragMoveEvent *event)
 
   viewport()->update();
 
-  if (shouldAutoScroll(dragPos_))
-    startAutoScroll();
+  if (shouldAutoScroll(dragPos_)) {
+    if (!dragAutoScrollTimer_.isActive())
+      dragAutoScrollTimer_.start(16);
+  } else {
+    dragAutoScrollTimer_.stop();
+  }
 }
 
 // ----------------------------------------------------------------------------
 bool FeedsView::shouldAutoScroll(const QPoint &pos) const
 {
-    if (!hasAutoScroll())
-        return false;
-    QRect area = viewport()->rect();
-    return (pos.y() - area.top() < autoScrollMargin())
-        || (area.bottom() - pos.y() < autoScrollMargin())
-        || (pos.x() - area.left() < autoScrollMargin())
-        || (area.right() - pos.x() < autoScrollMargin());
+  if (!hasAutoScroll())
+    return false;
+
+  const QRect area = viewport()->rect();
+  return (pos.y() - area.top() < autoScrollMargin())
+      || (area.bottom() - pos.y() < autoScrollMargin());
+}
+
+// ----------------------------------------------------------------------------
+void FeedsView::dragAutoScroll()
+{
+  if (!shouldAutoScroll(dragPos_)) {
+    dragAutoScrollTimer_.stop();
+    return;
+  }
+
+  QScrollBar *scrollBar = verticalScrollBar();
+  const int oldValue = scrollBar->value();
+  const QRect area = viewport()->rect();
+  const int margin = qMax(1, autoScrollMargin());
+  int direction = 0;
+  int depth = 0;
+
+  if (dragPos_.y() - area.top() < margin) {
+    direction = -1;
+    depth = margin - (dragPos_.y() - area.top());
+  } else if (area.bottom() - dragPos_.y() < margin) {
+    direction = 1;
+    depth = margin - (area.bottom() - dragPos_.y());
+  }
+
+  // Keep motion gentle at the inner edge and accelerate only as the cursor
+  // moves deeper into (or beyond) the autoscroll margin.  With a 16 ms
+  // timer this yields roughly 60--240 pixels/second.
+  depth = qBound(0, depth, margin);
+  const int step = 1 + (3 * depth) / margin;
+  scrollBar->setValue(oldValue + direction * step);
+
+  if (scrollBar->value() == oldValue) {
+    dragAutoScrollTimer_.stop();
+    return;
+  }
+
+  viewport()->update();
 }
 
 // ----------------------------------------------------------------------------
 void FeedsView::dropEvent(QDropEvent *event)
 {
+  dragAutoScrollTimer_.stop();
+  if (verticalScrollMode() != dragScrollMode_)
+    setVerticalScrollMode(dragScrollMode_);
   dragPos_ = QPoint();
   viewport()->update();
 

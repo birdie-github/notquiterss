@@ -4,6 +4,7 @@
 *.rej
 *.patch
 *.diff
+BUILD
 _build
 .directory
 debug
