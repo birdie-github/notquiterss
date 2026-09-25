@@ -1,6 +1,9 @@
 *.user
 *.bak
 *.orig
+*.rej
+*.patch
+*.diff
 _build
 .directory
 debug
