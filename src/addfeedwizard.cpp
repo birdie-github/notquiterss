@@ -517,8 +517,6 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
           if (0 <= duplicateFoundId) {
             if (feedUrlString_ != linkFeedString)
               textWarning->setText(tr("Duplicate feed!"));
-            else
-              textWarning->setText(tr("Could not find a feed URL."));
             warningWidget_->setVisible(true);
 
             deleteFeed();
@@ -540,7 +538,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
         }
       }
       if (pos < 0) {
-        textWarning->setText(tr("Could not find a feed URL."));
+        textWarning->setText(tr("The server returned content that is not a valid RSS or Atom feed."));
         warningWidget_->setVisible(true);
 
         deleteFeed();
