@@ -13,18 +13,22 @@ contains(QT_ARCH, x86_64) {
     QMAKE_CXXFLAGS += -march=x86-64-v2
 }
 
-# Handle LTO per-compiler family
-clang {
-    # ThinLTO is fast and recommended for Clang
-    QMAKE_CXXFLAGS += -flto=thin
-    QMAKE_LFLAGS   += -flto=thin
-} else:gcc {
-    # GCC supports auto thread detection
-    QMAKE_CXXFLAGS += -flto=auto
-    QMAKE_LFLAGS   += -flto=auto
-} else {
-    # MSVC or other compilers fallback
-    CONFIG += ltcg
+# Optional link-time optimization.
+# Enable with: qmake CONFIG+=lto
+contains(CONFIG, lto) {
+    # Handle LTO per-compiler family
+    clang {
+        # ThinLTO is fast and recommended for Clang
+        QMAKE_CXXFLAGS += -flto=thin
+        QMAKE_LFLAGS   += -flto=thin
+    } else:gcc {
+        # GCC supports auto thread detection
+        QMAKE_CXXFLAGS += -flto=auto
+        QMAKE_LFLAGS   += -flto=auto
+    } else:msvc {
+        # MSVC or other compilers fallback
+        CONFIG += ltcg
+    }
 }
 
 # Generate project metadata in the build tree, including for source archives.

@@ -29,9 +29,9 @@ jobs:
           mkdir _build
           cd _build
           if [ "${{ matrix.compiler }}" = "clang++" ]; then
-            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release QMAKE_LFLAGS+=-fuse-ld=lld
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release QMAKE_LFLAGS+=-fuse-ld=lld CONFIG+=lto
           else
-            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           fi
           make -j"$(nproc)"
 
@@ -59,7 +59,7 @@ jobs:
 
           mkdir _build
           cd _build
-          qmake6 ../app.pro USE_QT=6 PREFIX=/usr CONFIG+=release CONFIG-=debug_and_release
+          qmake6 ../app.pro USE_QT=6 PREFIX=/usr CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           make -j"$(nproc)"
           make INSTALL_ROOT="$PWD/AppDir" install
 
@@ -147,7 +147,7 @@ jobs:
           export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
-          qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
+          qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           mingw32-make -j"$(nproc)"
           mingw32-make install
           python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target
@@ -233,7 +233,7 @@ jobs:
           export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
-          "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
+          "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           make -j"$(nproc)"
           python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"]); print("PROJECT_EXECUTABLE="+d["executable"])' >> "$GITHUB_ENV"
 
