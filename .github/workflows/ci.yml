@@ -86,6 +86,7 @@ jobs:
           export EXTRA_QT_MODULES=waylandcompositor
           export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
           export LDAI_OUTPUT="$PWD/_build/artifacts/$PROJECT_NAME-$PROJECT_VERSION-Linux-x86_64.AppImage"
+          export MKSQUASHFS_ARGUMENTS="-comp zstd -Xcompression-level 22 -b 1M"
 
           "$tools/linuxdeploy-x86_64.AppImage" \
             --appdir _build/AppDir \
