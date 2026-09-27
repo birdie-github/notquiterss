@@ -209,14 +209,14 @@ bool MainApplication::confirmPrerelease()
   if (QVersionNumber::fromString(version).minorVersion() % 2 == 0)
     return true;
 
-  QSettings confirmations(QFileInfo(Settings::fileName()).dir().filePath("prerelease.ini"),
+  QSettings confirmations(QFileInfo(Settings().fileName()).dir().filePath("prerelease.ini"),
                           QSettings::IniFormat);
   const QString key = "Versions/" + version;
   if (confirmations.value(key).toString() == QLatin1String("Confirmed"))
     return true;
 
   const bool hasData = QFileInfo::exists(dbFileName()) ||
-      QFileInfo::exists(dbFileName() + ".bak") || QFileInfo::exists(Settings::fileName());
+      QFileInfo::exists(dbFileName() + ".bak") || QFileInfo::exists(Settings().fileName());
   QMessageBox warning(QMessageBox::Warning, tr("Beta version warning"),
       tr("You are using a test version of %1 (%2). It may contain bugs that could cause data loss.")
           .arg(applicationName().toHtmlEscaped(), version.toHtmlEscaped()), QMessageBox::NoButton);
