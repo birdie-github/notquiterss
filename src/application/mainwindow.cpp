@@ -32,6 +32,7 @@
 
 #include "common.h"
 #include "mainapplication.h"
+#include <QPointer>
 #include "database.h"
 #include "aboutdialog.h"
 #include "addfeedwizard.h"
@@ -5138,7 +5139,7 @@ void MainWindow::slotPlaySoundNewNews()
 // ----------------------------------------------------------------------------
 void MainWindow::showNewsFiltersDlg(bool newFilter)
 {
-  NewsFiltersDialog *newsFiltersDialog = new NewsFiltersDialog(this);
+  QPointer<NewsFiltersDialog> newsFiltersDialog = new NewsFiltersDialog(this);
   if (newFilter) {
     newsFiltersDialog->filtersTree_->setCurrentItem(
           newsFiltersDialog->filtersTree_->topLevelItem(
@@ -5147,7 +5148,8 @@ void MainWindow::showNewsFiltersDlg(bool newFilter)
 
   newsFiltersDialog->exec();
 
-  delete newsFiltersDialog;
+  // Tray Exit can destroy the parent and this dialog inside exec().
+  delete newsFiltersDialog.data();
 }
 // ----------------------------------------------------------------------------
 void MainWindow::showFilterRulesDlg()
@@ -5156,7 +5158,7 @@ void MainWindow::showFilterRulesDlg()
 
   int feedId = feedsView_->selectId_;
 
-  FilterRulesDialog *filterRulesDialog = new FilterRulesDialog(
+  QPointer<FilterRulesDialog> filterRulesDialog = new FilterRulesDialog(
         this, -1, feedId);
 
   QModelIndex index = feedsModel_->indexById(feedId);
@@ -5164,12 +5166,14 @@ void MainWindow::showFilterRulesDlg()
   filterRulesDialog->filterName_->setText(QString("'%1'").arg(text));
 
   int result = filterRulesDialog->exec();
+  // The parent may have been destroyed by tray Exit during the modal loop.
+  if (!filterRulesDialog) return;
   if (result == QDialog::Rejected) {
-    delete filterRulesDialog;
+    delete filterRulesDialog.data();
     return;
   }
 
-  delete filterRulesDialog;
+  delete filterRulesDialog.data();
 
   showNewsFiltersDlg(true);
 }

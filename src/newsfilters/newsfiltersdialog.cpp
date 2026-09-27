@@ -19,6 +19,7 @@
 #include "newsfiltersdialog.h"
 
 #include "mainapplication.h"
+#include <QPointer>
 #include "filterrulesdialog.h"
 #include "parseobject.h"
 #include "settings.h"
@@ -135,17 +136,19 @@ void NewsFiltersDialog::closeDialog()
 
 void NewsFiltersDialog::newFilter()
 {
-  FilterRulesDialog *filterRulesDialog = new FilterRulesDialog(
+  QPointer<FilterRulesDialog> filterRulesDialog = new FilterRulesDialog(
         parentWidget(), -1);
 
   int result = filterRulesDialog->exec();
+  // The parent may have been destroyed by tray Exit during the modal loop.
+  if (!filterRulesDialog) return;
   if (result == QDialog::Rejected) {
-    delete filterRulesDialog;
+    delete filterRulesDialog.data();
     return;
   }
 
   int filterId = filterRulesDialog->filterId_;
-  delete filterRulesDialog;
+  delete filterRulesDialog.data();
 
   QSqlQuery q;
   QString qStr = QString("SELECT name, feeds, enable FROM filters WHERE id=='%1'").
@@ -182,16 +185,18 @@ void NewsFiltersDialog::editFilter()
   int filterRow = filtersTree_->currentIndex().row();
   int filterId = filtersTree_->topLevelItem(filterRow)->text(0).toInt();
 
-  FilterRulesDialog *filterRulesDialog = new FilterRulesDialog(
+  QPointer<FilterRulesDialog> filterRulesDialog = new FilterRulesDialog(
         parentWidget(), filterId);
 
   int result = filterRulesDialog->exec();
+  // The parent may have been destroyed by tray Exit during the modal loop.
+  if (!filterRulesDialog) return;
   if (result == QDialog::Rejected) {
-    delete filterRulesDialog;
+    delete filterRulesDialog.data();
     return;
   }
 
-  delete filterRulesDialog;
+  delete filterRulesDialog.data();
 
   QSqlQuery q;
   QString qStr = QString("SELECT name, feeds FROM filters WHERE id=='%1'").
@@ -209,15 +214,18 @@ void NewsFiltersDialog::editFilter()
 
 void NewsFiltersDialog::deleteFilter()
 {
-  QMessageBox msgBox(this);
-  msgBox.setIcon(QMessageBox::Question);
-  msgBox.setWindowTitle(tr("Delete Filter"));
-  msgBox.setText(QString(tr("Are you sure you want to delete the filter '%1'?")).
+  QPointer<QMessageBox> msgBox = new QMessageBox(this);
+  msgBox->setIcon(QMessageBox::Question);
+  msgBox->setWindowTitle(tr("Delete Filter"));
+  msgBox->setText(QString(tr("Are you sure you want to delete the filter '%1'?")).
                  arg(filtersTree_->currentItem()->text(1)));
-  msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-  msgBox.setDefaultButton(QMessageBox::No);
+  msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+  msgBox->setDefaultButton(QMessageBox::No);
 
-  if (msgBox.exec() == QMessageBox::No) return;
+  const int result = msgBox->exec();
+  if (!msgBox) return;
+  delete msgBox.data();
+  if (result != QMessageBox::Yes) return;
 
   int filterRow = filtersTree_->currentIndex().row();
   int filterId = filtersTree_->topLevelItem(filterRow)->text(0).toInt();
