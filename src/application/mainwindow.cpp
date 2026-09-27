@@ -1512,6 +1512,7 @@ void MainWindow::createMenu()
   fileMenu_->addAction(exitAct_);
 
   toolbarsMenu_ = new QMenu(this);
+  toolbarsMenu_->addAction(feedsWidgetVisibleAct_);
   toolbarsMenu_->addAction(mainToolbarToggle_);
   toolbarsMenu_->addAction(feedsToolbarToggle_);
   toolbarsMenu_->addAction(newsToolbarToggle_);
@@ -4435,7 +4436,7 @@ void MainWindow::retranslateStrings()
   switchFocusPrevAct_->setToolTip(
         tr("Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)"));
 
-  feedsWidgetVisibleAct_->setText(tr("Show/Hide Feed Tree"));
+  feedsWidgetVisibleAct_->setText(tr("Feeds Pane"));
 
   placeToTrayAct_->setText(tr("Minimize to Tray"));
   placeToTrayAct_->setToolTip(tr("Minimize Application to Tray"));
