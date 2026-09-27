@@ -27,6 +27,7 @@
 namespace {
 using Handle = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 QMutex backupMutex;
+bool upgradeBackupHandled = false;
 std::atomic<bool> subscriptionPending{false};
 QString sqlError(sqlite3 *db) { return QString::fromUtf8(sqlite3_errmsg(db)); }
 bool execute(sqlite3 *db, const char *sql, QString &error)
@@ -34,6 +35,26 @@ bool execute(sqlite3 *db, const char *sql, QString &error)
   if (sqlite3_exec(db, sql, nullptr, nullptr, nullptr) == SQLITE_OK) return true;
   error = sqlError(db);
   return false;
+}
+
+bool copySnapshot(sqlite3 *source, sqlite3 *raw, QString &error)
+{
+  sqlite3_backup *copy = sqlite3_backup_init(raw, "main", source, "main");
+  if (!copy) { error = sqlError(raw); return false; }
+  QElapsedTimer timeout;
+  timeout.start();
+  int rc;
+  do {
+    rc = sqlite3_backup_step(copy, 256);
+    if (rc == SQLITE_BUSY || rc == SQLITE_LOCKED) sqlite3_sleep(20);
+  } while ((rc == SQLITE_OK || rc == SQLITE_BUSY || rc == SQLITE_LOCKED) && timeout.elapsed() < 10000);
+  const int finishRc = sqlite3_backup_finish(copy);
+  if (rc != SQLITE_DONE || finishRc != SQLITE_OK) {
+    error = DatabaseBackup::tr("SQLite snapshot failed (code %1): %2").arg(rc).arg(sqlError(raw));
+    return false;
+  }
+
+  return true;
 }
 
 // Hash logical rows, not SQLite page counters/free space. This also observes
@@ -112,6 +133,12 @@ QString DatabaseBackup::directory()
   return QDir(mainApp->dataDir()).filePath(ProjectMetadata::backup());
 }
 
+void DatabaseBackup::skipUpgradeBackup()
+{
+  QMutexLocker lock(&backupMutex);
+  upgradeBackupHandled = true;
+}
+
 DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, int cleanOverride)
 {
   // Finish a coalesced subscription request even if the user exits during its
@@ -124,7 +151,12 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
   Result result;
   Settings settings;
   const bool manual = trigger == Trigger::Manual;
-  const bool upgrade = trigger == Trigger::Upgrade;
+  const bool prerelease = trigger == Trigger::Prerelease;
+  const bool upgrade = trigger == Trigger::Upgrade || prerelease;
+  // The startup gate already backed up this session, or the user declined.
+  if (trigger == Trigger::Upgrade && upgradeBackupHandled) {
+    result.skipped = true; return result;
+  }
   const bool clean = !upgrade && (cleanOverride < 0 ? AppSettings::backupClean.get() : cleanOverride != 0);
   if (!manual && !upgrade && (!AppSettings::backupEnabled.get() ||
       (trigger == Trigger::Exit && !AppSettings::backupExit.get()) ||
@@ -142,54 +174,73 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
   if (!staging.isValid()) return fail(staging.errorString());
   const QString dbName = ProjectMetadata::database() + ".backup";
   const QString iniName = QCoreApplication::applicationName() + ".ini.backup";
-  sqlite3 *source = nullptr;
-  Handle upgradeSource(nullptr, sqlite3_close);
-  if (upgrade) {
-    // Initialization uses Qt's QSQLITE plugin, which may bundle a different
-    // SQLite library. Never pass its native handle to our linked SQLite API.
-    // No migrations have run yet; read the committed database independently.
-    const int rc = sqlite3_open_v2(mainApp->dbFileName().toUtf8().constData(),
-                                  &source, SQLITE_OPEN_READONLY, nullptr);
-    upgradeSource.reset(source);
-    if (rc != SQLITE_OK)
-      return fail(source ? sqlError(source) : tr("Cannot open the database before upgrade."));
+  QString digest;
+  if (prerelease) {
+    // Protect both the current file and any pending replacement before
+    // connectDatabase() renames it. Read-only SQLite snapshots include WAL data.
+    for (const QString &path : QStringList{mainApp->dbFileName(), mainApp->dbFileName() + ".bak"}) {
+      if (!QFileInfo::exists(path)) continue;
+      sqlite3 *source = nullptr;
+      const int sourceRc = sqlite3_open_v2(path.toUtf8().constData(), &source,
+                                          SQLITE_OPEN_READONLY, nullptr);
+      Handle sourceHandle(source, sqlite3_close);
+      if (sourceRc != SQLITE_OK)
+        return fail(source ? sqlError(source) : tr("Cannot open the database for backup."));
+      sqlite3 *target = nullptr;
+      const QString destination = staging.filePath(QFileInfo(path).fileName() + ".backup");
+      const int targetRc = sqlite3_open(destination.toUtf8().constData(), &target);
+      Handle targetHandle(target, sqlite3_close);
+      if (targetRc != SQLITE_OK)
+        return fail(target ? sqlError(target) : tr("Cannot open the backup database."));
+      QString error;
+      if (!copySnapshot(source, target, error)) return fail(error);
+    }
   } else {
-    QVariant value = db.driver() ? db.driver()->handle() : QVariant();
-    if (!value.isValid() || qstrcmp(value.typeName(), "sqlite3*") != 0)
-      return fail(tr("The live SQLite connection is unavailable."));
-    source = *static_cast<sqlite3 **>(value.data());
-  }
-  if (!source) return fail(tr("The live SQLite connection is closed."));
-  sqlite3 *raw = nullptr;
-  const int openRc = sqlite3_open(staging.filePath(dbName).toUtf8().constData(), &raw);
-  Handle target(raw, sqlite3_close);
-  if (openRc != SQLITE_OK) return fail(raw ? sqlError(raw) : tr("Cannot open the backup database."));
-  sqlite3_backup *copy = sqlite3_backup_init(raw, "main", source, "main");
-  if (!copy) return fail(sqlError(raw));
-  QElapsedTimer timeout;
-  timeout.start();
-  int rc;
-  do {
-    rc = sqlite3_backup_step(copy, 256);
-    if (rc == SQLITE_BUSY || rc == SQLITE_LOCKED) sqlite3_sleep(20);
-  } while ((rc == SQLITE_OK || rc == SQLITE_BUSY || rc == SQLITE_LOCKED) && timeout.elapsed() < 10000);
-  const int finishRc = sqlite3_backup_finish(copy);
-  if (rc != SQLITE_DONE || finishRc != SQLITE_OK)
-    return fail(tr("SQLite snapshot failed (code %1): %2").arg(rc).arg(sqlError(raw)));
+    sqlite3 *source = nullptr;
+    Handle upgradeSource(nullptr, sqlite3_close);
+    if (upgrade) {
+      // Initialization uses Qt's QSQLITE plugin, which may bundle a different
+      // SQLite library. Never pass its native handle to our linked SQLite API.
+      // No migrations have run yet; read the committed database independently.
+      const int rc = sqlite3_open_v2(mainApp->dbFileName().toUtf8().constData(),
+                                    &source, SQLITE_OPEN_READONLY, nullptr);
+      upgradeSource.reset(source);
+      if (rc != SQLITE_OK)
+        return fail(source ? sqlError(source) : tr("Cannot open the database before upgrade."));
+    } else {
+      QVariant value = db.driver() ? db.driver()->handle() : QVariant();
+      if (!value.isValid() || qstrcmp(value.typeName(), "sqlite3*") != 0)
+        return fail(tr("The live SQLite connection is unavailable."));
+      source = *static_cast<sqlite3 **>(value.data());
+    }
+    if (!source) return fail(tr("The live SQLite connection is closed."));
+    sqlite3 *raw = nullptr;
+    const int openRc = sqlite3_open(staging.filePath(dbName).toUtf8().constData(), &raw);
+    Handle target(raw, sqlite3_close);
+    if (openRc != SQLITE_OK) return fail(raw ? sqlError(raw) : tr("Cannot open the backup database."));
+    QString error;
+    if (!copySnapshot(source, raw, error)) return fail(error);
 
-  QString error;
-  if (clean && !filterCopy(raw, error)) return fail(error);
-  const QString digest = fingerprint(raw, error) + (clean ? ":clean" : ":full");
-  if (!error.isEmpty()) return fail(error);
-  if (!manual && !upgrade && settings.value("Backup/lastDigest").toString() == digest &&
-      QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + dbName) &&
-      QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + iniName)) {
+    if (clean && !filterCopy(raw, error)) return fail(error);
+    digest = fingerprint(raw, error) + (clean ? ":clean" : ":full");
+    if (!error.isEmpty()) return fail(error);
+    if (!manual && !upgrade && settings.value("Backup/lastDigest").toString() == digest &&
+        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + dbName) &&
+        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + iniName)) {
+      result.skipped = true; return result;
+    }
+    target.reset(); // Close every handle before publishing/renaming on Windows.
+  }
+  // Preserve the original settings before startup changes them. A profile may
+  // have only settings, only a database, or neither on its first run.
+  if (!prerelease && !Settings::syncSettings())
+    return fail(tr("Cannot write the current application settings."));
+  QFile ini(settings.fileName());
+  if ((!prerelease || ini.exists()) && !ini.copy(staging.filePath(iniName)))
+    return fail(ini.errorString());
+  if (prerelease && QDir(staging.path()).entryList(QDir::Files).isEmpty()) {
     result.skipped = true; return result;
   }
-  target.reset(); // Close every handle before publishing/renaming on Windows.
-  if (!Settings::syncSettings()) return fail(tr("Cannot write the current application settings."));
-  QFile ini(settings.fileName());
-  if (!ini.copy(staging.filePath(iniName))) return fail(ini.errorString());
   const QString stem = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") +
       "_v" + QCoreApplication::applicationVersion();
   QString name = stem;
@@ -198,6 +249,7 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
     return fail(tr("Cannot publish the completed backup."));
   staging.setAutoRemove(false);
   result.directory = QDir(root).filePath(name);
+  if (prerelease) upgradeBackupHandled = true;
   if (!upgrade) {
     settings.setValue("Backup/lastDigest", digest);
     settings.setValue("Backup/lastDirectory", result.directory);

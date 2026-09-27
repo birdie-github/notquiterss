@@ -43,6 +43,24 @@ ISO date. The generator supplies C++, qmake, Windows VERSIONINFO, macOS plist,
 Linux desktop/AppStream, and Doxygen metadata. Windows limits each version
 component to 65535. The version is unchanged by this rebranding patch.
 
+Odd minor versions (for example, `0.95.0` and `0.95.1`) show a beta warning;
+even minor versions skip it. An unconfirmed beta offers a
+full backup of any existing database and settings through the backup service,
+regardless of automatic/clean backup preferences. This happens before database
+initialization and pending `.bak` replacement; a pending database is also saved
+as `feeds.db.bak.backup`. Normal two-file snapshots follow existing retention;
+partial-profile snapshots and sets containing a pending database are preserved
+by the service's existing conservative retention rules.
+
+`prerelease.ini`, beside the application INI (including portable installations),
+keeps every acknowledged full version as `0.95.0=Confirmed` under `[Versions]`.
+Entries are written after a successful backup, an explicit Continue without
+backing up, or Continue on a fresh installation. Skipping the backup also skips
+the pre-upgrade backup for that startup, without changing automatic backup
+settings. A backup failure offers Retry or Exit. Returning to a confirmed
+version does not repeat the warning; removing its entry makes it appear again.
+Acknowledgement write failures allow startup but are reported to the user.
+
 `project.repository` is the actual GitHub repository, regardless of the app's
 name. Homepage, issues, releases, translator and latest-release API URLs default
 to this repository. Optional `homepage`, `issues`, `releases`, `translations`,

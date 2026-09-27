@@ -13,10 +13,11 @@ class DatabaseBackup : public QObject
 {
   Q_OBJECT
 public:
-  enum class Trigger { Manual, Subscription, Schedule, Exit, Upgrade };
+  enum class Trigger { Manual, Subscription, Schedule, Exit, Upgrade, Prerelease };
   struct Result { QString directory; QString error; bool skipped = false; };
   static DatabaseBackup *instance();
   static QString directory();
+  static void skipUpgradeBackup(); // Explicit startup choice; this session only.
   static Result create(QSqlDatabase db, Trigger trigger, int cleanOverride = -1);
   static void report(const Result &result, bool manual, QWidget *parent = nullptr);
   static void subscriptionsChanged(); // May be called from the import worker.

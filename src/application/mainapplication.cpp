@@ -33,6 +33,7 @@
 #include <cstdio>
 
 #include <QScreen>
+#include <QVersionNumber>
 #include <QDesktopServices>
 #include <QProcess>
 #include <QThread>
@@ -90,6 +91,13 @@ MainApplication::MainApplication(int &argc, char **argv)
   setQuitOnLastWindowClosed(false);
 
   createSettings();
+  setTranslateApplication();
+  // Run before applying the theme (which saves settings), replacing a pending
+  // database, initializing SQL, or starting any feed workers.
+  if (!confirmPrerelease()) {
+    isClosing_ = true;
+    return;
+  }
 
   qWarning() << "Run application!";
 
@@ -99,7 +107,6 @@ MainApplication::MainApplication(int &argc, char **argv)
   systemStyleName_ = style()->objectName();
   systemPalette_ = palette();
   setStyleApplication();
-  setTranslateApplication();
   showSplashScreen();
 
   if (!connectDatabase()) {
@@ -194,6 +201,71 @@ void MainApplication::createSettings()
   langFileName_ = settings.value("langFileName", defaultLanguage).toString();
 
   proxyLoadSettings();
+}
+
+bool MainApplication::confirmPrerelease()
+{
+  const QString version = applicationVersion();
+  if (QVersionNumber::fromString(version).minorVersion() % 2 == 0)
+    return true;
+
+  QSettings confirmations(QFileInfo(Settings::fileName()).dir().filePath("prerelease.ini"),
+                          QSettings::IniFormat);
+  const QString key = "Versions/" + version;
+  if (confirmations.value(key).toString() == QLatin1String("Confirmed"))
+    return true;
+
+  const bool hasData = QFileInfo::exists(dbFileName()) ||
+      QFileInfo::exists(dbFileName() + ".bak") || QFileInfo::exists(Settings::fileName());
+  QMessageBox warning(QMessageBox::Warning, tr("Beta version warning"),
+      tr("You are using a test version of %1 (%2). It may contain bugs that could cause data loss.")
+          .arg(applicationName().toHtmlEscaped(), version.toHtmlEscaped()), QMessageBox::NoButton);
+  warning.setTextFormat(Qt::RichText);
+  const QString issueLink = tr("Please report problems using the <a href=\"%1\">issue tracker</a>.")
+      .arg(ProjectMetadata::issuesUrl().toHtmlEscaped());
+  warning.setInformativeText(hasData
+      ? tr("We recommend creating a full backup of your existing feeds and settings before continuing. "
+           "This backup is available even if automatic backups are disabled.") + "<br/><br/>" + issueLink
+      : issueLink);
+  QPushButton *proceed = warning.addButton(hasData ? tr("Back up and continue") : tr("Continue"),
+                                           QMessageBox::AcceptRole);
+  QPushButton *skip = hasData
+      ? warning.addButton(tr("Continue without backing up"), QMessageBox::ActionRole) : nullptr;
+  QPushButton *exit = warning.addButton(tr("Exit"), QMessageBox::RejectRole);
+  warning.setDefaultButton(proceed);
+  warning.setEscapeButton(exit);
+  warning.exec();
+  if (warning.clickedButton() != proceed && (!skip || warning.clickedButton() != skip))
+    return false;
+  if (skip && warning.clickedButton() == skip)
+    DatabaseBackup::skipUpgradeBackup();
+  while (hasData && warning.clickedButton() == proceed) {
+    const auto backup = DatabaseBackup::create(QSqlDatabase(), DatabaseBackup::Trigger::Prerelease);
+    if (!backup.directory.isEmpty()) {
+      // Retention cleanup can fail after a complete backup was published.
+      if (!backup.error.isEmpty()) DatabaseBackup::report(backup, true, &warning);
+      break;
+    }
+    QMessageBox failure(QMessageBox::Critical, tr("Backup failed"),
+        backup.error.isEmpty() ? tr("No backup was created. The application has not started.")
+                               : backup.error,
+        QMessageBox::Retry | QMessageBox::Abort, &warning);
+    failure.setTextFormat(Qt::PlainText);
+    failure.button(QMessageBox::Abort)->setText(tr("Exit"));
+    failure.setDefaultButton(QMessageBox::Retry);
+    failure.setEscapeButton(QMessageBox::Abort);
+    if (failure.exec() != QMessageBox::Retry) return false;
+  }
+
+  confirmations.setValue(key, "Confirmed");
+  confirmations.sync();
+  if (confirmations.status() != QSettings::NoError) {
+    qWarning() << "Cannot save prerelease confirmation:" << confirmations.fileName();
+    QMessageBox::warning(nullptr, tr("Beta version warning"),
+        tr("Your confirmation could not be saved. The application will continue, "
+           "but this warning will appear again next time."));
+  }
+  return true;
 }
 
 bool MainApplication::connectDatabase()
