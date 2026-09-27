@@ -37,6 +37,7 @@
 #include <QDesktopServices>
 #include <QProcess>
 #include <QThread>
+#include <QDrag>
 #include "articlecontent.h"
 
 MainApplication::MainApplication(int &argc, char **argv)
@@ -291,8 +292,36 @@ bool MainApplication::connectDatabase()
   return Database::initialization();
 }
 
+bool MainApplication::finishModalOperations()
+{
+  // Keep every owner alive until modal callers have resumed and destroyed
+  // their local dialogs. Closing the innermost window preserves cancellation
+  // semantics (e.g. No/Cancel in QMessageBox), unlike forcing done(0).
+  if (QWidget *popup = QApplication::activePopupWidget()) {
+    popup->close();
+    return false;
+  }
+  if (QWidget *modal = QApplication::activeModalWidget()) {
+    modal->close();
+    // A busy Clean Up wizard deliberately refuses close; wait for completion.
+    return false;
+  }
+  // A hidden/accepted dialog can still have exec() frames on the stack, as
+  // can a native dialog or drag operation. Never tear down from those loops.
+  if (QThread::currentThread()->loopLevel() != 1) {
+    QDrag::cancel();
+    return false;
+  }
+  return true;
+}
+
 void MainApplication::quitApplication()
 {
+  // Also cover dialogs opened by a queued callback during worker shutdown.
+  if (!finishModalOperations()) {
+    QTimer::singleShot(25, this, &MainApplication::quitApplication);
+    return;
+  }
   qWarning() << "quitApplication 1";
   delete mainWindow_;
   qWarning() << "quitApplication 2";

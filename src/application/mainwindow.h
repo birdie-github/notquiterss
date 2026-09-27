@@ -461,6 +461,9 @@ private slots:
   void createBackup();
 
 private:
+  void finishQuitApp();
+  QTimer quitTimer_;
+
   enum class DeferredDatabaseUi { FeedSelection, TabSelection, FeedsReload, NewsRefresh };
   void deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry);
   void retryDatabaseUi();

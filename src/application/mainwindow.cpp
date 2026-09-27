@@ -185,6 +185,9 @@ MainWindow::MainWindow(QWidget *parent)
   , recountCategoryCountsOn_(false)
   , optionsDialog_(NULL)
 {
+  quitTimer_.setInterval(25);
+  connect(&quitTimer_, &QTimer::timeout, this, &MainWindow::finishQuitApp);
+
   databaseUiTimer_.setSingleShot(true);
   databaseUiTimer_.setInterval(25);
   connect(&databaseUiTimer_, &QTimer::timeout, this, &MainWindow::retryDatabaseUi);
@@ -288,6 +291,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
  *---------------------------------------------------------------------------*/
 void MainWindow::quitApp()
 {
+  if (mainApp->isClosing() || quitTimer_.isActive()) return;
+  // Always return to the event loop first, including for a tray menu action.
+  quitTimer_.start();
+}
+
+void MainWindow::finishQuitApp()
+{
+  if (!mainApp->finishModalOperations()) return;
+  quitTimer_.stop();
   mainApp->setClosing();
   databaseUiTimer_.stop();
   deferredDatabaseUi_.clear();

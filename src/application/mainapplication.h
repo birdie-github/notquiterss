@@ -51,6 +51,7 @@ public:
   bool isPortable() const;
   bool isPortableAppsCom() const;
   void setClosing();
+  bool finishModalOperations();
   bool isClosing() const;
   bool isNoDebugOutput() const;
   void showClosingWidget();
