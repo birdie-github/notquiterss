@@ -103,6 +103,19 @@ private slots:
   void addRssNewsIntoBase(NewsItemStruct *newsItem);
 
 private:
+  struct FilterEffects {
+    QList<QPair<int, QString>> colors;
+    QString sound;
+    bool playSound = false;
+  };
+  struct UpdateEffects {
+    QList<FeedCountStruct> counts;
+    QList<FilterEffects> filters;
+  };
+  bool storeFeed(const QDomDocument &doc, int feedId, int &newCount, UpdateEffects &effects);
+  void applyUserFilter(int feedId, int filterId, UpdateEffects &effects);
+  bool checkQuery(bool success, const QSqlQuery &query);
+  void publishEffects(const UpdateEffects &effects);
   void parseAtom(const QString &feedUrl, const QDomDocument &doc);
   void parseRss(const QString &feedUrl, const QDomDocument &doc);
   QString toPlainText(const QString &text);
@@ -110,9 +123,10 @@ private:
   QString getCommunity(const QDomNode &nodeContent);
   QString parseDate(const QString &dateString, const QString &urlString);
   int recountFeedCounts(int feedId, const QString &feedUrl,
-                        const QString &updated, const QString &lastBuildDate);
+                        const QString &updated, const QString &lastBuildDate, UpdateEffects &effects);
 
   QSqlDatabase db_;
+  QSqlError sqlError_;
   QTimer *parseTimer_;
   QMutex mutex_;
   QQueue<int> idsQueue_;
