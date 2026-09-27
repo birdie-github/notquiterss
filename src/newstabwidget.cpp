@@ -1396,14 +1396,22 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
           arg(ltr ? "ltr" : "rtl").    // direction
           arg(ltr ? "right" : "left");  // "Date" text-align
 
+      const QString separatorColor = qApp->palette().color(QPalette::Dark).name();
       if (ltr)
-        htmlStr = htmlString_.arg(cssStr, titleString, dateString, authorString, content);
+        htmlStr = htmlString_.arg(cssStr, titleString, dateString, authorString,
+                                  content, separatorColor);
       else
-        htmlStr = htmlRtlString_.arg(cssStr, titleString, dateString, authorString, content);
+        htmlStr = htmlRtlString_.arg(cssStr, titleString, dateString, authorString,
+                                     content, separatorColor);
 
     }
 
-    htmlStr.replace("<body>", "<body><a name=\"article-" + newsId + "\">&#8203;</a>");
+    // QTextDocument lays out the standalone zero-width anchor before the table
+    // as a real text line.  Put it inside the existing title row instead so it
+    // remains addressable without creating an empty line above the article.
+    htmlStr.replace("<td class=\"title\">",
+                    "<td class=\"title\"><a name=\"article-" + newsId +
+                    "\">&#8203;</a>");
     articleView_->setArticleHtml(htmlStr, preservePosition);
     if (feedsModel_->dataField(directionIndex, "layoutDirection").toInt())
       makeRtlAlignmentAbsolute(articleView_->document());

@@ -111,7 +111,10 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
   QPointer<QTextDocument> old = document();
   ArticleDocument *doc = new ArticleDocument(this);
   doc->setDefaultFont(font());
-  doc->setDocumentMargin(8);
+  // QTextDocument has its own outer margin; the article HTML already controls
+  // spacing.  Keep it at zero so body { margin: 0 } behaves like the old
+  // WebKit view instead of adding a second inset around every article.
+  doc->setDocumentMargin(0);
   setDocument(doc);
   if (old) old->deleteLater();
   doc->setHtml(html);
