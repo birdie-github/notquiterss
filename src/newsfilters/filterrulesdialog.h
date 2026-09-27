@@ -52,6 +52,7 @@ private slots:
 private:
   void setData();
 
+  QCheckBox *allFeeds_;
   QTreeWidget *feedsTree_;
 
   QComboBox *matchComboBox_;

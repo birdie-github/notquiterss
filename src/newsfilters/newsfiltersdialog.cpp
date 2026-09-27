@@ -50,21 +50,7 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
   q.exec(qStr);
   while (q.next()) {
     QSqlQuery q1;
-    bool isFolder = false;
-    QString strNameFeeds;
-    QStringList strIdFeeds = q.value(2).toString().split(",", Qt::SkipEmptyParts);
-    foreach (QString strIdFeed, strIdFeeds) {
-      if (isFolder) strNameFeeds.append("; ");
-      qStr = QString("SELECT text FROM feeds WHERE id==%1 AND xmlUrl!=''").
-          arg(strIdFeed);
-      q1.exec(qStr);
-      if (q1.next()) {
-        strNameFeeds.append(q1.value(0).toString());
-        isFolder = true;
-      } else {
-        isFolder = false;
-      }
-    }
+    const QString strNameFeeds = feedScopeText(q.value(2).toString());
 
     treeItem.clear();
     treeItem << q.value(0).toString()
@@ -166,22 +152,7 @@ void NewsFiltersDialog::newFilter()
       arg(filterId);
   q.exec(qStr);
   if (q.next()) {
-    QSqlQuery q1;
-    bool isFolder = false;
-    QString strNameFeeds;
-    QStringList strIdFeeds = q.value(1).toString().split(",", Qt::SkipEmptyParts);
-    foreach (QString strIdFeed, strIdFeeds) {
-      if (isFolder) strNameFeeds.append("; ");
-      qStr = QString("SELECT text FROM feeds WHERE id==%1 AND xmlUrl!=''").
-          arg(strIdFeed);
-      q1.exec(qStr);
-      if (q1.next()) {
-        strNameFeeds.append(q1.value(0).toString());
-        isFolder = true;
-      } else {
-        isFolder = false;
-      }
-    }
+    const QString strNameFeeds = feedScopeText(q.value(1).toString());
 
     QStringList treeItem;
     treeItem << QString::number(filterId)
@@ -227,22 +198,7 @@ void NewsFiltersDialog::editFilter()
       arg(filterId);
   q.exec(qStr);
   if (q.next()) {
-    QSqlQuery q1;
-    bool isFolder = false;
-    QString strNameFeeds;
-    QStringList strIdFeeds = q.value(1).toString().split(",", Qt::SkipEmptyParts);
-    foreach (QString strIdFeed, strIdFeeds) {
-      if (isFolder) strNameFeeds.append("; ");
-      qStr = QString("SELECT text FROM feeds WHERE id==%1 AND xmlUrl!=''").
-          arg(strIdFeed);
-      q1.exec(qStr);
-      if (q1.next()) {
-        strNameFeeds.append(q1.value(0).toString());
-        isFolder = true;
-      } else {
-        isFolder = false;
-      }
-    }
+    const QString strNameFeeds = feedScopeText(q.value(1).toString());
 
     filtersTree_->topLevelItem(filterRow)->setText(0, QString::number(filterId));
     filtersTree_->topLevelItem(filterRow)->setText(1, q.value(0).toString());
@@ -380,12 +336,35 @@ void NewsFiltersDialog::applyFilter()
       arg(filterId);
   q.exec(qStr);
   if (q.first()) {
-    QStringList strIdFeeds = q.value(0).toString().split(",", Qt::SkipEmptyParts);
+    const QString scope = q.value(0).toString();
     q.finish();
-    foreach (QString strIdFeed, strIdFeeds) {
-      mainApp->runUserFilter(strIdFeed.toInt(), filterId);
+    // Resolve a global rule against the subscriptions that exist at execution.
+    // Folder IDs in older selections are harmless and are not execution targets.
+    if (!q.prepare("SELECT id FROM feeds WHERE xmlUrl!='' "
+                   "AND (?='*' OR instr(?, ',' || id || ',')>0)")) {
+      QApplication::restoreOverrideCursor();
+      QMessageBox::warning(this, tr("Could not load feeds"), q.lastError().text());
+      return;
+    }
+    q.addBindValue(scope);
+    q.addBindValue(scope);
+    if (!q.exec()) {
+      QApplication::restoreOverrideCursor();
+      QMessageBox::warning(this, tr("Could not load feeds"), q.lastError().text());
+      return;
+    }
+    QList<int> feedIds;
+    while (q.next()) feedIds.append(q.value(0).toInt());
+    if (q.lastError().isValid()) {
+      QApplication::restoreOverrideCursor();
+      QMessageBox::warning(this, tr("Could not load feeds"), q.lastError().text());
+      return;
+    }
+    q.finish();
+    for (int id : feedIds) {
+      mainApp->runUserFilter(id, filterId);
       NewsTabWidget *widget = qobject_cast<NewsTabWidget*>(mainWindow->stackedWidget_->currentWidget());
-      if (widget->feedId_ == strIdFeed.toInt()) feedId = strIdFeed.toInt();
+      if (widget && widget->feedId_ == id) feedId = id;
     }
   }
 
@@ -408,4 +387,18 @@ void NewsFiltersDialog::slotItemChanged(QTreeWidgetItem *item, int column)
         arg(enable).arg(item->text(0).toInt());
     q.exec(qStr);
   }
+}
+
+QString NewsFiltersDialog::feedScopeText(const QString &scope) const
+{
+  if (scope == "*") return tr("All feeds (including future feeds)");
+  QStringList names;
+  QSqlQuery q;
+  q.prepare("SELECT text FROM feeds WHERE id=? AND xmlUrl!=''");
+  for (const QString &id : scope.split(",", Qt::SkipEmptyParts)) {
+    q.bindValue(0, id.toInt());
+    if (q.exec() && q.next()) names.append(q.value(0).toString());
+    q.finish();
+  }
+  return names.isEmpty() ? tr("No feeds") : names.join("; ");
 }

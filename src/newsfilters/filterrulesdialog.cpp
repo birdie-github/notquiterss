@@ -21,6 +21,7 @@
 #include "mainapplication.h"
 #include "settings.h"
 #include "feedselectiontree.h"
+#include <QCheckBox>
 
 FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   : Dialog(parent, Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
@@ -31,6 +32,8 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   setWindowTitle(tr("Filter Rules"));
   setMinimumHeight(300);
 
+  allFeeds_ = new QCheckBox(tr("All feeds (including future feeds)"), this);
+  allFeeds_->setToolTip(tr("Apply this rule to every feed, including feeds added later."));
   feedsTree_ = new QTreeWidget(this);
   feedsTree_->setObjectName("feedsTreeFR");
   feedsTree_->setColumnCount(2);
@@ -46,7 +49,7 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   QString treeError;
   if (!FeedSelectionTree::populate(feedsTree_, QSqlDatabase::database(),
                                   mainApp->mainWindow()->defaultIconFeeds_,
-                                  tr("All Feeds"), feedId, treeError)) {
+                                  tr("Select all current feeds"), feedId, treeError)) {
     QMessageBox::warning(this, tr("Could not load feeds"), treeError);
   }
 
@@ -63,6 +66,8 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   }
   connect(feedsTree_, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
           this, SLOT(feedItemChanged(QTreeWidgetItem*,int)));
+
+  connect(allFeeds_, &QCheckBox::toggled, feedsTree_, &QWidget::setDisabled);
 
   filterName_ = new LineEdit(this);
   QHBoxLayout *filterNamelayout = new QHBoxLayout();
@@ -146,7 +151,12 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   QSplitter *mainSpliter = new QSplitter(this);
   mainSpliter->setChildrenCollapsible(false);
   mainSpliter->addWidget(rulesWidget);
-  mainSpliter->addWidget(feedsTree_);
+  auto *scopeWidget = new QWidget(this);
+  auto *scopeLayout = new QVBoxLayout(scopeWidget);
+  scopeLayout->setContentsMargins(0, 0, 0, 0);
+  scopeLayout->addWidget(allFeeds_);
+  scopeLayout->addWidget(feedsTree_);
+  mainSpliter->addWidget(scopeWidget);
 
   QLabel *iconWarning = new QLabel(this);
   iconWarning->setPixmap(QPixmap(":/images/warning"));
@@ -198,7 +208,9 @@ void FilterRulesDialog::setData()
     matchComboBox_->setCurrentIndex(q.value(1).toInt());
 
     itemNotChecked_ = true;
-    QStringList strIdFeeds = q.value(2).toString().split(",", Qt::SkipEmptyParts);
+    const QString scope = q.value(2).toString();
+    allFeeds_->setChecked(scope == "*");
+    QStringList strIdFeeds = scope.split(",", Qt::SkipEmptyParts);
     foreach (QString strIdFeed, strIdFeeds) {
       QList<QTreeWidgetItem *> treeItems =
           feedsTree_->findItems(strIdFeed,
@@ -298,6 +310,8 @@ void FilterRulesDialog::acceptDialog()
     treeItem = feedsTree_->itemBelow(treeItem);
   }
   strIdFeeds.append(",");
+  // '*' is an explicit dynamic scope; an empty selection still means no feeds.
+  if (allFeeds_->isChecked()) strIdFeeds = "*";
 
   QSqlQuery q;
   if (filterId_ == -1) {

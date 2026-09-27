@@ -1080,10 +1080,10 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
 
   if (filterId != -1) {
     isAllFilters = false;
-    if (!checkQuery(q.exec(QString("SELECT enable, type FROM filters WHERE id='%1' AND feeds LIKE '%,%2,%'").
+    if (!checkQuery(q.exec(QString("SELECT enable, type FROM filters WHERE id='%1' AND (feeds='*' OR feeds LIKE '%,%2,%')").
            arg(filterId).arg(feedId)), q)) return;
   } else {
-    if (!checkQuery(q.exec(QString("SELECT enable, type, id FROM filters WHERE feeds LIKE '%,%1,%' ORDER BY num").
+    if (!checkQuery(q.exec(QString("SELECT enable, type, id FROM filters WHERE (feeds='*' OR feeds LIKE '%,%1,%') ORDER BY num").
            arg(feedId)), q)) return;
   }
 

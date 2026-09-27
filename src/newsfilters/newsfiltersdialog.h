@@ -45,6 +45,7 @@ private slots:
   void applyFilter();
 
 private:
+  QString feedScopeText(const QString &scope) const;
   QPushButton *editButton_;
   QPushButton *deleteButton_;
   QPushButton *moveUpButton_;
