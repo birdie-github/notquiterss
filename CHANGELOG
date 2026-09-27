@@ -1,3 +1,24 @@
+Version 0.95.0 BETA, use with caution! (upcoming)
+
+* NEW FEATURE: Choose whether each feed follows the global update schedule, uses its own schedule, or does not update automatically.
+* NEW FEATURE: Change settings for several feeds at once from the Tools menu.
+* NEW FEATURE: Disabled feeds are marked with a red X. Folders show the marker when all their feeds are disabled.
+* NEW FEATURE: Article filters can apply to all feeds, including feeds added in the future.
+* NEW FEATURE: Show or hide the feeds pane from the View menu.
+* NEW FEATURE: Add an option to keep the window visible on all workspaces under X11. Wayland users will have to ask their compositor whether it feels like offering the same feature.
+* NEW FEATURE: Produce a Linux AppImage.
+* NEW FEATURE: Explicitly warn about using a prerelease version.
+* CHANGE: Odd-numbered releases are beta versions for testing; even-numbered releases are stable versions. This release includes substantial changes. Back up your feeds and settings before upgrading, and please report any problems.
+* CHANGE: New subscriptions prefer HTTPS. The app asks before using an HTTP address you entered explicitly.
+* CHANGE: Feed updates keep the app responsive. In testing with about 60 feeds, the latest improvements also made startup and shutdown roughly three times faster.
+* BUG FIX: Fix an update that could get stuck when a feed requires authentication; cancelling feed requests now works more reliably.
+* BUG FIX: Fix feed dragging near the top and bottom of the list on Qt 6.
+* BUG FIX: Prevent crashes when exiting from the tray while an Article Filters window is open.
+* BUG FIX: Fix article spacing and restore the separation between the heading and content, bringing the layout closer to QuiteRSS.
+* BUG FIX: Improve handling of database errors during feed updates.
+* BUG FIX: Prevent modal filter windows from being hidden while the main window remains blocked.
+* CHANGE: Prepare the application for translations.
+
 Version 0.93.0 (2026-09-20)
 * NEW FEATURE: Add User-Agent configuration in Settings
 * NEW FEATURE: Per website user-agent overrides and GET/POST requirements (e.g. for Reddit) - check overrides.ini.sample
