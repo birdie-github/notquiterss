@@ -46,7 +46,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential git python3 wget file pkg-config libxml2-dev libsqlite3-dev \
             qt6-base-dev libqt6svg6-dev qt6-tools-dev-tools qt6-l10n-tools libqt6core5compat6-dev libgl-dev \
-            qt6-wayland libqt6sql6-sqlite
+            libqt6sql6-sqlite
 
       - name: Prepare dependencies and build
         run: |
@@ -83,8 +83,6 @@ jobs:
           export PATH="$tools:$PATH"
           export APPIMAGE_EXTRACT_AND_RUN=1
           export QMAKE=qmake6
-          export EXTRA_QT_MODULES=waylandcompositor
-          export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
           export LDAI_OUTPUT="$PWD/_build/artifacts/$PROJECT_NAME-$PROJECT_VERSION-Linux-x86_64.AppImage"
 
           "$tools/linuxdeploy-x86_64.AppImage" \
@@ -92,9 +90,6 @@ jobs:
             --desktop-file "_build/AppDir/usr/share/applications/$PROJECT_NAME.desktop" \
             --icon-file "_build/AppDir/usr/share/icons/hicolor/256x256/apps/$PROJECT_NAME.png" \
             --plugin qt \
-            --exclude-library libwayland-client.so.0 \
-            --exclude-library libwayland-cursor.so.0 \
-            --exclude-library libwayland-egl.so.0 \
             --output appimage
 
           test -f "$LDAI_OUTPUT"
