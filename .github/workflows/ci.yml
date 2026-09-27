@@ -92,6 +92,9 @@ jobs:
             --desktop-file "_build/AppDir/usr/share/applications/$PROJECT_NAME.desktop" \
             --icon-file "_build/AppDir/usr/share/icons/hicolor/256x256/apps/$PROJECT_NAME.png" \
             --plugin qt \
+            --exclude-library libwayland-client.so.0 \
+            --exclude-library libwayland-cursor.so.0 \
+            --exclude-library libwayland-egl.so.0 \
             --output appimage
 
           test -f "$LDAI_OUTPUT"
