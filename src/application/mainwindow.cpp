@@ -55,9 +55,90 @@
 #include <QRegularExpression>
 #include <QScreen>
 #include <QStyle>
+#ifdef HAVE_X11
+#include <QLibrary>
+#endif
 #include <algorithm>
 
 namespace {
+#ifdef HAVE_X11
+// Keep X11 optional: use the small Xlib ABI surface required for the
+// _NET_WM_STATE_STICKY client message without linking to libX11 or requiring
+// X11 development headers. This code is reached only when Qt is using xcb.
+using XWindow = unsigned long;
+using XAtom = unsigned long;
+
+struct XClientMessageEventCompat {
+  int type;
+  unsigned long serial;
+  int sendEvent;
+  void *display;
+  XWindow window;
+  XAtom messageType;
+  int format;
+  union {
+    char bytes[20];
+    short shorts[10];
+    long longs[5];
+  } data;
+};
+
+union XEventCompat {
+  int type;
+  XClientMessageEventCompat client;
+  long padding[24];
+};
+
+bool applyX11StickyState(WId windowId, bool sticky)
+{
+  if (QGuiApplication::platformName() != QLatin1String("xcb"))
+    return false;
+
+  QLibrary x11(QStringLiteral("X11"), 6);
+  if (!x11.load())
+    return false;
+
+  using OpenDisplay = void *(*)(const char *);
+  using CloseDisplay = int (*)(void *);
+  using DefaultRootWindow = XWindow (*)(void *);
+  using InternAtom = XAtom (*)(void *, const char *, int);
+  using SendEvent = int (*)(void *, XWindow, int, long, XEventCompat *);
+  using Flush = int (*)(void *);
+
+  const auto openDisplay = reinterpret_cast<OpenDisplay>(x11.resolve("XOpenDisplay"));
+  const auto closeDisplay = reinterpret_cast<CloseDisplay>(x11.resolve("XCloseDisplay"));
+  const auto defaultRootWindow = reinterpret_cast<DefaultRootWindow>(x11.resolve("XDefaultRootWindow"));
+  const auto internAtom = reinterpret_cast<InternAtom>(x11.resolve("XInternAtom"));
+  const auto sendEvent = reinterpret_cast<SendEvent>(x11.resolve("XSendEvent"));
+  const auto flush = reinterpret_cast<Flush>(x11.resolve("XFlush"));
+  if (!openDisplay || !closeDisplay || !defaultRootWindow || !internAtom || !sendEvent || !flush)
+    return false;
+
+  void *display = openDisplay(nullptr);
+  if (!display)
+    return false;
+
+  const XAtom stateAtom = internAtom(display, "_NET_WM_STATE", 0);
+  const XAtom stickyAtom = internAtom(display, "_NET_WM_STATE_STICKY", 0);
+  bool sent = false;
+  if (stateAtom && stickyAtom) {
+    XEventCompat event = {};
+    event.client.type = 33;  // ClientMessage
+    event.client.window = static_cast<XWindow>(windowId);
+    event.client.messageType = stateAtom;
+    event.client.format = 32;
+    event.client.data.longs[0] = sticky ? 1 : 0;  // _NET_WM_STATE_ADD / REMOVE
+    event.client.data.longs[1] = static_cast<long>(stickyAtom);
+    event.client.data.longs[3] = 1;  // normal application source indication
+    constexpr long eventMask = (1L << 20) | (1L << 19);  // SubstructureRedirect/Notify
+    sent = sendEvent(display, defaultRootWindow(display), 0, eventMask, &event) != 0;
+    flush(display);
+  }
+  closeDisplay(display);
+  return sent;
+}
+#endif
+
 QSize virtualDesktopSize()
 {
   QScreen *screen = QGuiApplication::primaryScreen();
@@ -424,6 +505,10 @@ void MainWindow::showWindows(bool trayClick)
       restoreGeometry(settings.value("GeometryState").toByteArray());
     }
     activateWindow();
+#ifdef HAVE_X11
+    if (allWorkspacesAct_ && allWorkspacesAct_->isChecked())
+      setAllWorkspaces();
+#endif
   } else {
     if (minimizingTray_)
       emit signalPlaceToTray();
@@ -1100,6 +1185,16 @@ void MainWindow::createActions()
   newsKeyDownAct_->setObjectName("newsKeyDownAct");
   this->addAction(newsKeyDownAct_);
   newsKeyPageUpAct_ = new QAction(this);
+#ifdef HAVE_X11
+  allWorkspacesAct_ = nullptr;
+  if (QGuiApplication::platformName() == QLatin1String("xcb")) {
+    allWorkspacesAct_ = new QAction(this);
+    allWorkspacesAct_->setObjectName("allWorkspacesAct");
+    allWorkspacesAct_->setCheckable(true);
+    connect(allWorkspacesAct_, SIGNAL(triggered()),
+            this, SLOT(setAllWorkspaces()));
+  }
+#endif
   newsKeyPageUpAct_->setObjectName("newsKeyPageUpAct");
   this->addAction(newsKeyPageUpAct_);
   newsKeyPageDownAct_ = new QAction(this);
@@ -1556,6 +1651,10 @@ void MainWindow::createMenu()
   viewMenu_->addMenu(styleMenu_);
   viewMenu_->addSeparator();
   viewMenu_->addAction(stayOnTopAct_);
+#ifdef HAVE_X11
+  if (allWorkspacesAct_)
+    viewMenu_->addAction(allWorkspacesAct_);
+#endif
   viewMenu_->addAction(fullScreenAct_);
 
   feedsFilterGroup_ = new QActionGroup(this);
@@ -1958,6 +2057,15 @@ void MainWindow::loadSettings()
   else
     setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
 
+#ifdef HAVE_X11
+  if (allWorkspacesAct_) {
+    allWorkspacesAct_->setChecked(settings.value("allWorkspaces", false).toBool());
+    if (allWorkspacesAct_->isChecked()) {
+      QTimer::singleShot(0, this, [this]() { setAllWorkspaces(); });
+    }
+  }
+#endif
+
   hideFeedsOpenTab_ = settings.value("hideFeedsOpenTab", false).toBool();
   showToggleFeedsTree_ = settings.value("showToggleFeedsTree", true).toBool();
   pushButtonNull_->setVisible(showToggleFeedsTree_);
@@ -2130,6 +2238,10 @@ void MainWindow::saveSettings()
   settings.setValue("closeNotify", closeNotify_);
 
   settings.setValue("mainToolbarLock", toolBarLockAct_->isChecked());
+#ifdef HAVE_X11
+  if (allWorkspacesAct_)
+    settings.setValue("allWorkspaces", allWorkspacesAct_->isChecked());
+#endif
 
   settings.setValue("mainToolbarShow2", mainToolbarToggle_->isChecked());
   settings.setValue("feedsToolbarShow2", feedsToolbarToggle_->isChecked());
@@ -4284,6 +4396,10 @@ void MainWindow::retranslateStrings()
   trayIconController_->setToolTip(info);
 
   mainMenuButton_->setToolTip(tr("Menu"));
+#ifdef HAVE_X11
+  if (allWorkspacesAct_)
+    allWorkspacesAct_->setText(tr("All Workspaces"));
+#endif
 
   addAct_->setText(tr("&Add"));
   addAct_->setToolTip(tr("Add New Feed"));
@@ -6362,9 +6478,22 @@ void MainWindow::setStayOnTop()
   }
   setWindowState((Qt::WindowState)state);
   show();
+#ifdef HAVE_X11
+  if (allWorkspacesAct_ && allWorkspacesAct_->isChecked())
+    setAllWorkspaces();
+#endif
 
   isMinimizeToTray_ = false;
 }
+#ifdef HAVE_X11
+void MainWindow::setAllWorkspaces()
+{
+  if (!allWorkspacesAct_)
+    return;
+  applyX11StickyState(winId(), allWorkspacesAct_->isChecked());
+}
+#endif
+
 
 void MainWindow::showMenuBar()
 {

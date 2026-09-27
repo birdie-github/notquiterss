@@ -398,6 +398,9 @@ private slots:
 
   void setFullScreen();
   void setStayOnTop();
+#ifdef HAVE_X11
+  void setAllWorkspaces();
+#endif
   void showMenuBar();
 
   void slotMoveIndex(const QModelIndex &indexWhere, int how);
@@ -594,6 +597,9 @@ private:
   QAction *findFeedAct_;
   QAction *fullScreenAct_;
   QAction *stayOnTopAct_;
+#ifdef HAVE_X11
+  QAction *allWorkspacesAct_;
+#endif
 
   QAction *nextTabAct_;
   QAction *prevTabAct_;
