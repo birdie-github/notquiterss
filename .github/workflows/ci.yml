@@ -234,7 +234,7 @@ jobs:
           mkdir _build
           cd _build
           "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
-          make -j"$(nproc)"
+          make -j"$(sysctl -n hw.ncpu)"
           python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"]); print("PROJECT_EXECUTABLE="+d["executable"])' >> "$GITHUB_ENV"
 
       - name: Deploy, sign and package macOS app
