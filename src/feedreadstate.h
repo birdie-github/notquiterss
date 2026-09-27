@@ -3,10 +3,21 @@
 #define FEEDREADSTATE_H
 
 #include <QObject>
+#include <QMap>
 #include <QSqlDatabase>
 #include "parseobject.h"
 
 class MainWindow;
+
+struct CategoryCounts {
+  int starred = 0;
+  int unreadStarred = 0;
+  int deleted = 0;
+  QMap<int, int> labels;
+  QMap<int, int> unreadLabels;
+  bool valid = false;
+};
+Q_DECLARE_METATYPE(CategoryCounts)
 
 // Shared read/count operations, executed using the owning object's connection.
 // The GUI instance handles synchronous navigation; UpdateObject uses its worker's.
@@ -25,7 +36,8 @@ public slots:
   void slotRefreshInfoTray();
 
 signals:
-  void signalRecountCategoryCounts(QList<int>, QList<int>, QList<int>, QStringList);
+  void signalRecountCategoryCounts(CategoryCounts counts);
+  void requestCategoryCounts();
   void feedCountsUpdate(FeedCountStruct counts);
   void signalFeedsViewportUpdate();
   void signalRefreshInfoTray(int newCount, int unreadCount);

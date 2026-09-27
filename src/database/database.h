@@ -21,11 +21,18 @@
 
 #include <QtCore>
 #include <QtSql>
+#include <mutex>
 
 class Database : public QObject
 {
   Q_OBJECT
 public:
+  // Coordinate background SQL with UI operations that can be retried. The UI
+  // must never wait here: keep its cached view and retry after returning to Qt.
+  using AccessLock = std::unique_lock<std::recursive_mutex>;
+  static AccessLock tryAccess();
+  static AccessLock backgroundAccess();
+
   static int version();
   static bool initialization();
   // Create a new connection in the calling thread. The caller owns its removal.

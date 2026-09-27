@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "feedreadstate.h"
+#include "database.h"
 #include "mainwindow.h"
 #include <QSqlDriver>
 #include <QThread>
@@ -35,24 +36,39 @@ void FeedReadState::setDatabase(const QSqlDatabase &database)
 
 void FeedReadState::slotRecountCategoryCounts()
 {
-  QList<int> deletedList;
-  QList<int> starredList;
-  QList<int> readList;
-  QStringList labelList;
+  auto databaseAccess = Database::backgroundAccess();
+  CategoryCounts counts;
   QSqlQuery q(db_);
-  q.exec("SELECT deleted, starred, read, label FROM news WHERE deleted < 2");
-  while (q.next()) {
-    deletedList.append(q.value(0).toInt());
-    starredList.append(q.value(1).toInt());
-    readList.append(q.value(2).toInt());
-    labelList.append(q.value(3).toString());
+  q.setForwardOnly(true);
+  if (q.exec("SELECT deleted, starred, read, label FROM news WHERE deleted < 2")) {
+    while (q.next()) {
+      if (q.value(0).toInt() == 1) {
+        ++counts.deleted;
+        continue;
+      }
+      if (q.value(0).toInt() != 0) continue;
+      const bool unread = q.value(2).toInt() == 0;
+      if (q.value(1).toInt() == 1) {
+        ++counts.starred;
+        if (unread) ++counts.unreadStarred;
+      }
+      const QStringList labels = q.value(3).toString().split(',', Qt::SkipEmptyParts);
+      for (const QString &label : labels) {
+        const int id = label.toInt();
+        ++counts.labels[id];
+        if (unread) ++counts.unreadLabels[id];
+      }
+    }
+    counts.valid = !q.lastError().isValid();
   }
-
-  emit signalRecountCategoryCounts(deletedList, starredList, readList, labelList);
+  if (!counts.valid) qWarning() << "Category recount failed:" << q.lastError();
+  // Only the small summary crosses to the UI, not one record per article.
+  emit signalRecountCategoryCounts(counts);
 }
 
 void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   QString qStr;
 
@@ -344,7 +360,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
     db.commit();
 
     slotRecountFeedCounts(feedId);
-    slotRecountCategoryCounts();
+    emit requestCategoryCounts();
 
     if (readType != FeedReadPlaceToTray)
       slotRefreshInfoTray();
@@ -369,6 +385,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
 
 void FeedReadState::slotRefreshInfoTray()
 {
+  auto databaseAccess = Database::backgroundAccess();
   // Calculate new and unread news number
   int newCount = 0;
   int unreadCount = 0;

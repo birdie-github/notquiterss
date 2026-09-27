@@ -185,6 +185,10 @@ MainWindow::MainWindow(QWidget *parent)
   , recountCategoryCountsOn_(false)
   , optionsDialog_(NULL)
 {
+  databaseUiTimer_.setSingleShot(true);
+  databaseUiTimer_.setInterval(25);
+  connect(&databaseUiTimer_, &QTimer::timeout, this, &MainWindow::retryDatabaseUi);
+
   setObjectName("mainWindow");
   setWindowTitle(QGuiApplication::applicationDisplayName());
   setContextMenuPolicy(Qt::CustomContextMenu);
@@ -285,6 +289,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::quitApp()
 {
   mainApp->setClosing();
+  databaseUiTimer_.stop();
+  deferredDatabaseUi_.clear();
   DatabaseBackup::instance()->stop();
   isMinimizeToTray_ = true;
   disconnect(this);
@@ -738,6 +744,10 @@ void MainWindow::createTabBarWidget()
   connect(mainMenuButton_, SIGNAL(clicked()), this, SLOT(showMainMenu()));
   connect(tabBar_, SIGNAL(closeTab(int)),
           this, SLOT(slotCloseTab(int)));
+  connect(tabBar_, &QTabBar::currentChanged, this, [this] {
+    deferredDatabaseUi_.erase(DeferredDatabaseUi::FeedSelection);
+    deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
+  });
   connect(tabBar_, SIGNAL(currentChanged(int)),
           this, SLOT(slotTabCurrentChanged(int)), Qt::QueuedConnection);
   connect(tabBar_, SIGNAL(tabMoved(int,int)),
@@ -2690,7 +2700,11 @@ void MainWindow::recountFeedCategories(const QList<int> &categoriesList)
 // ----------------------------------------------------------------------------
 void MainWindow::recountCategoryCounts()
 {
-  if (recountCategoryCountsOn_) return;
+  if (mainApp->isClosing()) return;
+  if (recountCategoryCountsOn_) {
+    recountCategoryCountsPending_ = true;
+    return;
+  }
 
   if (!categoriesTree_->isVisible() || !stackedWidget_->count()) return;
 
@@ -2700,48 +2714,24 @@ void MainWindow::recountCategoryCounts()
 
 /** @brief Process recalculating categories counters
  *----------------------------------------------------------------------------*/
-void MainWindow::slotRecountCategoryCounts(QList<int> deletedList, QList<int> starredList,
-                                           QList<int> readList, QStringList labelList)
+void MainWindow::slotRecountCategoryCounts(CategoryCounts counts)
 {
-  int allStarredCount = 0;
-  int unreadStarredCount = 0;
-  int deletedCount = 0;
-  QMap<int,int> allCountList;
-  QMap<int,int> unreadCountList;
+  recountCategoryCountsOn_ = false;
+  if (recountCategoryCountsPending_) {
+    recountCategoryCountsPending_ = false;
+    recountCategoryCounts();
+  }
+  if (!counts.valid || mainApp->isClosing()) return;
+
+  const int allStarredCount = counts.starred;
+  const int unreadStarredCount = counts.unreadStarred;
+  const int deletedCount = counts.deleted;
+  const auto &allCountList = counts.labels;
+  const auto &unreadCountList = counts.unreadLabels;
   int allLabelCount = 0;
   int unreadLabelCount = 0;
   QFont font;
-
   QTreeWidgetItem *labelTreeItem = categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem);
-  for (int i = 0; i < labelTreeItem->childCount(); i++) {
-    int id = labelTreeItem->child(i)->text(2).toInt();
-    allCountList.insert(id, 0);
-    unreadCountList.insert(id, 0);
-  }
-
-  for (int i = 0; i < deletedList.count(); ++i) {
-    if (deletedList.at(i) == 0) {
-      if (starredList.at(i) == 1) {
-        allStarredCount++;
-        if (readList.at(i) == 0)
-          unreadStarredCount++;
-      }
-      QString idString = labelList.at(i);
-      if (!idString.isEmpty() && idString != ",") {
-        QStringList idList = idString.split(",", Qt::SkipEmptyParts);
-        foreach (QString idStr, idList) {
-          int id = idStr.toInt();
-          if (allCountList.contains(id)) {
-            allCountList[id]++;
-            if (readList.at(i) == 0)
-              unreadCountList[id]++;
-          }
-        }
-      }
-    } else if (deletedList.at(i) == 1) {
-      deletedCount++;
-    }
-  }
 
   for (int i = 0; i < labelTreeItem->childCount(); i++) {
     int id = labelTreeItem->child(i)->text(2).toInt();
@@ -2794,14 +2784,12 @@ void MainWindow::slotRecountCategoryCounts(QList<int> deletedList, QList<int> st
   categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem)->setFont(0, font);
 
   NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(stackedWidget_->currentIndex());
-  if ((widget->type_ > NewsTabWidget::TabTypeFeed) && (widget->type_ < NewsTabWidget::TabTypeDownloads)
+  if (widget && (widget->type_ > NewsTabWidget::TabTypeFeed) && (widget->type_ < NewsTabWidget::TabTypeDownloads)
       && categoriesTree_->currentIndex().isValid()) {
     int unreadCount = widget->getUnreadCount(categoriesTree_->currentItem()->text(4));
     int allCount = widget->newsModel_->rowCount();
     setStatusCounts(unreadCount, allCount);
   }
-
-  recountCategoryCountsOn_ = false;
 }
 
 /** @brief Update feed view
@@ -2886,10 +2874,57 @@ void MainWindow::slotUpdateFeed(int feedId, bool changed, int newCount, bool fin
   emit signalNextUpdate(finish);
 }
 
+void MainWindow::deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry)
+{
+  // Keep only the latest selection/refresh, rather than replaying keystrokes
+  // against views the user has already left.
+  deferredDatabaseUi_[operation] = std::move(retry);
+  if (!databaseUiTimer_.isActive()) databaseUiTimer_.start();
+}
+
+void MainWindow::retryDatabaseUi()
+{
+  if (mainApp->isClosing()) {
+    deferredDatabaseUi_.clear();
+    return;
+  }
+  if (deferredDatabaseUi_.empty()) return;
+  auto databaseAccess = Database::tryAccess();
+  if (!databaseAccess.owns_lock()) {
+    databaseUiTimer_.start();
+    return;
+  }
+  // Navigation comes first. Run one job per turn so a model reload and an
+  // article render do not accumulate into another long UI event.
+  auto job = deferredDatabaseUi_.begin();
+  auto retry = std::move(job->second);
+  deferredDatabaseUi_.erase(job);
+  retry();
+  if (!deferredDatabaseUi_.empty()) databaseUiTimer_.start();
+}
+
 /** @brief Process updating news list
  *---------------------------------------------------------------------------*/
 void MainWindow::slotUpdateNews(int refresh)
 {
+  if (mainApp->isClosing() || !currentNewsTab ||
+      currentNewsTab->type_ >= NewsTabWidget::TabTypeDownloads) return;
+  auto databaseAccess = Database::tryAccess();
+  if (!databaseAccess.owns_lock()) {
+    const QPointer<NewsTabWidget> tab(currentNewsTab);
+    const int feedId = tab->feedId_;
+    const auto type = tab->type_;
+    const int labelId = type == NewsTabWidget::TabTypeLabel ? tab->labelId_ : -1;
+    deferDatabaseUi(DeferredDatabaseUi::NewsRefresh, [this, tab, feedId, type, labelId, refresh] {
+      // A permanent tab can have been reused for a different feed/category.
+      if (tab && tab == currentNewsTab && tab->feedId_ == feedId && tab->type_ == type &&
+          (type != NewsTabWidget::TabTypeLabel || tab->labelId_ == labelId))
+        slotUpdateNews(refresh);
+    });
+    return;
+  }
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::NewsRefresh);
+
   int newsId = newsModel_->index(
         newsView_->currentIndex().row(), newsModel_->fieldIndex("id")).data(Qt::EditRole).toInt();
 
@@ -2917,7 +2952,19 @@ void MainWindow::slotUpdateNews(int refresh)
  *---------------------------------------------------------------------------*/
 void MainWindow::slotFeedClicked(QModelIndex index)
 {
-  if (feedsView_->selectionModel()->selectedRows(0).count() > 1) return;
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::FeedSelection);
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
+  if (mainApp->isClosing() || feedsView_->selectionModel()->selectedRows(0).count() > 1) return;
+  auto databaseAccess = Database::tryAccess();
+  if (!databaseAccess.owns_lock()) {
+    const int feedId = feedsModel_->idByIndex(feedsProxyModel_->mapToSource(index));
+    deferDatabaseUi(DeferredDatabaseUi::FeedSelection, [this, feedId] {
+      const QModelIndex selected = feedsView_->currentIndex();
+      if (feedsModel_->idByIndex(feedsProxyModel_->mapToSource(selected)) == feedId)
+        slotFeedClicked(selected);
+    });
+    return;
+  }
 
   int feedIdCur = feedsModel_->idByIndex(feedsProxyModel_->mapToSource(index));
 
@@ -5660,8 +5707,25 @@ void MainWindow::slotCloseTab(int index)
  *---------------------------------------------------------------------------*/
 void MainWindow::slotTabCurrentChanged(int index)
 {
-  if (!stackedWidget_->count()) return;
+  if (mainApp->isClosing() || index < 0 || index >= stackedWidget_->count() ||
+      index != tabBar_->currentIndex()) return;
+  const bool currentTabAlive = stackedWidget_->indexOf(currentNewsTab) >= 0;
+  // A newer selection supersedes an older queued tab change, except when
+  // closing a tab requires replacing the pointer before it is destroyed.
+  if (currentTabAlive && deferredDatabaseUi_.count(DeferredDatabaseUi::FeedSelection)) return;
   if (tabBar_->closingTabState_ == TabBar::CloseTabOtherIndex) return;
+  auto databaseAccess = Database::tryAccess();
+  // Closing a tab must replace currentNewsTab before deleteLater destroys it.
+  // Only an ordinary switch between live tabs can safely be deferred.
+  if (!databaseAccess.owns_lock() && currentTabAlive) {
+    const QPointer<QWidget> tab(stackedWidget_->widget(index));
+    deferDatabaseUi(DeferredDatabaseUi::TabSelection, [this, tab] {
+      if (tab && stackedWidget_->widget(tabBar_->currentIndex()) == tab)
+        slotTabCurrentChanged(stackedWidget_->indexOf(tab));
+    });
+    return;
+  }
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
 
   NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(index);
 
@@ -6035,6 +6099,14 @@ void MainWindow::feedsModelReload(bool checkFilter)
     slotFeedsViewportUpdate();
     return;
   }
+
+  if (mainApp->isClosing()) return;
+  auto databaseAccess = Database::tryAccess();
+  if (!databaseAccess.owns_lock()) {
+    deferDatabaseUi(DeferredDatabaseUi::FeedsReload, [this] { feedsModelReload(false); });
+    return;
+  }
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::FeedsReload);
 
   int topRow = feedsView_->verticalScrollBar()->value();
   QModelIndex feedIndex = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
@@ -6625,6 +6697,19 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
  *---------------------------------------------------------------------------*/
 void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTab)
 {
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::FeedSelection);
+  deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
+  if (mainApp->isClosing() || !item) return;
+  auto databaseAccess = Database::tryAccess();
+  if (!createTab && !databaseAccess.owns_lock()) {
+    const QPersistentModelIndex selected(categoriesTree_->currentIndex());
+    deferDatabaseUi(DeferredDatabaseUi::FeedSelection, [this, selected] {
+      if (selected.isValid() && categoriesTree_->currentIndex() == selected)
+        slotCategoriesClicked(categoriesTree_->currentItem(), 0);
+    });
+    return;
+  }
+
   if (stackedWidget_->count() && currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads) {
     currentNewsTab->newsHeader_->saveStateColumns(currentNewsTab);
     Settings settings;

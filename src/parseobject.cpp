@@ -206,6 +206,7 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
     return;
   }
 
+  auto databaseAccess = Database::backgroundAccess();
   sqlError_ = QSqlError();
   UpdateEffects effects;
   int newCount = 0;
@@ -1056,6 +1057,7 @@ QString ParseObject::parseDate(const QString &dateString, const QString &urlStri
  *---------------------------------------------------------------------------*/
 void ParseObject::runUserFilter(int feedId, int filterId)
 {
+  auto databaseAccess = Database::backgroundAccess();
   sqlError_ = QSqlError();
   if (!db_.transaction()) {
     qWarning() << "Cannot start article filter transaction:" << db_.lastError();

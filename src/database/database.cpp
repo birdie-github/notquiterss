@@ -31,6 +31,22 @@ namespace {
 // Set once during startup, before any SQL workers exist, then read-only.
 QString liveDatabaseName;
 QString liveDatabaseOptions;
+std::recursive_mutex databaseAccess;
+}
+
+Database::AccessLock Database::tryAccess()
+{
+  return AccessLock(databaseAccess, std::try_to_lock);
+}
+
+Database::AccessLock Database::backgroundAccess()
+{
+  AccessLock lock(databaseAccess, std::defer_lock);
+  // FeedReadState is also used synchronously on the UI thread. Its caller
+  // takes tryAccess() when the operation can be deferred; never block it here.
+  if (QThread::currentThread() != QCoreApplication::instance()->thread())
+    lock.lock();
+  return lock;
 }
 
 const int versionDB = 17;

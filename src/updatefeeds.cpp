@@ -47,6 +47,7 @@ public:
   void initialize()
   {
     Q_ASSERT(QThread::currentThread() == thread());
+    auto databaseAccess = Database::backgroundAccess();
     database_ = Database::connection(QUuid::createUuid().toString(QUuid::WithoutBraces));
     parser->setDatabase(database_);
     if (updater) updater->setDatabase(database_);
@@ -69,8 +70,8 @@ private:
 
 void connectReadState(FeedReadState *state, QObject *window)
 {
-  QObject::connect(state, SIGNAL(signalRecountCategoryCounts(QList<int>,QList<int>,QList<int>,QStringList)),
-                   window, SLOT(slotRecountCategoryCounts(QList<int>,QList<int>,QList<int>,QStringList)),
+  QObject::connect(state, SIGNAL(signalRecountCategoryCounts(CategoryCounts)),
+                   window, SLOT(slotRecountCategoryCounts(CategoryCounts)),
                    Qt::QueuedConnection);
   QObject::connect(state, SIGNAL(feedCountsUpdate(FeedCountStruct)),
                    window, SLOT(slotFeedCountsUpdate(FeedCountStruct)));
@@ -194,10 +195,13 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     connect(parent, SIGNAL(signalRecountCategoryCounts()),
             updateObject_, SLOT(slotRecountCategoryCounts()));
     qRegisterMetaType<QList<int> >("QList<int>");
+    qRegisterMetaType<CategoryCounts>("CategoryCounts");
     connectReadState(updateObject_, parent);
     auto *navigationState = new FeedReadState(mainApp->mainWindow(), this);
     navigationState->setDatabase(QSqlDatabase::database());
     connectReadState(navigationState, parent);
+    connect(navigationState, &FeedReadState::requestCategoryCounts,
+            mainApp->mainWindow(), &MainWindow::recountCategoryCounts);
     connect(parent, SIGNAL(signalRecountFeedCounts(int,bool)),
             updateObject_, SLOT(slotRecountFeedCounts(int,bool)));
     connect(parent, SIGNAL(signalSetFeedRead(int,int,int,QList<int>)),
@@ -342,6 +346,7 @@ UpdateObject::~UpdateObject()
 
 void UpdateObject::slotGetFeedTimer(int feedId)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   q.exec(QString("SELECT xmlUrl, lastBuildDate, authentication FROM feeds WHERE id=='%1' AND disableUpdate=0")
          .arg(feedId));
@@ -354,6 +359,7 @@ void UpdateObject::slotGetFeedTimer(int feedId)
 
 void UpdateObject::slotGetAllFeedsTimer()
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   q.exec("SELECT id, xmlUrl, lastBuildDate, authentication FROM feeds "
          "WHERE xmlUrl!='' AND disableUpdate=0 "
@@ -378,6 +384,7 @@ void UpdateObject::slotGetFeed(int feedId, QString feedUrl, QDateTime date, int 
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotGetFeedsFolder(QString query)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   q.exec(query);
   while (q.next()) {
@@ -402,6 +409,7 @@ void UpdateObject::slotGetAllFeeds()
 
 void UpdateObject::queueAllFeeds(bool manual)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   q.exec("SELECT id, xmlUrl, lastBuildDate, authentication FROM feeds WHERE xmlUrl!='' AND disableUpdate=0");
   while (q.next()) {
@@ -418,6 +426,7 @@ void UpdateObject::queueAllFeeds(bool manual)
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 {
+  auto databaseAccess = Database::backgroundAccess();
   int outlineCount = 0;
   QSqlQuery q(db_);
   QList<int> idsList;
@@ -544,6 +553,9 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
   DatabaseBackup::subscriptionsChanged();
   emit signalMessageStatusBar(tr("Import complete"), 3000);
 
+  // This connection is blocking: the UI must be able to acquire access while
+  // rebuilding its feed model. The import transaction and query are finished.
+  databaseAccess.unlock();
   emit signalUpdateFeedsModel();
 
   for (int i = 0; i < idsList.count(); i++) {
@@ -557,6 +569,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
                                   const QDateTime &date, int auth, bool manual)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery enabledQuery(db_);
   enabledQuery.prepare("SELECT disableUpdate FROM feeds WHERE id = ?");
   enabledQuery.addBindValue(feedId);
@@ -625,6 +638,7 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
 
 void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString status)
 {
+  auto databaseAccess = Database::backgroundAccess();
   if (updateFeedsCount_ > 0) {
     updateFeedsCount_--;
     emit loadProgress(updateFeedsCount_);
@@ -712,6 +726,7 @@ void UpdateObject::slotNextUpdateFeed(bool finish)
 
 void UpdateObject::slotMarkFeedRead(int id, bool isFolder, bool openFeed)
 {
+  auto databaseAccess = Database::backgroundAccess();
   db_.transaction();
   QSqlQuery q(db_);
   QString qStr;
@@ -746,6 +761,7 @@ void UpdateObject::slotMarkFeedRead(int id, bool isFolder, bool openFeed)
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotUpdateStatus(int feedId, bool changed)
 {
+  auto databaseAccess = Database::backgroundAccess();
   if (changed) {
     slotRecountFeedCounts(feedId);
   }
@@ -786,6 +802,7 @@ void UpdateObject::slotUpdateStatus(int feedId, bool changed)
 
 void UpdateObject::slotMarkAllFeedsRead()
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
 
   q.exec("UPDATE news SET read=2 WHERE read!=2 AND deleted==0");
@@ -804,6 +821,7 @@ void UpdateObject::slotMarkAllFeedsRead()
 
 void UpdateObject::slotMarkReadCategory(int type, int idLabel)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QString qStr;
   switch (type) {
   case NewsTabWidget::TabTypeUnread:
@@ -841,6 +859,7 @@ void UpdateObject::slotMarkReadCategory(int type, int idLabel)
  *----------------------------------------------------------------------------*/
 void UpdateObject::slotIconSave(QString feedUrl, QByteArray faviconData)
 {
+  auto databaseAccess = Database::backgroundAccess();
   int feedId = 0;
 
   QSqlQuery q(db_);
@@ -861,6 +880,7 @@ void UpdateObject::slotIconSave(QString feedUrl, QByteArray faviconData)
 
 void UpdateObject::slotSqlQueryExec(QString query)
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   if (!q.exec(query)) {
     qCritical() << __PRETTY_FUNCTION__ << __LINE__
@@ -872,6 +892,7 @@ void UpdateObject::slotSqlQueryExec(QString query)
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotMarkAllFeedsOld()
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   q.exec("UPDATE news SET new=0 WHERE new==1 AND deleted==0");
 
@@ -890,6 +911,7 @@ void UpdateObject::slotMarkAllFeedsOld()
 
 void UpdateObject::saveMemoryDatabase()
 {
+  auto databaseAccess = Database::backgroundAccess();
   isSaveMemoryDatabase = true;
   Database::sqliteDBMemFile(db_);
   isSaveMemoryDatabase = false;
@@ -899,6 +921,7 @@ void UpdateObject::saveMemoryDatabase()
  *---------------------------------------------------------------------------*/
 void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<int> foldersIdList)
 {
+  auto databaseAccess = Database::backgroundAccess();
   bool cleanupOn = true;
   bool optimizeDB = false;
   bool fullCleanUp = false;
@@ -1136,6 +1159,7 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
  *---------------------------------------------------------------------------*/
 void UpdateObject::cleanUpShutdown()
 {
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
   QStringList feedsIdList;
   QList<int> foldersIdList;
@@ -1155,6 +1179,7 @@ void UpdateObject::cleanUpShutdown()
 
 void UpdateObject::quitApp()
 {
+  auto databaseAccess = Database::backgroundAccess();
   cleanUpShutdown();
   const auto backup = DatabaseBackup::create(db_, DatabaseBackup::Trigger::Exit);
   QMetaObject::invokeMethod(mainApp, [backup] {

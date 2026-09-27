@@ -26,9 +26,12 @@
 #include <QPrintPreviewDialog>
 #include <QPrinter>
 #include <QSet>
+#include <functional>
+#include <map>
 
 #include "categoriestreewidget.h"
 #include "feedsmodel.h"
+#include "feedreadstate.h"
 #include "feedsview.h"
 #include "findfeed.h"
 #include "newsheader.h"
@@ -311,8 +314,7 @@ private slots:
   void setFeedRead(int type, int feedId, FeedReedType feedReadType,
                    NewsTabWidget *widgetTab = 0, int idException = -1);
   void markFeedRead();
-  void slotRecountCategoryCounts(QList<int> deletedList, QList<int> starredList,
-                                 QList<int> readList, QStringList labelList);
+  void slotRecountCategoryCounts(CategoryCounts counts);
   void slotFeedsViewportUpdate();
   void slotPlaySoundNewNews();
 
@@ -459,6 +461,12 @@ private slots:
   void createBackup();
 
 private:
+  enum class DeferredDatabaseUi { FeedSelection, TabSelection, FeedsReload, NewsRefresh };
+  void deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry);
+  void retryDatabaseUi();
+  QTimer databaseUiTimer_;
+  std::map<DeferredDatabaseUi, std::function<void()>> deferredDatabaseUi_;
+
   void showBulkFeedSettings();
   QString updateScheduleDescription() const;
   void applyBulkFeedSettings(FeedPropertiesDialog *dialog);
@@ -724,6 +732,7 @@ private:
   bool changeBehaviorActionNUN_;
 
   bool recountCategoryCountsOn_;
+  bool recountCategoryCountsPending_ = false;
 
   OptionsDialog *optionsDialog_;
 
