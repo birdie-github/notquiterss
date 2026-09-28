@@ -3469,17 +3469,17 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="422"/>
         <source>starting %1</source>
-        <translation>запуск %1</translation>
+        <translation>запускe %1</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="423"/>
         <source>minimizing %1</source>
-        <translation>сворачивание %1</translation>
+        <translation>сворачивании %1</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="424"/>
         <source>closing %1</source>
-        <translation>закрытие %1</translation>
+        <translation>закрытии %1</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="431"/>
