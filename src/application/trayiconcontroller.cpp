@@ -16,7 +16,7 @@ TrayIconController::TrayIconController(QWidget *menuParent, QAction *showWindowA
                                        QAction *markAllFeedsReadAction, QAction *optionsAction,
                                        QAction *exitAction, QObject *parent)
   : QObject(parent)
-  , trayIcon_(new QSystemTrayIcon(QIcon(":/images/application128"), this))
+  , trayIcon_(new QSystemTrayIcon(QIcon(":/images/application256"), this))
   , trayMenu_(new QMenu(menuParent))
 {
   trayIcon_->setToolTip(QGuiApplication::applicationDisplayName());
@@ -69,7 +69,7 @@ void TrayIconController::showMessage(const QString &title, const QString &messag
 
 void TrayIconController::showDefaultIcon()
 {
-  trayIcon_->setIcon(QIcon(":/images/application128"));
+  trayIcon_->setIcon(QIcon(":/images/application256"));
 }
 
 void TrayIconController::showNewNewsIcon()

@@ -201,9 +201,9 @@ def generate(source, output):
         write(output / filename, render(template, values, transform))
     template = (source / 'packaging/application.rc.in').read_text(encoding='utf-8')
     write(output / 'application.rc', template.replace('@ICON_FILE@', str(source / values['root'] / 'external' / 'icons' / 'application.ico').replace('\\', '/').replace('"', '\\"')))
-    for size in (16, 32, 48, 64, 128, 256):
+    for size in (16, 32, 48, 64, 128, 256, 512):
         write(output / 'icons' / str(size) / (values['name'] + '.png'),
-              (source / values['root'] / 'external' / 'icons' / f'{size}x{size}' / 'quiterss.png').read_bytes())
+              (source / values['root'] / 'external' / 'icons' / f'{size}x{size}' / 'notquiterss.png').read_bytes())
     # Give install sets the desired public filenames without renaming source templates.
     write(output / (values['name'] + '.desktop'), (output / 'application.desktop').read_bytes())
     write(output / (values['bundleId'] + '.metainfo.xml'), (output / 'appdata.xml').read_bytes())

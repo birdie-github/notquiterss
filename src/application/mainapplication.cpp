@@ -88,7 +88,7 @@ MainApplication::MainApplication(int &argc, char **argv)
     }
   }
 
-  setWindowIcon(QIcon(":/images/application128"));
+  setWindowIcon(QIcon(":/images/application256"));
   setQuitOnLastWindowClosed(false);
 
   createSettings();

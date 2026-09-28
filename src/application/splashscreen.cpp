@@ -24,7 +24,7 @@ SplashScreen::SplashScreen(Qt::WindowFlags flag)
   QPixmap pixmap(420, 140);
   pixmap.fill(palette().color(QPalette::Window));
   QPainter painter(&pixmap);
-  painter.drawPixmap(16, 24, QPixmap(":/images/application128").scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+  painter.drawPixmap(16, 24, QPixmap(":/images/application256").scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation));
   QFont titleFont = font();
   titleFont.setPixelSize(28);
   titleFont.setBold(true);

@@ -39,7 +39,7 @@ include($$PROJECT_GENERATED_DIR/project.pri)
 INCLUDEPATH += $$PROJECT_GENERATED_DIR
 VERSION = $$PROJECT_VERSION
 # qmake includes these inputs in its Makefile regeneration dependencies.
-QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in) $$files($$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/*/quiterss.png) $$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/application.ico
+QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in) $$files($$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/*/notquiterss.png) $$PWD/$${PROJECT_RESOURCE_ROOT}/external/icons/application.ico
 DISTFILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in)
 
 # Invoke the matching qmake; this option validates, rather than switches, its Qt.
@@ -290,18 +290,20 @@ unix:!mac {
   icon_64.files =  $$PROJECT_GENERATED_DIR/icons/64/$${PROJECT_NAME}.png
   icon_128.files = $$PROJECT_GENERATED_DIR/icons/128/$${PROJECT_NAME}.png
   icon_256.files = $$PROJECT_GENERATED_DIR/icons/256/$${PROJECT_NAME}.png
+  icon_512.files = $$PROJECT_GENERATED_DIR/icons/512/$${PROJECT_NAME}.png
   icon_16.path =  $$quote($$PREFIX/share/icons/hicolor/16x16/apps)
   icon_32.path =  $$quote($$PREFIX/share/icons/hicolor/32x32/apps)
   icon_48.path =  $$quote($$PREFIX/share/icons/hicolor/48x48/apps)
   icon_64.path =  $$quote($$PREFIX/share/icons/hicolor/64x64/apps)
   icon_128.path = $$quote($$PREFIX/share/icons/hicolor/128x128/apps)
   icon_256.path = $$quote($$PREFIX/share/icons/hicolor/256x256/apps)
+  icon_512.path = $$quote($$PREFIX/share/icons/hicolor/512x512/apps)
 
 
   metainfo.files = $$PROJECT_GENERATED_DIR/$${PROJECT_BUNDLE_ID}.metainfo.xml
   metainfo.path = $$PREFIX/share/metainfo
   INSTALLS += target desktop target1 metainfo
-  INSTALLS += icon_16 icon_32 icon_48 icon_64 icon_128 icon_256
+  INSTALLS += icon_16 icon_32 icon_48 icon_64 icon_128 icon_256 icon_512
 }
 
 
