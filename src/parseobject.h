@@ -91,6 +91,7 @@ signals:
   void signalReadyParse(const QByteArray &xml, const int &feedId,
                         const QDateTime &dtReply, const QString &codecName);
   void signalFinishUpdate(int feedId, bool changed, int newCount, QString status);
+  void signalUserFilterApplied(int feedId);
   void feedCountsUpdate(FeedCountStruct counts);
   void signalPlaySound(const QString &soundPath);
   void signalAddColorList(int id, const QString &color);

@@ -336,9 +336,6 @@ void NewsFiltersDialog::applyFilter()
 
   int filterRow = filtersTree_->currentIndex().row();
   int filterId = filtersTree_->topLevelItem(filterRow)->text(0).toInt();
-  int feedId = -1;
-
-  MainWindow *mainWindow = mainApp->mainWindow();
   QSqlQuery q;
   QString qStr = QString("SELECT feeds FROM filters WHERE id='%1'").
       arg(filterId);
@@ -369,17 +366,9 @@ void NewsFiltersDialog::applyFilter()
       return;
     }
     q.finish();
-    for (int id : feedIds) {
+    for (int id : feedIds)
       mainApp->runUserFilter(id, filterId);
-      NewsTabWidget *widget = qobject_cast<NewsTabWidget*>(mainWindow->stackedWidget_->currentWidget());
-      if (widget && widget->feedId_ == id) feedId = id;
-    }
   }
-
-  if (feedId != -1)
-    mainWindow->slotUpdateNews(NewsTabWidget::RefreshAll);
-  mainWindow->slotUpdateStatus(feedId);
-  mainWindow->recountCategoryCounts();
 
   QApplication::restoreOverrideCursor();
 }

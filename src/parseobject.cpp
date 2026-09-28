@@ -1067,6 +1067,7 @@ void ParseObject::runUserFilter(int feedId, int filterId)
   applyUserFilter(feedId, filterId, effects);
   if (!sqlError_.isValid() && db_.commit()) {
     publishEffects(effects);
+    emit signalUserFilterApplied(feedId);
     return;
   }
   if (!sqlError_.isValid()) sqlError_ = db_.lastError();

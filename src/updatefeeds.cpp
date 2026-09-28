@@ -231,6 +231,14 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotSqlQueryExec(QString)));
     connect(mainApp, SIGNAL(signalRunUserFilter(int, int)),
             parseObject_, SLOT(runUserFilter(int, int)));
+    connect(parseObject_, &ParseObject::signalUserFilterApplied,
+            updateObject_, [updater = updateObject_](int feedId) {
+      // Manual filtering is asynchronous. Recount and refresh only after commit,
+      // on the SQL worker, using the same path as other article state changes.
+      updater->slotUpdateStatus(feedId, true);
+      updater->slotRecountCategoryCounts();
+      emit updater->signalUpdateNews(NewsTabWidget::RefreshAll);
+    });
 
     // faviconObject_
     connect(parent, SIGNAL(faviconRequestUrl(QString,QString)),
