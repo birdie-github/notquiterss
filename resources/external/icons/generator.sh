@@ -1,20 +1,33 @@
-#! /bin/bash
+#!/bin/bash
 
-cat << EOF
-Use shell, I will not run anything
+# Print instructions only; do not expand or execute the commands below.
+cat <<'EOF'
+Run these commands from resources/external/icons.
 
-1. Icons for different sizes ...
+1. Generate PNGs at each required size:
 dnf install GraphicsMagick
-for s in 512 256 128 64 32 16; do gm convert notquiterss.png -filter Lanczos -resize $((s))x$((s)) -background none -gravity center ${s}x{s}/notquiterss.png; done
+for s in 512 256 128 64 48 32 16; do
+    mkdir -p "${s}x${s}"
+    gm convert notquiterss.png -filter Lanczos -resize "${s}x${s}" \
+        -background none -gravity center -extent "${s}x${s}" \
+        "${s}x${s}/notquiterss.png"
+done
 
-2. Compress PNGs
-for i in *.png; do echo "Processing '$i' ..."; oxipng -p -o max "$i"; done
+2. Compress the generated PNGs:
+dnf install oxipng
+for s in 512 256 128 64 48 32 16; do
+    oxipng -p -o max "${s}x${s}/notquiterss.png"
+done
 
-3. Generate a MacOS iconset:
+3. Generate the macOS icon:
 dnf install libicns-utils
-png2icns application.icns $(printf '%s\n' [0-9]*x[0-9]*/ | grep -vE '(64x64|24x24)' | sort -rV | sed 's|$|notquiterss.png|')
+png2icns application.icns 16x16/notquiterss.png 32x32/notquiterss.png \
+    48x48/notquiterss.png 128x128/notquiterss.png \
+    256x256/notquiterss.png 512x512/notquiterss.png
 
-4. Generate a Windows icon:
+4. Generate the Windows icon:
 dnf install ImageMagick
-magick $(printf '%s\n' [0-9]*x[0-9]*/ | sort -rV | sed 's|$|*|') favicon.ico
+magick 16x16/notquiterss.png 32x32/notquiterss.png 48x48/notquiterss.png \
+    64x64/notquiterss.png 128x128/notquiterss.png \
+    256x256/notquiterss.png application.ico
 EOF

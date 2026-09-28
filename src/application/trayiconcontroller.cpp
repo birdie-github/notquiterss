@@ -8,6 +8,7 @@
 #include <QLinearGradient>
 #include <QMenu>
 #include <QPainter>
+#include <QPen>
 #include <QPixmap>
 #include <QSystemTrayIcon>
 
@@ -74,7 +75,18 @@ void TrayIconController::showDefaultIcon()
 
 void TrayIconController::showNewNewsIcon()
 {
-  trayIcon_->setIcon(QIcon(":/images/applicationNewNews"));
+  // Derive the notification state from the current application artwork.
+  QPixmap icon(":/images/application256");
+  {
+    QPainter painter(&icon);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal size = icon.width();
+    painter.setPen(QPen(QColor("#FFFFFF"), size / 64));
+    painter.setBrush(QColor("#B84DDB"));
+    painter.drawEllipse(QRectF(size / 64, size * 0.61,
+                               size * 0.375, size * 0.375));
+  }
+  trayIcon_->setIcon(QIcon(icon));
 }
 
 void TrayIconController::showCountIcon(int count)

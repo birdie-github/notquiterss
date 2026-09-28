@@ -122,7 +122,13 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   if (blueColor < 0) blueColor = 0;
 
   iconTitle_ = new QLabel(this);
-  iconTitle_->setPixmap(QPixmap(":/images/application64"));
+  QPixmap titleIcon(":/images/application64");
+  const qreal iconScale = devicePixelRatioF();
+  const int iconPixels = qRound(16 * iconScale);
+  titleIcon = titleIcon.scaled(iconPixels, iconPixels, Qt::KeepAspectRatio,
+                               Qt::SmoothTransformation);
+  titleIcon.setDevicePixelRatio(iconScale);
+  iconTitle_->setPixmap(titleIcon);
   iconTitle_->setStyleSheet("background: none;");
   textTitle_ = new QLabel(this);
   textTitle_->setStyleSheet("background: none;");
