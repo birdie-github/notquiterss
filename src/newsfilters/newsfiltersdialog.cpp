@@ -74,7 +74,7 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
     }
   }
 
-  QPushButton *newButton = new QPushButton(tr("New..."), this);
+  QPushButton *newButton = new QPushButton(tr("Create..."), this);
   connect(newButton, SIGNAL(clicked()), this, SLOT(newFilter()));
   editButton_ = new QPushButton(tr("Edit..."), this);
   editButton_->setEnabled(false);
@@ -90,7 +90,7 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
   moveDownButton_->setEnabled(false);
   connect(moveDownButton_, SIGNAL(clicked()), this, SLOT(moveDownFilter()));
 
-  runFilterButton_ = new QPushButton(tr("Run Filter"), this);
+  runFilterButton_ = new QPushButton(tr("Apply Filter"), this);
   runFilterButton_->setEnabled(false);
   buttonsLayout->insertWidget(0, runFilterButton_);
   connect(runFilterButton_, SIGNAL(clicked()), SLOT(applyFilter()));
