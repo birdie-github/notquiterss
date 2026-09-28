@@ -363,9 +363,9 @@
 Restoring such a backup cannot recover excluded articles, and feeds may no longer provide them.
 
 Your current database will not be changed. Pre-upgrade safety backups always remain complete.</source>
-        <translation>Эти резервные копии будут содержать ваши подписки и настройки, но только статьи, отмеченные звездочкой или меткой. Все остальные статьи, включая непрочитанные, будут исключены.
+        <translation>Эти резервные копии будут содержать ваши подписки и настройки, но только новости, отмеченные звездочкой или меткой. Все остальные новости, включая непрочитанные, будут исключены.
 
-При восстановлении такой резервной копии исключенные статьи не будут восстановлены, и их может больше не быть в лентах.
+При восстановлении такой резервной копии исключенные новости не будут восстановлены, и их может больше не быть в лентах.
 
 Ваша текущая база данных не изменится. Резервные копии, созданные в целях безопасности перед обновлением, всегда остаются полными.</translation>
     </message>
@@ -480,7 +480,7 @@ Your current database will not be changed. Pre-upgrade safety backups always rem
         <source>Permanently remove records marked as deleted from the database.
 Deleted articles may be downloaded again.</source>
         <translation>Окончательно удалить из базы данных записи, помеченные как удаленные.
-Удаленные статьи могут быть загружены повторно.</translation>
+Удаленные новости могут быть загружены повторно.</translation>
     </message>
     <message>
         <location filename="../../../src/cleanupwizard.cpp" line="332"/>
@@ -490,7 +490,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/cleanupwizard.cpp" line="333"/>
         <source>Cleanup wizard deleted %1 articles</source>
-        <translation>Мастер очистки удалил %1 статей</translation>
+        <translation>Мастер очистки удалил %1 новостей</translation>
     </message>
 </context>
 <context>
@@ -1155,7 +1155,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="379"/>
         <source>These columns and sorting affect this folder&apos;s combined article view, not its contained feeds.</source>
-        <translation>Эти столбцы и настройки сортировки влияют на объединенный вид статей в этой папке, а не на содержащиеся в ней ленты.</translation>
+        <translation>Эти столбцы и настройки сортировки влияют на объединенный вид новостей в этой папке, а не на содержащиеся в ней ленты.</translation>
     </message>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="396"/>
@@ -1480,7 +1480,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/newsfilters/itemaction.cpp" line="29"/>
         <source>Show Article in Notification</source>
-        <translation>Показать Статью в Уведомлениях</translation>
+        <translation>Показать Новость в Уведомлениях</translation>
     </message>
     <message>
         <location filename="../../../src/newsfilters/itemaction.cpp" line="38"/>
@@ -2020,7 +2020,7 @@ Details:
         <location filename="../../../src/application/mainwindow.cpp" line="4491"/>
         <location filename="../../../src/application/mainwindow.cpp" line="5272"/>
         <source>New Articles: %1</source>
-        <translation>Новые Статьи: %1</translation>
+        <translation>Свежие Новости: %1</translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4493"/>
@@ -2514,12 +2514,12 @@ Details:
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4639"/>
         <source>Article Page Up</source>
-        <translation>Старница Вверх в Статье</translation>
+        <translation>Старница Вверх в Новости</translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4640"/>
         <source>Article Page Down</source>
-        <translation>Старница Вниз в Статье</translation>
+        <translation>Старница Вниз в Новости</translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="4642"/>
@@ -3489,12 +3489,12 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="432"/>
         <source>Change icon when new articles arrive</source>
-        <translation>Изменять значок при появлении новых статей</translation>
+        <translation>Изменять значок при появлении свежих новостей</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="433"/>
         <source>Show number of new articles</source>
-        <translation>Показать количество новых новостей</translation>
+        <translation>Показать количество свежих новостей</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="434"/>
@@ -4283,7 +4283,7 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="1404"/>
         <source>Unread article count in feed tree</source>
-        <translation>Количество непрочитанных статей в дереве ленты</translation>
+        <translation>Количество непрочитанных новостей в дереве ленты</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="1407"/>
