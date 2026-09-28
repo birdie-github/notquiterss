@@ -41,6 +41,8 @@ public:
   explicit UpdateFeeds(QObject *parent, bool addFeed = false);
   ~UpdateFeeds();
 
+  // Connect and move workers in the constructor; start them after UI setup.
+  void start();
   void disconnectObjects();
   void startSaveTimer();
 

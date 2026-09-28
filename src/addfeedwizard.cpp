@@ -47,6 +47,7 @@ AddFeedWizard::AddFeedWizard(QWidget *parent, int curFolderId)
   addPage(createNameFeedPage());
 
   updateFeeds_ = new UpdateFeeds(this, true);
+  updateFeeds_->start();
 
   connect(button(QWizard::BackButton), SIGNAL(clicked()),
           this, SLOT(backButtonClicked()));

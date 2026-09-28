@@ -135,7 +135,12 @@ MainApplication::MainApplication(int &argc, char **argv)
   mainWindow_->requestDefaultFeedIcons();
   setProgressSplashScreen(90);
   qWarning() << "Run application 5";
+  // Startup must create its first article tab synchronously. Starting the SQL
+  // worker earlier can make slotFeedClicked defer that creation while startup
+  // still expects currentNewsTab to exist. Signals emitted during restoration
+  // are queued to the workers, whose connections are already installed.
   mainWindow_->restoreFeedsOnStartUp();
+  updateFeeds_->start();
   setProgressSplashScreen(100);
   qWarning() << "Run application 6";
   if (!mainWindow_->startingTray_ || !mainWindow_->showTrayIcon_) {

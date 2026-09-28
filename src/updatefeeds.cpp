@@ -262,10 +262,6 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(saveMemoryDatabase()));
 
     faviconObject_->moveToThread(getFaviconThread_);
-
-    getFaviconThread_->start(QThread::LowPriority);
-
-    startSaveTimer();
   }
 
   requestFeed_->moveToThread(getFeedThread_);
@@ -273,7 +269,14 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
   connect(updateFeedThread_, &QThread::started, sqlContext,
           [sqlContext] { sqlContext->initialize(); }, Qt::DirectConnection);
   connect(updateFeedThread_, &QThread::finished, sqlContext, &QObject::deleteLater);
+}
 
+void UpdateFeeds::start()
+{
+  if (!addFeed_) {
+    getFaviconThread_->start(QThread::LowPriority);
+    startSaveTimer();
+  }
   getFeedThread_->start(QThread::LowPriority);
   updateFeedThread_->start(QThread::LowPriority);
 }
