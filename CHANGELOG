@@ -1,3 +1,11 @@
+Version 0.95.1 BETA (2026-09-28)
+* CHANGE: Restore the option to be able to force update individual disabled feeds (to better mimic the behaviour of QuiteRSS).
+* CHANGE: Update the application icon set (to improve HiDPI support).
+* CHANGE: Extended and improved the progress bar.
+* BUG FIX: Applying a filter in "Article Filters" required two clicks instead of one.
+* BUG FIX: Fixing crashes when the app has modal dialogs open and it's closed from the systray.
+* CHANGE: Made the Linux AppImage slightly smaller by improving ZSTD compression.
+
 Version 0.95.0 BETA, use with caution! (2026-09-27)
 
 * NEW FEATURE: Choose whether each feed follows the global update schedule, uses its own schedule, or does not update automatically.
