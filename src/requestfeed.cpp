@@ -226,6 +226,7 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
   currentHead_.append(true);
   currentTime_.append(timeoutRequest_);
 
+  emit feedProgressStage(id, tr("Checking…"));
   QNetworkReply *reply = networkManager_->head(request);
   reply->setProperty("feedReply", QVariant(true));
   requestUrl_.append(reply->url());
@@ -258,7 +259,15 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
   currentHead_.append(false);
   currentTime_.append(timeoutRequest_);
 
+  emit feedProgressStage(id, count ? tr("Retrying…") : tr("Connecting…"));
   QNetworkReply *reply = networkManager_->get(request);
+  // Report the stage once, not on every data chunk. Length may be unknown.
+  connect(reply, &QIODevice::readyRead, this, [this, reply, id] {
+    if (!networkReply_.contains(reply) ||
+        reply->property("progressDownloading").toBool()) return;
+    reply->setProperty("progressDownloading", true);
+    emit feedProgressStage(id, tr("Downloading…"));
+  });
   reply->setProperty("feedReply", QVariant(true));
   requestUrl_.append(reply->url());
   networkReply_.append(reply);

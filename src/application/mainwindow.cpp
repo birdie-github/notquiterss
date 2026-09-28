@@ -2814,7 +2814,6 @@ void MainWindow::slotUpdateFeed(int feedId, bool changed, int newCount, bool fin
 {
   if (finish) {
     emit signalShowNotification();
-    statusBarController_->resetProgress();
     isStartImportFeed_ = false;
   }
 
@@ -3816,12 +3815,18 @@ void MainWindow::showProgressBar(int maximum)
   settings.setValue("Flags/updatingFeeds", true);
 
   playSoundNewNews_ = false;
-
-  statusBarController_->startProgress(maximum);
 }
-void MainWindow::slotSetValue(int value)
+void MainWindow::queueFeedProgress(int feedId, QString name)
 {
-  statusBarController_->updateProgress(value);
+  if (!mainApp->isClosing()) statusBarController_->queueFeed(feedId, name);
+}
+void MainWindow::setFeedProgressStage(int feedId, QString stage)
+{
+  if (!mainApp->isClosing()) statusBarController_->setFeedStage(feedId, stage);
+}
+void MainWindow::finishFeedProgress(int feedId)
+{
+  if (!mainApp->isClosing()) statusBarController_->finishFeed(feedId);
 }
 void MainWindow::showMessageStatusBar(QString message, int timeout)
 {

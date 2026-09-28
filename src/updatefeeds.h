@@ -100,7 +100,9 @@ public slots:
 
 signals:
   void showProgressBar(int value);
-  void loadProgress(int value, bool clear = false);
+  void feedProgressQueued(int feedId, QString name);
+  void feedProgressStage(int feedId, QString stage);
+  void feedProgressFinished(int feedId);
   void signalMessageStatusBar(QString message, int timeout = 0);
   void signalUpdateFeedsModel();
   void signalRequestUrl(int feedId, QString urlString,
@@ -122,6 +124,7 @@ private slots:
 
 private:
   void queueAllFeeds(bool manual);
+  void announceFeedProgress(int feedId);
 
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;

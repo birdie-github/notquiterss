@@ -155,8 +155,14 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotImportFeeds(QByteArray,bool)));
     connect(updateObject_, SIGNAL(showProgressBar(int)),
             parent, SLOT(showProgressBar(int)));
-    connect(updateObject_, SIGNAL(loadProgress(int)),
-            parent, SLOT(slotSetValue(int)));
+    connect(updateObject_, &UpdateObject::feedProgressQueued,
+            mainApp->mainWindow(), &MainWindow::queueFeedProgress);
+    connect(updateObject_, &UpdateObject::feedProgressStage,
+            mainApp->mainWindow(), &MainWindow::setFeedProgressStage);
+    connect(requestFeed_, &RequestFeed::feedProgressStage,
+            mainApp->mainWindow(), &MainWindow::setFeedProgressStage);
+    connect(updateObject_, &UpdateObject::feedProgressFinished,
+            mainApp->mainWindow(), &MainWindow::finishFeedProgress);
     connect(updateObject_, SIGNAL(signalMessageStatusBar(QString,int)),
             parent, SLOT(showMessageStatusBar(QString,int)));
     connect(updateObject_, SIGNAL(signalUpdateFeedsModel()),
@@ -568,9 +574,20 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 
   for (int i = 0; i < idsList.count(); i++) {
     updateFeedsCount_ = updateFeedsCount_ + 2;
+    announceFeedProgress(idsList.at(i));
     emit signalRequestUrl(idsList.at(i), urlsList.at(i), QDateTime(), "");
   }
   emit showProgressBar(updateFeedsCount_);
+}
+
+void UpdateObject::announceFeedProgress(int feedId)
+{
+  auto databaseAccess = Database::backgroundAccess();
+  QSqlQuery q(db_);
+  q.prepare("SELECT text FROM feeds WHERE id=?");
+  q.addBindValue(feedId);
+  const QString name = q.exec() && q.next() ? q.value(0).toString() : QString();
+  emit feedProgressQueued(feedId, name);
 }
 
 // ----------------------------------------------------------------------------
@@ -611,6 +628,7 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
             arg(QString::fromUtf8(QByteArray::fromBase64(q.value(1).toByteArray())));
       }
     }
+    announceFeedProgress(feedId);
     emit signalRequestUrl(feedId, feedUrl, date, userInfo);
     return true;
   }
@@ -626,10 +644,10 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
 
   if (updateFeedsCount_ > 0) {
     updateFeedsCount_--;
-    emit loadProgress(updateFeedsCount_);
   }
 
   if (!data.isEmpty()) {
+    emit feedProgressStage(feedId, tr("Processing…"));
     emit xmlReadyParse(data, feedId, dtReply, codecName);
   } else {
     QString status = "0";
@@ -649,7 +667,6 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
   auto databaseAccess = Database::backgroundAccess();
   if (updateFeedsCount_ > 0) {
     updateFeedsCount_--;
-    emit loadProgress(updateFeedsCount_);
   }
   bool finish = false;
   if (updateFeedsCount_ <= 0) {
@@ -716,6 +733,7 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
     }
   }
 
+  emit feedProgressFinished(feedId);
   emit feedUpdated(feedId, changed, newCount, finish);
   emit setStatusFeed(feedId, status);
 }

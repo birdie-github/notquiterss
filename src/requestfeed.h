@@ -55,6 +55,7 @@ signals:
   void signalGet(const QUrl &getUrl, const int &id, const QString &feedUrl,
                  const QDateTime &date, const int &count = 0);
   void setStatusFeed(int feedId, QString status);
+  void feedProgressStage(int feedId, QString stage);
 
 private slots:
   void getQueuedUrl();

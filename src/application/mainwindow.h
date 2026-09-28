@@ -253,7 +253,9 @@ public slots:
   void slotGetAllFeeds();
   void slotStopUpdate();
   void showProgressBar(int addToMaximum);
-  void slotSetValue(int value);
+  void queueFeedProgress(int feedId, QString name);
+  void setFeedProgressStage(int feedId, QString stage);
+  void finishFeedProgress(int feedId);
   void showMessageStatusBar(QString message, int timeout = 0);
   void slotCountsStatusBar(int unreadCount, int allCount);
   void slotPlaySound(const QString &path);
