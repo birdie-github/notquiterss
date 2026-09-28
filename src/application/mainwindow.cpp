@@ -259,6 +259,16 @@ MainWindow::MainWindow(QWidget *parent)
 
   retranslateStrings();
 
+  // Queue selection notifications so the view has updated its selected feed ID.
+  connect(feedsView_->selectionModel(), &QItemSelectionModel::selectionChanged,
+          this, &MainWindow::updateFeedActionText, Qt::QueuedConnection);
+  connect(feedsView_->selectionModel(), &QItemSelectionModel::currentChanged,
+          this, &MainWindow::updateFeedActionText, Qt::QueuedConnection);
+  connect(feedsModel_, &QAbstractItemModel::dataChanged,
+          this, &MainWindow::updateFeedActionText, Qt::QueuedConnection);
+  connect(feedsModel_, &QAbstractItemModel::modelReset,
+          this, &MainWindow::updateFeedActionText, Qt::QueuedConnection);
+
   installEventFilter(this);
 }
 
@@ -3751,41 +3761,63 @@ void MainWindow::slotGetFeedsTimer()
 }
 /** @brief Process update feed action
  *---------------------------------------------------------------------------*/
+QModelIndexList MainWindow::selectedFeedIndexes() const
+{
+  QModelIndexList indexes = feedsView_->selectionModel()->selectedRows(0);
+  if (indexes.count() <= 1) {
+    indexes.clear();
+    indexes.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
+  }
+  return indexes;
+}
+
+void MainWindow::updateFeedActionText()
+{
+  bool force = false;
+  for (const QModelIndex &proxyIndex : selectedFeedIndexes()) {
+    const QModelIndex index = feedsProxyModel_->mapToSource(proxyIndex);
+    if (index.isValid() && !feedsModel_->isFolder(index) &&
+        feedsModel_->dataField(index, "disableUpdate").toBool()) {
+      force = true;
+      break;
+    }
+  }
+  updateFeedAct_->setText(force ? tr("Force Update") : tr("Update Feed"));
+  updateFeedAct_->setToolTip(force
+      ? tr("Update selected feeds once, including disabled feeds")
+      : tr("Update Current Feed"));
+}
+
 void MainWindow::slotGetFeed()
 {
-  QModelIndexList indexList = feedsView_->selectionModel()->selectedRows(0);
-  if (indexList.count() <= 1) {
-    indexList.clear();
-    indexList.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
+  const QModelIndexList indexes = selectedFeedIndexes();
+  QList<int> ids;
+  QSet<int> explicitFeeds;
+  // Collect direct selections first: they override a selected folder's policy,
+  // regardless of tree order, and each feed must be dispatched only once.
+  for (const QModelIndex &proxyIndex : indexes) {
+    const QModelIndex index = feedsProxyModel_->mapToSource(proxyIndex);
+    if (!index.isValid() || feedsModel_->isFolder(index)) continue;
+    const int id = feedsModel_->idByIndex(index);
+    if (!explicitFeeds.contains(id)) ids.append(id);
+    explicitFeeds.insert(id);
   }
-  QList<int> idList;
-  foreach (QModelIndex indexProxy, indexList) {
-    QModelIndex index = feedsProxyModel_->mapToSource(indexProxy);
-    if (feedsModel_->isFolder(index)) {
-      QList<int> list = UpdateObject::getIdFeedsInList(db_, feedsModel_->dataField(index, "id").toInt());
-      foreach (int idFeed, list) {
-        if (!idList.contains(idFeed)) {
-          idList.append(idFeed);
-          index = feedsModel_->indexById(idFeed);
-          if (!feedsModel_->dataField(index, "disableUpdate").toBool()) {
-            emit signalGetFeed(feedsModel_->dataField(index, "id").toInt(),
-                               feedsModel_->dataField(index, "xmlUrl").toString(),
-                               feedsModel_->dataField(index, "lastBuildDate").toDateTime(),
-                               feedsModel_->dataField(index, "authentication").toInt());
-          }
-        }
-      }
-
-    } else {
-      int idFeed = feedsModel_->dataField(index, "id").toInt();
-      if (!idList.contains(idFeed)) {
-        idList.append(idFeed);
-        emit signalGetFeed(feedsModel_->dataField(index, "id").toInt(),
-                           feedsModel_->dataField(index, "xmlUrl").toString(),
-                           feedsModel_->dataField(index, "lastBuildDate").toDateTime(),
-                           feedsModel_->dataField(index, "authentication").toInt());
-      }
+  for (const QModelIndex &proxyIndex : indexes) {
+    const QModelIndex index = feedsProxyModel_->mapToSource(proxyIndex);
+    if (!index.isValid() || !feedsModel_->isFolder(index)) continue;
+    const QList<int> children = UpdateObject::getIdFeedsInList(db_, feedsModel_->idByIndex(index));
+    for (int id : children) {
+      if (!ids.contains(id)) ids.append(id);
     }
+  }
+  for (int id : ids) {
+    const QModelIndex index = feedsModel_->indexById(id);
+    if (!index.isValid()) continue;
+    const bool force = explicitFeeds.contains(id);
+    if (!force && feedsModel_->dataField(index, "disableUpdate").toBool()) continue;
+    emit signalGetFeed(id, feedsModel_->dataField(index, "xmlUrl").toString(),
+                      feedsModel_->dataField(index, "lastBuildDate").toDateTime(),
+                      feedsModel_->dataField(index, "authentication").toInt(), force);
   }
 }
 
@@ -4299,12 +4331,14 @@ void MainWindow::showContextMenuFeed(const QPoint &pos)
 
   index = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
   feedsView_->selectId_ = feedsModel_->idByIndex(index);
+  updateFeedActionText();
 
   feedProperties_->setEnabled(feedsView_->selectIndex().isValid());
 }
 // ----------------------------------------------------------------------------
 void MainWindow::slotFeedMenuShow()
 {
+  updateFeedActionText();
   feedProperties_->setEnabled(feedsView_->selectIndex().isValid());
 }
 // ----------------------------------------------------------------------------
@@ -4492,8 +4526,7 @@ void MainWindow::retranslateStrings()
 
   exitAct_->setText(tr("E&xit"));
 
-  updateFeedAct_->setText(tr("Update Feed"));
-  updateFeedAct_->setToolTip(tr("Update Current Feed"));
+  updateFeedActionText();
 
   updateAllFeedsAct_->setText(tr("Update All"));
   updateAllFeedsAct_->setToolTip(tr("Update All Feeds"));

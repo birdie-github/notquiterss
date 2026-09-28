@@ -76,7 +76,7 @@ public:
 public slots:
   void slotGetFeedTimer(int feedId);
   void slotGetAllFeedsTimer();
-  void slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth);
+  void slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void slotGetFeedsFolder(QString query);
   void slotGetAllFeeds();
   void slotGetAllFeedsStartup();
@@ -120,7 +120,7 @@ signals:
 
 private slots:
   bool addFeedInQueue(int feedId, const QString &feedUrl,
-                      const QDateTime &date, int auth, bool manual = false);
+                      const QDateTime &date, int auth, bool manual = false, bool force = false);
 
 private:
   void queueAllFeeds(bool manual);

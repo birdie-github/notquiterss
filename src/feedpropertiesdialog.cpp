@@ -170,7 +170,7 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   editURL = new LineEdit();
 
   disableUpdate_ = new QCheckBox(tr("Disable"), this);
-  disableUpdate_->setToolTip(tr("Disabled feeds are excluded from all updates, including manual updates."));
+  disableUpdate_->setToolTip(tr("Exclude this feed from automatic, folder, and Update All operations. You can still update it individually."));
   disableUpdate_->setChecked(false);
 
   QGroupBox *updateSchedule = createUpdateSchedule();

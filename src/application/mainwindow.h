@@ -283,7 +283,7 @@ signals:
   void signalPlaceToTray();
   void signalGetFeedTimer(int feedId);
   void signalGetAllFeedsTimer();
-  void signalGetFeed(int feedId, QString feedUrl, QDateTime date, int auth);
+  void signalGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void signalGetFeedsFolder(QString query);
   void signalGetAllFeeds();
   void signalGetAllFeedsStartup();
@@ -463,6 +463,8 @@ private slots:
   void createBackup();
 
 private:
+  void updateFeedActionText();
+  QModelIndexList selectedFeedIndexes() const;
   void finishQuitApp();
   QTimer quitTimer_;
 

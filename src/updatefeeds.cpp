@@ -147,8 +147,8 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotGetAllFeedsStartup()));
     connect(parent, SIGNAL(signalGetAllFeeds()),
             updateObject_, SLOT(slotGetAllFeeds()));
-    connect(parent, SIGNAL(signalGetFeed(int,QString,QDateTime,int)),
-            updateObject_, SLOT(slotGetFeed(int,QString,QDateTime,int)));
+    connect(parent, SIGNAL(signalGetFeed(int,QString,QDateTime,int,bool)),
+            updateObject_, SLOT(slotGetFeed(int,QString,QDateTime,int,bool)));
     connect(parent, SIGNAL(signalGetFeedsFolder(QString)),
             updateObject_, SLOT(slotGetFeedsFolder(QString)));
     connect(parent, SIGNAL(signalImportFeeds(QByteArray,bool)),
@@ -387,9 +387,9 @@ void UpdateObject::slotGetAllFeedsTimer()
 
 /** @brief Process update feed action
  *---------------------------------------------------------------------------*/
-void UpdateObject::slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth)
+void UpdateObject::slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force)
 {
-  addFeedInQueue(feedId, feedUrl, date, auth, true);
+  addFeedInQueue(feedId, feedUrl, date, auth, true, force);
 
   emit showProgressBar(updateFeedsCount_);
 }
@@ -592,7 +592,7 @@ void UpdateObject::announceFeedProgress(int feedId)
 
 // ----------------------------------------------------------------------------
 bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
-                                  const QDateTime &date, int auth, bool manual)
+                                  const QDateTime &date, int auth, bool manual, bool force)
 {
   auto databaseAccess = Database::backgroundAccess();
   QSqlQuery enabledQuery(db_);
@@ -602,7 +602,7 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
     qWarning() << "Cannot check whether feed updates are disabled:" << enabledQuery.lastError().text();
     return false;
   }
-  if (!enabledQuery.next() || enabledQuery.value(0).toBool())
+  if (!enabledQuery.next() || (!force && enabledQuery.value(0).toBool()))
     return false;
   enabledQuery.finish();
 
