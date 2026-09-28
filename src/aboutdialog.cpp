@@ -57,7 +57,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
       + "</P>"
       + "<BR>"
       + tr("%1 is an open-source, cross-platform RSS/Atom news feed reader").arg(QGuiApplication::applicationDisplayName().toHtmlEscaped())
-      + "<P>" + tr("Includes:")
+      + "<P>" + tr("Uses ")
       + QString(" Qt-%1, SQLite-%2").
       arg(QT_VERSION_STR).arg(SQLITE_VERSION)
       + "</P>"
