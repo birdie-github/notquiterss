@@ -28,7 +28,7 @@
     <message>
         <location filename="../../../src/aboutdialog.cpp" line="60"/>
         <source>Uses </source>
-        <translation>Использует</translation>
+        <translation>Использует </translation>
     </message>
     <message>
         <location filename="../../../src/aboutdialog.cpp" line="67"/>
@@ -124,85 +124,85 @@
         <translation>Добавление ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="106"/>
-        <location filename="../../../src/addfeedwizard.cpp" line="181"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="107"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="182"/>
         <source>Create New Feed</source>
         <translation>Создание новой ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="115"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="116"/>
         <source>Use the feed title as the display name</source>
-        <translation>Использовать заголовок ленты в качестве отображаемого имени.</translation>
+        <translation>Использовать заголовок ленты в качестве отображаемого имени</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="119"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="120"/>
         <source>Server requires authentication:</source>
         <translation>Сервер требует авторизации:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="128"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="129"/>
         <source>Username:</source>
         <translation>Имя пользователя:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="130"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="131"/>
         <source>Password:</source>
         <translation>Пароль:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="160"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="161"/>
         <source>Feed URL or website address:</source>
         <translation>URL ленты или адрес веб-сайта:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="193"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="194"/>
         <source>Feeds</source>
         <translation>Ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="197"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="198"/>
         <source>All Feeds</source>
         <translation>Все ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="237"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="238"/>
         <source>New Folder...</source>
         <translation>Новая папка...</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="252"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="253"/>
         <source>Displayed name:</source>
         <translation>Отображаемое имя:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="254"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="255"/>
         <source>Location:</source>
         <translation>Расположение:</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="330"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="331"/>
         <source>Invalid URL</source>
         <translation>Неверный URL</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="344"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="345"/>
         <source>Duplicate feed</source>
-        <translation>Дубликат ленты!</translation>
+        <translation>Уже существует дубликат</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="519"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="520"/>
         <source>Duplicate feed!</source>
         <translation>Дубликат ленты!</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="541"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="542"/>
         <source>The server returned content that is not a valid RSS or Atom feed.</source>
         <translation>Сервер вернул ответ, который не является валидной RSS или Atom лентой.</translation>
     </message>
     <message>
-        <location filename="../../../src/addfeedwizard.cpp" line="560"/>
+        <location filename="../../../src/addfeedwizard.cpp" line="561"/>
         <source>Request failed</source>
-        <translation>Не удалось выполнить запрос!</translation>
+        <translation>Ошибка запроса</translation>
     </message>
 </context>
 <context>
@@ -614,7 +614,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="53"/>
         <source>SQLite snapshot failed (code %1): %2</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка создания снимка SQLite (код %1): %2</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="169"/>
@@ -647,34 +647,36 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="213"/>
         <source>The live SQLite connection is unavailable.</source>
-        <translation type="unfinished"></translation>
+        <translation>Подключение к SQLite в режиме реального времени недоступно.</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="216"/>
         <source>The live SQLite connection is closed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Подключение к SQLite в режиме реального времени закрыто.</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="237"/>
         <source>Cannot write the current application settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удается сохранить текущие настройки приложения.</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="249"/>
         <source>Cannot publish the completed backup.</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удается опубликовать готовую резервную копию.</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="258"/>
         <source>Backup created in %1, but its scheduling state could not be saved.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>Резервная копия создана в %1, но состояние планирования не удалось сохранить.
+</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="279"/>
         <source>Backup created, but an old backup could not be removed: %1
 </source>
-        <translation type="unfinished"></translation>
+        <translation>Резервная копия создана, но удалить старую резервную копию не удалось: %1
+</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="290"/>
@@ -722,7 +724,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="187"/>
         <source>Invalid redirect or unsupported redirect scheme; only HTTP and HTTPS are allowed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Недопустимое перенаправление или неподдерживаемая схема перенаправления; допускаются только HTTP и HTTPS.</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="191"/>
@@ -739,7 +741,7 @@ Deleted articles may be downloaded again.</source>
         <location filename="../../../src/downloads/downloaditem.cpp" line="223"/>
         <location filename="../../../src/downloads/downloaditem.cpp" line="264"/>
         <source>Cannot write to file!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удается записать в файл!</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="258"/>
@@ -785,7 +787,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="345"/>
         <source>%1 remaining - %2 of %3 (%4)</source>
-        <translation type="unfinished"></translation>
+        <translation>Остаётся %1 — %2 из %3 (%4)</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="365"/>
@@ -800,7 +802,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="375"/>
         <source>Do you also want to delete the downloaded file?</source>
-        <translation type="unfinished"></translation>
+        <translation>Вы также хотите удалить загруженный файл?</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloaditem.cpp" line="392"/>
@@ -863,7 +865,7 @@ Deleted articles may be downloaded again.</source>
         <location filename="../../../src/downloads/downloadmanager.cpp" line="94"/>
         <location filename="../../../src/downloads/downloadmanager.cpp" line="185"/>
         <source>Download failed</source>
-        <translation>Ошибка загрузки.</translation>
+        <translation>Ошибка загрузки</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloadmanager.cpp" line="81"/>
@@ -931,11 +933,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/feedsview/feedhealth.cpp" line="61"/>
         <source>Last successful retrieval: %1</source>
-        <translation>Последнее обновление завершилось с ошибкой: %1
-
-Количество подряд неудачных обновлений: %1
-
-Последний успешный ответ: %1</translation>
+        <translation>Последний успешный ответ: %1</translation>
     </message>
 </context>
 <context>
@@ -1290,7 +1288,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="896"/>
         <source>Load images:</source>
-        <translation>Загружать изображения</translation>
+        <translation>Загружать изображения:</translation>
     </message>
     <message>
         <location filename="../../../src/feedpropertiesdialog.cpp" line="898"/>
@@ -1709,74 +1707,74 @@ All %2 feeds in this folder are disabled.</source>
 <context>
     <name>MainApplication</name>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="221"/>
-        <location filename="../../../src/application/mainapplication.cpp" line="265"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="226"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="270"/>
         <source>Beta version warning</source>
         <translation>Предупреждение о бета-версии</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="222"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="227"/>
         <source>You are using a test version of %1 (%2). It may contain bugs that could cause data loss.</source>
         <translation>Вы используете тестовую версию %1 (%2). В ней могут содержаться ошибки, которые могут привести к потере данных.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="225"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="230"/>
         <source>Please report problems using the &lt;a href=&quot;%1&quot;&gt;issue tracker&lt;/a&gt;.</source>
         <translation>О проблемах просим сообщать через &lt;a href=&quot;%1&quot;&gt;систему отслеживания проблем&lt;/a&gt;.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="228"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="233"/>
         <source>We recommend creating a full backup of your existing feeds and settings before continuing. This backup is available even if automatic backups are disabled.</source>
         <translation>Прежде чем продолжить, рекомендуем создать полную резервную копию лент и настроек. Эта резервная копия будет доступна даже в том случае, если автоматическое резервное копирование отключено.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="231"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="236"/>
         <source>Back up and continue</source>
         <translation>Сделайте резервную копию и продолжить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="231"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="236"/>
         <source>Continue</source>
         <translation>Продолжить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="234"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="239"/>
         <source>Continue without backing up</source>
-        <translation>Продолжить без создания резервной копии </translation>
+        <translation>Продолжить без создания резервной копии</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="235"/>
-        <location filename="../../../src/application/mainapplication.cpp" line="255"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="240"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="260"/>
         <source>Exit</source>
         <translation>Выйти</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="250"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="255"/>
         <source>Backup failed</source>
         <translation>Ошибка создания резеврной копии</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="251"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="256"/>
         <source>No backup was created. The application has not started.</source>
         <translation>Резервная копия не была создана. Приложение не запущено.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="266"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="271"/>
         <source>Your confirmation could not be saved. The application will continue, but this warning will appear again next time.</source>
         <translation>Ваше подтверждение не удалось сохранить. Работа приложения будет продолжена, но при следующем запуске это предупреждение появится снова.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="342"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="347"/>
         <source>Saving data...</source>
         <translation>Сохранение данных...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="728"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="733"/>
         <source>External Browser</source>
-        <translation>Внешний браузер:</translation>
+        <translation>Внешний браузер</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainapplication.cpp" line="729"/>
+        <location filename="../../../src/application/mainapplication.cpp" line="734"/>
         <source>Could not start the configured browser. Check the custom browser setting in Article View.</source>
         <translation>Не удалось запустить настроенный браузер. Проверьте настройки пользовательского браузера в разделе «Просмотр новостей».</translation>
     </message>
@@ -3363,7 +3361,7 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="223"/>
         <source>External Browser</source>
-        <translation>Внешний браузер:</translation>
+        <translation>Внешний браузер</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="223"/>
@@ -3830,7 +3828,7 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="851"/>
         <source>when selected, after </source>
-        <translation>когда выбраны, после</translation>
+        <translation>когда выбраны, после </translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="868"/>
@@ -4368,7 +4366,7 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="1843"/>
         <source>Warning: key is already assigned to </source>
-        <translation>Предупреждение: клавиша уже назначена на</translation>
+        <translation>Предупреждение: клавиша уже назначена на </translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="1895"/>
@@ -4396,22 +4394,22 @@ Details:
     <message>
         <location filename="../../../src/parseobject.cpp" line="203"/>
         <source>Invalid XML at line %1, column %2: %3</source>
-        <translation type="unfinished"></translation>
+        <translation>Недопустимый XML в строке %1, столбце %2: %3</translation>
     </message>
     <message>
         <location filename="../../../src/parseobject.cpp" line="204"/>
         <source>The response is not a supported RSS or Atom feed (root element: %1).</source>
-        <translation type="unfinished"></translation>
+        <translation>Ответ не является поддерживаемым RSS- или Atom лентой (корневой элемент: %1).</translation>
     </message>
     <message>
         <location filename="../../../src/parseobject.cpp" line="234"/>
         <source>Database update failed: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка обновления базы данных: %1</translation>
     </message>
     <message>
         <location filename="../../../src/parseobject.cpp" line="1498"/>
         <source>Database query failed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка при выполнении запроса к БД.</translation>
     </message>
 </context>
 <context>
@@ -4506,17 +4504,17 @@ Details:
     <message>
         <location filename="../../../src/application/opmlinput.cpp" line="63"/>
         <source>The file is not an OPML document.</source>
-        <translation type="unfinished"></translation>
+        <translation>Этот файл не является документом OPML.</translation>
     </message>
     <message>
         <location filename="../../../src/application/opmlinput.cpp" line="72"/>
         <source>The OPML file contains an invalid feed URL: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Файл OPML содержит недопустимый URL-адрес ленты: %1</translation>
     </message>
     <message>
         <location filename="../../../src/application/opmlinput.cpp" line="78"/>
         <source>Invalid OPML at line %1: %2</source>
-        <translation type="unfinished"></translation>
+        <translation>Недопустимый OPML в строке %1: %2</translation>
     </message>
     <message>
         <location filename="../../../src/database/database.cpp" line="314"/>
@@ -4526,12 +4524,12 @@ Details:
     <message>
         <location filename="../../../src/downloads/downloadmanager.cpp" line="200"/>
         <source>Could not start external program</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удалось запустить внешнюю программу</translation>
     </message>
     <message>
         <location filename="../../../src/downloads/downloadmanager.cpp" line="201"/>
         <source>Could not start external program. %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удалось запустить внешнюю программу. %1</translation>
     </message>
     <message>
         <location filename="../../../src/network/feedurl.cpp" line="39"/>
@@ -4861,7 +4859,7 @@ Please contact the website operator and ask them to exempt their RSS/Atom feed U
     <message>
         <location filename="../../../src/updateappdialog.cpp" line="117"/>
         <source>You already have the latest version.</source>
-        <translation>У вас уже есть последняя версия</translation>
+        <translation>У вас уже есть последняя версия.</translation>
     </message>
     <message>
         <location filename="../../../src/updateappdialog.cpp" line="120"/>
@@ -4887,30 +4885,30 @@ Please contact the website operator and ask them to exempt their RSS/Atom feed U
 <context>
     <name>UpdateObject</name>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="453"/>
+        <location filename="../../../src/updatefeeds.cpp" line="456"/>
         <source>Could not check existing subscriptions.</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удалось проверить имеющиеся подписки.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="460"/>
+        <location filename="../../../src/updatefeeds.cpp" line="463"/>
         <source>Could not start the import transaction.</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удалось запустить транзакцию импорта.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="467"/>
-        <location filename="../../../src/updatefeeds.cpp" line="564"/>
+        <location filename="../../../src/updatefeeds.cpp" line="470"/>
+        <location filename="../../../src/updatefeeds.cpp" line="567"/>
         <source>Import failed: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка импорта: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="568"/>
+        <location filename="../../../src/updatefeeds.cpp" line="571"/>
         <source>Import complete</source>
-        <translation type="unfinished"></translation>
+        <translation>Импорт завершен</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="650"/>
+        <location filename="../../../src/updatefeeds.cpp" line="653"/>
         <source>Processing…</source>
-        <translation type="unfinished"></translation>
+        <translation>Обработка…</translation>
     </message>
 </context>
 <context>
@@ -4918,12 +4916,12 @@ Please contact the website operator and ask them to exempt their RSS/Atom feed U
     <message>
         <location filename="../../../src/network/websiteoverrides.cpp" line="19"/>
         <source>Invalid overrides file: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Недопустимый файл переопределений: %1</translation>
     </message>
     <message>
         <location filename="../../../src/network/websiteoverrides.cpp" line="136"/>
         <source>Feed URL for %1 is missing nonempty query parameters: %2.</source>
-        <translation type="unfinished"></translation>
+        <translation>В URL-адресе канала для %1 отсутствуют непустые параметры запроса: %2.</translation>
     </message>
 </context>
 </TS>
