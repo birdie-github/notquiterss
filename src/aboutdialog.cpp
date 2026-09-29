@@ -49,7 +49,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
   QString appInfo =
       "<html><style>a { color: blue; text-decoration: none; }</style><body>"
       "<CENTER>"
-      "<IMG SRC=\":/images/images/logo.png\">"
+      "<IMG SRC=\":/images/application256\" WIDTH=\"128\" HEIGHT=\"128\">"
       "<BR><B>" + QGuiApplication::applicationDisplayName().toHtmlEscaped() + "</B>"
       "<P>"
       + tr("Version") + " " + "<B>" + QString(QCoreApplication::applicationVersion()) + "</B>" + QString(" (%1)").arg(ProjectMetadata::releaseDate())

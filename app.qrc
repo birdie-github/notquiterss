@@ -29,7 +29,6 @@
         <file alias="exportFeeds">resources/embedded/icons/exportFeeds.png</file>
         <file alias="add">resources/embedded/icons/add.png</file>
         <file alias="delete">resources/embedded/icons/delete.png</file>
-        <file alias="images/logo.png">resources/embedded/icons/logo.png</file>
         <file alias="images/noicon.png">resources/embedded/icons/noicon.png</file>
         <file alias="preferencesFeed">resources/embedded/icons/preferencesFeed.png</file>
         <file alias="editClear">resources/embedded/icons/editClear.png</file>
