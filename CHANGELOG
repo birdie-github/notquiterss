@@ -1,6 +1,6 @@
 Version 0.95.2 BETA (2026-09-29)
 * BUG FIX: App could crash on startup under certain conditions.
-* BUG FIX: An attempt to fix malfunctioning cursors for the app's AppImage Linux version
+* BUG FIX: An attempt to fix malfunctioning cursors for the app's AppImage Linux version.
 
 Version 0.95.1 BETA (2026-09-28)
 * CHANGE: Restore the option to be able to force update individual disabled feeds (to better mimic the behaviour of QuiteRSS).

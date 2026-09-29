@@ -80,10 +80,10 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse(list(output.rglob('*.ts')))
 
     def test_source_guard(self):
-        before = (self.source / 'resources/embedded/icons/logo.png').read_bytes()
+        before = (self.source / 'resources/external/icons/256x256/notquiterss.png').read_bytes()
         with self.assertRaises(ValueError):
             stage.stage(self.source, self.source)
-        self.assertEqual((self.source / 'resources/embedded/icons/logo.png').read_bytes(), before)
+        self.assertEqual((self.source / 'resources/external/icons/256x256/notquiterss.png').read_bytes(), before)
 
     def test_qrc_paths_and_aliases(self):
         seen = set()
@@ -95,7 +95,7 @@ class ResourceTests(unittest.TestCase):
                 seen.add(alias)
                 if file.text.startswith('resources/'):
                     self.assertIsNotNone(file.get('alias'))
-        self.assertIn('/images/images/logo.png', seen)
+        self.assertIn('/images/application256', seen)
         self.assertIn('/html/description', seen)
         self.assertIn('/style/system', seen)
 
