@@ -3401,7 +3401,7 @@ Details:
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="341"/>
         <source>Show default RSS icon instead of each feed&apos;s icon</source>
-        <translation>Показывать стандартный значок RSS вместо значков отдельных каналов</translation>
+        <translation>Показывать стандартный значок RSS вместо значков отдельных лент</translation>
     </message>
     <message>
         <location filename="../../../src/optionsdialog.cpp" line="342"/>
@@ -4680,7 +4680,7 @@ Please contact the website operator and ask them to exempt their RSS/Atom feed U
 
 Данный веб-сайт требует проверки браузера перед предоставлением доступа. %2 не может пройти эту проверку, поскольку не содержит полноценного веб-браузера.
 
-Пожалуйста, свяжитесь с администратором сайта и попросите его исключить URL-адреса RSS/Atom-каналов из списка требований проверки браузера.</translation>
+Пожалуйста, свяжитесь с администратором сайта и попросите его исключить URL-адреса RSS/Atom лент из списка требований проверки браузера.</translation>
     </message>
     <message>
         <location filename="../../../src/requestfeed.cpp" line="318"/>
@@ -4921,7 +4921,7 @@ Please contact the website operator and ask them to exempt their RSS/Atom feed U
     <message>
         <location filename="../../../src/network/websiteoverrides.cpp" line="136"/>
         <source>Feed URL for %1 is missing nonempty query parameters: %2.</source>
-        <translation>В URL-адресе канала для %1 отсутствуют непустые параметры запроса: %2.</translation>
+        <translation>В URL-адресе ленты для %1 отсутствуют непустые параметры запроса: %2.</translation>
     </message>
 </context>
 </TS>
