@@ -5,12 +5,13 @@ cat <<'EOF'
 Run these commands from resources/external/icons.
 
 1. Generate PNGs at each required size:
-dnf install GraphicsMagick
+dnf install ImageMagick
 for s in 512 256 128 64 48 32 16; do
     mkdir -p "${s}x${s}"
-    gm convert notquiterss.png -filter Lanczos -resize "${s}x${s}" \
-        -background none -gravity center -extent "${s}x${s}" \
-        "${s}x${s}/notquiterss.png"
+    magick -background none notquiterss-lighting-pro.svg \
+         -filter Lanczos -resize "${s}x${s}" -extent "${s}x${s}"\
+         -gravity center -depth 8 \
+         PNG32:"${s}x${s}/notquiterss.png"
 done
 
 2. Compress the generated PNGs:
@@ -26,7 +27,6 @@ png2icns application.icns 16x16/notquiterss.png 32x32/notquiterss.png \
     256x256/notquiterss.png 512x512/notquiterss.png
 
 4. Generate the Windows icon:
-dnf install ImageMagick
 magick 16x16/notquiterss.png 32x32/notquiterss.png 48x48/notquiterss.png \
     64x64/notquiterss.png 128x128/notquiterss.png \
     256x256/notquiterss.png application.ico
