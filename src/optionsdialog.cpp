@@ -20,6 +20,7 @@
 #include "logfile.h"
 #include "optionsdialog.h"
 #include "backupsettingspage.h"
+#include "cookiesdialog.h"
 #include <QScreen>
 #include <QWindow>
 #include "articlecontent.h"
@@ -591,6 +592,12 @@ void OptionsDialog::createNetworkConnectionsWidget()
   networkConnectionsLayout->addSpacing(20);
   networkConnectionsLayout->addWidget(customUserAgent_);
   networkConnectionsLayout->addLayout(userAgentLayout);
+  auto *cookies = new QPushButton(tr("Website cookies…"));
+  networkConnectionsLayout->addWidget(cookies);
+  connect(cookies, &QPushButton::clicked, this, [this]() {
+    CookiesDialog dialog(this);
+    dialog.exec();
+  });
   networkConnectionsLayout->addStretch(1);
 
   networkConnectionsWidget_ = new QFrame();

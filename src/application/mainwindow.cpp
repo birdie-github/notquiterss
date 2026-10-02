@@ -2345,8 +2345,6 @@ void MainWindow::saveSettings()
                     feedsFilterGroup_->checkedAction()->objectName());
   stateSettings.setValue("newsSettings/filterName",
                     newsFilterGroup_->checkedAction()->objectName());
-
-  mainApp->cookieJar()->saveCookies();
 }
 
 void MainWindow::showMainMenu()

@@ -331,6 +331,7 @@ void MainApplication::quitApplication()
   delete mainWindow_;
   qWarning() << "quitApplication 2";
   delete networkManager_;
+  if (cookieJar_) cookieJar_->saveCookies();
   delete cookieJar_;
   delete closingWidget_;
 
@@ -587,7 +588,9 @@ CookieJar *MainApplication::cookieJar()
 {
   if (!cookieJar_) {
     Q_ASSERT(QThread::currentThread() == thread());
-    cookieJar_ = new CookieJar(this);
+    Settings settings;
+    settings.remove("Settings/saveCookies");
+    cookieJar_ = new CookieJar(dataDir() + "/" + ProjectMetadata::cookies(), this);
   }
   return cookieJar_;
 }

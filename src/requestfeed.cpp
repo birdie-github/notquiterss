@@ -284,8 +284,7 @@ void RequestFeed::finished(QNetworkReply *reply)
   qDebug() << reply->header(QNetworkRequest::ContentLengthHeader);
   qDebug() << reply->header(QNetworkRequest::LocationHeader);
   qDebug() << reply->header(QNetworkRequest::LastModifiedHeader);
-  qDebug() << reply->header(QNetworkRequest::CookieHeader);
-  qDebug() << reply->header(QNetworkRequest::SetCookieHeader);
+  // Cookie values are credentials; never write raw cookie headers to the log.
 
   int currentReplyIndex = currentUrls_.indexOf(replyUrl);
 
@@ -308,8 +307,11 @@ void RequestFeed::finished(QNetworkReply *reply)
                         "This website requires browser verification before allowing access. "
                         "%2 cannot complete this verification because it does not include "
                         "a full web browser.\n\n"
-                        "Please contact the website operator and ask them to exempt their "
-                        "RSS/Atom feed URLs from browser challenges.")
+                        "You can try completing verification in your browser, then exporting "
+                        "cookies in Netscape format and importing them in Tools > Options > "
+                        "Network > Website cookies. A matching User-Agent may also be required "
+                        "in overrides.ini. Importing cookies does not guarantee access. "
+                        "Alternatively, ask the website operator to exempt RSS/Atom feeds.")
                          .arg(challengeProvider, QCoreApplication::applicationName()));
     } else if (reply->error() != QNetworkReply::NoError) {
       qDebug() << "  error retrieving RSS feed:" << reply->error() << reply->errorString();

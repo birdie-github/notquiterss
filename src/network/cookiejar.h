@@ -19,39 +19,44 @@
 #ifndef COOKIEJAR_H
 #define COOKIEJAR_H
 
-#include <QFile>
-#include <QStringList>
+#include <QMutex>
+#include <QNetworkCookie>
 #include <QNetworkCookieJar>
+#include <QSet>
+#include <QStringList>
 
-enum UseCookies {
-  BlockCookies,
-  SaveCookies,
-  DeleteCookiesOnClose
-};
-
+// One locked store; each network manager owns a separate forwarding jar.
 class CookieJar : public QNetworkCookieJar
 {
   Q_OBJECT
 public:
-  explicit CookieJar(QObject *parent);
+  struct Import {
+    QList<QNetworkCookie> cookies;
+    QStringList sites;
+    int expired = 0;
+  };
 
-  bool setCookiesFromUrl(const QList<QNetworkCookie> &cookieList, const QUrl &url);
-
-  QList<QNetworkCookie> getAllCookies();
-  void setAllCookies(const QList<QNetworkCookie> &cookieList);
-
-  void saveCookies();
-  void loadCookies();
-
-  UseCookies useCookies() const;
-  void setUseCookies(UseCookies value);
-
-public slots:
-  void clearCookies();
+  explicit CookieJar(const QString &path, QObject *parent = nullptr);
+  QNetworkCookieJar *createNetworkJar(QObject *parent);
+  QList<QNetworkCookie> cookiesForUrl(const QUrl &url) const override;
+  bool setCookiesFromUrl(const QList<QNetworkCookie> &cookies, const QUrl &url) override;
+  static bool readImport(const QString &path, Import *result, QString *error);
+  bool importCookies(const Import &data, QString *error);
+  QStringList enabledSites() const;
+  bool removeSite(const QString &site, QString *error);
+  bool saveCookies(QString *error = nullptr);
 
 private:
-  UseCookies useCookies_;
-
+  void loadCookies();
+  QByteArray persistentData() const; // caller holds mutex_
+  bool saveLocked(QString *error);
+  bool enabled(const QString &scope) const;
+  void addSite(const QString &scope);
+  const QString path_;
+  mutable QMutex mutex_;
+  QSet<QString> sites_;
+  bool dirty_ = false;
+  bool writable_ = true;
 };
 
 #endif // COOKIEJAR_H

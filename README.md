@@ -28,3 +28,5 @@ See [LOGGING.md](LOGGING.md) for file logging, `--debug`, command-line help,
 and the log-location control in General settings.
 
 Resource organization and platform deployment are documented in [resources/README.md](resources/README.md).
+
+For feeds requiring browser verification, see [Website cookies](COOKIES.md).

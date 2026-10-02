@@ -125,6 +125,7 @@ HEADERS += \
     src/application/splashscreen.h \
     src/network/authenticationdialog.h \
     src/network/cookiejar.h \
+    src/network/cookiesdialog.h \
     src/network/networkmanager.h \
     src/articleview/articleview.h \
     src/database/database.h \
@@ -190,6 +191,7 @@ SOURCES += \
     src/application/splashscreen.cpp \
     src/network/authenticationdialog.cpp \
     src/network/cookiejar.cpp \
+    src/network/cookiesdialog.cpp \
     src/network/networkmanager.cpp \
     src/articleview/articleview.cpp \
     src/database/database.cpp \

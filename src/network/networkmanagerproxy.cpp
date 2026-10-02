@@ -44,9 +44,7 @@ NetworkManagerProxy::NetworkManagerProxy(QObject* parent)
   : QNetworkAccessManager(parent)
 
 {
-  setCookieJar(mainApp->cookieJar());
-  // CookieJar is shared between NetworkManagers
-  mainApp->cookieJar()->setParent(0);
+  setCookieJar(mainApp->cookieJar()->createNetworkJar(this));
 
 #ifndef QT_NO_NETWORKPROXY
   qRegisterMetaType<QNetworkProxy>("QNetworkProxy");

@@ -34,7 +34,7 @@
   "files": {
     "database": "feeds.db",
     "log": "debug.log",
-    "cookies": "cookies.dat",
+    "cookies": "cookies.txt",
     "last_feed": "lastfeed.dat",
     "portable_marker": "portable.dat",
     "cache": "cache",
