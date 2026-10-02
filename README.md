@@ -9,7 +9,7 @@ The application renders articles with QTextBrowser, without QtWebKit or
 QtWebEngine. See [INSTALL](INSTALL) for dependencies and [ARTICLE_VIEW.md](ARTICLE_VIEW.md)
 for rendering behavior, image-format plugins and validation notes.
 
-Notification sounds use system audio players (paplay, afplay, aplay).
+Notification sounds use system audio players (paplay on Linux, afplay on macOS, aplay as fallback, PowerShell on Windows).
 
 Links:
 * Git repository: https://github.com/birdie-github/notquiterss

@@ -42,11 +42,12 @@ builds without an explicit UTF-8 INI codec may misread non-ASCII values.
 
 Notification audio
 ==================
-The application uses system audio players (paplay, afplay, aplay) for WAV files.
+The application uses system audio players for WAV files.
 A working audio service/device is required; codec plugins are not needed.
 Supported players are detected automatically: paplay (PulseAudio/PipeWire) on
-Linux, afplay on macOS, aplay (ALSA) as fallback on Linux. When no player is
-available, playback failures are logged silently.
+Linux, afplay on macOS, aplay (ALSA) as fallback on Linux, and PowerShell on
+Windows (using .NET System.Media.SoundPlayer, supports WAV and MP3).
+When no player is available, playback failures are logged silently.
 
 Article age retention
 =====================
