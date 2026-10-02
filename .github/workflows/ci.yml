@@ -151,12 +151,10 @@ jobs:
           python3 tests/resources/test_resources.py
           python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake qmake6 --make mingw32-make
-      - name: Prepare external QtSingleApplication and build
+      - name: Prepare dependencies and build
         run: |
           export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"
           dep_work="$(cygpath -m "$RUNNER_TEMP/app-deps")"
-          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake qmake6 --make mingw32-make
-          export QMAKEFEATURES="$dep_work/install/features"
           python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
           export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
@@ -270,8 +268,6 @@ jobs:
 
           # Include the notices supplied by our external dependency helpers.
           mkdir -p "$bundle/Contents/Resources/licenses"
-          cp -R "$RUNNER_TEMP/app-deps/install/share/licenses/qtsingleapplication" "$bundle/Contents/Resources/licenses/"
-          cp -R "$RUNNER_TEMP/app-deps/miniaudio/share/licenses/miniaudio" "$bundle/Contents/Resources/licenses/"
 
           # Homebrew installs Qt modules separately; plugins can reference
           # frameworks outside qtbase. Do not overwrite already-fixed libraries
@@ -351,6 +347,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PROJECT_NAME }}-macOS-arm64-${{ github.sha }}
-          path: _build/artifacts/*.dmg
-          if-no-files-found: error
-          retention-days: 14
+          path: _build/artifa                                                                          

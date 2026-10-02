@@ -24,7 +24,8 @@
 #include "languagecatalog.h"
 #include "applicationstyle.h"
 #include <QtWidgets>
-#include <qtsingleapplication.h>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QNetworkDiskCache>
 #include <QLocale>
 #include <QLibraryInfo>
@@ -38,7 +39,7 @@ class NetworkManager;
 class SplashScreen;
 class UpdateFeeds;
 
-class MainApplication : public QtSingleApplication
+class MainApplication : public QApplication
 {
   Q_OBJECT
 public:
@@ -97,12 +98,15 @@ public slots:
 signals:
   void signalRunUserFilter(int feedId, int filterId);
   void signalSqlQueryExec(const QString &query);
+  void messageReceived(const QString &message);
 
 private slots:
   void commitData(QSessionManager &manager);
 
 private:
   void createSettings();
+  void startLocalServer();
+  void sendMessage(const QString &message);
   bool connectDatabase();
   bool confirmPrerelease();
   void setStyleApplication();
@@ -114,6 +118,7 @@ private:
 
   bool isPortableAppsCom_;
   bool isClosing_;
+  QLocalServer *localServer_;
   int startupExitCode_ = 0;
 
   bool storeDBMemory_;

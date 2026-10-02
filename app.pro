@@ -234,12 +234,8 @@ OBJECTS_DIR = $${BUILD_DIR}/obj
 MOC_DIR = $${BUILD_DIR}/moc
 RCC_DIR = $${BUILD_DIR}/rcc
 
-# Require QtSingleApplication built for the selected Qt and its qmake feature.
-!load(qtsingleapplication, true) {
-  error("QtSingleApplication built with the selected Qt is required, including qtsingleapplication.prf. See INSTALL for the preparation helper and QMAKEFEATURES setup.")
-}
+# Single-instance via QLocalServer (built into Qt, no external dependency).
 include(3rdparty/sqlite.pri)
-include(3rdparty/miniaudio.pri)
 
 win32|mac {
   TARGET = $$PROJECT_EXECUTABLE

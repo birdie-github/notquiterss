@@ -13,8 +13,6 @@ See resources/external/translations/README.md for discovery paths, optional meta
   Qt modules: Core, Gui, Widgets, PrintSupport, Network, Sql, Xml, Svg
   Qt's QSQLITE plugin (used for initialization and VACUUM)
   Qt 6 additionally requires Core5Compat for the existing QTextCodec decoders
-  QtSingleApplication for the selected Qt: headers, library and qtsingleapplication.prf
-  miniaudio 0.11.25 headers (explicit preparation helper below; no shared library)
 
 Selecting Qt 5 or Qt 6
 =====================
@@ -25,20 +23,16 @@ The application defaults to Qt 5. Invoke qmake from the matching Qt installation
 
 USE_QT accepts only 5 or 6; a mismatch with qmake's Qt is an error.
 It cannot switch the libraries used by an already selected qmake executable.
-Use separate application build directories and QtSingleApplication work directories
-for each Qt/toolchain. Prepare the dependency with the SAME qmake as the application.
 The platform recipes below retain Qt 5 defaults. Only Windows CI selects Qt 6.
 
 For Qt 6 on MSYS2, substitute qt6-base, qt6-svg, qt6-tools and
 qt6-imageformats for the qt5 packages below, and add
-mingw-w64-ucrt-x86_64-qt6-5compat. Pass --qmake qmake6 to the preparation helper,
-then use the Qt 6 application command above. Deploy with windeployqt6;
-the Qt 5 --no-angle option is not applicable.
+mingw-w64-ucrt-x86_64-qt6-5compat. Then use the Qt 6 application command above.
+Deploy with windeployqt6; the Qt 5 --no-angle option is not applicable.
 
 On Linux, install the equivalent Qt 6 development packages, including
-Core5Compat, and use the helper if no matching QtSingleApplication feature
-is packaged. On Homebrew, select the Qt 6 formula's bin directory instead of
-qt@5, prepare QtSingleApplication with that qmake, and pass USE_QT=6.
+Core5Compat. On Homebrew, select the Qt 6 formula's bin directory instead of
+qt@5 and pass USE_QT=6.
 Executable names vary by distribution; an absolute path to qmake is also valid.
 
 Both builds read/write UTF-8 INI values so non-ASCII settings survive switching
@@ -48,42 +42,11 @@ builds without an explicit UTF-8 INI codec may misread non-ASCII values.
 
 Notification audio
 ==================
-Qt Multimedia is not used. Miniaudio provides native output through WASAPI on
-Windows, Core Audio on macOS, and PulseAudio/ALSA on Linux. PipeWire systems can
-use their PulseAudio-compatible server. A working audio service/device and the
-corresponding runtime client library are still required; codec plugins are not.
-The null (silent) backend is disabled so output failures are reported.
-
-The explicit helper downloads only miniaudio.h and LICENSE from upstream commit
-9634bedb5b5a2ca38c1ee7108a9358a4e233f14d (0.11.25), verifies their SHA-256 hashes,
-and installs them outside the source tree. It does not build or install packages:
-
-  python3 scripts/prepare-miniaudio.py --prefix "$HOME/miniaudio-snapshot"
-  export MINIAUDIO_INCLUDE_DIR="$HOME/miniaudio-snapshot/include"
-
-For an offline preparation, add --source-dir /path/to/miniaudio-0.11.25 with
-the upstream miniaudio.h and LICENSE files; the same hashes are checked.
-Alternatively, point MINIAUDIO_INCLUDE_DIR at compatible 0.11.25+ headers from
-the 0.11.x series. Version 0.12 requires a separate integration review.
-The header implementation is compiled once in SoundPlayer; do not also link
-a miniaudio library. There are no downloads during application qmake/make.
-On Windows use a native C:/... include path, as in the recipe below.
-
-The normal WAV sound picker and saved sound paths are unchanged. Built-in
-WAV/FLAC/MP3 decoding is available; manually configured AAC, Ogg/Vorbis or other
-files formerly supported by a Qt backend are not supported. The legacy hidden
-Settings/useMediaPlayer key is ignored; all sounds use the same FIFO queue,
-including configurations that previously launched an external "play" command.
-Errors are logged with the filename and backend result. Repeated failures are
-suppressed in the UI until playback starts successfully again.
-
-Audio initialization and file loading run off the UI thread. The output device
-and miniaudio threads are released after an idle tail, and worker teardown is
-joined on application destruction. Closing to the tray does not stop the player.
-Linux links dl/pthread/m; macOS links the system CoreFoundation/CoreAudio/
-AudioToolbox frameworks directly. Miniaudio adds no runtime DLL to deploy on
-Windows. Its MIT-0/Unlicense text and source provenance are installed by the
-helper under share/licenses/miniaudio; include these in distribution notices.
+The application uses system audio players (paplay, afplay, aplay) for WAV files.
+A working audio service/device is required; codec plugins are not needed.
+Supported players are detected automatically: paplay (PulseAudio/PipeWire) on
+Linux, afplay on macOS, aplay (ALSA) as fallback on Linux. When no player is
+available, playback failures are logged silently.
 
 Article age retention
 =====================
@@ -134,32 +97,11 @@ SQLite build with UTF-16, declared column types and the backup API enabled.
 The old SQLITE_OMIT_* defines applied only to the deleted engine sources;
 application compiler flags cannot configure a prebuilt SQLite library.
 
-QtSingleApplication must be installed before application qmake runs. Fedora
-supplies the library AND qmake feature. Where a suitable package is unavailable,
-the explicit helper below builds a static QtSingleApplication library against
-your installed shared Qt and installs headers and qtsingleapplication.prf.
-It fetches only qtproject/qt-solutions commit:
-  777e95ba69952f11eaec0adfb0cb987fabcdecb3
-Sources, temporary build files and installed outputs stay under --work-dir,
-which must be OUTSIDE the application source tree. The helper requires Python 3
-and Git. It is never invoked by application qmake/make and performs no package
-installation. A successful repeated run reuses the verified source checkout;
-a partial/modified checkout requires a fresh work directory.
-
-Use a separate work directory for each compiler/Qt installation/architecture.
-The helper defaults to release; pass --config debug to prepare the debug archive
-as well. Request only configurations supplied by your Qt package. Rebuild both
-archives after changing the toolchain. QMAKEFEATURES must point at the installed
-features directory, not the upstream .pri file. A .pri that adds source files
-is not an installed-library feature. SYSTEMQTSA is no longer needed.
-
 Linux (Fedora 44)
 ================
   sudo dnf install python3 gcc-c++ make pkgconf-pkg-config qt5-qtbase-devel \
-    qt5-qtsvg-devel qt5-qttools-devel qtsingleapplication-qt5-devel \
+    qt5-qtsvg-devel qt5-qttools-devel \
     sqlite-devel libxml2-devel qt5-qtimageformats
-  python3 scripts/prepare-miniaudio.py --prefix "$HOME/miniaudio-snapshot"
-  export MINIAUDIO_INCLUDE_DIR="$HOME/miniaudio-snapshot/include"
   mkdir _build
   cd _build
   qmake-qt5 ../app.pro CONFIG+=release CONFIG-=debug_and_release PREFIX=/usr
@@ -167,7 +109,7 @@ Linux (Fedora 44)
   sudo make install
 
 Other Linux distributions need the equivalent development packages and Qt 5
-QtSingleApplication feature. qmake may be named qmake or qmake-qt5. For Clang on Linux,
+toolchain. qmake may be named qmake or qmake-qt5. For Clang on Linux,
 install clang and lld, then pass -spec linux-clang and QMAKE_LFLAGS+=-fuse-ld=lld
 to qmake so compiler-specific LTO flags match the compiler and linker.
 
@@ -188,12 +130,6 @@ it does not use the Qt online installer's separate MinGW or an MSVC toolchain.
 
 From the application source directory:
   export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"
-  dep_work="$(cygpath -m "$HOME/app-deps-ucrt64")"
-  /ucrt64/bin/python scripts/prepare-qtsingleapplication.py \
-    --work-dir "$dep_work" --qmake qmake-qt5 --make mingw32-make
-  export QMAKEFEATURES="$dep_work/install/features"
-  python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
-  export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
   mkdir _build
   cd _build
   qmake-qt5 ../app.pro CONFIG+=release CONFIG-=debug_and_release
@@ -204,8 +140,7 @@ From the application source directory:
 The install target copies the shared external resource stage into resources/
 beside the executable, including styles, sounds, translations and sharing data. The UCRT64 shell supplies the dependency DLL paths for local
 testing. MSVC is not covered by this recipe or CI: it needs compatible external
-libraries and its own installed qtsingleapplication.prf; do not link the UCRT64
-C++ archive into an MSVC application.
+libraries; do not link the UCRT64 C++ archive into an MSVC application.
 
 macOS (Homebrew, native architecture)
 ====================================
@@ -215,11 +150,6 @@ Install Xcode Command Line Tools and Homebrew (https://brew.sh/) first.
 From the application source directory:
   export PATH="$(brew --prefix qt)/bin:$PATH"
   export PKG_CONFIG_PATH="$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig"
-  dep_work="$HOME/app-deps-macos"
-  python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work"
-  export QMAKEFEATURES="$dep_work/install/features"
-  python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
-  export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
   mkdir _build
   cd _build
   qmake ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
@@ -255,9 +185,6 @@ If qmake reports a missing dependency, verify in the SAME build environment:
   pkg-config --modversion sqlite3 libxml-2.0
   pkg-config --cflags --libs sqlite3 libxml-2.0
   pkg-config --atleast-version=3.36.0 sqlite3
-Also check QMAKEFEATURES and that its qtsingleapplication.prf refers to installed
-headers/libraries. An existing packaged feature may be used instead of the
-helper. Match the Qt version, compiler, architecture and debug/release ABI.
 No application configuration/build step downloads dependencies.
 
 These recipes and CI compile for local use; they do not create self-contained
@@ -267,9 +194,6 @@ deploy non-Qt dependencies as well (SQLite, libxml2 and their dependencies,
 OpenSSL/TLS backend, compiler runtime where needed). Deployment tools alone
 must not be assumed to collect every non-Qt library. macOS bundles need their
 non-system dylib paths fixed and signing performed after all files are copied.
-Include the licenses of deployed dependencies, including the helper's installed
-share/licenses/qtsingleapplication directory. Packaged shared QtSingleApplication
-builds also require that shared library; the helper's static build does not.
 
 Keep the QSQLITE plugin, Qt platform plugin and image-format
 plugins, including WebP. Linux packages should depend on the selected Qt's
@@ -288,4 +212,4 @@ need these runtime checks; compilation alone cannot establish them.
 Application styles
 ==================
 The normal install/bundle targets deploy the style directory on every platform.
-For runtime discovery, QSS metadata, paths and testing, see resources/external/themes/README.md.
+For runtime discovery,                                                                           

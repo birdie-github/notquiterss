@@ -73,7 +73,7 @@ public:
   explicit UpdateObject(QObject *parent = 0);
   ~UpdateObject();
 
-  std::atomic_bool isSaveMemoryDatabase;
+  std::atomic_bool isSaveMemoryDatabase{false};
 
 public slots:
   void slotGetFeedTimer(int feedId);

@@ -41,9 +41,10 @@
 #include "articlecontent.h"
 
 MainApplication::MainApplication(int &argc, char **argv)
-  : QtSingleApplication(argc, argv)
-  , isPortableAppsCom_(false)
-  , isClosing_(false)
+  : QApplication(argc, argv)
+
+  , localServer_(nullptr)
+
   , dbFileExists_(false)
   , translator_(0)
   , qt_translator_(0)
@@ -71,21 +72,30 @@ MainApplication::MainApplication(int &argc, char **argv)
   globals.init();
 
   QString message = options.messages.join('\n');
-  if (isRunning()) {
+
+  // Try to start the local server — this is the single-instance gate.
+  // The first instance succeeds; subsequent instances get AddressInUseError
+  // and must exit, forwarding any messages to the running instance.
+  startLocalServer();
+  if (!localServer_) {
     if (options.debug)
-      qInfo() << "An instance is already running. Restart it with --debug to enable its console logging.";
-    if (message.isEmpty()) {
-      sendMessage("--show");
-    } else {
-      sendMessage(message);
+      qInfo() << "Another instance is already running.";
+    if (!options.messages.contains("--exit")) {
+      if (message.isEmpty()) {
+        sendMessage("--show");
+      } else {
+        sendMessage(message);
+      }
     }
     isClosing_ = true;
+    startupExitCode_ = 0;
     return;
-  } else {
-    if (options.messages.contains("--exit")) {
-      isClosing_ = true;
-      return;
-    }
+  }
+
+  if (options.messages.contains("--exit")) {
+    isClosing_ = true;
+    startupExitCode_ = 0;
+    return;
   }
 
   setWindowIcon(QIcon(":/images/application256"));
@@ -318,6 +328,71 @@ bool MainApplication::finishModalOperations()
     return false;
   }
   return true;
+}
+
+
+void MainApplication::startLocalServer()
+{
+  const QString serverName = QStringLiteral("notquiterss-%1").arg(applicationName());
+
+  // Try to connect to an existing server — if successful, another instance
+  // is already running and we must exit (this is the second instance).
+  QLocalSocket probe;
+  probe.connectToServer(serverName);
+  if (probe.waitForConnected(1000)) {
+    // Another instance is running.  Leave localServer_ null so main()
+    // detects the gate failure and the second instance exits.
+    probe.abort();
+    probe.disconnectFromServer();
+    return;
+  }
+  // Connection failed — either no instance running, or a stale socket.
+
+  localServer_ = new QLocalServer(this);
+  connect(localServer_, &QLocalServer::newConnection, this, [this]() {
+    QLocalSocket *socket = localServer_->nextPendingConnection();
+    connect(socket, &QLocalSocket::readyRead, this, [this, socket]() {
+      const QByteArray data = socket->readAll();
+      if (!data.isEmpty()) {
+        emit this->messageReceived(QString::fromUtf8(data));
+      }
+      socket->deleteLater();
+    });
+    connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
+  });
+
+  if (!localServer_->listen(serverName)) {
+    // AddressInUseError after probe connect-failed means a stale socket from
+    // a crashed instance — remove it and retry once.
+    if (localServer_->serverError() == QAbstractSocket::AddressInUseError) {
+      QLocalServer::removeServer(serverName);
+      if (!localServer_->listen(serverName)) {
+        qWarning() << "Cannot create local server:" << localServer_->errorString();
+        localServer_->deleteLater();
+        localServer_ = nullptr;
+        return;
+      }
+      qInfo() << "Recovered from stale local server socket.";
+    } else {
+      qWarning() << "Cannot create local server:" << localServer_->errorString();
+      localServer_->deleteLater();
+      localServer_ = nullptr;
+    }
+  }
+}
+
+void MainApplication::sendMessage(const QString &message)
+{
+  const QString serverName = QStringLiteral("notquiterss-%1").arg(applicationName());
+  QLocalSocket socket;
+  socket.connectToServer(serverName);
+  if (socket.waitForConnected(2000)) {
+    const QByteArray data = message.toUtf8();
+    socket.write(data);
+    socket.flush();
+    socket.waitForBytesWritten(2000);
+  }
+  // Connection failure is acceptable — the target instance may have crashed.
 }
 
 void MainApplication::quitApplication()
