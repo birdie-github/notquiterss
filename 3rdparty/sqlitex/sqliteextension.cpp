@@ -28,12 +28,21 @@
 #include <sqlite3.h>
 #include <QRegularExpression>
 
+#include <QCollator>
+#include <QLocale>
+
 static int localeCompare( void* /*arg*/, int len1, const void* data1, int len2, const void* data2 )
 {
-  QString string1 = QString::fromRawData( reinterpret_cast<const QChar*>( data1 ), len1 / sizeof( QChar ) );
-  QString string2 = QString::fromRawData( reinterpret_cast<const QChar*>( data2 ), len2 / sizeof( QChar ) );
+  static thread_local const QCollator collator([]() {
+    QCollator c(QLocale(QLocale::English));
+    c.setCaseSensitivity(Qt::CaseInsensitive);
+    return c;
+  }());
 
-  return QString::localeAwareCompare( string1, string2 );
+  auto str1 = QStringView( reinterpret_cast<const QChar*>( data1 ), len1 / sizeof( QChar ) );
+  auto str2 = QStringView( reinterpret_cast<const QChar*>( data2 ), len2 / sizeof( QChar ) );
+
+  return collator.compare( str1, str2 );
 }
 
 static int nocaseCompare( void* /*arg*/, int len1, const void* data1, int len2, const void* data2 )
