@@ -518,14 +518,21 @@ void MainApplication::setTranslateApplication()
                           resourcesDir() + ("/" + ProjectMetadata::qtTranslations()), qtTranslationsDir};
   directories.removeDuplicates();
   if (langFileName_ != QLatin1String("en")) {
+    bool loaded = false;
     for (const QString &directory : directories) {
       // windeployqt may merge Qt module catalogs into qt_<locale>.qm.
       if (qt_translator_->load("qtbase_" + langFileName_, directory) ||
           qt_translator_->load("qt_" + langFileName_, directory)) {
         installTranslator(qt_translator_);
+        loaded = true;
+        if (LogFile::consoleLoggingEnabled())
+          qDebug() << "[translations] Loaded Qt catalog:" << qt_translator_->filePath();
         break;
       }
     }
+    if (!loaded && LogFile::consoleLoggingEnabled())
+      qWarning() << "[translations] Cannot load Qt catalog for" << langFileName_
+                 << "(qtbase_<locale>.qm or qt_<locale>.qm); searched:" << directories;
   }
 }
 

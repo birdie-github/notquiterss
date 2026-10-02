@@ -19,6 +19,7 @@ jobs:
       - name: Test resource staging and translation build
         run: |
           python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake qmake-qt5
       - name: Prepare miniaudio
         run: |
@@ -123,6 +124,7 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-base
             mingw-w64-ucrt-x86_64-qt6-svg
             mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-translations
             mingw-w64-ucrt-x86_64-qt6-5compat
             mingw-w64-ucrt-x86_64-qt6-imageformats
             mingw-w64-ucrt-x86_64-sqlite3
@@ -132,6 +134,7 @@ jobs:
       - name: Test resource staging
         run: |
           python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake qmake6 --make mingw32-make
       - name: Prepare external QtSingleApplication and build
         run: |
@@ -147,7 +150,7 @@ jobs:
           mingw32-make -j"$(nproc)"
           mingw32-make install
           python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target
-          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_EXECUTABLE="+d["executable"]); print("PROJECT_QT_TRANSLATIONS="+d["root"]+"/"+d["qtTranslations"])' >> "$GITHUB_ENV"
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_EXECUTABLE="+d["executable"]); print("PROJECT_RESOURCE_ROOT="+d["root"])' >> "$GITHUB_ENV"
 
       - name: Deploy with windeployqt
         run: |
@@ -162,10 +165,14 @@ jobs:
           windeployqt6 \
             --release \
             --compiler-runtime \
-            --translationdir "$(cygpath -m "$PWD/$DEPLOY_DIR/$PROJECT_QT_TRANSLATIONS")" \
+            --no-translations \
             --no-opengl-sw \
             --verbose 1 \
             "$EXE"
+
+          python3 ../scripts/deploy-qt-translations.py --source .. \
+            --resources "$DEPLOY_DIR/$PROJECT_RESOURCE_ROOT" \
+            --qt-translations "$(qmake6 -query QT_INSTALL_TRANSLATIONS)"
 
           echo "=== Collecting MSYS2 runtime dependencies ==="
 
@@ -211,10 +218,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install qt sqlite libxml2 pkgconf python
+        run: brew install qt qttranslations sqlite libxml2 pkgconf python
       - name: Test resource staging and translation build
         run: |
           python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake "$(brew --prefix qt)/bin/qmake"
       - name: Prepare external QtSingleApplication and build
         run: |
@@ -260,6 +268,9 @@ jobs:
             -libpath="$(brew --prefix sqlite)/lib" \
             -libpath="$(brew --prefix libxml2)/lib" \
             -verbose=2 -no-codesign
+          python3 "$GITHUB_WORKSPACE/scripts/deploy-qt-translations.py" \
+            --source "$GITHUB_WORKSPACE" --resources "$bundle/Contents/Resources" \
+            --qt-translations "$("$qt_bin/qmake" -query QT_INSTALL_TRANSLATIONS)"
           test -f "$bundle/Contents/PlugIns/platforms/libqcocoa.dylib"
           test -f "$bundle/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
 
