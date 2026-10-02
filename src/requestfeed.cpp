@@ -308,8 +308,8 @@ void RequestFeed::finished(QNetworkReply *reply)
                         "%2 cannot complete this verification because it does not include "
                         "a full web browser.\n\n"
                         "You can try completing verification in your browser, then exporting "
-                        "cookies in Netscape format and importing them in Tools > Options > "
-                        "Network > Website cookies. A matching User-Agent may also be required "
+                        "cookies in Netscape format and importing them in Tools > "
+                        "Website cookies. A matching User-Agent may also be required "
                         "in overrides.ini. Importing cookies does not guarantee access. "
                         "Alternatively, ask the website operator to exempt RSS/Atom feeds.")
                          .arg(challengeProvider, QCoreApplication::applicationName()));

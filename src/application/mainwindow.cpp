@@ -42,6 +42,9 @@
 #include "feedpropertiesdialog.h"
 #include "filterrulesdialog.h"
 #include "newsfiltersdialog.h"
+#include "cookiesdialog.h"
+#include <QPainter>
+#include <QPixmap>
 #include "settings.h"
 #include "shareservice.h"
 
@@ -1067,6 +1070,29 @@ void MainWindow::createActions()
   bulkFeedSettingsAct_->setObjectName("bulkFeedSettingsAct");
   this->addAction(bulkFeedSettingsAct_);
   connect(bulkFeedSettingsAct_, &QAction::triggered, this, &MainWindow::showBulkFeedSettings);
+
+  websiteCookiesAct_ = new QAction(this);
+  websiteCookiesAct_->setObjectName("websiteCookiesAct");
+  QIcon cookieIcon;
+  // Supply multiple resolutions for menus and high-DPI screens.
+  for (int size : {16, 24, 32, 48, 64}) {
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    QFont font = this->font();
+    font.setPixelSize(size - 2);
+    painter.setFont(font);
+    painter.drawText(pixmap.rect(), Qt::AlignCenter, QStringLiteral("🍪"));
+    painter.end();
+    cookieIcon.addPixmap(pixmap);
+  }
+  websiteCookiesAct_->setIcon(cookieIcon);
+  this->addAction(websiteCookiesAct_);
+  connect(websiteCookiesAct_, &QAction::triggered, this, [this]() {
+    CookiesDialog dialog(this);
+    dialog.exec();
+  });
+
   setFilterNewsAct_ = new QAction(this);
   setFilterNewsAct_->setObjectName("setFilterNewsAct");
   setFilterNewsAct_->setIcon(QIcon(":/images/filterOff"));
@@ -1505,6 +1531,7 @@ void MainWindow::createShortcut()
   shortcutRegistry_.append(showCleanUpWizardAct_);
   shortcutRegistry_.append(setNewsFiltersAct_);
   shortcutRegistry_.append(bulkFeedSettingsAct_);
+  shortcutRegistry_.append(websiteCookiesAct_);
   shortcutRegistry_.append(setFilterNewsAct_);
   optionsAct_->setShortcut(QKeySequence(Qt::Key_F8));
   shortcutRegistry_.append(optionsAct_);
@@ -1806,6 +1833,7 @@ void MainWindow::createMenu()
   toolsMenu_->addAction(showCleanUpWizardAct_);
   toolsMenu_->addAction(setNewsFiltersAct_);
   toolsMenu_->addAction(bulkFeedSettingsAct_);
+  toolsMenu_->addAction(websiteCookiesAct_);
   toolsMenu_->addSeparator();
   toolsMenu_->addAction(optionsAct_);
 
@@ -4546,6 +4574,7 @@ void MainWindow::retranslateStrings()
 
   setNewsFiltersAct_->setText(tr("Article Filters..."));
   bulkFeedSettingsAct_->setText(tr("Bulk configure feeds..."));
+  websiteCookiesAct_->setText(tr("Website cookies…"));
   setFilterNewsAct_->setText(tr("Filter Articles..."));
 
   optionsAct_->setText(tr("Options..."));

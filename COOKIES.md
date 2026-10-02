@@ -5,7 +5,7 @@ Cookies are disabled by default. For a feed that needs browser verification:
 1. Open the website in your browser and complete verification.
 2. Export the relevant cookies in Netscape `cookies.txt` format. Cookie exports
    can grant access to your accounts; do not share them or upload them to a bug report.
-3. Open **Tools → Options → Network → Website cookies → Import cookies…**.
+3. Open **Tools → Website cookies → Import cookies…**.
 4. Select the websites needed by your feeds and confirm. A leading dot includes
    subdomains. Import merges cookies; it does not replace unrelated websites.
 5. Update the feed. Some websites may also require the browser's User-Agent,

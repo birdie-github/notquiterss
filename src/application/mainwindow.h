@@ -547,6 +547,7 @@ private:
   QAction *showDownloadManagerAct_;
   QAction *setNewsFiltersAct_;
   QAction *bulkFeedSettingsAct_;
+  QAction *websiteCookiesAct_;
   QAction *setFilterNewsAct_;
   QAction *optionsAct_;
   QAction *updateAllFeedsAct_;

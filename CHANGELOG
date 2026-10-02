@@ -1,3 +1,9 @@
+Version 0.95.3 BETA (2026-10-02)
+* CHANGE: Better HiDPI icons.
+* CHANGE: Reworked cookies management - check [website cookies](COOKIES.md).
+* BUG FIX: Feed sorting now shows English/Latin feeds at the top.
+* BUG FIX: Fix missing translations.
+
 Version 0.95.2 BETA (2026-09-29)
 * BUG FIX: App could crash on startup under certain conditions.
 * BUG FIX: An attempt to fix malfunctioning cursors for the app's AppImage Linux version.
