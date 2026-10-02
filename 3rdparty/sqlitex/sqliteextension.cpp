@@ -34,7 +34,7 @@
 static int localeCompare( void* /*arg*/, int len1, const void* data1, int len2, const void* data2 )
 {
   static thread_local const QCollator collator([]() {
-    QCollator c(QLocale(QLocale::English));
+    QCollator c{QLocale(QLocale::English)}; // Fixed: braces prevent function declaration parsing
     c.setCaseSensitivity(Qt::CaseInsensitive);
     return c;
   }());
