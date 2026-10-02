@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          dnf install -y git python3 gcc-c++ clang lld make pkgconf-pkg-config qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel qtsingleapplication-qt5-devel sqlite-devel libxml2-devel
+          dnf install -y git python3 gcc-c++ clang lld make pkgconf-pkg-config qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel sqlite-devel libxml2-devel
       - uses: actions/checkout@v4
       - name: Test resource staging and translation build
         run: |
@@ -28,10 +28,6 @@ jobs:
           qmake-qt5 -spec ${{ matrix.spec }} ../tests/cookies/cookies.pro
           make -j"$(nproc)"
           ./cookies-test
-      - name: Prepare miniaudio
-        run: |
-          python3 scripts/prepare-miniaudio.py --prefix "$RUNNER_TEMP/miniaudio-snapshot"
-          echo "MINIAUDIO_INCLUDE_DIR=$RUNNER_TEMP/miniaudio-snapshot/include" >> "$GITHUB_ENV"
       - name: Build
         run: |
           mkdir _build
@@ -64,24 +60,14 @@ jobs:
           make -j"$(nproc)"
           ./cookies-test
 
-      - name: Prepare dependencies and build
+      - name: Build AppImage
         run: |
           set -euo pipefail
-          dep_work="$RUNNER_TEMP/app-deps"
-          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake qmake6
-          export QMAKEFEATURES="$dep_work/install/features"
-          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
-          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
-
           mkdir _build
           cd _build
           qmake6 ../app.pro USE_QT=6 PREFIX=/usr CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           make -j"$(nproc)"
           make INSTALL_ROOT="$PWD/AppDir" install
-
-          mkdir -p AppDir/usr/share/NotQuiteRSS/licenses
-          cp -R "$dep_work/install/share/licenses/qtsingleapplication" AppDir/usr/share/NotQuiteRSS/licenses/
-          cp -R "$dep_work/miniaudio/share/licenses/miniaudio" AppDir/usr/share/NotQuiteRSS/licenses/
 
           python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"])' >> "$GITHUB_ENV"
 
@@ -151,12 +137,9 @@ jobs:
           python3 tests/resources/test_resources.py
           python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake qmake6 --make mingw32-make
-      - name: Prepare dependencies and build
+      - name: Build
         run: |
           export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"
-          dep_work="$(cygpath -m "$RUNNER_TEMP/app-deps")"
-          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
-          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
           qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
@@ -237,17 +220,12 @@ jobs:
           python3 tests/resources/test_resources.py
           python3 tests/resources/test_qt_translations.py
           python3 tests/resources/test_translation_build.py --qmake "$(brew --prefix qt)/bin/qmake"
-      - name: Prepare external QtSingleApplication and build
+      - name: Build
         run: |
           set -euo pipefail
           qt_bin="$(brew --prefix qt)/bin"
           export PATH="$qt_bin:$PATH"
           export PKG_CONFIG_PATH="$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig"
-          dep_work="$RUNNER_TEMP/app-deps"
-          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake "$qt_bin/qmake"
-          export QMAKEFEATURES="$dep_work/install/features"
-          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
-          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
           "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
@@ -347,4 +325,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PROJECT_NAME }}-macOS-arm64-${{ github.sha }}
-          path: _build/artifa                                                                          
+          path: _build/artifacts/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+                                                                          
