@@ -7,7 +7,7 @@ Existing database content and legacy database columns are retained.
 
 Build dependencies: Qt 5.15.x, QtSingleApplication for Qt 5, SQLite, and libxml2 development headers (discovered
 through pkg-config). Rerun qmake after applying the renderer migration because
-source paths and linked Qt modules have changed. See INSTALL for platform details.
+source paths and linked Qt modules have changed. See [INSTALL](../INSTALL) for platform details.
 
 ## Article content and presentation
 

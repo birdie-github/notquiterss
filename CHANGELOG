@@ -1,6 +1,6 @@
 Version 0.95.3 BETA (2026-10-02)
 * CHANGE: Better HiDPI icons.
-* CHANGE: Reworked cookies management - check [website cookies](COOKIES.md).
+* CHANGE: Reworked cookies management - check [website cookies](docs/COOKIES.md).
 * BUG FIX: Feed sorting now shows English/Latin feeds at the top.
 * BUG FIX: Fix missing translations.
 
