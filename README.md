@@ -30,3 +30,9 @@ and the log-location control in General settings.
 Resource organization and platform deployment are documented in [resources/README.md](resources/README.md).
 
 For feeds requiring browser verification, see [Website cookies](COOKIES.md).
+
+### Dependencies and design choices explained
+
+NotQuiteRSS keeps QtSingleApplication because reliably enforcing a single running instance requires more than checking whether a local socket responds. Simultaneous launches, unresponsive processes, and crash recovery need careful handling—especially when two instances could overwrite the same user data. Removing this small dependency would make the application responsible for maintaining that machinery, without a clear benefit to users.
+
+Notification sounds use miniaudio, compiled into the application, with support for WAV, MP3, and FLAC. Users do not need to install or configure an external player. Launching system commands would introduce platform-dependent format support and require managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS reader, keeping a consistent built-in audio backend is the more practical choice.
