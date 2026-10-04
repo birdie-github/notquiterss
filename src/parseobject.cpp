@@ -35,6 +35,17 @@
 #endif
 #include <QRegularExpression>
 
+namespace {
+bool hasCommonArticle(const QHash<QString, QSet<int>> &first, const QString &firstValue,
+                      const QHash<QString, QSet<int>> &second, const QString &secondValue)
+{
+  const auto firstRows = first.constFind(firstValue);
+  const auto secondRows = second.constFind(secondValue);
+  return firstRows != first.cend() && secondRows != second.cend() &&
+      firstRows.value().intersects(secondRows.value());
+}
+}
+
 ParseObject::ParseObject(QObject *parent)
   : QObject(parent)
 {
@@ -223,10 +234,10 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
     if (!success && !db_.rollback())
       qCritical() << "Feed update rollback failed:" << db_.lastError();
   }
-  guidList_.clear();
-  titleList_.clear();
-  publishedList_.clear();
-  linkList_.clear();
+  guidIndex_.clear();
+  titleIndex_.clear();
+  publishedIndex_.clear();
+  linkIndex_.clear();
 
   if (!success) {
     qWarning() << "Feed update failed:" << feedId << sqlError_;
@@ -282,11 +293,15 @@ bool ParseObject::storeFeed(const QDomDocument &doc, int feedId, int &newCount,
   qDebug() << QString("Feed '%1' found with id = %2").arg(feedUrl).arg(parseFeedId_);
 
   if (!checkQuery(q.exec(QString("SELECT guid, title, published, link_href FROM news WHERE feedId='%1'").arg(feedId)), q)) return false;
+  // Build once per feed update, without adding newly inserted articles to
+  // the snapshot: duplicate handling within the incoming feed stays unchanged.
+  int articleRow = 0;
   while (q.next()) {
-    guidList_.append(q.value(0).toString());
-    titleList_.append(q.value(1).toString());
-    publishedList_.append(q.value(2).toString());
-    linkList_.append(q.value(3).toString());
+    guidIndex_[q.value(0).toString()].insert(articleRow);
+    titleIndex_[q.value(1).toString()].insert(articleRow);
+    publishedIndex_[q.value(2).toString()].insert(articleRow);
+    linkIndex_[q.value(3).toString()].insert(articleRow);
+    ++articleRow;
   }
   if (!checkQuery(!q.lastError().isValid(), q)) return false;
   q.finish();
@@ -507,31 +522,19 @@ void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
   qDebug() << "published:" << newsItem->updated;
 
   bool isDuplicate = false;
-  for (int i = 0; i < guidList_.count(); ++i) {
-    if (!newsItem->id.isEmpty()) {         // search by guid if present
-      if (guidList_.at(i) == newsItem->id) {
-        if (duplicateNewsMode_) {       // autodelete duplicate news enabled
-          isDuplicate = true;
-        } else {                        // autodelete dupl. news disabled
-          if (!newsItem->updated.isEmpty()) {  // search by pubDate if present
-            if (publishedList_.at(i) == newsItem->updated)
-              isDuplicate = true;
-          } else {                      // ... or by title
-            if (!newsItem->title.isEmpty() && (titleList_.at(i) == newsItem->title))
-              isDuplicate = true;
-          }
-        }
-      }
-    } else {                                // guid is absent
-      if (!newsItem->updated.isEmpty()) {    // search by pubDate if present
-        if (publishedList_.at(i) == newsItem->updated)
-          isDuplicate = true;
-      } else {                              // ... or by title
-        if (!newsItem->title.isEmpty() && (titleList_.at(i) == newsItem->title))
-          isDuplicate = true;
-      }
-    }
-    if (isDuplicate) break;
+  if (!newsItem->id.isEmpty()) {
+    if (duplicateNewsMode_)
+      isDuplicate = guidIndex_.contains(newsItem->id);
+    else if (!newsItem->updated.isEmpty())
+      isDuplicate = hasCommonArticle(guidIndex_, newsItem->id,
+                                     publishedIndex_, newsItem->updated);
+    else if (!newsItem->title.isEmpty())
+      isDuplicate = hasCommonArticle(guidIndex_, newsItem->id,
+                                     titleIndex_, newsItem->title);
+  } else if (!newsItem->updated.isEmpty()) {
+    isDuplicate = publishedIndex_.contains(newsItem->updated);
+  } else if (!newsItem->title.isEmpty()) {
+    isDuplicate = titleIndex_.contains(newsItem->title);
   }
 
   // Verify old news before a date to avoid adding them to base
@@ -753,78 +756,25 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
   qDebug() << "published:" << newsItem->updated;
 
   bool isDuplicate = false;
-  for (int i = 0; i < guidList_.count(); ++i) {
-    if (!newsItem->id.isEmpty()) {         // search by guid if present
-      if (guidList_.at(i) == newsItem->id) {
-        if (!newsItem->updated.isEmpty()) {  // search by pubDate if present
-          if (!duplicateNewsMode_) {
-            if (publishedList_.at(i) == newsItem->updated)
-              isDuplicate = true;
-          }
-          else {
-            isDuplicate = true;
-          }
-        } else {                            // ... or by title
-          if (!newsItem->title.isEmpty() && (titleList_.at(i) == newsItem->title))
-            isDuplicate = true;
-        }
-      }
-      if (!isDuplicate) {
-        if (!newsItem->updated.isEmpty()) {
-          if ((publishedList_.at(i) == newsItem->updated) &&
-              (titleList_.at(i) == newsItem->title)) {
-            isDuplicate = true;
-          }
-        }
-      }
+  if (!newsItem->id.isEmpty() || !newsItem->link.isEmpty()) {
+    const auto &identityIndex = !newsItem->id.isEmpty() ? guidIndex_ : linkIndex_;
+    const QString &identity = !newsItem->id.isEmpty() ? newsItem->id : newsItem->link;
+    if (!newsItem->updated.isEmpty()) {
+      isDuplicate = duplicateNewsMode_ ? identityIndex.contains(identity)
+          : hasCommonArticle(identityIndex, identity, publishedIndex_, newsItem->updated);
+      if (!isDuplicate)
+        isDuplicate = hasCommonArticle(publishedIndex_, newsItem->updated,
+                                       titleIndex_, newsItem->title);
+    } else if (!newsItem->title.isEmpty()) {
+      isDuplicate = hasCommonArticle(identityIndex, identity, titleIndex_, newsItem->title);
     }
-    else if (!newsItem->link.isEmpty()) {   // search by link_href
-      if (linkList_.at(i) == newsItem->link) {
-        if (!newsItem->updated.isEmpty()) {  // search by pubDate if present
-          if (!duplicateNewsMode_) {
-            if (publishedList_.at(i) == newsItem->updated)
-              isDuplicate = true;
-          }
-          else {
-            isDuplicate = true;
-          }
-        } else {                            // ... or by title
-          if (!newsItem->title.isEmpty() && (titleList_.at(i) == newsItem->title))
-            isDuplicate = true;
-        }
-      }
-      if (!isDuplicate) {
-        if (!newsItem->updated.isEmpty()) {
-          if ((publishedList_.at(i) == newsItem->updated) &&
-              (titleList_.at(i) == newsItem->title)) {
-            isDuplicate = true;
-          }
-        }
-      }
-    }
-    else {                                // guid is absent
-      if (!newsItem->updated.isEmpty()) {  // search by pubDate if present
-        if (!duplicateNewsMode_) {
-          if (publishedList_.at(i) == newsItem->updated)
-            isDuplicate = true;
-        }
-        else {
-          isDuplicate = true;
-        }
-      } else {                            // ... or by title
-        if (!newsItem->title.isEmpty() && (titleList_.at(i) == newsItem->title))
-          isDuplicate = true;
-      }
-      if (!isDuplicate) {
-        if (!newsItem->updated.isEmpty()) {
-          if ((publishedList_.at(i) == newsItem->updated) &&
-              (titleList_.at(i) == newsItem->title)) {
-            isDuplicate = true;
-          }
-        }
-      }
-    }
-    if (isDuplicate) break;
+  } else if (!newsItem->updated.isEmpty()) {
+    // With duplicate removal enabled, the existing rule matches any stored
+    // article when the incoming RSS entry has a date but no GUID or link.
+    isDuplicate = duplicateNewsMode_ ? !publishedIndex_.isEmpty()
+        : publishedIndex_.contains(newsItem->updated);
+  } else if (!newsItem->title.isEmpty()) {
+    isDuplicate = titleIndex_.contains(newsItem->title);
   }
 
   // Verify old news before a date to avoid adding them to base

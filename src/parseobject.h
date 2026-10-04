@@ -26,6 +26,8 @@
 #include <QObject>
 #include <QUrl>
 #include <QMutex>
+#include <QHash>
+#include <QSet>
 
 struct FeedItemStruct {
   QString title;
@@ -142,10 +144,12 @@ private:
   bool avoidedOldSingleNews_;
   QDate avoidedOldSingleNewsDate_;
 
-  QStringList guidList_;
-  QStringList linkList_;
-  QStringList titleList_;
-  QStringList publishedList_;
+  // Each set contains row numbers from the stored-article snapshot. Shared
+  // row numbers preserve comparisons that must match the same article.
+  QHash<QString, QSet<int>> guidIndex_;
+  QHash<QString, QSet<int>> linkIndex_;
+  QHash<QString, QSet<int>> titleIndex_;
+  QHash<QString, QSet<int>> publishedIndex_;
 
   QDateTime lastBuildDate_;
   QDateTime retentionCutoff_;
