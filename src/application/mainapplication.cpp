@@ -159,8 +159,8 @@ MainApplication::MainApplication(int &argc, char **argv)
   }
 
   DatabaseBackup::instance()->start();
-  receiveMessage(message);
   connect(this, SIGNAL(messageReceived(QString)), SLOT(receiveMessage(QString)));
+  receiveMessage(message);
 }
 
 MainApplication::~MainApplication()
