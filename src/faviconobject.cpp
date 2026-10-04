@@ -25,9 +25,66 @@
 #include <QDebug>
 #include <QtSql>
 #include <QRegularExpression>
+#include <QTextDocumentFragment>
 
 #define REPLY_MAX_COUNT 4
 #define REQUEST_TIMEOUT 30
+
+namespace {
+QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
+{
+  // Bound parsing work even for large pages. Icon declarations normally live
+  // near the start of the head; keep the existing /favicon.ico fallback.
+  QString html = QString::fromUtf8(data.left(64 * 1024));
+  static const QRegularExpression headEnd(QStringLiteral("</head\\s*>"),
+                                         QRegularExpression::CaseInsensitiveOption);
+  const auto end = headEnd.match(html);
+  if (end.hasMatch()) html.truncate(end.capturedStart());
+
+  // Skip comments and script bodies. Quoted attributes may contain '>'.
+  static const QRegularExpression tags(
+      QStringLiteral(R"rx(<!--.*?(?:-->|$)|<script\b[^>]*>.*?(?:</script\s*>|$)|<link\b((?:[^'"<>]++|'[^']*+'|"[^"]*+")*+)>)rx"),
+      QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+  static const QRegularExpression attributes(
+      QStringLiteral(R"rx((?:^|\s)([a-z][a-z0-9_-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s'"=<>`]+)))rx"),
+      QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression whitespace(QStringLiteral("\\s+"));
+
+  QUrl bestUrl;
+  int bestScore = -1;
+  auto links = tags.globalMatch(html);
+  while (links.hasNext()) {
+    const auto link = links.next();
+    if (link.capturedStart(1) < 0) continue;
+    QString rel, href, sizes;
+    auto attrs = attributes.globalMatch(link.captured(1));
+    while (attrs.hasNext()) {
+      const auto attr = attrs.next();
+      const QString name = attr.captured(1).toLower();
+      const QString value = attr.capturedStart(2) >= 0 ? attr.captured(2)
+          : attr.capturedStart(3) >= 0 ? attr.captured(3) : attr.captured(4);
+      if (name == QLatin1String("rel") && rel.isNull()) rel = value;
+      else if (name == QLatin1String("href") && href.isNull()) href = value;
+      else if (name == QLatin1String("sizes") && sizes.isNull()) sizes = value;
+    }
+    const QStringList relations = rel.toLower().split(whitespace, Qt::SkipEmptyParts);
+    const bool icon = relations.contains(QStringLiteral("icon"));
+    if (!icon && !relations.contains(QStringLiteral("apple-touch-icon"))) continue;
+    if (href.trimmed().isEmpty()) continue;
+    const QString decodedHref = QTextDocumentFragment::fromHtml(href).toPlainText().trimmed();
+    const QUrl target = pageUrl.resolved(QUrl(decodedHref));
+    if (!NetworkPolicy::isHttpUrl(target)) continue;
+    const QStringList dimensions = sizes.toLower().split(whitespace, Qt::SkipEmptyParts);
+    const int score = (icon ? 100 : 0) + (dimensions.contains(QStringLiteral("16x16")) ? 3
+        : dimensions.contains(QStringLiteral("32x32")) ? 2 : 1);
+    if (score > bestScore) {
+      bestScore = score;
+      bestUrl = target;
+    }
+  }
+  return bestUrl;
+}
+}
 
 FaviconObject::FaviconObject(QObject *parent)
   : QObject(parent)
@@ -154,43 +211,11 @@ void FaviconObject::finished(QNetworkReply *reply)
         QByteArray data = reply->readAll();
         if (!data.isNull()) {
           if ((cntRequests == 0) || (cntRequests == 2)) {
-            QString linkFavicon;
-            QString str = QString::fromUtf8(data);
-            if (str.contains("<html", Qt::CaseInsensitive)) {
-              QRegularExpression rx("<link[^>]+rel=['\"]shortcut icon['\"][^>]+>",
-                  QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-              QRegularExpressionMatch match = rx.match(str);
-              int pos = match.capturedStart();
-              if (pos == -1) {
-                rx = QRegularExpression("<link[^>]+rel=['\"]icon['\"][^>]+>",
-                    QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-                match = rx.match(str);
-                pos = match.capturedStart();
-              }
-              if (pos > -1) {
-                str = match.captured(0);
-                rx.setPattern("href=\"([^\"]+)");
-                match = rx.match(str);
-                pos = match.capturedStart();
-                if (pos == -1) {
-                  rx.setPattern("href='([^']+)");
-                  match = rx.match(str);
-                  pos = match.capturedStart();
-                }
-                if (pos > -1) {
-                  linkFavicon = match.captured(1).simplified();
-                  QUrl urlFavicon(linkFavicon);
-                  if (urlFavicon.host().isEmpty()) {
-                    urlFavicon.setHost(url.host());
-                  }
-                  if (urlFavicon.scheme().isEmpty()) {
-                    urlFavicon.setScheme(url.scheme());
-                  }
-                  linkFavicon = urlFavicon.toString().simplified();
-                  qDebug() << "Favicon URL:" << linkFavicon;
-                  emit signalGet(linkFavicon, feedUrl, cntRequests+1);
-                }
-              }
+            const QUrl iconUrl = faviconUrl(data, url);
+            const QString linkFavicon = iconUrl.toString();
+            if (!linkFavicon.isEmpty()) {
+              qDebug() << "Favicon URL:" << linkFavicon;
+              emit signalGet(iconUrl, feedUrl, cntRequests+1);
             }
             if (linkFavicon.isEmpty()) {
               if ((cntRequests == 0) || (cntRequests == 2)) {
