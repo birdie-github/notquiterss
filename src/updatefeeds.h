@@ -127,6 +127,7 @@ private slots:
 private:
   void queueAllFeeds(bool manual);
   void announceFeedProgress(int feedId);
+  bool isFeedInFolder(int feedId, int folderId);
 
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;

@@ -367,6 +367,39 @@ UpdateObject::~UpdateObject()
 
 }
 
+bool UpdateObject::isFeedInFolder(int feedId, int folderId)
+{
+  if (folderId < 0) return false;
+  QSqlQuery q(db_);
+  if (!q.prepare("SELECT parentId FROM feeds WHERE id=?")) {
+    qWarning() << "Could not prepare feed parent lookup:" << q.lastError().text();
+    return false;
+  }
+  QSet<int> visited;
+  while (feedId > 0) {
+    if (visited.contains(feedId)) {
+      qWarning() << "Cycle in feed parent hierarchy at ID:" << feedId;
+      return false;
+    }
+    visited.insert(feedId);
+    q.bindValue(0, feedId);
+    if (!q.exec()) {
+      qWarning() << "Feed parent lookup failed for ID:" << feedId << q.lastError().text();
+      return false;
+    }
+    if (!q.next()) {
+      if (q.lastError().isValid())
+        qWarning() << "Could not read feed parent for ID:" << feedId << q.lastError().text();
+      return false;
+    }
+    const int parentId = q.value(0).toInt();
+    q.finish();
+    if (parentId == folderId) return true;
+    feedId = parentId;
+  }
+  return false;
+}
+
 void UpdateObject::slotGetFeedTimer(int feedId)
 {
   auto databaseAccess = Database::backgroundAccess();
@@ -701,31 +734,14 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
 
   if (changed) {
     if (mainWindow_->currentNewsTab->type_ == NewsTabWidget::TabTypeFeed) {
-      bool folderUpdate = false;
-      int feedParentId = 0;
-
-      QSqlQuery q(db_);
-      q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(feedId));
-      if (q.first()) {
-        feedParentId = q.value(0).toInt();
-        if (feedParentId == mainWindow_->currentNewsTab->feedId_)
-          folderUpdate = true;
-      }
-
-      while (feedParentId && !folderUpdate) {
-        q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(feedParentId));
-        if (q.first()) {
-          feedParentId = q.value(0).toInt();
-          if (feedParentId == mainWindow_->currentNewsTab->feedId_)
-            folderUpdate = true;
-        }
-      }
+      const bool folderUpdate = isFeedInFolder(feedId, mainWindow_->currentNewsTab->feedId_);
 
       // Click on feed if it is displayed to update view
       if ((feedId == mainWindow_->currentNewsTab->feedId_) || folderUpdate) {
         if (!timerUpdateNews_->isActive())
           timerUpdateNews_->start(1000);
 
+        QSqlQuery q(db_);
         int unreadCount = 0;
         int allCount = 0;
         q.exec(QString("SELECT unread, undeleteCount FROM feeds WHERE id=='%1'").
@@ -803,25 +819,11 @@ void UpdateObject::slotUpdateStatus(int feedId, bool changed)
   slotRefreshInfoTray();
 
   if (feedId > 0) {
-    bool folderUpdate = false;
-    int feedParentId = 0;
-    QSqlQuery q(db_);
-    q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(feedId));
-    if (q.next()) {
-      feedParentId = q.value(0).toInt();
-      if (feedParentId == mainWindow_->currentNewsTab->feedId_) folderUpdate = true;
-    }
-
-    while (feedParentId && !folderUpdate) {
-      q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(feedParentId));
-      if (q.next()) {
-        feedParentId = q.value(0).toInt();
-        if (feedParentId == mainWindow_->currentNewsTab->feedId_) folderUpdate = true;
-      }
-    }
+    const bool folderUpdate = isFeedInFolder(feedId, mainWindow_->currentNewsTab->feedId_);
 
     // Click on feed if it is displayed to update view
     if ((feedId == mainWindow_->currentNewsTab->feedId_) || folderUpdate) {
+      QSqlQuery q(db_);
       int unreadCount = 0;
       int allCount = 0;
       q.exec(QString("SELECT unread, undeleteCount FROM feeds WHERE id=='%1'").
