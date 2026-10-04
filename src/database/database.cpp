@@ -531,10 +531,9 @@ void Database::sqliteDBMemFile(QSqlDatabase &db, bool save)
 
         pBackup = sqlite3_backup_init(pTo, "main", pFrom, "main");
 
-        /* Each iteration of this loop copies 5 database pages from database
-        ** pDb to the backup database. If the return value of backup_step()
-        ** indicates that there are still further pages to copy, sleep for
-        ** 250 ms before repeating. */
+        /* Copy up to 10000 pages per step. SQLITE_OK means more pages remain,
+        ** so continue immediately; pause only when the database is busy or
+        ** locked. SQLITE_DONE indicates that the copy is complete. */
         do {
           rc = sqlite3_backup_step(pBackup, 10000);
 
@@ -544,7 +543,7 @@ void Database::sqliteDBMemFile(QSqlDatabase &db, bool save)
             qDebug() << rc << "backup" << pagecount << "remain" << remaining;
           }
 
-          if ((rc == SQLITE_OK) || (rc == SQLITE_BUSY) || (rc == SQLITE_LOCKED))
+          if ((rc == SQLITE_BUSY) || (rc == SQLITE_LOCKED))
             sqlite3_sleep(100);
         } while ((rc == SQLITE_OK) || (rc == SQLITE_BUSY) || (rc == SQLITE_LOCKED));
 
