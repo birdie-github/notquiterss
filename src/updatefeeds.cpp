@@ -977,6 +977,32 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
 
   QSqlQuery q(db_);
   QString qStr;
+  const QString clearArticle = QStringLiteral("UPDATE news SET description='', content='', received='', "
+      "author_name='', author_uri='', author_email='', category='', new='', read='', "
+      "starred='', label='', deleteDate='', feedParentId='', deleted=2");
+  auto removeArticles = [&](const QList<int> &ids, const QString &feedId,
+                            bool hardDelete, bool onlyRead) {
+    // Stay below SQLite's older parameter limit and bound each SQL statement.
+    constexpr int batchSize = 256;
+    QSqlQuery remove(db_);
+    for (int offset = 0; offset < ids.size(); offset += batchSize) {
+      const int count = qMin(batchSize, int(ids.size()) - offset);
+      QStringList placeholders;
+      for (int i = 0; i < count; ++i) placeholders.append(QStringLiteral("?"));
+      QString statement = (hardDelete ? QStringLiteral("DELETE FROM news") : clearArticle) +
+          QStringLiteral(" WHERE feedId=? AND id IN (") + placeholders.join(',') + QLatin1Char(')');
+      if (onlyRead) statement += QStringLiteral(" AND read!=0");
+      if (!remove.prepare(statement)) {
+        qWarning() << "Cleanup batch preparation failed:" << remove.lastError().text();
+        continue;
+      }
+      remove.addBindValue(feedId);
+      for (int i = 0; i < count; ++i) remove.addBindValue(ids.at(offset + i));
+      if (!remove.exec())
+        qWarning() << "Cleanup batch failed:" << remove.lastError().text();
+      remove.finish();
+    }
+  };
 
   // Only the automatic maximum-age policy also filters incoming entries.
   // The manual wizard must not purge identities using its independent limits.
@@ -1019,15 +1045,7 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
           qWarning() << "Age cleanup selection failed:" << q.lastError().text();
         }
         q.finish();
-        // Finish the SELECT before modifying the table it traverses.
-        QSqlQuery remove(db_);
-        remove.prepare("DELETE FROM news WHERE id=? AND feedId=?");
-        for (int id : expiredIds) {
-          remove.bindValue(0, id);
-          remove.bindValue(1, feedId);
-          if (!remove.exec())
-            qWarning() << "Age cleanup deletion failed:" << remove.lastError().text();
-        }
+        removeArticles(expiredIds, feedId, true, false);
       }
 
       qStr = QString("SELECT count(*) FROM news WHERE feedId=='%1' AND deleted==0").arg(feedId);
@@ -1037,11 +1055,6 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       if (fullCleanUp)
         q.exec(QString("DELETE FROM news WHERE feedId=='%1' AND deleted >= 2").arg(feedId));
 
-      QString qStr1 = QString("UPDATE news SET description='', content='', received='', "
-                              "author_name='', author_uri='', author_email='', "
-                              "category='', new='', read='', starred='', label='', "
-                              "deleteDate='', feedParentId='', deleted=2");
-
       qStr = QString("SELECT id, received, published FROM news WHERE feedId=='%1' AND deleted == 0").
           arg(feedId);
       if (neverUnreadCleanUp) qStr.append(" AND read!=0");
@@ -1049,16 +1062,13 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       if (neverLabelCleanUp) qStr.append(" AND (label=='' OR label==',' OR label IS NULL)");
       qStr.append(" ORDER BY published");
       q.exec(qStr);
+      QList<int> removeIds;
+      QList<int> readRemoveIds;
       while (q.next()) {
         int newsId = q.value(0).toInt();
 
         if (newsCleanUpOn && (countDelNews < (countAllNews - maxNewsCleanUp))) {
-          if (fullCleanUp)
-            qStr = QString("DELETE FROM news WHERE id='%1'").arg(newsId);
-          else
-            qStr = QString("%1 WHERE id=='%2'").arg(qStr1).arg(newsId);
-          QSqlQuery qt(db_);
-          qt.exec(qStr);
+          removeIds.append(newsId);
           countDelNews++;
           continue;
         }
@@ -1070,26 +1080,20 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
             !NewsRetention::publicationDate(q.value(2).toString()).isValid();
         if (dayCleanUpOn && useReceiptAge &&
             (dateTime.daysTo(QDateTime::currentDateTime()) > maxDayCleanUp)) {
-          if (fullCleanUp)
-            qStr = QString("DELETE FROM news WHERE id='%1'").arg(newsId);
-          else
-            qStr = QString("%1 WHERE id=='%2'").arg(qStr1).arg(newsId);
-          QSqlQuery qt(db_);
-          qt.exec(qStr);
+          removeIds.append(newsId);
           countDelNews++;
           continue;
         }
 
         if (readCleanUp) {
-          if (fullCleanUp)
-            qStr = QString("DELETE FROM news WHERE id='%1'").arg(newsId);
-          else
-            qStr = QString("%1 WHERE read!=0 AND id=='%2'").arg(qStr1).arg(newsId);
-          QSqlQuery qt(db_);
-          qt.exec(qStr);
+          readRemoveIds.append(newsId);
           countDelNews++;
         }
       }
+      // Complete selection before any DELETE or UPDATE of the selected rows.
+      q.finish();
+      removeArticles(removeIds, feedId, fullCleanUp, false);
+      removeArticles(readRemoveIds, feedId, fullCleanUp, !fullCleanUp);
 
       int undeleteCount = 0;
       qStr = QString("SELECT count(id) FROM news WHERE feedId=='%1' AND deleted==0").
