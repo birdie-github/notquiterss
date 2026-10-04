@@ -16,7 +16,6 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
-#include <QTimeZone>
 #include "newsmodel.h"
 
 #include "mainapplication.h"
@@ -109,16 +108,12 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QString strDate = index.data(Qt::EditRole).toString();
 
       if (!strDate.isNull()) {
-        QDateTime dtLocalTime = QDateTime::currentDateTime();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), QTimeZone(QTimeZone::UTC));
-#else
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), Qt::UTC);
-#endif
-        int nTimeShift = dtLocalTime.secsTo(dtUTC);
-
-        QDateTime dt = QDateTime::fromString(strDate, Qt::ISODate);
-        dtLocal = dt.addSecs(nTimeShift);
+        // Publisher dates are stored as UTC without a suffix; fallback dates
+        // already include one. Parse in UTC before converting, so historical
+        // DST offsets and local clock gaps do not affect interpretation.
+        if (strDate.size() == 19)
+          strDate.append(QLatin1Char('Z'));
+        dtLocal = QDateTime::fromString(strDate, Qt::ISODate).toLocalTime();
       } else {
         dtLocal = QDateTime::fromString(
               QSqlTableModel::index(index.row(), fieldIndex("received")).data(Qt::EditRole).toString(),
