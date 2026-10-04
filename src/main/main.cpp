@@ -22,6 +22,57 @@
 #include "commandline.h"
 #include "projectmetadata.h"
 #include <cstdio>
+#ifdef Q_OS_UNIX
+#include <QSocketNotifier>
+#include <cerrno>
+#include <csignal>
+#include <fcntl.h>
+#include <unistd.h>
+
+namespace {
+volatile sig_atomic_t sigtermWriteFd = -1;
+
+void notifySigterm(int)
+{
+  const int savedErrno = errno;
+  const int fd = sigtermWriteFd;
+  if (fd >= 0) {
+    const char byte = 0;
+    ssize_t result;
+    do {
+      result = ::write(fd, &byte, 1);
+    } while (result < 0 && errno == EINTR);
+    // A full nonblocking pipe already contains a termination notification.
+  }
+  errno = savedErrno;
+}
+
+bool installSigtermHandler(int (&fds)[2], struct sigaction &previous)
+{
+  if (::pipe(fds) != 0) return false;
+  for (int fd : fds) {
+    if (::fcntl(fd, F_SETFL, O_NONBLOCK) == -1 ||
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+      ::close(fds[0]);
+      ::close(fds[1]);
+      return false;
+    }
+  }
+  struct sigaction action {};
+  action.sa_handler = notifySigterm;
+  ::sigemptyset(&action.sa_mask);
+  action.sa_flags = SA_RESTART;
+  sigtermWriteFd = fds[1];
+  if (::sigaction(SIGTERM, &action, &previous) != 0) {
+    sigtermWriteFd = -1;
+    ::close(fds[0]);
+    ::close(fds[1]);
+    return false;
+  }
+  return true;
+}
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -47,5 +98,26 @@ int main(int argc, char **argv)
   if (app.isClosing())
     return app.startupExitCode();
 
+#ifdef Q_OS_UNIX
+  int signalPipe[2] = {-1, -1};
+  struct sigaction previousSigterm {};
+  if (installSigtermHandler(signalPipe, previousSigterm)) {
+    QSocketNotifier notifier(signalPipe[0], QSocketNotifier::Read);
+    QObject::connect(&notifier, &QSocketNotifier::activated, &app, [&app, &notifier] {
+      // Disable before requesting exit; repeated signals cannot dispatch it again.
+      notifier.setEnabled(false);
+      // Enter normal shutdown, including modal unwinding and memory-DB saving.
+      app.mainWindow()->quitApp();
+    });
+    const int result = app.exec();
+    notifier.setEnabled(false);
+    ::sigaction(SIGTERM, &previousSigterm, nullptr);
+    sigtermWriteFd = -1;
+    ::close(signalPipe[0]);
+    ::close(signalPipe[1]);
+    return result;
+  }
+  qWarning() << "Could not install graceful SIGTERM handling";
+#endif
   return app.exec();
 }
