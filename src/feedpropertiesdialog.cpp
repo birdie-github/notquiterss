@@ -22,6 +22,7 @@
 #include "articlecontent.h"
 #include "mainapplication.h"
 #include "feedselectiontree.h"
+#include "feedsview/feedhealth.h"
 
 FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bulk)
   : Dialog(parent)
@@ -530,10 +531,11 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   pass_->setText(feedProperties.authentication.pass);
 
   QString status = feedProperties.status.feedStatus;
-  if (status.isEmpty() || (status == "0"))
+  const auto health = FeedHealth::read(status);
+  if (health.error.isEmpty())
     statusFeed_->setText(tr("Good"));
   else
-    statusFeed_->setText(status.section(" ", 1));
+    statusFeed_->setText(health.error);
 
   descriptionText_->setText(feedProperties.status.description);
   if (feedProperties.status.createdTime.isValid())
