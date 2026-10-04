@@ -47,7 +47,7 @@ void notifySigterm(int)
   errno = savedErrno;
 }
 
-bool installSigtermHandler(int (&fds)[2], struct sigaction &previous)
+bool installSigtermHandler(int (&fds)[2])
 {
   if (::pipe(fds) != 0) return false;
   for (int fd : fds) {
@@ -60,10 +60,10 @@ bool installSigtermHandler(int (&fds)[2], struct sigaction &previous)
   }
   struct sigaction action {};
   action.sa_handler = notifySigterm;
-  ::sigemptyset(&action.sa_mask);
+  sigemptyset(&action.sa_mask);
   action.sa_flags = SA_RESTART;
   sigtermWriteFd = fds[1];
-  if (::sigaction(SIGTERM, &action, &previous) != 0) {
+  if (::sigaction(SIGTERM, &action, nullptr) != 0) {
     sigtermWriteFd = -1;
     ::close(fds[0]);
     ::close(fds[1]);
@@ -100,8 +100,7 @@ int main(int argc, char **argv)
 
 #ifdef Q_OS_UNIX
   int signalPipe[2] = {-1, -1};
-  struct sigaction previousSigterm {};
-  if (installSigtermHandler(signalPipe, previousSigterm)) {
+  if (installSigtermHandler(signalPipe)) {
     QSocketNotifier notifier(signalPipe[0], QSocketNotifier::Read);
     QObject::connect(&notifier, &QSocketNotifier::activated, &app, [&app, &notifier] {
       // Disable before requesting exit; repeated signals cannot dispatch it again.
@@ -111,10 +110,10 @@ int main(int argc, char **argv)
     });
     const int result = app.exec();
     notifier.setEnabled(false);
-    ::sigaction(SIGTERM, &previousSigterm, nullptr);
-    sigtermWriteFd = -1;
-    ::close(signalPipe[0]);
-    ::close(signalPipe[1]);
+    // Keep the handler and both pipe ends alive through application destruction.
+    // A handler may still be running on another thread after exec() returns;
+    // closing the descriptors here could race with its write. The OS closes
+    // them at process exit, and FD_CLOEXEC prevents inheritance across exec.
     return result;
   }
   qWarning() << "Could not install graceful SIGTERM handling";
