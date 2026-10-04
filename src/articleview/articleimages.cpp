@@ -113,6 +113,7 @@ private:
       // lazy certificate initialization. Use platform roots explicitly for each
       // HTTPS request, including redirects; never bypass peer verification.
       QSslConfiguration ssl = request.sslConfiguration();
+      ssl.setProtocol(QSsl::TlsV1_2OrLater);
       ssl.setCaCertificates(QSslConfiguration::systemCaCertificates());
       ssl.setPeerVerifyMode(QSslSocket::VerifyPeer);
       request.setSslConfiguration(ssl);

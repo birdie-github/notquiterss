@@ -94,6 +94,7 @@ void NetworkManager::loadCertificates()
   // Saved certificate exceptions are not CA trust anchors. Only platform
   // roots and explicitly configured CA paths participate in verification.
   QSslConfiguration ssl = QSslConfiguration::defaultConfiguration();
+  ssl.setProtocol(QSsl::TlsV1_2OrLater);
   ssl.setCaCertificates(caCerts);
   QSslConfiguration::setDefaultConfiguration(ssl);
 
