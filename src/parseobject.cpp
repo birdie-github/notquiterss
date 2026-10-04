@@ -973,7 +973,8 @@ QString ParseObject::parseDate(const QString &dateString, const QString &urlStri
     if (dt.isValid()) return locale.toString(dt.addSecs(timeZone.toInt() * -3600), "yyyy-MM-ddTHH:mm:ss");
   }
 
-  qDebug() << __LINE__ << "parseDate: error with" << dateString << urlString;
+  qWarning().noquote() << "parseDate: unable to parse date" << dateString
+                       << "for feed" << urlString;
   return QString();
 }
 
