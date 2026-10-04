@@ -27,8 +27,10 @@ void FileManager::showFile(const QString &fileName)
   if (QFileInfo::exists(fileName)) {
 #ifdef Q_OS_WIN
     if (QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(fileName)})) return;
+    qWarning() << "Could not start explorer.exe to show file:" << fileName;
 #elif defined(Q_OS_MAC)
     if (QProcess::startDetached("/usr/bin/open", {"-R", fileName})) return;
+    qWarning() << "Could not start open to show file:" << fileName;
 #elif defined(HAVE_FILEMANAGER_DBUS)
     QDBusMessage message = QDBusMessage::createMethodCall("org.freedesktop.FileManager1",
         "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1", "ShowItems");
@@ -36,9 +38,13 @@ void FileManager::showFile(const QString &fileName)
     auto *watcher = new QDBusPendingCallWatcher(
         QDBusConnection::sessionBus().asyncCall(message, 1500), QCoreApplication::instance());
     QObject::connect(watcher, &QDBusPendingCallWatcher::finished, watcher,
-                     [directory](QDBusPendingCallWatcher *finished) {
+                      [directory, fileName](QDBusPendingCallWatcher *finished) {
       const QDBusPendingReply<> reply = *finished;
-      if (reply.isError()) FileManager::openDirectory(directory);
+      if (reply.isError()) {
+        qWarning() << "FileManager1.ShowItems failed:" << reply.error().message()
+                      << ", falling back to directory open for:" << fileName;
+        FileManager::openDirectory(directory);
+      }
       finished->deleteLater();
     });
     return;
