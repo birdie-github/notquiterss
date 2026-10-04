@@ -377,10 +377,12 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
       idStr.append(QString("id='%1'").arg(newsId));
     }
 
-    db.transaction();
-    q.exec(QString("UPDATE news SET read=2 WHERE (%1) AND read==1").arg(idStr));
-    q.exec(QString("UPDATE news SET new=0 WHERE (%1) AND new==1").arg(idStr));
-    db.commit();
+    if (!idNewsList.isEmpty()) {
+      db.transaction();
+      q.exec(QString("UPDATE news SET read=2 WHERE (%1) AND read==1").arg(idStr));
+      q.exec(QString("UPDATE news SET new=0 WHERE (%1) AND new==1").arg(idStr));
+      db.commit();
+    }
 
     if (feedId > -1)
       slotRecountFeedCounts(feedId, false);
