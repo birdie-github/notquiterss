@@ -265,6 +265,7 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
   }
 
   requestFeed_->moveToThread(getFeedThread_);
+  connect(getFeedThread_, &QThread::finished, requestFeed_, &QObject::deleteLater);
   sqlContext->moveToThread(updateFeedThread_);
   connect(updateFeedThread_, &QThread::started, sqlContext,
           [sqlContext] { sqlContext->initialize(); }, Qt::DirectConnection);
@@ -283,8 +284,6 @@ void UpdateFeeds::start()
 
 UpdateFeeds::~UpdateFeeds()
 {
-  requestFeed_->deleteLater();
-
   if (!addFeed_) {
     faviconObject_->deleteLater();
 

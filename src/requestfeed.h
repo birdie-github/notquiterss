@@ -64,6 +64,7 @@ private slots:
 
 private:
   NetworkManager *networkManager_;
+  bool shuttingDown_ = false;
 
   int timeoutRequest_;
   int numberRequests_;

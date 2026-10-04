@@ -25,6 +25,7 @@
 #include <QDebug>
 #include <QtSql>
 #include <QRegularExpression>
+#include <QThread>
 
 #define REPLY_MAX_COUNT 10
 
@@ -98,14 +99,23 @@ RequestFeed::RequestFeed(int timeoutRequest, int numberRequests,
 
 RequestFeed::~RequestFeed()
 {
-
+  disconnectObjects();
 }
 
 void RequestFeed::disconnectObjects()
 {
-  disconnect(this);
+  // Disconnect outward notifications and self-dispatch immediately. Queued
+  // slot calls may still arrive; the shutdown guards reject them in this thread.
+  QObject::disconnect(this, nullptr, nullptr, nullptr);
+  if (QThread::currentThread() != thread()) {
+    QMetaObject::invokeMethod(this, [this] { disconnectObjects(); }, Qt::QueuedConnection);
+    return;
+  }
+  if (shuttingDown_) return;
+  shuttingDown_ = true;
+  stopRequest();
   if (networkManager_)
-    networkManager_->disconnect(networkManager_);
+    networkManager_->disconnect(this);
 }
 
 /** @brief Put URL in request queue
@@ -113,6 +123,8 @@ void RequestFeed::disconnectObjects()
 void RequestFeed::requestUrl(int id, QString urlString,
                               QDateTime date, QString userInfo)
 {
+  if (shuttingDown_) return;
+
   if (!networkManager_) {
     networkManager_ = new NetworkManager(true, this);
     connect(networkManager_, SIGNAL(finished(QNetworkReply*)),
@@ -163,6 +175,8 @@ void RequestFeed::stopRequest()
  *----------------------------------------------------------------------------*/
 void RequestFeed::getQueuedUrl()
 {
+  if (shuttingDown_) return;
+
   if ((currentFeeds_.count() >= numberRequests_) ||
       (currentFeeds_.count() >= REPLY_MAX_COUNT)) {
     getUrlTimer_->start();
@@ -206,6 +220,8 @@ void RequestFeed::getQueuedUrl()
 void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &feedUrl,
                             const QDateTime &date, const int &count)
 {
+  if (shuttingDown_) return;
+
   const QString overrideError = globals.overrides().validationError(getUrl);
   if (!overrideError.isEmpty()) {
     emit getUrlDone(-1, id, feedUrl, overrideError);
@@ -238,6 +254,8 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
 void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feedUrl,
                            const QDateTime &date, const int &count)
 {
+  if (shuttingDown_) return;
+
   const QString overrideError = globals.overrides().validationError(getUrl);
   if (!overrideError.isEmpty()) {
     emit getUrlDone(-1, id, feedUrl, overrideError);
@@ -435,6 +453,8 @@ void RequestFeed::finished(QNetworkReply *reply)
  *----------------------------------------------------------------------------*/
 void RequestFeed::slotRequestTimeout()
 {
+  if (shuttingDown_) return;
+
   for (int i = currentTime_.count() - 1; i >= 0; i--) {
     int time = currentTime_.at(i) - 1;
     if (time <= 0) {
