@@ -590,24 +590,6 @@ void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
     q.addBindValue(read ? 2 : 0);
     if (!checkQuery(q.exec(), q)) return;
     q.finish();
-    qDebug() << "q.exec(" << q.lastQuery() << ")";
-    qDebug() << "       " << parseFeedId_;
-    qDebug() << "       " << newsItem->description;
-    qDebug() << "       " << newsItem->content;
-    qDebug() << "       " << newsItem->id;
-    qDebug() << "       " << newsItem->title;
-    qDebug() << "       " << newsItem->author;
-    qDebug() << "       " << newsItem->authorUri;
-    qDebug() << "       " << newsItem->authorEmail;
-    qDebug() << "       " << newsItem->updated;
-    qDebug() << "       " << QDateTime::currentDateTime().toString();
-    qDebug() << "       " << newsItem->link;
-    qDebug() << "       " << newsItem->linkAlternate;
-    qDebug() << "       " << newsItem->category;
-    qDebug() << "       " << newsItem->comments;
-    qDebug() << "       " << newsItem->eUrl;
-    qDebug() << "       " << newsItem->eType;
-    qDebug() << "       " << newsItem->eLength;
 
     if (lastBuildDate_ < QDateTime::fromString(newsItem->updated, Qt::ISODate))
       lastBuildDate_ = QDateTime::fromString(newsItem->updated, Qt::ISODate);
@@ -897,21 +879,6 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
     q.addBindValue(read ? 2 : 0);
     if (!checkQuery(q.exec(), q)) return;
     q.finish();
-    qDebug() << "q.exec(" << q.lastQuery() << ")";
-    qDebug() << "       " << parseFeedId_;
-    qDebug() << "       " << newsItem->description;
-    qDebug() << "       " << newsItem->content;
-    qDebug() << "       " << newsItem->id;
-    qDebug() << "       " << newsItem->title;
-    qDebug() << "       " << newsItem->author;
-    qDebug() << "       " << newsItem->updated;
-    qDebug() << "       " << QDateTime::currentDateTime().toString();
-    qDebug() << "       " << newsItem->link;
-    qDebug() << "       " << newsItem->category;
-    qDebug() << "       " << newsItem->comments;
-    qDebug() << "       " << newsItem->eUrl;
-    qDebug() << "       " << newsItem->eType;
-    qDebug() << "       " << newsItem->eLength;
 
     if (lastBuildDate_ < QDateTime::fromString(newsItem->updated, Qt::ISODate))
       lastBuildDate_ = QDateTime::fromString(newsItem->updated, Qt::ISODate);
