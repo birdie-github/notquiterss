@@ -85,6 +85,7 @@ public:
   void setDatabase(const QSqlDatabase &database);
 
 public slots:
+  void setArticleSettings(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
   void parseXml(QByteArray data, int feedId,
                 QDateTime dtReply, QString codecName);
   void runUserFilter(int feedId, int filterId = -1);
@@ -140,6 +141,10 @@ private:
   int parseFeedId_;
   bool duplicateNewsMode_;
   bool feedChanged_;
+  // Updated in this object's thread, between feed parses.
+  bool markIdenticalNewsRead_ = true;
+  bool avoidOldNews_ = false;
+  QDate avoidedOldNewsDate_;
   bool addSingleNewsAnyDate_;
   bool avoidedOldSingleNews_;
   QDate avoidedOldSingleNewsDate_;

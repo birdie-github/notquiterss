@@ -73,6 +73,15 @@ void ParseObject::setDatabase(const QSqlDatabase &database)
   db_ = database;
 }
 
+void ParseObject::setArticleSettings(bool markIdenticalNewsRead, bool avoidOldNews,
+                                     QDate avoidedOldNewsDate)
+{
+  Q_ASSERT(QThread::currentThread() == thread());
+  markIdenticalNewsRead_ = markIdenticalNewsRead;
+  avoidOldNews_ = avoidOldNews;
+  avoidedOldNewsDate_ = avoidedOldNewsDate;
+}
+
 void ParseObject::disconnectObjects()
 {
   disconnect(this);
@@ -540,12 +549,12 @@ void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
   // Verify old news before a date to avoid adding them to base
   bool isOld = false;
   QDateTime pubDate_ = QDateTime::fromString(newsItem->updated, "yyyy-MM-ddTHH:mm:ss");
-  QDateTime avoidedDate_ = mainApp->mainWindow()->avoidedOldNewsDate_.startOfDay();
+  QDateTime avoidedDate_ = avoidedOldNewsDate_.startOfDay();
   if (!addSingleNewsAnyDate_) {      //
     if (avoidedOldSingleNews_ ) {     // avoid adding old single news
       if (avoidedOldSingleNewsDate_.startOfDay() > pubDate_)
         isOld = true;
-      } else if (mainApp->mainWindow()->avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
+      } else if (avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
         isOld = true;
       }
    }
@@ -553,7 +562,7 @@ void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
   // if duplicates not found and is old news, add them into base
   if (!isDuplicate && !isOld) {
     bool read = false;
-    if (mainApp->mainWindow()->markIdenticalNewsRead_) {
+    if (markIdenticalNewsRead_) {
       if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title AND feedId!=:id"), q)) return;
       q.bindValue(":id", parseFeedId_);
       q.bindValue(":title", newsItem->title);
@@ -780,12 +789,12 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
   // Verify old news before a date to avoid adding them to base
   bool isOld = false;
   QDateTime pubDate_ = QDateTime::fromString(newsItem->updated, "yyyy-MM-ddTHH:mm:ss");
-  QDateTime avoidedDate_ = mainApp->mainWindow()->avoidedOldNewsDate_.startOfDay();
+  QDateTime avoidedDate_ = avoidedOldNewsDate_.startOfDay();
   if (!addSingleNewsAnyDate_) {      //
     if (avoidedOldSingleNews_ ) {     // avoid adding old single news
       if (avoidedOldSingleNewsDate_.startOfDay() > pubDate_)
         isOld = true;
-      } else if (mainApp->mainWindow()->avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
+      } else if (avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
               isOld = true;
       }
    }
@@ -793,7 +802,7 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
  // if duplicates not found And old news, add them into base
  if (!isDuplicate && !isOld) {
     bool read = false;
-    if (mainApp->mainWindow()->markIdenticalNewsRead_) {
+    if (markIdenticalNewsRead_) {
       if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title AND feedId!=:id"), q)) return;
       q.bindValue(":id", parseFeedId_);
       q.bindValue(":title", newsItem->title);

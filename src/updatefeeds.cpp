@@ -107,6 +107,13 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
   requestFeed_ = new RequestFeed(timeoutRequest, numberRequests, numberRepeats);
 
   parseObject_ = new ParseObject();
+  // Initialize on the GUI thread before moving either parser to its SQL worker.
+  // Future updates deliver all related settings together in the parser's thread.
+  MainWindow *window = mainApp->mainWindow();
+  parseObject_->setArticleSettings(window->markIdenticalNewsRead_, window->avoidOldNews_,
+                                   window->avoidedOldNewsDate_);
+  connect(window, &MainWindow::articleSettingsChanged,
+          parseObject_, &ParseObject::setArticleSettings, Qt::QueuedConnection);
   auto *sqlContext = new UpdateSqlContext();
   sqlContext->parser = parseObject_;
   parseObject_->setParent(sqlContext);

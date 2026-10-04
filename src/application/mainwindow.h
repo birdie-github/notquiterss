@@ -279,6 +279,7 @@ public slots:
   void slotPrintPreview();
 
 signals:
+  void articleSettingsChanged(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
   void signalQuitApp();
   void signalPlaceToTray();
   void signalGetFeedTimer(int feedId);
