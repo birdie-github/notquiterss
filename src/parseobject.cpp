@@ -1338,9 +1338,10 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
             idLabelsStr.append(QString("%1,").arg(idLabel));
 
           }
-          qStr1 = QString("UPDATE news SET label='%1' WHERE id='%2'").arg(idLabelsStr).
-              arg(q1.value(0).toInt());
-          if (!checkQuery(q2.exec(qStr1), q2)) return;
+          if (!checkQuery(q2.prepare("UPDATE news SET label=? WHERE id=?"), q2)) return;
+          q2.addBindValue(idLabelsStr);
+          q2.addBindValue(q1.value(0).toInt());
+          if (!checkQuery(q2.exec(), q2)) return;
         }
 
         if (!colorList.isEmpty()) {
@@ -1465,11 +1466,14 @@ int ParseObject::recountFeedCounts(int feedId, const QString &feedUrl,
       updatedParent = q.value(3).toString();
     }
     if (!checkQuery(!q.lastError().isValid(), q)) return 0;
-    qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3', "
-                   "updated='%4' WHERE id=='%5'").
-        arg(unreadCount).arg(newCount).arg(undeleteCount).arg(updatedParent).
-        arg(l_feedParId);
-    if (!checkQuery(q.exec(qStr), q)) return 0;
+    if (!checkQuery(q.prepare("UPDATE feeds SET unread=?, newCount=?, undeleteCount=?, "
+                              "updated=? WHERE id==?"), q)) return 0;
+    q.addBindValue(unreadCount);
+    q.addBindValue(newCount);
+    q.addBindValue(undeleteCount);
+    q.addBindValue(updatedParent);
+    q.addBindValue(l_feedParId);
+    if (!checkQuery(q.exec(), q)) return 0;
 
     FeedCountStruct counts;
     counts.feedId = l_feedParId;

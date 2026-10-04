@@ -226,11 +226,14 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
             undeleteCount = q.value(2).toInt();
             updated       = q.value(3).toString();
           }
-          qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3', "
-                         "updated='%4' WHERE id=='%5'").
-              arg(unreadCount).arg(newCount).arg(undeleteCount).arg(updated).
-              arg(l_feedParId);
-          q.exec(qStr);
+          q.prepare("UPDATE feeds SET unread=?, newCount=?, undeleteCount=?, "
+                    "updated=? WHERE id==?");
+          q.addBindValue(unreadCount);
+          q.addBindValue(newCount);
+          q.addBindValue(undeleteCount);
+          q.addBindValue(updated);
+          q.addBindValue(l_feedParId);
+          q.exec();
 
           // Update view
           FeedCountStruct counts;
@@ -264,11 +267,14 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
       undeleteCount = q.value(2).toInt();
       updated       = q.value(3).toString();
     }
-    qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3', "
-                   "updated='%4' WHERE id=='%5'").
-        arg(unreadCount).arg(newCount).arg(undeleteCount).arg(updated).
-        arg(l_feedParId);
-    q.exec(qStr);
+    q.prepare("UPDATE feeds SET unread=?, newCount=?, undeleteCount=?, "
+              "updated=? WHERE id==?");
+    q.addBindValue(unreadCount);
+    q.addBindValue(newCount);
+    q.addBindValue(undeleteCount);
+    q.addBindValue(updated);
+    q.addBindValue(l_feedParId);
+    q.exec();
 
     // Update view
     FeedCountStruct counts;
