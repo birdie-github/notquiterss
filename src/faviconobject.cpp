@@ -35,15 +35,11 @@ QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
 {
   // Bound parsing work even for large pages. Icon declarations normally live
   // near the start of the head; keep the existing /favicon.ico fallback.
-  QString html = QString::fromUtf8(data.left(64 * 1024));
-  static const QRegularExpression headEnd(QStringLiteral("</head\\s*>"),
-                                         QRegularExpression::CaseInsensitiveOption);
-  const auto end = headEnd.match(html);
-  if (end.hasMatch()) html.truncate(end.capturedStart());
+  const QString html = QString::fromUtf8(data.left(64 * 1024));
 
   // Skip comments and script bodies. Quoted attributes may contain '>'.
   static const QRegularExpression tags(
-      QStringLiteral(R"rx(<!--.*?(?:-->|$)|<script\b[^>]*>.*?(?:</script\s*>|$)|<link\b((?:[^'"<>]++|'[^']*+'|"[^"]*+")*+)>)rx"),
+      QStringLiteral(R"rx(<!--.*?(?:-->|$)|<script\b[^>]*>.*?(?:</script\s*>|$)|<link\b((?:[^'"<>]++|'[^']*+'|"[^"]*+")*+)>|(</head\s*>))rx"),
       QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
   static const QRegularExpression attributes(
       QStringLiteral(R"rx((?:^|\s)([a-z][a-z0-9_-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s'"=<>`]+)))rx"),
@@ -55,6 +51,8 @@ QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
   auto links = tags.globalMatch(html);
   while (links.hasNext()) {
     const auto link = links.next();
+    // Recognize the head end only outside the comments and scripts skipped above.
+    if (link.capturedStart(2) >= 0) break;
     if (link.capturedStart(1) < 0) continue;
     QString rel, href, sizes;
     auto attrs = attributes.globalMatch(link.captured(1));
