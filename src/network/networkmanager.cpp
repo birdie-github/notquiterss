@@ -20,6 +20,7 @@
 #include "networkpolicy.h"
 
 #include "mainapplication.h"
+#include "globals.h"
 #include "settings.h"
 #include "authenticationdialog.h"
 
@@ -145,6 +146,7 @@ QNetworkReply *NetworkManager::createRequest(QNetworkAccessManager::Operation op
   if (!NetworkPolicy::isRequestUrl(request.url()))
     return new NetworkPolicy::RejectedReply(op, request, this);
   QNetworkRequest checked(request);
+  checked.setRawHeader("User-Agent", globals.requestUserAgent(checked.url()).toUtf8());
   // Feed, favicon and download callers resolve and validate redirects themselves.
   checked.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
   return QNetworkAccessManager::createRequest(op, checked, outgoingData);

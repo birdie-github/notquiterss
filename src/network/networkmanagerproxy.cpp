@@ -37,6 +37,7 @@
 #include "networkpolicy.h"
 #include "cookiejar.h"
 #include "mainapplication.h"
+#include "globals.h"
 
 #include <QNetworkRequest>
 
@@ -67,6 +68,7 @@ QNetworkReply* NetworkManagerProxy::createRequest(QNetworkAccessManager::Operati
   if (!NetworkPolicy::isHttpUrl(request.url()))
     return new NetworkPolicy::RejectedReply(op, request, this);
   QNetworkRequest checked(request);
+  checked.setRawHeader("User-Agent", globals.requestUserAgent(checked.url()).toUtf8());
   checked.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::UserVerifiedRedirectPolicy);
   checked.setMaximumRedirectsAllowed(10);
   QNetworkReply *reply = QNetworkAccessManager::createRequest(op, checked, outgoingData);

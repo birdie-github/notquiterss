@@ -28,6 +28,7 @@
 #include <QSettings>
 #include <QStringBuilder>
 #include <QDebug>
+#include <QMutexLocker>
 
 #include "settings.h"
 
@@ -36,6 +37,23 @@ Globals globals;
 QString Globals::defaultUserAgent()
 {
   return QStringLiteral("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1");
+}
+
+QString Globals::requestUserAgent(const QUrl &url) const
+{
+  const QString globalAgent = userAgent();
+  const QString agent = overrides_.userAgent(url, globalAgent);
+  if (agent != globalAgent) {
+    QString host = QString::fromLatin1(QUrl::toAce(url.host())).toLower();
+    if (host.endsWith(QLatin1Char('.'))) host.chop(1);
+    // Feed requests and image/download requests can run on different threads.
+    QMutexLocker lock(&userAgentLogMutex_);
+    if (!loggedUserAgentHosts_.contains(host)) {
+      loggedUserAgentHosts_.insert(host);
+      qInfo().noquote() << "User-Agent override:" << host << agent;
+    }
+  }
+  return agent;
 }
 
 void Globals::setUserAgent(bool useCustom, const QString &customUserAgent)
@@ -133,8 +151,6 @@ void Globals::init()
     qWarning() << overrides_.path() << overrides_.error();
 
   qInfo().noquote() << "User-Agent (global):" << userAgent_;
-  for (const QString &entry : overrides_.userAgentOverrides())
-    qInfo().noquote() << "User-Agent override:" << entry;
 
   isInit_ = true;
 }

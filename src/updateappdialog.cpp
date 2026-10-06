@@ -167,8 +167,6 @@ void UpdateAppDialog::renderStatistics()
   if (updateCheckEnabled || showDialog_) {
     QNetworkRequest request{QUrl(ProjectMetadata::updateEndpoint())};
     request.setRawHeader("Accept", "application/vnd.github+json");
-    request.setRawHeader("User-Agent", (QCoreApplication::applicationName() + "/" +
-                                        QCoreApplication::applicationVersion()).toUtf8());
     request.setTransferTimeout(15000);
     reply_ = networkManagerProxy_->get(request);
     connect(reply_, &QIODevice::readyRead, this, [this]() {

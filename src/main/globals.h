@@ -20,6 +20,8 @@
 #define GLOBALS_H
 
 #include <QString>
+#include <QMutex>
+#include <QSet>
 #include "websiteoverrides.h"
 
 class Globals
@@ -30,7 +32,7 @@ public:
   void init();
 
   QString userAgent() const { return userAgent_; }
-  QString feedUserAgent(const QUrl &url) const { return overrides_.userAgent(url, userAgent()); }
+  QString requestUserAgent(const QUrl &url) const;
   const WebsiteOverrides &overrides() const { return overrides_; }
   static QString defaultUserAgent();
   void setUserAgent(bool useCustom, const QString &customUserAgent);
@@ -47,6 +49,8 @@ public:
 private:
   QString userAgent_;
   WebsiteOverrides overrides_;
+  mutable QMutex userAgentLogMutex_;
+  mutable QSet<QString> loggedUserAgentHosts_;
 
 };
 

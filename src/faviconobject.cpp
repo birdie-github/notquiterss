@@ -173,7 +173,6 @@ void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const in
     Common::sleep(30);
 
   QNetworkRequest request(getUrl);
-  request.setRawHeader("User-Agent", globals.userAgent().toUtf8());
 
   currentUrls_.append(getUrl);
   currentFeeds_.append(feedUrl);
