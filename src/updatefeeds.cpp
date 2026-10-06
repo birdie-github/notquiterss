@@ -964,15 +964,95 @@ void UpdateObject::saveMemoryDatabase()
 void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<int> foldersIdList)
 {
   auto databaseAccess = Database::backgroundAccess();
-  bool cleanupOn = true;
-  bool optimizeDB = false;
-  bool fullCleanUp = false;
+  QString error;
+  if (manualCleanupRollbackPending_) {
+    if (!rollbackCleanUp(error)) {
+      if (isShutdown) shutdownCleanupError_ = error;
+      else emit signalCleanUpFailed(error);
+      return;
+    }
+    manualCleanupRollbackPending_ = false;
+  }
+  if (!db_.transaction()) {
+    error = tr("Cannot start cleanup: %1").arg(db_.lastError().text());
+    if (isShutdown) shutdownCleanupError_ = error;
+    else emit signalCleanUpFailed(error);
+    return;
+  }
+  if (isShutdown) {
+    shutdownCleanupError_.clear();
+    shutdownCleanup_ = ShutdownCleanup::TransactionOpen;
+  }
+
   int countDeleted = 0;
+  // All operation queries are destroyed before committing or rolling back.
+  bool success = cleanUpArticles(isShutdown, feedsIdList, foldersIdList, countDeleted, error);
+  if (success && !db_.commit()) {
+    error = db_.lastError().text();
+    success = false;
+  }
+  if (!success) {
+    qWarning().noquote() << "Cleanup failed:" << error;
+    if (isShutdown) {
+      shutdownCleanupWarning_ = tr("Shutdown cleanup failed and was skipped. "
+                                  "Previously committed changes from this session are preserved.\n%1")
+                                  .arg(error);
+      // The exit recovery path resolves this transaction before copying.
+      return;
+    }
+    QString rollbackError;
+    if (!rollbackCleanUp(rollbackError)) {
+      manualCleanupRollbackPending_ = true;
+      error += tr("\nRollback failed: %1").arg(rollbackError);
+    }
+    emit signalCleanUpFailed(error);
+    return;
+  }
+  if (isShutdown) shutdownCleanup_ = ShutdownCleanup::Finished;
+
+  Settings settings("Settings");
+  const bool vacuum = !isShutdown || (!mainApp->storeDBMemory() &&
+      settings.value("cleanupOnShutdown", true).toBool() &&
+      settings.value("optimizeDB", false).toBool());
+  QString warning;
+  if (vacuum) {
+    QSqlQuery optimize(db_);
+    if (!optimize.exec("VACUUM")) {
+      warning = tr("Cleanup completed, but database optimization failed: %1")
+                  .arg(optimize.lastError().text());
+      qWarning().noquote() << warning;
+    }
+  }
+  if (isShutdown && !warning.isEmpty()) shutdownCleanupWarning_ = warning;
+  emit signalFinishCleanUp(countDeleted, warning);
+}
+
+bool UpdateObject::rollbackCleanUp(QString &error)
+{
+  error.clear();
+  QVariant value = db_.driver() ? db_.driver()->handle() : QVariant();
+  sqlite3 *handle = value.isValid() && qstrcmp(value.typeName(), "sqlite3*") == 0
+      ? *static_cast<sqlite3 **>(value.data()) : nullptr;
+  if (!handle) {
+    error = tr("The live SQLite connection is unavailable.");
+    return false;
+  }
+  // SQLite may already have rolled back after a fatal error.
+  if (sqlite3_get_autocommit(handle) || db_.rollback()) return true;
+  error = tr("Cannot roll back cleanup: %1").arg(db_.lastError().text());
+  return false;
+}
+
+bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdList,
+                                  const QList<int> &foldersIdList, int &countDeleted,
+                                  QString &error)
+{
+  bool cleanupOn = true;
+  bool fullCleanUp = false;
 
   Settings settings(isShutdown ? "Settings" : "CleanUpWizard");
   if (isShutdown) {
     cleanupOn = settings.value("cleanupOnShutdown", true).toBool();
-    optimizeDB = settings.value("optimizeDB", false).toBool();
   } else {
     fullCleanUp = settings.value("fullCleanUp", false).toBool();
   }
@@ -986,18 +1066,16 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
   bool neverLabelCleanUp = settings.value("neverLabelClearUp", true).toBool();
   bool cleanUpDeleted = settings.value("cleanUpDeleted", false).toBool();
 
-  const bool transactionStarted = db_.transaction();
-  if (isShutdown) {
-    if (!transactionStarted) {
-      shutdownCleanupError_ = tr("Cannot start shutdown cleanup: %1").arg(db_.lastError().text());
-      return;
-    }
-    shutdownCleanupError_.clear();
-    shutdownCleanup_ = ShutdownCleanup::TransactionOpen;
-  }
-
   QSqlQuery q(db_);
   QString qStr;
+  auto queryError = [&](const QSqlQuery &query) {
+    error = query.lastError().text();
+    if (error.isEmpty()) error = tr("A cleanup query did not return its expected result.");
+    return false;
+  };
+  auto execute = [&](const QString &statement) {
+    return q.exec(statement) || queryError(q);
+  };
   const QString clearArticle = QStringLiteral("UPDATE news SET description='', content='', received='', "
       "author_name='', author_uri='', author_email='', category='', new='', read='', "
       "starred='', label='', deleteDate='', feedParentId='', deleted=2");
@@ -1013,16 +1091,13 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       QString statement = (hardDelete ? QStringLiteral("DELETE FROM news") : clearArticle) +
           QStringLiteral(" WHERE feedId=? AND id IN (") + placeholders.join(',') + QLatin1Char(')');
       if (onlyRead) statement += QStringLiteral(" AND read!=0");
-      if (!remove.prepare(statement)) {
-        qWarning() << "Cleanup batch preparation failed:" << remove.lastError().text();
-        continue;
-      }
+      if (!remove.prepare(statement)) return queryError(remove);
       remove.addBindValue(feedId);
       for (int i = 0; i < count; ++i) remove.addBindValue(ids.at(offset + i));
-      if (!remove.exec())
-        qWarning() << "Cleanup batch failed:" << remove.lastError().text();
+      if (!remove.exec()) return queryError(remove);
       remove.finish();
     }
+    return true;
   };
 
   // Only the automatic maximum-age policy also filters incoming entries.
@@ -1031,15 +1106,16 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       ? NewsRetention::cutoff(maxDayCleanUp) : QDateTime();
 
   if (isShutdown) {
-    q.exec("UPDATE news SET new=0 WHERE new==1");
-    q.exec("UPDATE news SET read=2 WHERE read==1");
-    q.exec("UPDATE feeds SET newCount=0 WHERE newCount!=0");
+    if (!execute("UPDATE news SET new=0 WHERE new==1")) return false;
+    if (!execute("UPDATE news SET read=2 WHERE read==1")) return false;
+    if (!execute("UPDATE feeds SET newCount=0 WHERE newCount!=0")) return false;
   }
 
   if (cleanupOn) {
     if (!isShutdown) {
-      q.exec("SELECT count(id) FROM news WHERE deleted < 2");
-      if (q.first()) countDeleted = q.value(0).toInt();
+      if (!execute("SELECT count(id) FROM news WHERE deleted < 2")) return false;
+      if (!q.next()) return queryError(q);
+      countDeleted = q.value(0).toInt();
     }
 
     // Run Cleanup for all feeds, except categories
@@ -1054,27 +1130,29 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
         if (neverLabelCleanUp)
           eligible += QStringLiteral(" AND (label=='' OR label==',' OR label IS NULL)");
         eligible += QLatin1Char(')');
-        q.prepare("SELECT id, published FROM news WHERE feedId=? AND (" + eligible + ")");
+        if (!q.prepare("SELECT id, published FROM news WHERE feedId=? AND (" + eligible + ")"))
+          return queryError(q);
         q.addBindValue(feedId);
         QList<int> expiredIds;
-        if (q.exec()) {
-          while (q.next()) {
-            if (NewsRetention::expired(q.value(1).toString(), retentionCutoff))
-              expiredIds.append(q.value(0).toInt());
-          }
-        } else {
-          qWarning() << "Age cleanup selection failed:" << q.lastError().text();
+        if (!q.exec()) return queryError(q);
+        while (q.next()) {
+          if (NewsRetention::expired(q.value(1).toString(), retentionCutoff))
+            expiredIds.append(q.value(0).toInt());
         }
+        if (q.lastError().isValid()) return queryError(q);
         q.finish();
-        removeArticles(expiredIds, feedId, true, false);
+        if (!removeArticles(expiredIds, feedId, true, false)) return false;
       }
 
       qStr = QString("SELECT count(*) FROM news WHERE feedId=='%1' AND deleted==0").arg(feedId);
-      q.exec(qStr);
-      if (q.next()) countAllNews = q.value(0).toInt();
+      if (!execute(qStr)) return false;
+      if (!q.next()) return queryError(q);
+      countAllNews = q.value(0).toInt();
 
-      if (fullCleanUp)
-        q.exec(QString("DELETE FROM news WHERE feedId=='%1' AND deleted >= 2").arg(feedId));
+      if (fullCleanUp) {
+        if (!execute(QString("DELETE FROM news WHERE feedId=='%1' AND deleted >= 2").arg(feedId)))
+          return false;
+      }
 
       qStr = QString("SELECT id, received, published FROM news WHERE feedId=='%1' AND deleted == 0").
           arg(feedId);
@@ -1082,7 +1160,7 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       if (neverStarCleanUp) qStr.append(" AND starred==0");
       if (neverLabelCleanUp) qStr.append(" AND (label=='' OR label==',' OR label IS NULL)");
       qStr.append(" ORDER BY published");
-      q.exec(qStr);
+      if (!execute(qStr)) return false;
       QList<int> removeIds;
       QList<int> readRemoveIds;
       while (q.next()) {
@@ -1111,36 +1189,40 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
           countDelNews++;
         }
       }
+      if (q.lastError().isValid()) return queryError(q);
       // Complete selection before any DELETE or UPDATE of the selected rows.
       q.finish();
-      removeArticles(removeIds, feedId, fullCleanUp, false);
-      removeArticles(readRemoveIds, feedId, fullCleanUp, !fullCleanUp);
+      if (!removeArticles(removeIds, feedId, fullCleanUp, false)) return false;
+      if (!removeArticles(readRemoveIds, feedId, fullCleanUp, !fullCleanUp)) return false;
 
       int undeleteCount = 0;
       qStr = QString("SELECT count(id) FROM news WHERE feedId=='%1' AND deleted==0").
           arg(feedId);
-      q.exec(qStr);
-      if (q.next()) undeleteCount = q.value(0).toInt();
+      if (!execute(qStr)) return false;
+      if (!q.next()) return queryError(q);
+      undeleteCount = q.value(0).toInt();
 
       int unreadCount = 0;
       qStr = QString("SELECT count(read) FROM news WHERE feedId=='%1' AND read==0 AND deleted==0").
           arg(feedId);
-      q.exec(qStr);
-      if (q.next()) unreadCount = q.value(0).toInt();
+      if (!execute(qStr)) return false;
+      if (!q.next()) return queryError(q);
+      unreadCount = q.value(0).toInt();
 
       int newCount = 0;
       if (!isShutdown) {
         qStr = QString("SELECT count(new) FROM news WHERE feedId=='%1' AND new==1 AND deleted==0").
             arg(feedId);
-        q.exec(qStr);
-        if (q.next()) newCount = q.value(0).toInt();
+        if (!execute(qStr)) return false;
+        if (!q.next()) return queryError(q);
+        newCount = q.value(0).toInt();
         qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3' WHERE id=='%4'").
             arg(unreadCount).arg(newCount).arg(undeleteCount).arg(feedId);
       } else {
         qStr = QString("UPDATE feeds SET unread='%1', undeleteCount='%2' WHERE id=='%3'").
             arg(unreadCount).arg(undeleteCount).arg(feedId);
       }
-      q.exec(qStr);
+      if (!execute(qStr)) return false;
     }
 
     // Run categories recount, because cleanup may change counts
@@ -1157,61 +1239,41 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
         // Calculate sum of all feeds with same parent
         qStr = QString("SELECT sum(unread), sum(undeleteCount), sum(newCount) "
                        "FROM feeds WHERE parentId=='%1'").arg(folderId);
-        q.exec(qStr);
-        if (q.next()) {
-          unreadCount   = q.value(0).toInt();
-          undeleteCount = q.value(1).toInt();
-          newCount = q.value(2).toInt();
-        }
+        if (!execute(qStr)) return false;
+        if (!q.next()) return queryError(q);
+        unreadCount   = q.value(0).toInt();
+        undeleteCount = q.value(1).toInt();
+        newCount = q.value(2).toInt();
 
         if (unreadCount != -1) {
           qStr = QString("UPDATE feeds SET unread='%1', undeleteCount='%2', newCount='%3' WHERE id=='%4'").
               arg(unreadCount).arg(undeleteCount).arg(newCount).arg(folderId);
-          q.exec(qStr);
+          if (!execute(qStr)) return false;
         }
 
         // go to next parent's parent
         qStr = QString("SELECT parentId FROM feeds WHERE id=='%1'").arg(folderId);
         folderId = 0;
-        q.exec(qStr);
+        if (!execute(qStr)) return false;
         if (q.next()) folderId = q.value(0).toInt();
+        else if (q.lastError().isValid()) return queryError(q);
       }
     }
 
     if (cleanUpDeleted) {
-      q.exec("UPDATE news SET description='', content='', received='', "
+      if (!execute("UPDATE news SET description='', content='', received='', "
              "author_name='', author_uri='', author_email='', "
              "category='', new='', read='', starred='', label='', "
-             "deleteDate='', feedParentId='', deleted=2 WHERE deleted==1");
+             "deleteDate='', feedParentId='', deleted=2 WHERE deleted==1")) return false;
     }
     if (!isShutdown) {
-      q.exec("SELECT count(id) FROM news WHERE deleted < 2");
-      if (q.first()) countDeleted = countDeleted - q.value(0).toInt();
+      if (!execute("SELECT count(id) FROM news WHERE deleted < 2")) return false;
+      if (!q.next()) return queryError(q);
+      countDeleted -= q.value(0).toInt();
     }
   }
 
-  q.finish();
-  const bool committed = db_.commit();
-  if (isShutdown) {
-    if (!committed) {
-      shutdownCleanupWarning_ = tr("Shutdown cleanup could not be committed and was skipped. "
-                                  "Previously committed changes from this session are preserved.\n%1")
-                                  .arg(db_.lastError().text());
-      // Resolve this transaction before copying, including on a later retry.
-      return;
-    }
-    shutdownCleanup_ = ShutdownCleanup::Finished;
-  }
-
-  if (!mainApp->storeDBMemory()) {
-    if ((cleanupOn && optimizeDB) || !isShutdown)
-      QSqlQuery(db_).exec("VACUUM");
-  } else if (!isShutdown) {
-    // Manual cleanup stays in memory until the save timer or actual exit.
-    QSqlQuery(db_).exec("VACUUM");
-  }
-
-  emit signalFinishCleanUp(countDeleted);
+  return true;
 }
 
 /** @brief Delete news from the feed by criteria
@@ -1222,7 +1284,10 @@ void UpdateObject::cleanUpShutdown()
   QSqlQuery q(db_);
   QStringList feedsIdList;
   QList<int> foldersIdList;
-  q.exec("SELECT id, xmlUrl FROM feeds");
+  if (!q.exec("SELECT id, xmlUrl FROM feeds")) {
+    shutdownCleanupError_ = tr("Cannot select feeds for shutdown cleanup: %1").arg(q.lastError().text());
+    return;
+  }
   while (q.next()) {
     if (q.value(1).toString().isEmpty()) {
       foldersIdList << q.value(0).toInt();
@@ -1230,6 +1295,10 @@ void UpdateObject::cleanUpShutdown()
     else {
       feedsIdList << q.value(0).toString();
     }
+  }
+  if (q.lastError().isValid()) {
+    shutdownCleanupError_ = tr("Cannot read feeds for shutdown cleanup: %1").arg(q.lastError().text());
+    return;
   }
   q.finish();
 
@@ -1263,17 +1332,9 @@ void UpdateObject::retryQuitApp(const QString &fileName)
     }
   }
   if (shutdownCleanup_ == ShutdownCleanup::TransactionOpen) {
-    QVariant value = db_.driver() ? db_.driver()->handle() : QVariant();
-    sqlite3 *handle = value.isValid() && qstrcmp(value.typeName(), "sqlite3*") == 0
-        ? *static_cast<sqlite3 **>(value.data()) : nullptr;
-    if (!handle) {
-      reportFailure(tr("The live SQLite connection is unavailable."));
-      return;
-    }
-    // Some SQLite errors roll back automatically. Otherwise explicitly undo
-    // only the failed shutdown cleanup, not earlier committed session changes.
-    if (!sqlite3_get_autocommit(handle) && !db_.rollback()) {
-      reportFailure(tr("Cannot roll back shutdown cleanup: %1").arg(db_.lastError().text()));
+    QString error;
+    if (!rollbackCleanUp(error)) {
+      reportFailure(error);
       return;
     }
     shutdownCleanup_ = ShutdownCleanup::Finished;
@@ -1288,8 +1349,16 @@ void UpdateObject::retryQuitApp(const QString &fileName)
     }
     Settings settings("Settings");
     if (fileName.isEmpty() && settings.value("cleanupOnShutdown", true).toBool() &&
-        settings.value("optimizeDB", false).toBool())
-      Database::setVacuum();
+        settings.value("optimizeDB", false).toBool()) {
+      QString optimizeError;
+      if (!Database::setVacuum(optimizeError)) {
+        const QString warning = tr("Database saved, but database optimization failed: %1")
+                                .arg(optimizeError);
+        qWarning().noquote() << warning;
+        if (!shutdownCleanupWarning_.isEmpty()) shutdownCleanupWarning_ += '\n';
+        shutdownCleanupWarning_ += warning;
+      }
+    }
   }
   const auto backup = DatabaseBackup::create(db_, DatabaseBackup::Trigger::Exit);
   const QString cleanupWarning = shutdownCleanupWarning_;

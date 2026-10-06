@@ -119,7 +119,8 @@ signals:
   void signalCountsStatusBar(int unreadCount, int allCount);
   void signalMarkAllFeedsRead(int nextUnread = -1);
   void signalIconUpdate(int feedId, QByteArray faviconData);
-  void signalFinishCleanUp(int countDeleted);
+  void signalFinishCleanUp(int countDeleted, QString warning);
+  void signalCleanUpFailed(QString error);
 
 private slots:
   bool addFeedInQueue(int feedId, const QString &feedUrl,
@@ -129,6 +130,9 @@ private:
   void queueAllFeeds(bool manual);
   void announceFeedProgress(int feedId);
   bool isFeedInFolder(int feedId, int folderId);
+  bool cleanUpArticles(bool isShutdown, const QStringList &feedsIdList,
+                      const QList<int> &foldersIdList, int &countDeleted, QString &error);
+  bool rollbackCleanUp(QString &error);
 
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;
@@ -138,6 +142,7 @@ private:
   ShutdownCleanup shutdownCleanup_ = ShutdownCleanup::NotStarted;
   QString shutdownCleanupError_;
   QString shutdownCleanupWarning_;
+  bool manualCleanupRollbackPending_ = false;
   QTimer *updateModelTimer_;
   QTimer *timerUpdateNews_;
 

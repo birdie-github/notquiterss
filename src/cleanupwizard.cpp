@@ -44,6 +44,10 @@ CleanUpWizard::CleanUpWizard(QWidget *parent)
   connect(button(QWizard::FinishButton), SIGNAL(clicked()),
           this, SLOT(finishButtonClicked()));
   connect(this, SIGNAL(currentIdChanged(int)), SLOT(currentIdChanged(int)));
+  UpdateObject *updater = mainApp->updateFeeds()->updateObject_;
+  connect(this, &CleanUpWizard::signalStartCleanUp, updater, &UpdateObject::startCleanUp);
+  connect(updater, &UpdateObject::signalFinishCleanUp, this, &CleanUpWizard::finishCleanUp);
+  connect(updater, &UpdateObject::signalCleanUpFailed, this, &CleanUpWizard::failCleanUp);
 }
 
 CleanUpWizard::~CleanUpWizard()
@@ -296,15 +300,21 @@ void CleanUpWizard::finishButtonClicked()
   settings.setValue("cleanUpDeleted", cleanUpDeleted_->isChecked());
   settings.setValue("fullCleanUp", fullCleanUp_->isChecked());
 
-  connect(this, SIGNAL(signalStartCleanUp(bool, QStringList, QList<int>)),
-          mainApp->updateFeeds()->updateObject_, SLOT(startCleanUp(bool, QStringList, QList<int>)));
-  connect(mainApp->updateFeeds()->updateObject_, SIGNAL(signalFinishCleanUp(int)),
-          this, SLOT(finishCleanUp(int)));
-
   emit signalStartCleanUp(false, feedsIdList, foldersIdList);
 }
 
-void CleanUpWizard::finishCleanUp(int countDeleted)
+void CleanUpWizard::failCleanUp(const QString &error)
+{
+  progressBar_->hide();
+  page(1)->setEnabled(true);
+  button(QWizard::BackButton)->setEnabled(true);
+  button(QWizard::CancelButton)->setEnabled(true);
+  button(QWizard::FinishButton)->setEnabled(true);
+  selectedPage_ = false;
+  QMessageBox::critical(this, tr("Cleanup failed"), error);
+}
+
+void CleanUpWizard::finishCleanUp(int countDeleted, const QString &warning)
 {
   int feedId = -1;
   MainWindow *mainWindow = mainApp->mainWindow();
@@ -329,7 +339,10 @@ void CleanUpWizard::finishCleanUp(int countDeleted)
 
   accept();
 
-  QMessageBox::information(this, tr("Information"),
-                           tr("Cleanup wizard deleted %1 articles").
-                           arg(countDeleted));
+  QString message = tr("Cleanup wizard deleted %1 articles").arg(countDeleted);
+  if (warning.isEmpty()) {
+    QMessageBox::information(this, tr("Information"), message);
+  } else {
+    QMessageBox::warning(this, tr("Cleanup"), message + "\n\n" + warning);
+  }
 }

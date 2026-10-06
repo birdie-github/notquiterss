@@ -561,15 +561,23 @@ bool Database::sqliteDBMemFile(QSqlDatabase &db, QString &error, bool save,
   return true;
 }
 
-void Database::setVacuum()
+bool Database::setVacuum(QString &error)
 {
+  error.clear();
+  bool success = false;
   {
     QSqlDatabase dbFile = QSqlDatabase::addDatabase("QSQLITE", "vacuum");
     dbFile.setDatabaseName(mainApp->dbFileName());
-    dbFile.open();
-    setPragma(dbFile);
-    QSqlQuery(dbFile).exec("VACUUM");
+    if (!dbFile.open()) {
+      error = dbFile.lastError().text();
+    } else {
+      setPragma(dbFile);
+      QSqlQuery query(dbFile);
+      success = query.exec("VACUUM");
+      if (!success) error = query.lastError().text();
+    }
     dbFile.close();
   }
   QSqlDatabase::removeDatabase("vacuum");
+  return success;
 }

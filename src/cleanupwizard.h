@@ -33,7 +33,8 @@ signals:
                           QList<int> foldersIdList);
 
 public slots:
-  void finishCleanUp(int countDeleted);
+  void finishCleanUp(int countDeleted, const QString &warning);
+  void failCleanUp(const QString &error);
 
 protected:
   virtual void closeEvent(QCloseEvent*);

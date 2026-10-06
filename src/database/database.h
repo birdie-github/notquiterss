@@ -41,7 +41,7 @@ public:
   // path allows recovery without discarding the live in-memory database.
   static bool sqliteDBMemFile(QSqlDatabase &db, QString &error, bool save = true,
                              const QString &fileName = QString());
-  static void setVacuum();
+  static bool setVacuum(QString &error);
 
 private:
   static void setPragma(QSqlDatabase &db);
