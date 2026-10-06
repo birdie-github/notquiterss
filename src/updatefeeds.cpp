@@ -965,14 +965,6 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
 {
   auto databaseAccess = Database::backgroundAccess();
   QString error;
-  if (manualCleanupRollbackPending_) {
-    if (!rollbackCleanUp(error)) {
-      if (isShutdown) shutdownCleanupError_ = error;
-      else emit signalCleanUpFailed(error);
-      return;
-    }
-    manualCleanupRollbackPending_ = false;
-  }
   if (!db_.transaction()) {
     error = tr("Cannot start cleanup: %1").arg(db_.lastError().text());
     if (isShutdown) shutdownCleanupError_ = error;
@@ -1001,9 +993,12 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
       return;
     }
     QString rollbackError;
-    if (!rollbackCleanUp(rollbackError)) {
-      manualCleanupRollbackPending_ = true;
-      error += tr("\nRollback failed: %1").arg(rollbackError);
+    while (!rollbackCleanUp(rollbackError)) {
+      emit signalCleanUpRollbackFailed(rollbackError);
+      // Keep this SQL thread and the database access lock inside cleanup.
+      // Processing queued work here could commit the partial cleanup through
+      // another operation. Only the GUI's semaphore wakeup can retry rollback.
+      cleanupRollbackRetry_.acquire();
     }
     emit signalCleanUpFailed(error);
     return;
@@ -1025,6 +1020,11 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
   }
   if (isShutdown && !warning.isEmpty()) shutdownCleanupWarning_ = warning;
   emit signalFinishCleanUp(countDeleted, warning);
+}
+
+void UpdateObject::retryCleanUpRollback()
+{
+  cleanupRollbackRetry_.release();
 }
 
 bool UpdateObject::rollbackCleanUp(QString &error)

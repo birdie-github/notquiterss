@@ -31,10 +31,13 @@ public:
 signals:
   void signalStartCleanUp(bool isShutdown, QStringList feedsIdList,
                           QList<int> foldersIdList);
+  void signalRetryCleanUpRollback();
 
 public slots:
   void finishCleanUp(int countDeleted, const QString &warning);
   void failCleanUp(const QString &error);
+  void waitForRollback(const QString &error);
+  void reject() override;
 
 protected:
   virtual void closeEvent(QCloseEvent*);
@@ -52,6 +55,10 @@ private:
 
   bool selectedPage_;
   bool itemNotChecked_;
+  bool cleanupRunning_ = false;
+  bool rollbackRecovery_ = false;
+  QString finishButtonText_;
+  QLabel *rollbackErrorLabel_;
   QTreeWidget *feedsTree_;
   QCheckBox *dayCleanUpOn_;
   QSpinBox *maxDayCleanUp_;

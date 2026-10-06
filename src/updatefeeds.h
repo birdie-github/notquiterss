@@ -23,6 +23,7 @@
 #include <QtSql>
 #include <QQueue>
 #include <QSet>
+#include <QSemaphore>
 #include <atomic>
 
 #include "requestfeed.h"
@@ -73,6 +74,9 @@ public:
   explicit UpdateObject(QObject *parent = 0);
   ~UpdateObject();
 
+  // Thread-safe: wake a rollback attempt without dispatching SQL-worker events.
+  void retryCleanUpRollback();
+
   std::atomic_bool isSaveMemoryDatabase;
 
 public slots:
@@ -121,6 +125,7 @@ signals:
   void signalIconUpdate(int feedId, QByteArray faviconData);
   void signalFinishCleanUp(int countDeleted, QString warning);
   void signalCleanUpFailed(QString error);
+  void signalCleanUpRollbackFailed(QString error);
 
 private slots:
   bool addFeedInQueue(int feedId, const QString &feedUrl,
@@ -142,7 +147,7 @@ private:
   ShutdownCleanup shutdownCleanup_ = ShutdownCleanup::NotStarted;
   QString shutdownCleanupError_;
   QString shutdownCleanupWarning_;
-  bool manualCleanupRollbackPending_ = false;
+  QSemaphore cleanupRollbackRetry_;
   QTimer *updateModelTimer_;
   QTimer *timerUpdateNews_;
 

@@ -37,6 +37,7 @@ CleanUpWizard::CleanUpWizard(QWidget *parent)
 
   addPage(createChooseFeedsPage());
   addPage(createCleanUpOptionsPage());
+  finishButtonText_ = buttonText(QWizard::FinishButton);
 
   Settings settings;
   restoreGeometry(settings.value("CleanUpWizard/geometry").toByteArray());
@@ -48,6 +49,11 @@ CleanUpWizard::CleanUpWizard(QWidget *parent)
   connect(this, &CleanUpWizard::signalStartCleanUp, updater, &UpdateObject::startCleanUp);
   connect(updater, &UpdateObject::signalFinishCleanUp, this, &CleanUpWizard::finishCleanUp);
   connect(updater, &UpdateObject::signalCleanUpFailed, this, &CleanUpWizard::failCleanUp);
+  connect(updater, &UpdateObject::signalCleanUpRollbackFailed, this, &CleanUpWizard::waitForRollback);
+  // The worker is deliberately waiting, so a queued slot could never wake it.
+  // retryCleanUpRollback touches only its thread-safe semaphore.
+  connect(this, &CleanUpWizard::signalRetryCleanUpRollback,
+          updater, &UpdateObject::retryCleanUpRollback, Qt::DirectConnection);
 }
 
 CleanUpWizard::~CleanUpWizard()
@@ -58,8 +64,14 @@ CleanUpWizard::~CleanUpWizard()
 
 /*virtual*/ void CleanUpWizard::closeEvent(QCloseEvent* event)
 {
-  if (progressBar_->isVisible())
+  if (cleanupRunning_)
     event->ignore();
+}
+
+void CleanUpWizard::reject()
+{
+  // Also cover Escape and programmatic rejection while the SQL worker waits.
+  if (!cleanupRunning_) QWizard::reject();
 }
 
 QWizardPage *CleanUpWizard::createChooseFeedsPage()
@@ -195,6 +207,10 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   progressBar_->setMinimum(0);
   progressBar_->setMaximum(0);
   progressBar_->setVisible(false);
+  rollbackErrorLabel_ = new QLabel(this);
+  rollbackErrorLabel_->setTextFormat(Qt::PlainText);
+  rollbackErrorLabel_->setWordWrap(true);
+  rollbackErrorLabel_->hide();
 
   Settings settings("CleanUpWizard");
   maxDayCleanUp_->setValue(settings.value("maxDayClearUp", 30).toInt());
@@ -216,6 +232,7 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   layout->addWidget(fullCleanUp_);
   layout->addLayout(fullCleanUpDescriptionLayout);
   layout->addStretch(1);
+  layout->addWidget(rollbackErrorLabel_);
   layout->addWidget(progressBar_);
 
   return page;
@@ -267,6 +284,15 @@ void CleanUpWizard::currentIdChanged(int idPage)
 
 void CleanUpWizard::finishButtonClicked()
 {
+  if (rollbackRecovery_) {
+    rollbackRecovery_ = false;
+    button(QWizard::FinishButton)->setEnabled(false);
+    progressBar_->show();
+    emit signalRetryCleanUpRollback();
+    return;
+  }
+  if (cleanupRunning_) return;
+  cleanupRunning_ = true;
   button(QWizard::BackButton)->setEnabled(false);
   button(QWizard::CancelButton)->setEnabled(false);
   button(QWizard::FinishButton)->setEnabled(false);
@@ -305,6 +331,10 @@ void CleanUpWizard::finishButtonClicked()
 
 void CleanUpWizard::failCleanUp(const QString &error)
 {
+  cleanupRunning_ = false;
+  rollbackRecovery_ = false;
+  rollbackErrorLabel_->hide();
+  setButtonText(QWizard::FinishButton, finishButtonText_);
   progressBar_->hide();
   page(1)->setEnabled(true);
   button(QWizard::BackButton)->setEnabled(true);
@@ -312,6 +342,17 @@ void CleanUpWizard::failCleanUp(const QString &error)
   button(QWizard::FinishButton)->setEnabled(true);
   selectedPage_ = false;
   QMessageBox::critical(this, tr("Cleanup failed"), error);
+}
+
+void CleanUpWizard::waitForRollback(const QString &error)
+{
+  rollbackRecovery_ = true;
+  progressBar_->hide();
+  rollbackErrorLabel_->setText(tr("Cleanup could not be rolled back. Database work is paused. "
+                                 "Fix the problem and choose Retry rollback.\n\n%1").arg(error));
+  rollbackErrorLabel_->show();
+  setButtonText(QWizard::FinishButton, tr("Retry rollback"));
+  button(QWizard::FinishButton)->setEnabled(true);
 }
 
 void CleanUpWizard::finishCleanUp(int countDeleted, const QString &warning)
@@ -336,6 +377,7 @@ void CleanUpWizard::finishCleanUp(int countDeleted, const QString &warning)
   mainWindow->recountCategoryCounts();
 
   selectedPage_ = true;
+  cleanupRunning_ = false;
 
   accept();
 
