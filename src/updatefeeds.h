@@ -99,6 +99,7 @@ public slots:
   void startCleanUp(bool isShutdown, QStringList feedsIdList, QList<int> foldersIdList);
   void cleanUpShutdown();
   void quitApp();
+  void retryQuitApp(const QString &fileName = QString());
 
 signals:
   void showProgressBar(int value);
@@ -132,6 +133,7 @@ private:
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;
   int updateFeedsCount_;
+  bool shutdownPrepared_ = false;
   QTimer *updateModelTimer_;
   QTimer *timerUpdateNews_;
 

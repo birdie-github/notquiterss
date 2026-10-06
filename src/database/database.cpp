@@ -276,7 +276,13 @@ bool Database::initialization()
     setPragma(db);
 
     if (mainApp->storeDBMemory()) {
-      sqliteDBMemFile(db, false);
+      QString error;
+      if (!sqliteDBMemFile(db, error, false)) {
+        QMessageBox::critical(nullptr, tr("Error"),
+                              tr("Cannot load the database into memory.\n%1").arg(error));
+        db.close();
+        return false;
+      }
     }
     return true;
   }
@@ -487,81 +493,72 @@ QSqlDatabase Database::connection(const QString &connectionName)
   return db;
 }
 
-void Database::sqliteDBMemFile(QSqlDatabase &db, bool save)
+bool Database::sqliteDBMemFile(QSqlDatabase &db, QString &error, bool save,
+                              const QString &fileName)
 {
-  if (save) qWarning() << "sqliteDBMemFile(): from memory to file...";
-  else qWarning() << "sqliteDBMemFile(): from file to memory...";
+  error.clear();
+  const QString path = fileName.isEmpty() ? mainApp->dbFileName() : fileName;
+  auto fail = [&](const QString &detail) {
+    error = tr("Database copy failed for %1:\n%2").arg(path, detail);
+    qCritical().noquote() << error;
+    return false;
+  };
 
-  int rc = -1;                   /* Function return code */
-  QVariant v = db.driver()->handle();
-  if (v.isValid() && qstrcmp(v.typeName(),"sqlite3*") == 0) {
-    // v.data() returns a pointer to the handle
-    sqlite3 *handle = *static_cast<sqlite3 **>(v.data());
-    if (handle != 0) {  // check that it is not NULL
-      sqlite3 *pInMemory = handle;
-      sqlite3 *pFile;           /* Database connection opened on zFilename */
-      sqlite3_backup *pBackup;  /* Backup object used to copy data */
-      sqlite3 *pTo;             /* Database to copy to (pFile or pInMemory) */
-      sqlite3 *pFrom;           /* Database to copy from (pFile or pInMemory) */
+  QVariant value = db.isOpen() && db.driver() ? db.driver()->handle() : QVariant();
+  if (!value.isValid() || qstrcmp(value.typeName(), "sqlite3*") != 0)
+    return fail(tr("The live SQLite connection is unavailable."));
+  sqlite3 *memory = *static_cast<sqlite3 **>(value.data());
+  if (!memory)
+    return fail(tr("The live SQLite connection is closed."));
 
-      /* Open the database file identified by zFilename. Exit early if this fails
-      ** for any reason. */
-      rc = sqlite3_open(mainApp->dbFileName().toUtf8().data(), &pFile);
-      if (rc == SQLITE_OK) {
-        /* If this is a 'load' operation (isSave==0), then data is copied
-        ** from the database file just opened to database pInMemory.
-        ** Otherwise, if this is a 'save' operation (isSave==1), then data
-        ** is copied from pInMemory to pFile.  Set the variables pFrom and
-        ** pTo accordingly. */
-        pFrom = (save ? pInMemory : pFile);
-        pTo   = (save ? pFile     : pInMemory);
-
-        /* Set up the backup procedure to copy from the "main" database of
-        ** connection pFile to the main database of connection pInMemory.
-        ** If something goes wrong, pBackup will be set to NULL and an error
-        ** code and  message left in connection pTo.
-        **
-        ** If the backup object is successfully created, call backup_step()
-        ** to copy data from pFile to pInMemory. Then call backup_finish()
-        ** to release resources associated with the pBackup object.  If an
-        ** error occurred, then  an error code and message will be left in
-        ** connection pTo. If no error occurred, then the error code belonging
-        ** to pTo is set to SQLITE_OK.
-        */
-
-        pBackup = sqlite3_backup_init(pTo, "main", pFrom, "main");
-
-        /* Copy up to 10000 pages per step. SQLITE_OK means more pages remain,
-        ** so continue immediately; pause only when the database is busy or
-        ** locked. SQLITE_DONE indicates that the copy is complete. */
-        do {
-          rc = sqlite3_backup_step(pBackup, 10000);
-
-          if (!mainApp->isNoDebugOutput()) {
-            int remaining = sqlite3_backup_remaining(pBackup);
-            int pagecount = sqlite3_backup_pagecount(pBackup);
-            qDebug() << rc << "backup" << pagecount << "remain" << remaining;
-          }
-
-          if ((rc == SQLITE_BUSY) || (rc == SQLITE_LOCKED))
-            sqlite3_sleep(100);
-        } while ((rc == SQLITE_OK) || (rc == SQLITE_BUSY) || (rc == SQLITE_LOCKED));
-
-        /* Release resources allocated by backup_init(). */
-        (void)sqlite3_backup_finish(pBackup);
-
-        if (rc != SQLITE_DONE)
-          qCritical() << "sqliteDBMemFile(): return code =" << rc;
-      } else {
-        qCritical() << "sqliteDBMemFile(): error open =" << rc;
-      }
-
-      /* Close the database connection opened on database file zFilename
-      ** and return the result of this function. */
-      (void)sqlite3_close(pFile);
-    }
+  sqlite3 *file = nullptr;
+  // Loading must not create an empty database if the source has disappeared.
+  const int flags = save ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READONLY;
+  const int openRc = sqlite3_open_v2(path.toUtf8().constData(), &file, flags, nullptr);
+  if (openRc != SQLITE_OK) {
+    const QString detail = QString::fromUtf8(file ? sqlite3_errmsg(file) : sqlite3_errstr(openRc));
+    if (file) sqlite3_close(file);
+    return fail(detail);
   }
-  qWarning() << "sqliteDBMemFile(): finished!";
+
+  sqlite3 *source = save ? memory : file;
+  sqlite3 *target = save ? file : memory;
+  sqlite3_backup *copy = sqlite3_backup_init(target, "main", source, "main");
+  if (!copy) {
+    const QString detail = QString::fromUtf8(sqlite3_errmsg(target));
+    sqlite3_close(file);
+    return fail(detail);
+  }
+
+  // Stop retrying locks after ten seconds, including SQLite's own busy waits.
+  // Successful steps can continue past the deadline for a large database.
+  QElapsedTimer timeout;
+  timeout.start();
+  int stepRc;
+  do {
+    stepRc = sqlite3_backup_step(copy, 10000);
+    if (!mainApp->isNoDebugOutput()) {
+      qDebug() << stepRc << "backup" << sqlite3_backup_pagecount(copy)
+               << "remain" << sqlite3_backup_remaining(copy);
+    }
+    if (stepRc == SQLITE_BUSY || stepRc == SQLITE_LOCKED) {
+      if (timeout.elapsed() >= 10000) break;
+      sqlite3_sleep(100);
+    }
+  } while (stepRc == SQLITE_OK || stepRc == SQLITE_BUSY || stepRc == SQLITE_LOCKED);
+
+  // Finish exactly once after every successful init, including incomplete
+  // copies. SQLITE_OK from finish alone does not mean the copy completed.
+  const int finishRc = sqlite3_backup_finish(copy);
+  const QString detail = QString::fromUtf8(sqlite3_errmsg(target));
+  const int closeRc = sqlite3_close(file);
+  if (closeRc != SQLITE_OK) sqlite3_close_v2(file);
+  if (stepRc != SQLITE_DONE || finishRc != SQLITE_OK || closeRc != SQLITE_OK) {
+    return fail(tr("%1 (copy: %2, finish: %3, close: %4)")
+                .arg(detail).arg(stepRc).arg(finishRc).arg(closeRc));
+  }
+  qInfo() << "Database copy completed:" << path << (save ? "saved" : "loaded");
+  return true;
 }
 
 void Database::setVacuum()

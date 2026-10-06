@@ -37,7 +37,10 @@ public:
   static bool initialization();
   // Create a new connection in the calling thread. The caller owns its removal.
   static QSqlDatabase connection(const QString &connectionName);
-  static void sqliteDBMemFile(QSqlDatabase &db, bool save = true);
+  // Copy the live database to disk, or load it at startup. An alternate save
+  // path allows recovery without discarding the live in-memory database.
+  static bool sqliteDBMemFile(QSqlDatabase &db, QString &error, bool save = true,
+                             const QString &fileName = QString());
   static void setVacuum();
 
 private:

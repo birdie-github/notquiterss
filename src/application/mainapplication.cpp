@@ -357,6 +357,36 @@ void MainApplication::showClosingWidget()
   qApp->processEvents();
 }
 
+void MainApplication::reportDatabaseSaveFailure(const QString &error)
+{
+  closingWidget_->hide();
+  QMessageBox dialog(QMessageBox::Critical, tr("Database save failed"),
+      tr("The in-memory database could not be saved. The application will remain "
+         "open to preserve it. Fix the problem and retry, or save a recovery copy "
+         "to another location.\n\n%1").arg(error), QMessageBox::NoButton, closingWidget_);
+  QPushButton *retry = dialog.addButton(tr("Retry"), QMessageBox::AcceptRole);
+  QPushButton *recover = dialog.addButton(tr("Save recovery copy..."), QMessageBox::ActionRole);
+  dialog.setDefaultButton(retry);
+  dialog.exec();
+
+  QString fileName;
+  if (dialog.clickedButton() == recover) {
+    fileName = QFileDialog::getSaveFileName(closingWidget_, tr("Save recovery copy"),
+        dbFileName() + ".recovery", tr("All files (*)"));
+  }
+  if (dialog.clickedButton() != retry && fileName.isEmpty()) {
+    // Dismissing either dialog must not release the only current database.
+    QTimer::singleShot(0, this, [this, error] { reportDatabaseSaveFailure(error); });
+    return;
+  }
+
+  closingWidget_->show();
+  UpdateObject *updater = updateFeeds_->updateObject_;
+  QMetaObject::invokeMethod(updater, [updater, fileName] {
+    updater->retryQuitApp(fileName);
+  }, Qt::QueuedConnection);
+}
+
 void MainApplication::commitData(QSessionManager &manager)
 {
   manager.release();

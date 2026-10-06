@@ -55,6 +55,7 @@ public:
   bool isClosing() const;
   bool isNoDebugOutput() const;
   void showClosingWidget();
+  void reportDatabaseSaveFailure(const QString &error);
 
   QString resourcesDir() const;
   QString dataDir() const;

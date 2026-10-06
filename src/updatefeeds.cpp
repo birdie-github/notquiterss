@@ -310,6 +310,7 @@ UpdateFeeds::~UpdateFeeds()
 
 void UpdateFeeds::disconnectObjects()
 {
+  if (saveMemoryDBTimer_) saveMemoryDBTimer_->stop();
   if (!addFeed_) {
     updateObject_->disconnect(updateObject_);
     updateObject_->disconnect(parseObject_);
@@ -338,7 +339,7 @@ void UpdateFeeds::startSaveTimer()
 
 void UpdateFeeds::saveMemoryDatabase()
 {
-  if (!mainApp->storeDBMemory()) return;
+  if (mainApp->isClosing() || !mainApp->storeDBMemory()) return;
   if (updateObject_->isSaveMemoryDatabase) return;
 
   emit signalSaveMemoryDatabase();
@@ -949,8 +950,11 @@ void UpdateObject::slotMarkAllFeedsOld()
 void UpdateObject::saveMemoryDatabase()
 {
   auto databaseAccess = Database::backgroundAccess();
+  if (shutdownPrepared_) return;
   isSaveMemoryDatabase = true;
-  Database::sqliteDBMemFile(db_);
+  QString error;
+  if (!Database::sqliteDBMemFile(db_, error))
+    emit signalMessageStatusBar(tr("Could not save the in-memory database: %1").arg(error), 30000);
   isSaveMemoryDatabase = false;
 }
 
@@ -1183,12 +1187,7 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
   if (!mainApp->storeDBMemory()) {
     if ((cleanupOn && optimizeDB) || !isShutdown)
       QSqlQuery(db_).exec("VACUUM");
-  } else if (isShutdown) {
-    // Persist on actual exit, even when shutdown cleanup is disabled.
-    saveMemoryDatabase();
-    if (cleanupOn && optimizeDB)
-      Database::setVacuum();
-  } else {
+  } else if (!isShutdown) {
     // Manual cleanup stays in memory until the save timer or actual exit.
     QSqlQuery(db_).exec("VACUUM");
   }
@@ -1221,10 +1220,41 @@ void UpdateObject::cleanUpShutdown()
 void UpdateObject::quitApp()
 {
   auto databaseAccess = Database::backgroundAccess();
-  cleanUpShutdown();
+  if (!shutdownPrepared_) {
+    shutdownPrepared_ = true;
+    cleanUpShutdown();
+  }
+  retryQuitApp();
+}
+
+void UpdateObject::retryQuitApp(const QString &fileName)
+{
+  auto databaseAccess = Database::backgroundAccess();
+  if (!shutdownPrepared_) return;
+  if (mainApp->storeDBMemory()) {
+    QString error;
+    if (!Database::sqliteDBMemFile(db_, error, true, fileName)) {
+      // Keep the SQL context and its live database alive for another attempt.
+      QMetaObject::invokeMethod(mainApp, [error] {
+        mainApp->reportDatabaseSaveFailure(error);
+      }, Qt::QueuedConnection);
+      return;
+    }
+    Settings settings("Settings");
+    if (fileName.isEmpty() && settings.value("cleanupOnShutdown", true).toBool() &&
+        settings.value("optimizeDB", false).toBool())
+      Database::setVacuum();
+  }
   const auto backup = DatabaseBackup::create(db_, DatabaseBackup::Trigger::Exit);
-  QMetaObject::invokeMethod(mainApp, [backup] {
+  QMetaObject::invokeMethod(mainApp, [backup, fileName] {
     DatabaseBackup::report(backup, false);
+    if (!fileName.isEmpty()) {
+      QMessageBox::information(nullptr, MainApplication::tr("Database recovery"),
+          MainApplication::tr("The database was saved to:\n%1\n\n"
+                              "If you saved it outside the normal database location, restore "
+                              "this copy to %2 before starting the application again.")
+                              .arg(fileName, mainApp->dbFileName()));
+    }
     mainApp->quitApplication();
   }, Qt::QueuedConnection);
 }
