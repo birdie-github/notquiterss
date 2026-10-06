@@ -2386,6 +2386,7 @@ void MainWindow::showMainMenu()
  *---------------------------------------------------------------------------*/
 void MainWindow::addFeed()
 {
+  if (mainApp->isClosing()) return;
   int curFolderId = 0;
   QPersistentModelIndex curIndex = feedsView_->selectIndex();
   if (feedsModel_->isFolder(curIndex)) {

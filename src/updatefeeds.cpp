@@ -29,6 +29,7 @@
 #include <QDebug>
 #include <QRegularExpression>
 #include <QUuid>
+#include <sqlite3.h>
 
 #define UPDATE_INTERVAL 3000
 #define UPDATE_INTERVAL_MIN 500
@@ -985,7 +986,15 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
   bool neverLabelCleanUp = settings.value("neverLabelClearUp", true).toBool();
   bool cleanUpDeleted = settings.value("cleanUpDeleted", false).toBool();
 
-  db_.transaction();
+  const bool transactionStarted = db_.transaction();
+  if (isShutdown) {
+    if (!transactionStarted) {
+      shutdownCleanupError_ = tr("Cannot start shutdown cleanup: %1").arg(db_.lastError().text());
+      return;
+    }
+    shutdownCleanupError_.clear();
+    shutdownCleanup_ = ShutdownCleanup::TransactionOpen;
+  }
 
   QSqlQuery q(db_);
   QString qStr;
@@ -1182,7 +1191,17 @@ void UpdateObject::startCleanUp(bool isShutdown, QStringList feedsIdList, QList<
   }
 
   q.finish();
-  db_.commit();
+  const bool committed = db_.commit();
+  if (isShutdown) {
+    if (!committed) {
+      shutdownCleanupWarning_ = tr("Shutdown cleanup could not be committed and was skipped. "
+                                  "Previously committed changes from this session are preserved.\n%1")
+                                  .arg(db_.lastError().text());
+      // Resolve this transaction before copying, including on a later retry.
+      return;
+    }
+    shutdownCleanup_ = ShutdownCleanup::Finished;
+  }
 
   if (!mainApp->storeDBMemory()) {
     if ((cleanupOn && optimizeDB) || !isShutdown)
@@ -1222,7 +1241,6 @@ void UpdateObject::quitApp()
   auto databaseAccess = Database::backgroundAccess();
   if (!shutdownPrepared_) {
     shutdownPrepared_ = true;
-    cleanUpShutdown();
   }
   retryQuitApp();
 }
@@ -1231,13 +1249,41 @@ void UpdateObject::retryQuitApp(const QString &fileName)
 {
   auto databaseAccess = Database::backgroundAccess();
   if (!shutdownPrepared_) return;
+  auto reportFailure = [](const QString &error) {
+    qCritical().noquote() << error;
+    QMetaObject::invokeMethod(mainApp, [error] {
+      mainApp->reportDatabaseSaveFailure(error);
+    }, Qt::QueuedConnection);
+  };
+  if (shutdownCleanup_ == ShutdownCleanup::NotStarted) {
+    cleanUpShutdown();
+    if (shutdownCleanup_ == ShutdownCleanup::NotStarted) {
+      reportFailure(shutdownCleanupError_);
+      return;
+    }
+  }
+  if (shutdownCleanup_ == ShutdownCleanup::TransactionOpen) {
+    QVariant value = db_.driver() ? db_.driver()->handle() : QVariant();
+    sqlite3 *handle = value.isValid() && qstrcmp(value.typeName(), "sqlite3*") == 0
+        ? *static_cast<sqlite3 **>(value.data()) : nullptr;
+    if (!handle) {
+      reportFailure(tr("The live SQLite connection is unavailable."));
+      return;
+    }
+    // Some SQLite errors roll back automatically. Otherwise explicitly undo
+    // only the failed shutdown cleanup, not earlier committed session changes.
+    if (!sqlite3_get_autocommit(handle) && !db_.rollback()) {
+      reportFailure(tr("Cannot roll back shutdown cleanup: %1").arg(db_.lastError().text()));
+      return;
+    }
+    shutdownCleanup_ = ShutdownCleanup::Finished;
+    qWarning().noquote() << shutdownCleanupWarning_;
+  }
   if (mainApp->storeDBMemory()) {
     QString error;
     if (!Database::sqliteDBMemFile(db_, error, true, fileName)) {
       // Keep the SQL context and its live database alive for another attempt.
-      QMetaObject::invokeMethod(mainApp, [error] {
-        mainApp->reportDatabaseSaveFailure(error);
-      }, Qt::QueuedConnection);
+      reportFailure(error);
       return;
     }
     Settings settings("Settings");
@@ -1246,7 +1292,10 @@ void UpdateObject::retryQuitApp(const QString &fileName)
       Database::setVacuum();
   }
   const auto backup = DatabaseBackup::create(db_, DatabaseBackup::Trigger::Exit);
-  QMetaObject::invokeMethod(mainApp, [backup, fileName] {
+  const QString cleanupWarning = shutdownCleanupWarning_;
+  QMetaObject::invokeMethod(mainApp, [backup, fileName, cleanupWarning] {
+    if (!cleanupWarning.isEmpty())
+      QMessageBox::warning(nullptr, MainApplication::tr("Shutdown cleanup"), cleanupWarning);
     DatabaseBackup::report(backup, false);
     if (!fileName.isEmpty()) {
       QMessageBox::information(nullptr, MainApplication::tr("Database recovery"),

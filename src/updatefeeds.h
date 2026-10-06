@@ -134,6 +134,10 @@ private:
   QList<int> feedIdList_;
   int updateFeedsCount_;
   bool shutdownPrepared_ = false;
+  enum class ShutdownCleanup { NotStarted, TransactionOpen, Finished };
+  ShutdownCleanup shutdownCleanup_ = ShutdownCleanup::NotStarted;
+  QString shutdownCleanupError_;
+  QString shutdownCleanupWarning_;
   QTimer *updateModelTimer_;
   QTimer *timerUpdateNews_;
 

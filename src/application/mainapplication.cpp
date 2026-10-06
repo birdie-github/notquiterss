@@ -175,14 +175,13 @@ MainApplication *MainApplication::getInstance()
 
 void MainApplication::receiveMessage(const QString &message)
 {
+  if (isClosing_) return;
   if (!message.isEmpty()) {
     qWarning() << QString("Received message: %1").arg(message);
 
     QStringList params = message.split('\n');
     foreach (QString param, params) {
       if (param == "--show") {
-        if (isClosing_)
-          return;
         mainWindow_->showWindows();
       }
       if (param == "--exit") { mainWindow_->quitApp(); return; }
@@ -360,17 +359,20 @@ void MainApplication::showClosingWidget()
 void MainApplication::reportDatabaseSaveFailure(const QString &error)
 {
   closingWidget_->hide();
+  QString message = tr("Shutdown could not finish safely. The application will remain open "
+                       "to preserve its database. Fix the problem and retry.");
+  if (storeDBMemory_)
+    message += tr(" You can also save a recovery copy to another location.");
   QMessageBox dialog(QMessageBox::Critical, tr("Database save failed"),
-      tr("The in-memory database could not be saved. The application will remain "
-         "open to preserve it. Fix the problem and retry, or save a recovery copy "
-         "to another location.\n\n%1").arg(error), QMessageBox::NoButton, closingWidget_);
+      message + "\n\n" + error, QMessageBox::NoButton, closingWidget_);
   QPushButton *retry = dialog.addButton(tr("Retry"), QMessageBox::AcceptRole);
-  QPushButton *recover = dialog.addButton(tr("Save recovery copy..."), QMessageBox::ActionRole);
+  QPushButton *recover = storeDBMemory_
+      ? dialog.addButton(tr("Save recovery copy..."), QMessageBox::ActionRole) : nullptr;
   dialog.setDefaultButton(retry);
   dialog.exec();
 
   QString fileName;
-  if (dialog.clickedButton() == recover) {
+  if (recover && dialog.clickedButton() == recover) {
     fileName = QFileDialog::getSaveFileName(closingWidget_, tr("Save recovery copy"),
         dbFileName() + ".recovery", tr("All files (*)"));
   }
