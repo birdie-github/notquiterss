@@ -681,7 +681,11 @@ void OptionsDialog::createFeedsWidget()
 //! tab "General"
   updateFeedsStartUp_ = new QCheckBox(
         tr("Automatically update feeds on startup"));
+  updateFeedsStartUp_->setToolTip(tr("Refresh enabled feeds immediately when the application starts. "
+                                    "Otherwise, overdue scheduled feeds are checked after one minute."));
   updateFeedsEnable_ = new QCheckBox(tr("Automatically update feeds every"));
+  updateFeedsEnable_->setToolTip(tr("Time spent with the application closed counts toward the interval. "
+                                   "Overdue feeds are refreshed after a one-minute startup grace period."));
   updateFeedsInterval_ = new QSpinBox();
   updateFeedsInterval_->setEnabled(false);
   updateFeedsInterval_->setRange(1, 9999);

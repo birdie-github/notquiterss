@@ -37,17 +37,6 @@ void MainWindow::applyBulkFeedSettings(FeedPropertiesDialog *dialog)
     const QPersistentModelIndex index = feedsModel_->indexById(id);
     for (auto it = values.cbegin(); it != values.cend(); ++it)
       feedsModel_->setData(feedsModel_->indexSibling(index, it.key()), it.value());
-    if (changes.schedule) {
-      const auto &schedule = *changes.schedule;
-      if (schedule.mode == 1) {
-        const int multiplier = schedule.unit == -1 ? 1 : (schedule.unit == 0 ? 60 : 3600);
-        updateFeedsIntervalSec_.insert(id, schedule.interval * multiplier);
-        updateFeedsTimeCount_.insert(id, 0);
-      } else {
-        updateFeedsIntervalSec_.remove(id);
-        updateFeedsTimeCount_.remove(id);
-      }
-    }
   }
   refreshFeedSettings(ids, changes.columns.has_value(), changes.images.has_value(),
                       changes.rightToLeft.has_value());

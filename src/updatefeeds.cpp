@@ -147,10 +147,10 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     connect(parent, SIGNAL(signalStopUpdate()),
             requestFeed_, SLOT(stopRequest()));
 
-    connect(parent, SIGNAL(signalGetFeedTimer(int)),
-            updateObject_, SLOT(slotGetFeedTimer(int)));
-    connect(parent, SIGNAL(signalGetAllFeedsTimer()),
-            updateObject_, SLOT(slotGetAllFeedsTimer()));
+    connect(window, &MainWindow::signalGetScheduledFeeds,
+            updateObject_, &UpdateObject::slotGetScheduledFeeds);
+    connect(updateObject_, &UpdateObject::scheduledFeedsChecked,
+            window, &MainWindow::slotScheduledFeedsChecked);
     connect(parent, SIGNAL(signalGetAllFeedsStartup()),
             updateObject_, SLOT(slotGetAllFeedsStartup()));
     connect(parent, SIGNAL(signalGetAllFeeds()),
@@ -402,31 +402,88 @@ bool UpdateObject::isFeedInFolder(int feedId, int folderId)
   return false;
 }
 
-void UpdateObject::slotGetFeedTimer(int feedId)
+void UpdateObject::slotGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds)
 {
-  auto databaseAccess = Database::backgroundAccess();
-  QSqlQuery q(db_);
-  q.exec(QString("SELECT xmlUrl, lastBuildDate, authentication FROM feeds WHERE id=='%1' AND disableUpdate=0")
-         .arg(feedId));
-  if (q.next()) {
-    addFeedInQueue(feedId, q.value(0).toString(),
-                   q.value(1).toDateTime(), q.value(2).toInt());
-  }
-  emit showProgressBar(updateFeedsCount_);
+  checkScheduledFeeds(globalEnabled, globalIntervalSeconds);
+  // At most one scheduler check may wait behind other SQL work.
+  emit scheduledFeedsChecked();
 }
 
-void UpdateObject::slotGetAllFeedsTimer()
+void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSeconds)
 {
+  if (shutdownPrepared_) return;
   auto databaseAccess = Database::backgroundAccess();
+  const QDateTime now = QDateTime::currentDateTimeUtc();
   QSqlQuery q(db_);
-  q.exec("SELECT id, xmlUrl, lastBuildDate, authentication FROM feeds "
-         "WHERE xmlUrl!='' AND disableUpdate=0 "
-         "AND (updateIntervalEnable==-1 OR updateIntervalEnable IS NULL)");
-  while (q.next()) {
-    addFeedInQueue(q.value(0).toInt(), q.value(1).toString(),
-                   q.value(2).toDateTime(), q.value(3).toInt());
+  if (!q.exec("SELECT f.id, f.xmlUrl, f.lastBuildDate, f.authentication, f.disableUpdate, "
+              "f.updateIntervalEnable, f.updateInterval, f.updateIntervalType, f.updated, a.value "
+              "FROM feeds f LEFT JOIN "
+              "(SELECT feedId, max(value) AS value FROM feeds_ex "
+              "WHERE name='lastUpdateAttempt' GROUP BY feedId) a ON a.feedId=f.id "
+              "WHERE f.xmlUrl!=''")) {
+    qWarning() << "Could not check scheduled feeds:" << q.lastError().text();
+    return;
   }
-  emit showProgressBar(updateFeedsCount_);
+  QSet<int> existing;
+  bool queued = false;
+  while (q.next()) {
+    const int id = q.value(0).toInt();
+    existing.insert(id);
+    if (!lastUpdateAttempts_.contains(id)) {
+      QDateTime attempt = QDateTime::fromString(q.value(9).toString(), Qt::ISODate);
+      // Historical 'updated' values are UTC even though their text has no Z.
+      const QDateTime parsed = QDateTime::fromString(q.value(8).toString(), Qt::ISODate);
+      const QDateTime updated(parsed.date(), parsed.time(), Qt::UTC);
+      if (!attempt.isValid()) attempt = updated;
+      // A clock correction or imported future timestamp must not defer forever.
+      if (attempt > now) attempt = now;
+      lastUpdateAttempts_.insert(id, attempt);
+    }
+    if (q.value(4).toBool() || feedIdList_.contains(id)) continue;
+    const int mode = q.value(5).isNull() ? -1 : q.value(5).toInt();
+    int interval = globalIntervalSeconds;
+    if (mode == 1) {
+      const int unit = q.value(7).toInt();
+      interval = q.value(6).toInt() * (unit == -1 ? 1 : (unit == 0 ? 60 : 3600));
+    } else if (mode != -1 || !globalEnabled) {
+      continue;
+    }
+    if (interval <= 0) continue;
+    QDateTime &attempt = lastUpdateAttempts_[id];
+    if (attempt > now) attempt = now;
+    if (!attempt.isValid() || attempt.secsTo(now) >= interval) {
+      queued = addFeedInQueue(id, q.value(1).toString(), q.value(2).toDateTime(),
+                              q.value(3).toInt()) || queued;
+    }
+  }
+  if (q.lastError().isValid()) {
+    qWarning() << "Could not read scheduled feeds:" << q.lastError().text();
+  } else {
+    for (auto it = lastUpdateAttempts_.begin(); it != lastUpdateAttempts_.end();) {
+      if (!existing.contains(it.key())) it = lastUpdateAttempts_.erase(it);
+      else ++it;
+    }
+  }
+  if (queued) emit showProgressBar(updateFeedsCount_);
+}
+
+void UpdateObject::recordUpdateAttempt(int feedId)
+{
+  const QDateTime now = QDateTime::currentDateTimeUtc();
+  lastUpdateAttempts_.insert(feedId, now);
+  QSqlQuery q(db_);
+  // Reuse the extensible feed metadata; one atomic statement inserts or updates.
+  if (!q.prepare("INSERT OR REPLACE INTO feeds_ex(id, feedId, name, value) "
+                 "VALUES ((SELECT id FROM feeds_ex WHERE feedId=? AND name='lastUpdateAttempt' LIMIT 1), "
+                 "?, 'lastUpdateAttempt', ?)")) {
+    qWarning() << "Could not prepare feed attempt timestamp:" << q.lastError().text();
+    return;
+  }
+  q.addBindValue(feedId);
+  q.addBindValue(feedId);
+  q.addBindValue(now.toString(Qt::ISODate));
+  if (!q.exec())
+    qWarning() << "Could not save feed attempt timestamp for" << feedId << q.lastError().text();
 }
 
 /** @brief Process update feed action
@@ -617,9 +674,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
   emit signalUpdateFeedsModel();
 
   for (int i = 0; i < idsList.count(); i++) {
-    updateFeedsCount_ = updateFeedsCount_ + 2;
-    announceFeedProgress(idsList.at(i));
-    emit signalRequestUrl(idsList.at(i), urlsList.at(i), QDateTime(), "");
+    addFeedInQueue(idsList.at(i), urlsList.at(i), QDateTime(), 0);
   }
   emit showProgressBar(updateFeedsCount_);
 }
@@ -657,6 +712,7 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
     if (manual) manualFeeds_.insert(feedId);
     return false;
   } else {
+    recordUpdateAttempt(feedId);
     feedIdList_.append(feedId);
     if (manual) manualFeeds_.insert(feedId);
     updateFeedsCount_ = updateFeedsCount_ + 2;

@@ -179,7 +179,6 @@ MainWindow::MainWindow(QWidget *parent)
   , feedsFilterAction_(NULL)
   , newsFilterAction_(NULL)
   , newsView_(NULL)
-  , updateTimeCount_(0)
   , soundPlayer_(new SoundPlayer(this))
   , updateAppDialog_(NULL)
   , notificationWidget(NULL)
@@ -3562,12 +3561,6 @@ void MainWindow::showOptionDlg(int index)
   updateFeedsInterval_ = optionsDialog_->updateFeedsInterval_->value();
   updateFeedsIntervalType_ = optionsDialog_->updateIntervalType_->currentIndex()-1;
 
-  int updateInterval = updateFeedsInterval_;
-  if (updateFeedsIntervalType_ == 0)
-    updateInterval = updateInterval*60;
-  else if (updateFeedsIntervalType_ == 1)
-    updateInterval = updateInterval*60*60;
-  updateIntervalSec_ = updateInterval;
 
   openingFeedAction_ = optionsDialog_->getOpeningFeed();
   openNewsWebViewOn_ = optionsDialog_->openNewsWebViewOn_->isChecked();
@@ -3736,25 +3729,7 @@ void MainWindow::initUpdateFeeds()
     }
   }
 
-  q.exec("SELECT id, updateInterval, updateIntervalType FROM feeds WHERE xmlUrl != '' AND updateIntervalEnable == 1");
-  while (q.next()) {
-    int updateInterval = q.value(1).toInt();
-    int updateIntervalType = q.value(2).toInt();
-    if (updateIntervalType == 0)
-      updateInterval = updateInterval*60;
-    else if (updateIntervalType == 1)
-      updateInterval = updateInterval*60*60;
-
-    updateFeedsIntervalSec_.insert(q.value(0).toInt(), updateInterval);
-    updateFeedsTimeCount_.insert(q.value(0).toInt(), 0);
-  }
-
-  int updateInterval = updateFeedsInterval_;
-  if (updateFeedsIntervalType_ == 0)
-    updateInterval = updateInterval*60;
-  else if (updateFeedsIntervalType_ == 1)
-    updateInterval = updateInterval*60*60;
-  updateIntervalSec_ = updateInterval;
+  updateScheduleClock_.start();
 
   updateFeedsTimer_ = new QTimer(this);
   connect(updateFeedsTimer_, SIGNAL(timeout()),
@@ -3762,30 +3737,21 @@ void MainWindow::initUpdateFeeds()
   updateFeedsTimer_->start(1000);
 }
 // ----------------------------------------------------------------------------
+void MainWindow::slotScheduledFeedsChecked()
+{
+  scheduledUpdatePending_ = false;
+}
+
 void MainWindow::slotGetFeedsTimer()
 {
-  if (updateFeedsEnable_) {
-    updateTimeCount_++;
-    if (updateTimeCount_ >= updateIntervalSec_) {
-      updateTimeCount_ = 0;
-
-      emit signalGetAllFeedsTimer();
-    }
-  } else {
-    updateTimeCount_ = 0;
-  }
-
-  QMapIterator<int, int> iterator(updateFeedsTimeCount_);
-  while (iterator.hasNext()) {
-    iterator.next();
-    int feedId = iterator.key();
-    updateFeedsTimeCount_[feedId]++;
-    if (updateFeedsTimeCount_[feedId] >= updateFeedsIntervalSec_[feedId]) {
-      updateFeedsTimeCount_[feedId] = 0;
-
-      emit signalGetFeedTimer(feedId);
-    }
-  }
+  // Permit startup to settle, including when intervals are shorter than a minute.
+  // Explicit startup/manual updates still use their existing immediate paths.
+  if (mainApp->isClosing() || updateScheduleClock_.elapsed() < 60000 || scheduledUpdatePending_)
+    return;
+  const int multiplier = updateFeedsIntervalType_ == -1 ? 1 :
+                         (updateFeedsIntervalType_ == 0 ? 60 : 3600);
+  scheduledUpdatePending_ = true;
+  emit signalGetScheduledFeeds(updateFeedsEnable_, updateFeedsInterval_ * multiplier);
 }
 /** @brief Process update feed action
  *---------------------------------------------------------------------------*/
@@ -5236,21 +5202,6 @@ void MainWindow::showFeedPropertiesDlg()
   feedsModel_->setData(indexUpdateEnable, updateMode);
   feedsModel_->setData(indexUpdateInterval, properties.general.updateInterval);
   feedsModel_->setData(indexIntervalType, properties.general.intervalType);
-
-  int updateInterval = properties.general.updateInterval;
-  int updateIntervalType = properties.general.intervalType;
-  if (updateIntervalType == 0)
-    updateInterval = updateInterval*60;
-  else if (updateIntervalType == 1)
-    updateInterval = updateInterval*60*60;
-
-  if (updateMode == 1) {
-    updateFeedsIntervalSec_.insert(feedId, updateInterval);
-    updateFeedsTimeCount_.insert(feedId, 0);
-  } else {
-    updateFeedsIntervalSec_.remove(feedId);
-    updateFeedsTimeCount_.remove(feedId);
-  }
 
   if (properties.general.image != properties_tmp.general.image) {
     q.prepare("UPDATE feeds SET image = ? WHERE id == ?");

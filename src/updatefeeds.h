@@ -23,6 +23,7 @@
 #include <QtSql>
 #include <QQueue>
 #include <QSet>
+#include <QHash>
 #include <QSemaphore>
 #include <atomic>
 
@@ -80,8 +81,7 @@ public:
   std::atomic_bool isSaveMemoryDatabase;
 
 public slots:
-  void slotGetFeedTimer(int feedId);
-  void slotGetAllFeedsTimer();
+  void slotGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
   void slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void slotGetFeedsFolder(QString query);
   void slotGetAllFeeds();
@@ -107,6 +107,7 @@ public slots:
 
 signals:
   void showProgressBar(int value);
+  void scheduledFeedsChecked();
   void feedProgressQueued(int feedId, QString name);
   void feedProgressStage(int feedId, QString stage);
   void feedProgressFinished(int feedId);
@@ -133,12 +134,15 @@ private slots:
 
 private:
   void queueAllFeeds(bool manual);
+  void checkScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
+  void recordUpdateAttempt(int feedId);
   void announceFeedProgress(int feedId);
   bool isFeedInFolder(int feedId, int folderId);
   bool cleanUpArticles(bool isShutdown, const QStringList &feedsIdList,
                       const QList<int> &foldersIdList, int &countDeleted, QString &error);
   bool rollbackCleanUp(QString &error);
 
+  QHash<int, QDateTime> lastUpdateAttempts_;
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;
   int updateFeedsCount_;

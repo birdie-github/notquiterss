@@ -22,6 +22,7 @@
 #include <QtWidgets>
 #include "shortcutregistry.h"
 #include <QtSql>
+#include <QElapsedTimer>
 #include <QPrintDialog>
 #include <QPrintPreviewDialog>
 #include <QPrinter>
@@ -271,6 +272,7 @@ public slots:
   void slotFeedCountsUpdate(FeedCountStruct counts);
   void slotUpdateNews(int refresh);
   void slotUpdateStatus(int feedId, bool changed = true);
+  void slotScheduledFeedsChecked();
   void setNewsFilter(QAction*, bool clicked = true);
   void slotCloseTab(int index);
   void feedsModelReload(bool checkFilter = false);
@@ -282,8 +284,7 @@ signals:
   void articleSettingsChanged(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
   void signalQuitApp();
   void signalPlaceToTray();
-  void signalGetFeedTimer(int feedId);
-  void signalGetAllFeedsTimer();
+  void signalGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
   void signalGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void signalGetFeedsFolder(QString query);
   void signalGetAllFeeds();
@@ -657,14 +658,12 @@ private:
   QPushButton *pushButtonNull_;
 
   QTimer *updateFeedsTimer_;
-  int updateIntervalSec_;
-  int updateTimeCount_;
+  QElapsedTimer updateScheduleClock_;
+  bool scheduledUpdatePending_ = false;
   bool updateFeedsEnable_;
   int  updateFeedsInterval_;
   int  updateFeedsIntervalType_;
   QList<int> feedIdList_;
-  QMap<int,int> updateFeedsIntervalSec_;
-  QMap<int,int> updateFeedsTimeCount_;
 
   bool minimizingTray_;
   bool closingTray_;
