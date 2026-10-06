@@ -82,6 +82,7 @@ public:
 
 public slots:
   void slotGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
+  void recordUpdateAttempt(int feedId, QString identity, QDateTime startedAt);
   void slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void slotGetFeedsFolder(QString query);
   void slotGetAllFeeds();
@@ -114,7 +115,7 @@ signals:
   void signalMessageStatusBar(QString message, int timeout = 0);
   void signalUpdateFeedsModel();
   void signalRequestUrl(int feedId, QString urlString,
-                        QDateTime date, QString userInfo);
+                        QDateTime date, QString userInfo, QString identity);
   void xmlReadyParse(QByteArray data, int feedId,
                      QDateTime dtReply, QString codecName);
   void setStatusFeed(int feedId, QString status);
@@ -135,14 +136,14 @@ private slots:
 private:
   void queueAllFeeds(bool manual);
   void checkScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
-  void recordUpdateAttempt(int feedId);
   void announceFeedProgress(int feedId);
   bool isFeedInFolder(int feedId, int folderId);
   bool cleanUpArticles(bool isShutdown, const QStringList &feedsIdList,
                       const QList<int> &foldersIdList, int &countDeleted, QString &error);
   bool rollbackCleanUp(QString &error);
 
-  QHash<int, QDateTime> lastUpdateAttempts_;
+  QHash<QString, QDateTime> lastUpdateAttempts_;
+  QHash<int, QString> queuedUpdateIdentities_;
   QSet<int> manualFeeds_;
   QList<int> feedIdList_;
   int updateFeedsCount_;

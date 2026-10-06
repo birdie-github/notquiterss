@@ -363,11 +363,10 @@ void AddFeedWizard::addFeed()
     }
 
     // Insert feed
-    q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication) "
-              "VALUES (:feedUrl, :feedCreateTime, :rowToParent, :authentication)");
+    q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication, disableUpdate) "
+              "VALUES (:feedUrl, :feedCreateTime, :rowToParent, :authentication, 1)");
     q.bindValue(":feedUrl", feedUrlString_);
-    q.bindValue(":feedCreateTime",
-        QLocale::c().toString(QDateTime::currentDateTimeUtc(), "yyyy-MM-ddTHH:mm:ss"));
+    q.bindValue(":feedCreateTime", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
     q.bindValue(":rowToParent", rowToParent);
     q.bindValue(":authentication", auth);
     q.exec();
@@ -384,6 +383,7 @@ void AddFeedWizard::deleteFeed()
   QSqlQuery q;
   q.exec(QString("DELETE FROM feeds WHERE id='%1'").arg(feedId_));
   q.exec(QString("DELETE FROM news WHERE feedId='%1'").arg(feedId_));
+  q.exec(QString("DELETE FROM feeds_ex WHERE feedId='%1'").arg(feedId_));
 
   // Correct rowToParent field
   QList<int> idList;
@@ -627,6 +627,13 @@ void AddFeedWizard::finish()
     }
   }
 
+  // Publish the subscription only after its properties and credentials are saved.
+  q.prepare("UPDATE feeds SET disableUpdate=0 WHERE id=?");
+  q.addBindValue(feedId_);
+  if (!q.exec()) {
+    QMessageBox::warning(this, tr("Error"), q.lastError().text());
+    return;
+  }
 
   accept();
 }

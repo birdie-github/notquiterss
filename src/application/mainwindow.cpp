@@ -2552,6 +2552,7 @@ void MainWindow::deleteItemFeedsTree()
   }
   q.exec(QString("DELETE FROM feeds WHERE %1").arg(idStr));
   q.exec(QString("DELETE FROM news WHERE %1").arg(feedIdStr));
+  q.exec(QString("DELETE FROM feeds_ex WHERE %1").arg(feedIdStr));
   db_.commit();
 
   // Correction row

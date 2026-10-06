@@ -35,8 +35,15 @@
 #define UPDATE_INTERVAL_MIN 500
 
 #include "newsretention.h"
+#include <QJsonDocument>
+#include <QJsonObject>
 
 namespace {
+QString updateIdentity(int id, const QString &url, const QString &created)
+{
+  return QString::number(id) + QLatin1Char('\n') + url + QLatin1Char('\n') + created;
+}
+
 // Construct the connection only after this object and its SQL consumers have
 // moved to the worker. Destroy consumers before removing their connection.
 class UpdateSqlContext final : public QObject
@@ -138,8 +145,10 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     updateObject_->setParent(sqlContext);
     faviconObject_ = new FaviconObject();
 
-    connect(updateObject_, SIGNAL(signalRequestUrl(int,QString,QDateTime,QString)),
-            requestFeed_, SLOT(requestUrl(int,QString,QDateTime,QString)));
+    connect(updateObject_, &UpdateObject::signalRequestUrl,
+            requestFeed_, &RequestFeed::requestTrackedUrl);
+    connect(requestFeed_, &RequestFeed::requestStarted,
+            updateObject_, &UpdateObject::recordUpdateAttempt);
     connect(requestFeed_, SIGNAL(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)),
             updateObject_, SLOT(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)));
     connect(requestFeed_, SIGNAL(setStatusFeed(int,QString)),
@@ -416,7 +425,7 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
   const QDateTime now = QDateTime::currentDateTimeUtc();
   QSqlQuery q(db_);
   if (!q.exec("SELECT f.id, f.xmlUrl, f.lastBuildDate, f.authentication, f.disableUpdate, "
-              "f.updateIntervalEnable, f.updateInterval, f.updateIntervalType, f.updated, a.value "
+              "f.updateIntervalEnable, f.updateInterval, f.updateIntervalType, f.updated, a.value, f.created "
               "FROM feeds f LEFT JOIN "
               "(SELECT feedId, max(value) AS value FROM feeds_ex "
               "WHERE name='lastUpdateAttempt' GROUP BY feedId) a ON a.feedId=f.id "
@@ -424,22 +433,31 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
     qWarning() << "Could not check scheduled feeds:" << q.lastError().text();
     return;
   }
-  QSet<int> existing;
+  QSet<QString> existing;
   bool queued = false;
   while (q.next()) {
     const int id = q.value(0).toInt();
-    existing.insert(id);
-    if (!lastUpdateAttempts_.contains(id)) {
-      QDateTime attempt = QDateTime::fromString(q.value(9).toString(), Qt::ISODate);
+    const QString identity = updateIdentity(id, q.value(1).toString(), q.value(10).toString());
+    existing.insert(identity);
+    if (q.value(4).toBool()) continue;
+    if (!lastUpdateAttempts_.contains(identity)) {
+      const QString stored = q.value(9).toString();
+      const QJsonObject state = QJsonDocument::fromJson(stored.toUtf8()).object();
+      QDateTime attempt;
+      if (state.value("identity").toString() == identity)
+        attempt = QDateTime::fromString(state.value("time").toString(), Qt::ISODate);
+      else if (state.isEmpty())
+        attempt = QDateTime::fromString(stored, Qt::ISODate); // Earlier scheduler metadata.
       // Historical 'updated' values are UTC even though their text has no Z.
       const QDateTime parsed = QDateTime::fromString(q.value(8).toString(), Qt::ISODate);
       const QDateTime updated(parsed.date(), parsed.time(), Qt::UTC);
-      if (!attempt.isValid()) attempt = updated;
+      // A legacy timestamp has no identity: a newer successful check wins.
+      if (!attempt.isValid() || (state.isEmpty() && updated > attempt)) attempt = updated;
       // A clock correction or imported future timestamp must not defer forever.
       if (attempt > now) attempt = now;
-      lastUpdateAttempts_.insert(id, attempt);
+      lastUpdateAttempts_.insert(identity, attempt);
     }
-    if (q.value(4).toBool() || feedIdList_.contains(id)) continue;
+    if (feedIdList_.contains(id)) continue;
     const int mode = q.value(5).isNull() ? -1 : q.value(5).toInt();
     int interval = globalIntervalSeconds;
     if (mode == 1) {
@@ -449,7 +467,7 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
       continue;
     }
     if (interval <= 0) continue;
-    QDateTime &attempt = lastUpdateAttempts_[id];
+    QDateTime &attempt = lastUpdateAttempts_[identity];
     if (attempt > now) attempt = now;
     if (!attempt.isValid() || attempt.secsTo(now) >= interval) {
       queued = addFeedInQueue(id, q.value(1).toString(), q.value(2).toDateTime(),
@@ -467,11 +485,27 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
   if (queued) emit showProgressBar(updateFeedsCount_);
 }
 
-void UpdateObject::recordUpdateAttempt(int feedId)
+void UpdateObject::recordUpdateAttempt(int feedId, QString identity, QDateTime startedAt)
 {
-  const QDateTime now = QDateTime::currentDateTimeUtc();
-  lastUpdateAttempts_.insert(feedId, now);
+  if (shutdownPrepared_) return;
+  auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
+  if (!q.prepare("SELECT xmlUrl, created FROM feeds WHERE id=?")) {
+    qWarning() << "Could not prepare feed identity lookup:" << q.lastError().text();
+    return;
+  }
+  q.addBindValue(feedId);
+  if (!q.exec()) {
+    qWarning() << "Could not check feed identity:" << q.lastError().text();
+    return;
+  }
+  // A late start notification must not attach to a deleted/replaced subscription.
+  if (!q.next() || updateIdentity(feedId, q.value(0).toString(), q.value(1).toString()) != identity)
+    return;
+  q.finish();
+  lastUpdateAttempts_.insert(identity, startedAt);
+  const QJsonObject state{{"identity", identity}, {"time", startedAt.toString(Qt::ISODate)}};
+  const QString value = QString::fromUtf8(QJsonDocument(state).toJson(QJsonDocument::Compact));
   // Reuse the extensible feed metadata; one atomic statement inserts or updates.
   if (!q.prepare("INSERT OR REPLACE INTO feeds_ex(id, feedId, name, value) "
                  "VALUES ((SELECT id FROM feeds_ex WHERE feedId=? AND name='lastUpdateAttempt' LIMIT 1), "
@@ -481,7 +515,7 @@ void UpdateObject::recordUpdateAttempt(int feedId)
   }
   q.addBindValue(feedId);
   q.addBindValue(feedId);
-  q.addBindValue(now.toString(Qt::ISODate));
+  q.addBindValue(value);
   if (!q.exec())
     qWarning() << "Could not save feed attempt timestamp for" << feedId << q.lastError().text();
 }
@@ -628,7 +662,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
             q.addBindValue(xml.attributes().value("description").toString());
             q.addBindValue(xmlUrlString);
             q.addBindValue(xml.attributes().value("htmlUrl").toString());
-            q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+            q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
             q.addBindValue(parentIdsStack.top());
             q.addBindValue(rowToParent);
             if (!q.exec()) { failImport(); return; }
@@ -695,14 +729,17 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
 {
   auto databaseAccess = Database::backgroundAccess();
   QSqlQuery enabledQuery(db_);
-  enabledQuery.prepare("SELECT disableUpdate FROM feeds WHERE id = ?");
+  enabledQuery.prepare("SELECT disableUpdate, xmlUrl, created FROM feeds WHERE id = ?");
   enabledQuery.addBindValue(feedId);
   if (!enabledQuery.exec()) {
     qWarning() << "Cannot check whether feed updates are disabled:" << enabledQuery.lastError().text();
     return false;
   }
-  if (!enabledQuery.next() || (!force && enabledQuery.value(0).toBool()))
+  if (!enabledQuery.next() || (!force && enabledQuery.value(0).toBool()) ||
+      enabledQuery.value(1).toString() != feedUrl)
     return false;
+  const QString identity = updateIdentity(feedId, enabledQuery.value(1).toString(),
+                                          enabledQuery.value(2).toString());
   enabledQuery.finish();
 
   int feedIdIndex = feedIdList_.indexOf(feedId);
@@ -712,8 +749,8 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
     if (manual) manualFeeds_.insert(feedId);
     return false;
   } else {
-    recordUpdateAttempt(feedId);
     feedIdList_.append(feedId);
+    queuedUpdateIdentities_.insert(feedId, identity);
     if (manual) manualFeeds_.insert(feedId);
     updateFeedsCount_ = updateFeedsCount_ + 2;
     QString userInfo;
@@ -729,7 +766,7 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
       }
     }
     announceFeedProgress(feedId);
-    emit signalRequestUrl(feedId, feedUrl, date, userInfo);
+    emit signalRequestUrl(feedId, feedUrl, date, userInfo, identity);
     return true;
   }
 }
@@ -741,6 +778,11 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
                               QString codecName)
 {
   qDebug() << "getUrl result = " << result << "error: " << error << "url: " << feedUrlStr;
+
+  // Stop also cancels requests still waiting in the queue. Apply the ordinary
+  // interval so the next scheduler tick does not immediately restart them.
+  if (result == -7 && queuedUpdateIdentities_.contains(feedId))
+    recordUpdateAttempt(feedId, queuedUpdateIdentities_.value(feedId), QDateTime::currentDateTimeUtc());
 
   if (updateFeedsCount_ > 0) {
     updateFeedsCount_--;
@@ -777,6 +819,7 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
   if (feedIdIndex > -1) {
     feedIdList_.takeAt(feedIdIndex);
   }
+  queuedUpdateIdentities_.remove(feedId);
 
   QSqlQuery q(db_);
   q.prepare("SELECT status FROM feeds WHERE id=?");

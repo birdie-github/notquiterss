@@ -123,6 +123,12 @@ void RequestFeed::disconnectObjects()
 void RequestFeed::requestUrl(int id, QString urlString,
                               QDateTime date, QString userInfo)
 {
+  requestTrackedUrl(id, urlString, date, userInfo, QString());
+}
+
+void RequestFeed::requestTrackedUrl(int id, QString urlString, QDateTime date,
+                                   QString userInfo, QString identity)
+{
   if (shuttingDown_) return;
 
   if (!networkManager_) {
@@ -138,6 +144,7 @@ void RequestFeed::requestUrl(int id, QString urlString,
   feedsQueue_.enqueue(urlString);
   dateQueue_.enqueue(date);
   userInfo_.enqueue(userInfo);
+  identitiesQueue_.enqueue(identity);
 
   if (!getUrlTimer_->isActive())
     getUrlTimer_->start();
@@ -158,6 +165,7 @@ void RequestFeed::stopRequest()
     QString feedUrl = feedsQueue_.dequeue();
     dateQueue_.dequeue();
     userInfo_.dequeue();
+    identitiesQueue_.dequeue();
 
     emit getUrlDone(-7, feedId, feedUrl);
   }
@@ -208,6 +216,9 @@ void RequestFeed::getQueuedUrl()
 
     qDebug() << "getQueuedUrl() >>" << feedUrl << "countQueue=" << feedsQueue_.count();
     QDateTime currentDate = dateQueue_.dequeue();
+    const QString identity = identitiesQueue_.dequeue();
+    if (!identity.isEmpty())
+      emit requestStarted(feedId, identity, QDateTime::currentDateTimeUtc());
     if (currentDate.isValid())
       emit signalHead(getUrl, feedId, feedUrl, currentDate);
     else

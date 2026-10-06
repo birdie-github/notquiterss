@@ -40,6 +40,8 @@ public:
 
 public slots:
   void requestUrl(int id, QString urlString, QDateTime date, QString userInfo = "");
+  void requestTrackedUrl(int id, QString urlString, QDateTime date,
+                         QString userInfo, QString identity);
   void stopRequest();
   void slotHead(const QUrl &getUrl, const int &id, const QString &feedUrl,
                 const QDateTime &date, const int &count);
@@ -47,6 +49,7 @@ public slots:
                const QDateTime &date, const int &count);
 
 signals:
+  void requestStarted(int feedId, QString identity, QDateTime startedAt);
   void getUrlDone(int result, int feedId, QString feedUrl = "",
                   QString error = "", QByteArray data = NULL,
                   QDateTime dtReply = QDateTime(), QString codecName = "");
@@ -76,6 +79,7 @@ private:
   QQueue<QString> feedsQueue_;
   QQueue<QDateTime> dateQueue_;
   QQueue<QString> userInfo_;
+  QQueue<QString> identitiesQueue_;
 
   QList<QUrl> currentUrls_;
   QList<int> currentIds_;
