@@ -2421,7 +2421,7 @@ void MainWindow::addFeed()
   slotUpdateFeed(addFeedWizard->feedId_, true, addFeedWizard->newCount_, false);
 
   delete addFeedWizard;
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("add feed");
 }
 
 /** @brief Add folder to feed list
@@ -2465,7 +2465,7 @@ void MainWindow::addFolder()
   q.exec();
 
   delete addFolderDialog;
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("add folder");
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
   feedsModelReload();
@@ -2576,7 +2576,7 @@ void MainWindow::deleteItemFeedsTree()
   slotFeedClicked(currentIndex);
 
   QApplication::restoreOverrideCursor();
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("delete feeds or folders");
 }
 
 /** @brief Import feeds from OPML-file
@@ -5275,7 +5275,7 @@ void MainWindow::showFeedPropertiesDlg()
                       properties.display.displayEmbeddedImages != properties_tmp.display.displayEmbeddedImages,
                       properties.display.layoutDirection != properties_tmp.display.layoutDirection);
   feedsView_->viewport()->update();
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("save feed properties");
 }
 
 /** @brief Update tray information: icon and tooltip text
@@ -6768,7 +6768,7 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
   feedsView_->setCurrentIndex(feedsProxyModel_->mapFromSource(feedIdOld_));
 
   feedsView_->setCursor(Qt::ArrowCursor);
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("move feeds or folders");
 }
 
 /** @brief Process clicks in feeds tree
@@ -7467,7 +7467,7 @@ void MainWindow::sortedByTitleFeedsTree()
 
   feedsModelReload();
   QApplication::restoreOverrideCursor();
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("sort feed tree by name");
 }
 
 // ----------------------------------------------------------------------------

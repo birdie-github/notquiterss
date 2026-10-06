@@ -608,7 +608,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
     emit signalMessageStatusBar(tr("Import failed: %1").arg(error), 5000);
     return;
   }
-  DatabaseBackup::subscriptionsChanged();
+  DatabaseBackup::subscriptionsChanged("import OPML");
   emit signalMessageStatusBar(tr("Import complete"), 3000);
 
   // This connection is blocking: the UI must be able to acquire access while

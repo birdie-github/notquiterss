@@ -29,6 +29,18 @@ using Handle = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 QMutex backupMutex;
 bool upgradeBackupHandled = false;
 std::atomic<bool> subscriptionPending{false};
+const char *triggerName(DatabaseBackup::Trigger trigger)
+{
+  switch (trigger) {
+  case DatabaseBackup::Trigger::Manual: return "manual";
+  case DatabaseBackup::Trigger::Subscription: return "subscription";
+  case DatabaseBackup::Trigger::Schedule: return "schedule";
+  case DatabaseBackup::Trigger::Exit: return "exit";
+  case DatabaseBackup::Trigger::Upgrade: return "upgrade";
+  case DatabaseBackup::Trigger::Prerelease: return "prerelease";
+  }
+  return "unknown";
+}
 QString sqlError(sqlite3 *db) { return QString::fromUtf8(sqlite3_errmsg(db)); }
 bool execute(sqlite3 *db, const char *sql, QString &error)
 {
@@ -144,17 +156,20 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
   // Finish a coalesced subscription request even if the user exits during its
   // one-second delay and has disabled the independent exit trigger.
   if (trigger == Trigger::Exit && subscriptionPending.exchange(false)) {
+    qInfo() << "[backup] Processing pending subscription backup before exit";
     const Result pending = create(db, Trigger::Subscription);
     if (!pending.error.isEmpty()) return pending;
   }
   QMutexLocker lock(&backupMutex);
   Result result;
+  const char *triggerLabel = triggerName(trigger);
   Settings settings;
   const bool manual = trigger == Trigger::Manual;
   const bool prerelease = trigger == Trigger::Prerelease;
   const bool upgrade = trigger == Trigger::Upgrade || prerelease;
   // The startup gate already backed up this session, or the user declined.
   if (trigger == Trigger::Upgrade && upgradeBackupHandled) {
+    qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "startup backup already handled";
     result.skipped = true; return result;
   }
   const bool clean = !upgrade && (cleanOverride < 0 ? AppSettings::backupClean.get() : cleanOverride != 0);
@@ -162,10 +177,13 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
       (trigger == Trigger::Exit && !AppSettings::backupExit.get()) ||
       (trigger == Trigger::Subscription && !AppSettings::backupSubscriptions.get()) ||
       (trigger == Trigger::Schedule && !AppSettings::backupScheduled.get()))) {
+    qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "disabled in settings";
     result.skipped = true; return result;
   }
+  qInfo() << "[backup] Starting: trigger=" << triggerLabel << "filtered=" << clean;
   const QString root = directory();
   auto fail = [&](const QString &error) {
+    qWarning() << "[backup] Failed: trigger=" << triggerLabel << error;
     result.error = tr("Could not create a backup in %1:\n%2").arg(root, error);
     return result;
   };
@@ -227,6 +245,7 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
     if (!manual && !upgrade && settings.value("Backup/lastDigest").toString() == digest &&
         QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + dbName) &&
         QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + iniName)) {
+      qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "database unchanged";
       result.skipped = true; return result;
     }
     target.reset(); // Close every handle before publishing/renaming on Windows.
@@ -239,6 +258,7 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
   if ((!prerelease || ini.exists()) && !ini.copy(staging.filePath(iniName)))
     return fail(ini.errorString());
   if (prerelease && QDir(staging.path()).entryList(QDir::Files).isEmpty()) {
+    qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "no existing profile files";
     result.skipped = true; return result;
   }
   const QString stem = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") +
@@ -278,7 +298,8 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
     if (!QDir(sets.at(i)).removeRecursively())
       result.error += tr("Backup created, but an old backup could not be removed: %1\n").arg(sets.at(i));
   }
-  qInfo() << "Database backup created:" << result.directory << "filtered:" << clean;
+  qInfo() << "Database backup created:" << result.directory << "filtered:" << clean
+          << "trigger:" << triggerLabel;
   return result;
 }
 
@@ -346,9 +367,10 @@ void DatabaseBackup::manual(QWidget *parent)
 {
   report(create(QSqlDatabase::database(), Trigger::Manual), true, parent);
 }
-void DatabaseBackup::subscriptionsChanged()
+void DatabaseBackup::subscriptionsChanged(const char *reason)
 {
   if (!AppSettings::backupEnabled.get() || !AppSettings::backupSubscriptions.get()) return;
+  qInfo() << "[backup] Subscription backup requested by:" << reason;
   subscriptionPending = true;
   QMetaObject::invokeMethod(qApp, [] {
     auto *service = instance();

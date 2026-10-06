@@ -20,7 +20,7 @@ public:
   static void skipUpgradeBackup(); // Explicit startup choice; this session only.
   static Result create(QSqlDatabase db, Trigger trigger, int cleanOverride = -1);
   static void report(const Result &result, bool manual, QWidget *parent = nullptr);
-  static void subscriptionsChanged(); // May be called from the import worker.
+  static void subscriptionsChanged(const char *reason); // May be called from the import worker.
   void start();
   void stop();
   void manual(QWidget *parent);
