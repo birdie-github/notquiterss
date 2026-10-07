@@ -113,8 +113,11 @@ void TabBar::slotCloseOtherTabs()
   closingTabState_ = CloseTabOtherIndex;
   for (int i = count()-1; i > 0; i--) {
     if (i == index) continue;
-    if (i == curIndex) closingTabState_ = CloseTabCurrentIndex;
-    else closingTabState_ = CloseTabOtherIndex;
+    if (i == curIndex) {
+      closingTabState_ = CloseTabCurrentIndex;
+    } else {
+      closingTabState_ = CloseTabOtherIndex;
+    }
 
     emit closeTab(i);
   }
