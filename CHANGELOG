@@ -1,3 +1,19 @@
+Version 0.95.4 BETA (2026-10-07)
+* NEW FEATURE: Catch up on overdue feed updates one minute after startup when "Update feeds on startup" is disabled. Respect individual feed schedules and disabled feeds.
+* CHANGE: Improve performance when checking for duplicate articles, cleaning up old articles, and copying the database.
+* CHANGE: Use the configured User-Agent and website overrides for images, downloads, and application update checks.
+* CHANGE: Require TLS 1.2 or newer for HTTPS connections.
+* CHANGE: Make troubleshooting logs less noisy and show what triggered automatic backups.
+* BUG FIX: Report failures when saving the in-memory database and offer retry or recovery options if saving on exit fails.
+* BUG FIX: Prevent failed article cleanup from leaving partially completed changes.
+* BUG FIX: Improve shutdown reliability and save normally when Linux or macOS asks the app to terminate.
+* BUG FIX: Correct article times around daylight-saving time changes.
+* BUG FIX: Improve website icon detection.
+* BUG FIX: Show readable feed errors in Feed Properties.
+* BUG FIX: Fix a database error when switching article tabs.
+* BUG FIX: Handle feed links sent to the running app while the Add Feed dialog is open.
+* CHANGE: Update Russian translations and documentation.
+
 Version 0.95.3 BETA (2026-10-02)
 * CHANGE: Better HiDPI icons.
 * CHANGE: Reworked cookies management - check [website cookies](docs/COOKIES.md).
