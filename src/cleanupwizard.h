@@ -40,8 +40,8 @@ public slots:
   void reject() override;
 
 protected:
-  virtual void closeEvent(QCloseEvent*);
-  virtual bool validateCurrentPage();
+  void closeEvent(QCloseEvent*) override;
+  bool validateCurrentPage() override;
 
 private slots:
   void currentIdChanged(int);
