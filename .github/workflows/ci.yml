@@ -161,7 +161,10 @@ jobs:
           export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
           mkdir _build
           cd _build
-          qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
+          # GCC's LTO wrapper needs the native make executable and an explicit
+          # worker count on this Windows toolchain.
+          export MAKE=mingw32-make
+          qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto LTO_JOBS="$(nproc)"
           mingw32-make -j"$(nproc)"
           mingw32-make install
           python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target

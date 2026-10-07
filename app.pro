@@ -22,9 +22,10 @@ contains(CONFIG, lto) {
         QMAKE_CXXFLAGS += -flto=thin
         QMAKE_LFLAGS   += -flto=thin
     } else:gcc {
-        # GCC supports auto thread detection
-        QMAKE_CXXFLAGS += -flto=auto
-        QMAKE_LFLAGS   += -flto=auto
+        # Allow CI to supply a worker count where automatic detection fails.
+        isEmpty(LTO_JOBS): LTO_JOBS = auto
+        QMAKE_CXXFLAGS += -flto=$$LTO_JOBS
+        QMAKE_LFLAGS   += -flto=$$LTO_JOBS
     } else:msvc {
         # MSVC or other compilers fallback
         CONFIG += ltcg
