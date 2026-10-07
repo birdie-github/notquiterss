@@ -3829,6 +3829,11 @@ void MainWindow::slotStopUpdate()
   emit signalStopUpdate();
 }
 
+void MainWindow::startFeedUpdateCycle()
+{
+  playSoundNewNews_ = false;
+}
+
 /** @brief Show update progress bar after feed update has started
  *---------------------------------------------------------------------------*/
 void MainWindow::showProgressBar(int maximum)
@@ -3840,8 +3845,6 @@ void MainWindow::showProgressBar(int maximum)
 
   Settings settings;
   settings.setValue("Flags/updatingFeeds", true);
-
-  playSoundNewNews_ = false;
 }
 void MainWindow::queueFeedProgress(int feedId, QString name)
 {

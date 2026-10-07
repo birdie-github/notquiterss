@@ -107,6 +107,7 @@ public slots:
   void retryQuitApp(const QString &fileName = QString());
 
 signals:
+  void updateCycleStarted();
   void showProgressBar(int value);
   void scheduledFeedsChecked();
   void feedProgressQueued(int feedId, QString name);

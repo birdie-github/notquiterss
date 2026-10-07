@@ -253,6 +253,7 @@ public slots:
   void slotGetFeed();
   void slotGetAllFeeds();
   void slotStopUpdate();
+  void startFeedUpdateCycle();
   void showProgressBar(int addToMaximum);
   void queueFeedProgress(int feedId, QString name);
   void setFeedProgressStage(int feedId, QString stage);
@@ -679,7 +680,7 @@ private:
 
   bool soundNewNews_;
   QString soundNotifyPath_;
-  bool playSoundNewNews_;
+  bool playSoundNewNews_ = false;
   bool showNotifyOn_;
   bool fullscreenModeNotify_;
   bool showNotifyInactiveApp_;

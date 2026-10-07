@@ -173,6 +173,8 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotImportFeeds(QByteArray,bool)));
     connect(updateObject_, SIGNAL(showProgressBar(int)),
             parent, SLOT(showProgressBar(int)));
+    connect(updateObject_, &UpdateObject::updateCycleStarted,
+            window, &MainWindow::startFeedUpdateCycle);
     connect(updateObject_, &UpdateObject::feedProgressQueued,
             mainApp->mainWindow(), &MainWindow::queueFeedProgress);
     connect(updateObject_, &UpdateObject::feedProgressStage,
@@ -750,6 +752,8 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
     if (manual) manualFeeds_.insert(feedId);
     return false;
   } else {
+    // Joining an active update must not reset its notification sound guard.
+    if (feedIdList_.isEmpty()) emit updateCycleStarted();
     feedIdList_.append(feedId);
     queuedUpdateIdentities_.insert(feedId, identity);
     if (manual) manualFeeds_.insert(feedId);
