@@ -94,7 +94,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 
   QTextEdit *licenseTextEdit = new QTextEdit();
   licenseTextEdit->setReadOnly(true);
-  licenseTextEdit->setText(Common::readAllFileContents(":/file/COPYING").section("-----", 1, 1));
+  licenseTextEdit->setPlainText(Common::readAllFileContents(":/file/COPYING"));
 
   QHBoxLayout *licenseLayout = new QHBoxLayout();
   licenseLayout->addWidget(licenseTextEdit);
