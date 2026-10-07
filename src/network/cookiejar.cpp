@@ -24,6 +24,7 @@
 #include <QMutexLocker>
 #include <QSaveFile>
 #include <QTimer>
+#include <QTimeZone>
 #include <QUrl>
 #include <QDebug>
 #include <algorithm>
@@ -152,7 +153,7 @@ bool readFile(const QString &path, CookieJar::Import *result,
     cookie.setSecure(fields[3] == "TRUE");
     cookie.setHttpOnly(httpOnly);
     if (expiry) {
-      const auto date = QDateTime::fromSecsSinceEpoch(expiry, Qt::UTC);
+      const auto date = QDateTime::fromSecsSinceEpoch(expiry, QTimeZone(0));
       if (!date.isValid()) return invalid();
       cookie.setExpirationDate(date);
       if (date <= now) { ++result->expired; continue; }

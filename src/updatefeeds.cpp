@@ -28,6 +28,7 @@
 
 #include <QDebug>
 #include <QRegularExpression>
+#include <QTimeZone>
 #include <QUuid>
 #include <sqlite3.h>
 
@@ -450,7 +451,7 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
         attempt = QDateTime::fromString(stored, Qt::ISODate); // Earlier scheduler metadata.
       // Historical 'updated' values are UTC even though their text has no Z.
       const QDateTime parsed = QDateTime::fromString(q.value(8).toString(), Qt::ISODate);
-      const QDateTime updated(parsed.date(), parsed.time(), Qt::UTC);
+      const QDateTime updated(parsed.date(), parsed.time(), QTimeZone(0));
       // A legacy timestamp has no identity: a newer successful check wins.
       if (!attempt.isValid() || (state.isEmpty() && updated > attempt)) attempt = updated;
       // A clock correction or imported future timestamp must not defer forever.
