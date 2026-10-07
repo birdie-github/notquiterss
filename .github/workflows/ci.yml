@@ -273,16 +273,37 @@ jobs:
           cp -R "$RUNNER_TEMP/app-deps/install/share/licenses/qtsingleapplication" "$bundle/Contents/Resources/licenses/"
           cp -R "$RUNNER_TEMP/app-deps/miniaudio/share/licenses/miniaudio" "$bundle/Contents/Resources/licenses/"
 
-          # Homebrew installs Qt modules separately; plugins can reference
-          # frameworks outside qtbase. Do not overwrite already-fixed libraries
-          # when macdeployqt encounters them again through another plugin.
+          # Stage the plugin types used by this Widgets application. Keep all
+          # image formats, but exclude the unused QML virtual keyboard.
+          qt_plugins="$("$qt_bin/qmake" -query QT_INSTALL_PLUGINS)"
+          deploy_args=(-no-plugins -verbose=2 -no-codesign)
+          shopt -s nullglob
+          for plugin_type in platforms printsupport styles tls networkinformation imageformats iconengines platforminputcontexts sqldrivers; do
+            for plugin in "$qt_plugins/$plugin_type/"*.dylib; do
+              plugin_name="${plugin##*/}"
+              case "$plugin_name" in
+                *_debug.dylib|libqtvirtualkeyboard*.dylib) continue ;;
+              esac
+              if [ "$plugin_type" = platforms ] && [ "$plugin_name" != libqcocoa.dylib ]; then
+                continue
+              fi
+              mkdir -p "$bundle/Contents/PlugIns/$plugin_type"
+              destination="$bundle/Contents/PlugIns/$plugin_type/$plugin_name"
+              cp "$plugin" "$destination"
+              deploy_args+=("-executable=$destination")
+            done
+          done
+
+          # Homebrew installs Qt frameworks in separate formula directories.
+          # Search them without copying modules that no retained binary uses.
           brew_prefix="$(brew --prefix)"
-          "$qt_bin/macdeployqt" "$bundle" \
-            -libpath="$brew_prefix/lib" \
-            -libpath="$(brew --prefix qt)/lib" \
-            -libpath="$(brew --prefix sqlite)/lib" \
-            -libpath="$(brew --prefix libxml2)/lib" \
-            -verbose=2 -no-codesign
+          deploy_args+=("-libpath=$brew_prefix/lib"
+            "-libpath=$(brew --prefix sqlite)/lib"
+            "-libpath=$(brew --prefix libxml2)/lib")
+          for qt_lib in "$brew_prefix"/opt/qt*/lib; do
+            [ -d "$qt_lib" ] && deploy_args+=("-libpath=$qt_lib")
+          done
+          "$qt_bin/macdeployqt" "$bundle" "${deploy_args[@]}"
           python3 "$GITHUB_WORKSPACE/scripts/deploy-qt-translations.py" \
             --source "$GITHUB_WORKSPACE" --resources "$bundle/Contents/Resources" \
             --qt-translations "$("$qt_bin/qmake" -query QT_INSTALL_TRANSLATIONS)"
@@ -299,11 +320,10 @@ jobs:
             install_id="$(otool -D "$binary" | tail -n +2)"
             while IFS= read -r dependency; do
               case "$dependency" in
-                "$brew_prefix"/*)
+                "$brew_prefix"/*|@rpath/*)
                   case "$dependency" in
-                    *.framework/*)
-                      relative="${dependency#*/lib/}"
-                      ;;
+                    @rpath/*) relative="${dependency#@rpath/}" ;;
+                    *.framework/*) relative="${dependency#*/lib/}" ;;
                     *) relative="${dependency##*/}" ;;
                   esac
                   target="$bundle/Contents/Frameworks/$relative"
@@ -322,17 +342,28 @@ jobs:
             done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
           done < <(find "$bundle" -type f -print0)
 
-          # Reject binaries still linked to Homebrew or another build-host path.
-          # System libraries and bundle-relative install names are allowed.
+          # Signing does not check library availability. Reject missing
+          # bundle-relative dependencies as well as build-host references.
           while IFS= read -r -d '' binary; do
-            if file -b "$binary" | grep -q 'Mach-O'; then
-              otool -L "$binary" | tail -n +2 | awk -v binary="$binary" '
-                $1 ~ /^\// && $1 !~ /^\/(System\/Library|usr\/lib)\// {
-                  print "Unbundled dependency in " binary ": " $0; bad=1
-                }
-                END { exit bad }
-              '
-            fi
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                /System/Library/*|/usr/lib/*) continue ;;
+                @executable_path/*)
+                  target="$bundle/Contents/MacOS/${dependency#@executable_path/}" ;;
+                @loader_path/*)
+                  target="${binary%/*}/${dependency#@loader_path/}" ;;
+                *)
+                  echo "Unbundled dependency in $binary: $dependency" >&2
+                  exit 1 ;;
+              esac
+              if [ ! -f "$target" ]; then
+                echo "Missing bundled dependency for $binary: $dependency" >&2
+                exit 1
+              fi
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
           done < <(find "$bundle" -type f -print0)
           # All binary edits must precede signing. Deep signing is intentional
           # for this ad-hoc beta bundle, not a Developer ID/notarization workflow.
