@@ -1,5 +1,5 @@
-# Silence GCC warnings
-gcc {
+# This GCC-specific flag is not supported by Clang's GCC-compatible toolchain.
+gcc:!clang {
     GCC_VERSION = $$system($$QMAKE_CXX -dumpfullversion -dumpversion)
     GCC_MAJOR = $$section(GCC_VERSION, ., 0, 0)
 
