@@ -81,14 +81,12 @@ private:
   QQueue<QString> userInfo_;
   QQueue<QString> identitiesQueue_;
 
-  QList<QUrl> currentUrls_;
   QList<int> currentIds_;
   QList<QString> currentFeeds_;
   QList<QDateTime> currentDates_;
   QList<int> currentCount_;
   QList<bool> currentHead_;
   QList<int> currentTime_;
-  QList<QUrl> requestUrl_;
   QList<QNetworkReply*> networkReply_;
   QList<QString> hostList_;
 

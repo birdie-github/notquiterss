@@ -244,7 +244,6 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
   qDebug() << objectName() << "::head:" << getUrl.toEncoded() << "feed:" << feedUrl << "countRepeats:" << count;
   QNetworkRequest request(getUrl);
 
-  currentUrls_.append(getUrl);
   currentIds_.append(id);
   currentFeeds_.append(feedUrl);
   currentDates_.append(date);
@@ -255,7 +254,6 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
   emit feedProgressStage(id, tr("Checking…"));
   QNetworkReply *reply = networkManager_->head(request);
   reply->setProperty("feedReply", QVariant(true));
-  requestUrl_.append(reply->url());
   networkReply_.append(reply);
 }
 
@@ -278,7 +276,6 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
   QNetworkRequest request(getUrl);
   request.setRawHeader("Accept", "application/atom+xml,application/rss+xml;q=0.9,application/xml;q=0.8,text/xml;q=0.7,*/*;q=0.6");
 
-  currentUrls_.append(getUrl);
   currentIds_.append(id);
   currentFeeds_.append(feedUrl);
   currentDates_.append(date);
@@ -296,7 +293,6 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
     emit feedProgressStage(id, tr("Downloading…"));
   });
   reply->setProperty("feedReply", QVariant(true));
-  requestUrl_.append(reply->url());
   networkReply_.append(reply);
 }
 
@@ -313,11 +309,12 @@ void RequestFeed::finished(QNetworkReply *reply)
   qDebug() << reply->header(QNetworkRequest::LastModifiedHeader);
   // Cookie values are credentials; never write raw cookie headers to the log.
 
-  int currentReplyIndex = currentUrls_.indexOf(replyUrl);
+  const int currentReplyIndex = networkReply_.indexOf(reply);
 
   if (currentReplyIndex >= 0) {
     currentTime_.removeAt(currentReplyIndex);
-    currentUrls_.removeAt(currentReplyIndex);
+    // Retire this exact reply before dispatching any completion or retry.
+    networkReply_.removeAt(currentReplyIndex);
     int feedId    = currentIds_.takeAt(currentReplyIndex);
     QString feedUrl    = currentFeeds_.takeAt(currentReplyIndex);
     QDateTime feedDate = currentDates_.takeAt(currentReplyIndex);
@@ -445,13 +442,10 @@ void RequestFeed::finished(QNetworkReply *reply)
       }
     }
   } else {
-    qCritical() << "Request Url error: " << replyUrl.toString() << reply->errorString();
-  }
-
-  int replyIndex = requestUrl_.indexOf(replyUrl);
-  if (replyIndex >= 0) {
-    requestUrl_.removeAt(replyIndex);
-    networkReply_.removeAt(replyIndex);
+    // A timeout removes its reply before aborting it. Ignore that completion
+    // so it cannot consume another request or dispatch a second result.
+    reply->deleteLater();
+    return;
   }
 
   reply->abort();
@@ -467,7 +461,8 @@ void RequestFeed::slotRequestTimeout()
   for (int i = currentTime_.count() - 1; i >= 0; i--) {
     int time = currentTime_.at(i) - 1;
     if (time <= 0) {
-      QUrl url = currentUrls_.takeAt(i);
+      QNetworkReply *reply = networkReply_.takeAt(i);
+      const QUrl replyUrl = reply->url();
       int feedId    = currentIds_.takeAt(i);
       QString feedUrl = currentFeeds_.takeAt(i);
       QDateTime feedDate = currentDates_.takeAt(i);
@@ -475,17 +470,14 @@ void RequestFeed::slotRequestTimeout()
       currentTime_.removeAt(i);
       currentHead_.removeAt(i);
 
-      int replyIndex = requestUrl_.indexOf(url);
-      if (replyIndex >= 0) {
-        QUrl replyUrl = requestUrl_.takeAt(replyIndex);
-        QNetworkReply *reply = networkReply_.takeAt(replyIndex);
-        reply->deleteLater();
+      // Remove all bookkeeping before abort(): finished() may run synchronously.
+      reply->abort();
+      reply->deleteLater();
 
-        if (count < numberRepeats_) {
-          emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
-        } else {
-          emit getUrlDone(-3, feedId, feedUrl, tr("Request timed out"));
-        }
+      if (count < numberRepeats_) {
+        emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
+      } else {
+        emit getUrlDone(-3, feedId, feedUrl, tr("Request timed out"));
       }
     } else {
       currentTime_.replace(i, time);

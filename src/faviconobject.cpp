@@ -174,14 +174,12 @@ void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const in
 
   QNetworkRequest request(getUrl);
 
-  currentUrls_.append(getUrl);
   currentFeeds_.append(feedUrl);
   currentCntRequests_.append(count);
   currentTime_.append(REQUEST_TIMEOUT);
 
   QNetworkReply *reply = networkManager_->get(request);
   reply->setProperty("feedReply", QVariant(true));
-  requestUrl_.append(reply->url());
   networkReply_.append(reply);
 }
 
@@ -189,10 +187,12 @@ void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const in
  *----------------------------------------------------------------------------*/
 void FaviconObject::finished(QNetworkReply *reply)
 {
-  int currentReplyIndex = currentUrls_.indexOf(reply->url());
+  const int currentReplyIndex = networkReply_.indexOf(reply);
   if (currentReplyIndex >= 0) {
     currentTime_.removeAt(currentReplyIndex);
-    QUrl url = currentUrls_.takeAt(currentReplyIndex);
+    // Retries dispatch directly here, so retire the old reply first.
+    networkReply_.removeAt(currentReplyIndex);
+    const QUrl url = reply->url();
     QString feedUrl = currentFeeds_.takeAt(currentReplyIndex);
     int cntRequests = currentCntRequests_.takeAt(currentReplyIndex);
 
@@ -246,14 +246,12 @@ void FaviconObject::finished(QNetworkReply *reply)
       }
     }
   } else {
-    qCritical() << "Request Url error: " << reply->url().toString() << reply->errorString();
+    // Timed-out replies have already been retired; their abort completion
+    // must not consume another request with the same URL.
+    reply->deleteLater();
+    return;
   }
 
-  int replyIndex = requestUrl_.indexOf(reply->url());
-  if (replyIndex >= 0) {
-    requestUrl_.removeAt(replyIndex);
-    networkReply_.removeAt(replyIndex);
-  }
   reply->abort();
   reply->deleteLater();
 }
@@ -265,20 +263,18 @@ void FaviconObject::slotRequestTimeout()
   for (int i = currentTime_.count() - 1; i >= 0; i--) {
     int time = currentTime_.at(i) - 1;
     if (time <= 0) {
-      QUrl url = currentUrls_.takeAt(i);
+      QNetworkReply *reply = networkReply_.takeAt(i);
+      const QUrl url = reply->url();
       QString feedUrl = currentFeeds_.takeAt(i);
       int cntRequests = currentCntRequests_.takeAt(i);
       currentTime_.removeAt(i);
 
-      int replyIndex = requestUrl_.indexOf(url);
-      if (replyIndex >= 0) {
-        requestUrl_.removeAt(replyIndex);
-        QNetworkReply *reply = networkReply_.takeAt(replyIndex);
-        reply->deleteLater();
+      // abort() can invoke finished() before returning. The request is retired.
+      reply->abort();
+      reply->deleteLater();
 
-        if (cntRequests == 0) {
-          emit signalGet(url, feedUrl, 2);
-        }
+      if (cntRequests == 0) {
+        emit signalGet(url, feedUrl, 2);
       }
     } else {
       currentTime_.replace(i, time);

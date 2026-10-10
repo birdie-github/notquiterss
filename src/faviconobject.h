@@ -58,11 +58,9 @@ private:
 
   QTimer *timeout_;
   QTimer *getUrlTimer_;
-  QList<QUrl> currentUrls_;
   QList<QString> currentFeeds_;
   QList<int> currentCntRequests_;
   QList<int> currentTime_;
-  QList<QUrl> requestUrl_;
   QList<QNetworkReply*> networkReply_;
   QList<QString> hostList_;
 
