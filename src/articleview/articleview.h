@@ -75,6 +75,8 @@ protected:
   void contextMenuEvent(QContextMenuEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
+  void hideEvent(QHideEvent *event) override;
+  void showEvent(QShowEvent *event) override;
 
 private:
   friend class ArticleDocument;
@@ -91,6 +93,7 @@ private:
   ArticleImages *images_;
   QHash<QUrl, QImage> imagesCache_;
   QHash<QUrl, QMovie *> movies_;
+  QSet<QMovie *> pausedMovies_;
   QSet<QUrl> allowedImages_, pending_, failed_;
   QMap<int, QString> articleAnchors_;
   QHash<QString, int> anchorPositions_;
@@ -101,5 +104,6 @@ private:
   int completed_ = 0;
   bool loading_ = false;
   bool scaling_ = false;
+  bool animationsVisible_ = false;
 };
 #endif

@@ -23,6 +23,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>
 #include <QContextMenuEvent>
+#include <QHideEvent>
 #include <QImageReader>
 #include <QMouseEvent>
 #include <QMovie>
@@ -33,6 +34,7 @@
 #include <QPrinter>
 #include <QScrollBar>
 #include <QScopedPointer>
+#include <QShowEvent>
 #include <QTextBlock>
 #include <QTextFragment>
 #include <QTextImageFormat>
@@ -82,6 +84,7 @@ void ArticleView::disconnectObjects() {
   ++generation_;
   images_->reset();
   for (QMovie *movie : movies_) movie->stop();
+  pausedMovies_.clear();
   disconnect(this);
 }
 
@@ -137,7 +140,11 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
   }
   for (auto it = imagesCache_.begin(); it != imagesCache_.end();) {
     if (!used.contains(it.key())) {
-      if (QMovie *movie = movies_.take(it.key())) { movie->stop(); movie->deleteLater(); }
+      if (QMovie *movie = movies_.take(it.key())) {
+        pausedMovies_.remove(movie);
+        movie->stop();
+        movie->deleteLater();
+      }
       it = imagesCache_.erase(it);
     } else ++it;
   }
@@ -200,6 +207,12 @@ void ArticleView::requestImage(const QUrl &url) {
           if (movies_.value(url) == movie) installImage(url, movie->currentImage());
         });
         movie->start();
+        // start() decodes the first frame synchronously. Stop its timer if the
+        // image finished loading in a hidden tab or window.
+        if (!animationsVisible_ && movie->state() == QMovie::Running) {
+          movie->setPaused(true);
+          pausedMovies_.insert(movie);
+        }
       }
     }
     updateProgress();
@@ -208,8 +221,8 @@ void ArticleView::requestImage(const QUrl &url) {
 
 void ArticleView::installImage(const QUrl &url, const QImage &image) {
   if (image.isNull()) return;
-  const ViewState state = saveView();
   const bool changedSize = !imagesCache_.contains(url) || imagesCache_.value(url).size() != image.size();
+  const ViewState state = changedSize ? saveView() : ViewState();
   imagesCache_.insert(url, image);
   document()->addResource(QTextDocument::ImageResource, url, image);
   if (changedSize) {
@@ -413,4 +426,27 @@ void ArticleView::resizeEvent(QResizeEvent *event) {
   QTextBrowser::resizeEvent(event);
   scaleDocument();
   restoreView(state);
+}
+
+void ArticleView::hideEvent(QHideEvent *event) {
+  animationsVisible_ = false;
+  for (QMovie *movie : movies_) {
+    if (movie->state() == QMovie::Running) {
+      movie->setPaused(true);
+      pausedMovies_.insert(movie);
+    }
+  }
+  QTextBrowser::hideEvent(event);
+}
+
+void ArticleView::showEvent(QShowEvent *event) {
+  QTextBrowser::showEvent(event);
+  // A minimized widget can still report isVisible() and receive show events.
+  animationsVisible_ = !window()->isMinimized();
+  if (!animationsVisible_) return;
+  for (QMovie *movie : pausedMovies_) {
+    // Only resume movies paused by visibility handling, never finished movies.
+    if (movie->state() == QMovie::Paused) movie->setPaused(false);
+  }
+  pausedMovies_.clear();
 }
