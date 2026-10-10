@@ -1233,7 +1233,7 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
             qStr1.append(QString("(UPPER(title) LIKE '%%1%' OR UPPER(description) LIKE '%%1%') ").arg(content.toUpper()));
             break;
           case 1: // condition -> doesn't contain
-            qStr1.append(QString("(UPPER(title) NOT LIKE '%%1%' OR UPPER(description) NOT LIKE '%%1%') ").arg(content.toUpper()));
+            qStr1.append(QString("(UPPER(title) NOT LIKE '%%1%' AND UPPER(description) NOT LIKE '%%1%') ").arg(content.toUpper()));
             break;
           case 2: // condition -> regExp
             qStr1.append(QString("(title REGEXP '%1' OR description REGEXP '%1') ").arg(content));
