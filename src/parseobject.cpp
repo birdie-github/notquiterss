@@ -794,10 +794,8 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
   } else if (!newsItem->updated.isEmpty()) {
     // Without a GUID or link, duplicate removal needs a date and title from
     // the same stored article, not merely any article already in the feed.
-    isDuplicate = duplicateNewsMode_
-        ? hasCommonArticle(publishedIndex_, newsItem->updated,
-                           titleIndex_, newsItem->title)
-        : publishedIndex_.contains(newsItem->updated);
+    isDuplicate = hasCommonArticle(publishedIndex_, newsItem->updated,
+                                   titleIndex_, newsItem->title);
   } else if (!newsItem->title.isEmpty()) {
     isDuplicate = titleIndex_.contains(newsItem->title);
   }
