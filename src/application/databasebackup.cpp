@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDataStream>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -110,6 +111,40 @@ QString fingerprint(sqlite3 *db, QString &error)
   if (rc != SQLITE_DONE && error.isEmpty()) error = sqlError(db);
   sqlite3_finalize(tables);
   return error.isEmpty() ? QString::fromLatin1(hash.result().toHex()) : QString();
+}
+
+// Hash the saved settings snapshot, so the fingerprint describes the INI
+// actually included in this backup. Ignore only our own changing bookkeeping.
+QString settingsFingerprint(const QString &fileName, QString &error)
+{
+  QSettings ini(fileName, QSettings::IniFormat);
+  ini.setFallbacksEnabled(false);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  ini.setIniCodec("UTF-8");
+#endif
+  QStringList keys = ini.allKeys();
+  keys.sort();
+  QCryptographicHash hash(QCryptographicHash::Sha256);
+  for (const QString &key : keys) {
+    if (key == QLatin1String("Backup/lastDigest") ||
+        key == QLatin1String("Backup/lastDirectory") ||
+        key == QLatin1String("Backup/lastSuccess")) continue;
+    QByteArray field;
+    QDataStream stream(&field, QIODevice::WriteOnly);
+    // Use a fixed format across Qt 5/6, including byte arrays and list values.
+    stream.setVersion(QDataStream::Qt_5_0);
+    stream << key << ini.value(key);
+    if (stream.status() != QDataStream::Ok) {
+      error = DatabaseBackup::tr("Cannot fingerprint the application settings.");
+      return {};
+    }
+    hash.addData(QByteArray::number(field.size()) + ':' + field);
+  }
+  if (ini.status() != QSettings::NoError) {
+    error = DatabaseBackup::tr("Cannot read the application settings snapshot.");
+    return {};
+  }
+  return QString::fromLatin1(hash.result().toHex());
 }
 
 bool filterCopy(sqlite3 *db, QString &error)
@@ -242,12 +277,6 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
     if (clean && !filterCopy(raw, error)) return fail(error);
     digest = fingerprint(raw, error) + (clean ? ":clean" : ":full");
     if (!error.isEmpty()) return fail(error);
-    if (!manual && !upgrade && settings.value("Backup/lastDigest").toString() == digest &&
-        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + dbName) &&
-        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + iniName)) {
-      qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "database unchanged";
-      result.skipped = true; return result;
-    }
     target.reset(); // Close every handle before publishing/renaming on Windows.
   }
   // Preserve the original settings before startup changes them. A profile may
@@ -260,6 +289,18 @@ DatabaseBackup::Result DatabaseBackup::create(QSqlDatabase db, Trigger trigger, 
   if (prerelease && QDir(staging.path()).entryList(QDir::Files).isEmpty()) {
     qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "no existing profile files";
     result.skipped = true; return result;
+  }
+  if (!upgrade) {
+    QString error;
+    const QString settingsDigest = settingsFingerprint(staging.filePath(iniName), error);
+    if (!error.isEmpty()) return fail(error);
+    digest += ':' + settingsDigest;
+    if (!manual && settings.value("Backup/lastDigest").toString() == digest &&
+        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + dbName) &&
+        QFileInfo::exists(settings.value("Backup/lastDirectory").toString() + '/' + iniName)) {
+      qInfo() << "[backup] Skipped: trigger=" << triggerLabel << "database and settings unchanged";
+      result.skipped = true; return result;
+    }
   }
   const QString stem = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") +
       "_v" + QCoreApplication::applicationVersion();
