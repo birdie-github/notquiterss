@@ -36,6 +36,16 @@
 #include <QRegularExpression>
 
 namespace {
+QString literalTitlePattern(QString title)
+{
+  // Escape the escape character first, then SQL LIKE wildcards. Keep LIKE's
+  // existing case matching while treating every title character literally.
+  title.replace(QLatin1String("!"), QLatin1String("!!"));
+  title.replace(QLatin1String("%"), QLatin1String("!%"));
+  title.replace(QLatin1String("_"), QLatin1String("!_"));
+  return title;
+}
+
 bool hasCommonArticle(const QHash<QString, QSet<int>> &first, const QString &firstValue,
                       const QHash<QString, QSet<int>> &second, const QString &secondValue)
 {
@@ -563,9 +573,9 @@ void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
   if (!isDuplicate && !isOld) {
     bool read = false;
     if (markIdenticalNewsRead_) {
-      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title AND feedId!=:id"), q)) return;
+      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title ESCAPE '!' AND feedId!=:id"), q)) return;
       q.bindValue(":id", parseFeedId_);
-      q.bindValue(":title", newsItem->title);
+      q.bindValue(":title", literalTitlePattern(newsItem->title));
       if (!checkQuery(q.exec(), q)) return;
       if (q.first()) read = true;
       if (!checkQuery(!q.lastError().isValid(), q)) return;
@@ -803,9 +813,9 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
  if (!isDuplicate && !isOld) {
     bool read = false;
     if (markIdenticalNewsRead_) {
-      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title AND feedId!=:id"), q)) return;
+      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title ESCAPE '!' AND feedId!=:id"), q)) return;
       q.bindValue(":id", parseFeedId_);
-      q.bindValue(":title", newsItem->title);
+      q.bindValue(":title", literalTitlePattern(newsItem->title));
       if (!checkQuery(q.exec(), q)) return;
       if (q.first()) read = true;
       if (!checkQuery(!q.lastError().isValid(), q)) return;
