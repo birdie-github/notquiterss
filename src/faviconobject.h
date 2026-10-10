@@ -51,6 +51,8 @@ private slots:
   void slotRequestTimeout();
 
 private:
+  void requestResource(const QUrl &url, const QString &feedUrl, int count, bool isIcon);
+
   NetworkManager *networkManager_;
 
   QQueue<QString> urlsQueue_;

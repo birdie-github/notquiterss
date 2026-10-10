@@ -30,6 +30,9 @@
 #define REPLY_MAX_COUNT 10
 
 namespace {
+// Full-content feeds can be large; cap download buffering before XML decoding
+// and DOM construction amplify its memory cost.
+constexpr qint64 FeedResponseLimit = 32LL * 1024 * 1024;
 QString browserChallengeProvider(QNetworkReply *reply)
 {
   if (reply->rawHeader("cf-mitigated").trimmed().toLower() == "challenge")
@@ -294,6 +297,7 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
   });
   reply->setProperty("feedReply", QVariant(true));
   networkReply_.append(reply);
+  NetworkPolicy::limitReplySize(reply, FeedResponseLimit);
 }
 
 /** @brief Process network reply
@@ -322,7 +326,13 @@ void RequestFeed::finished(QNetworkReply *reply)
     bool headOk = currentHead_.takeAt(currentReplyIndex);
     const QString challengeProvider = browserChallengeProvider(reply);
 
-    if (reply->error() == QNetworkReply::OperationCanceledError) {
+    if (!headOk && NetworkPolicy::replyExceedsSizeLimit(reply, FeedResponseLimit)) {
+      // Size rejection is neither a user cancellation nor a retryable failure.
+      // Never send a partial body to the parser.
+      emit getUrlDone(-6, feedId, feedUrl,
+                     tr("Feed exceeds the %1 MiB size limit.")
+                         .arg(FeedResponseLimit / (1024 * 1024)));
+    } else if (reply->error() == QNetworkReply::OperationCanceledError) {
       emit getUrlDone(-7, feedId, feedUrl);
     } else if (!challengeProvider.isEmpty()) {
       // Finish once, without retrying or passing the challenge HTML to parsing.

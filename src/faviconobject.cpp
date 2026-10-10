@@ -31,6 +31,10 @@
 #define REQUEST_TIMEOUT 30
 
 namespace {
+// Discovery examines only the first 64 KiB, but allow ordinary website pages.
+constexpr qint64 FaviconPageLimit = 1LL * 1024 * 1024;
+// Allow large PNGs and ICO files containing multiple icon resolutions.
+constexpr qint64 FaviconImageLimit = 4LL * 1024 * 1024;
 QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
 {
   // Bound parsing work even for large pages. Icon declarations normally live
@@ -169,6 +173,14 @@ void FaviconObject::getQueuedUrl()
  *----------------------------------------------------------------------------*/
 void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const int &count)
 {
+  // Existing dispatch uses 0/2 for pages and 1/3 for discovered/fallback icons.
+  // Redirects use requestResource() to preserve the role independently of count.
+  requestResource(getUrl, feedUrl, count, count == 1 || count == 3);
+}
+
+void FaviconObject::requestResource(const QUrl &getUrl, const QString &feedUrl,
+                                   int count, bool isIcon)
+{
   if (count)
     Common::sleep(30);
 
@@ -180,7 +192,9 @@ void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const in
 
   QNetworkReply *reply = networkManager_->get(request);
   reply->setProperty("feedReply", QVariant(true));
+  reply->setProperty("faviconImage", isIcon);
   networkReply_.append(reply);
+  NetworkPolicy::limitReplySize(reply, isIcon ? FaviconImageLimit : FaviconPageLimit);
 }
 
 /** @brief Finish network request processing
@@ -196,18 +210,29 @@ void FaviconObject::finished(QNetworkReply *reply)
     QString feedUrl = currentFeeds_.takeAt(currentReplyIndex);
     int cntRequests = currentCntRequests_.takeAt(currentReplyIndex);
 
-    if ((reply->error() == QNetworkReply::NoError) || (reply->error() == QNetworkReply::UnknownContentError)) {
+    const bool isIcon = reply->property("faviconImage").toBool();
+    const qint64 limit = isIcon ? FaviconImageLimit : FaviconPageLimit;
+    if (NetworkPolicy::replyExceedsSizeLimit(reply, limit)) {
+      qWarning() << "Favicon" << (isIcon ? "image" : "page")
+                 << "exceeds size limit:" << limit << "bytes";
+      if (!isIcon) {
+        // An oversized discovery page is not useful. Try the conventional icon
+        // directly; an oversized icon must not start another page/icon cycle.
+        const QUrl iconUrl = url.resolved(QUrl(QStringLiteral("/favicon.ico")));
+        requestResource(iconUrl, feedUrl, cntRequests + 1, true);
+      }
+    } else if ((reply->error() == QNetworkReply::NoError) || (reply->error() == QNetworkReply::UnknownContentError)) {
       QUrl redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
       if (redirectionTarget.isValid()) {
         if ((cntRequests == 0) || (cntRequests == 1) || (cntRequests == 3)) {
           redirectionTarget = reply->url().resolved(redirectionTarget);
           if (NetworkPolicy::isSafeRedirect(reply->url(), redirectionTarget))
-            emit signalGet(redirectionTarget, feedUrl, cntRequests+2);
+            requestResource(redirectionTarget, feedUrl, cntRequests+2, isIcon);
         }
       } else {
         QByteArray data = reply->readAll();
         if (!data.isNull()) {
-          if ((cntRequests == 0) || (cntRequests == 2)) {
+          if (!isIcon) {
             const QUrl iconUrl = faviconUrl(data, url);
             const QString linkFavicon = iconUrl.toString();
             if (!linkFavicon.isEmpty()) {
@@ -215,7 +240,7 @@ void FaviconObject::finished(QNetworkReply *reply)
               emit signalGet(iconUrl, feedUrl, cntRequests+1);
             }
             if (linkFavicon.isEmpty()) {
-              if ((cntRequests == 0) || (cntRequests == 2)) {
+              if (!isIcon) {
                 QString link = QString("%1://%2/favicon.ico").arg(url.scheme()).arg(url.host());
                 emit signalGet(link, feedUrl, cntRequests+1);
               }
@@ -226,7 +251,7 @@ void FaviconObject::finished(QNetworkReply *reply)
             emit signalIconRecived(feedUrl, data, info.suffix());
           }
         } else {
-          if ((cntRequests == 0) || (cntRequests == 2)) {
+          if (!isIcon) {
             QString link = QString("%1://%2/favicon.ico").arg(url.scheme()).arg(url.host());
             emit signalGet(link, feedUrl, cntRequests+1);
           }
