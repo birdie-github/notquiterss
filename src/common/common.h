@@ -20,6 +20,8 @@
 #define COMMON_H
 
 #include <QString>
+#include <QByteArray>
+#include <QRegularExpression>
 #include <QDir>
 
 #ifndef QSL
@@ -36,6 +38,30 @@
 
 namespace Common
 {
+
+  inline QByteArray repairXmlAmpersands(const QByteArray &data)
+  {
+    static const QRegularExpression bareAmpersand(
+        QStringLiteral("&(?!([a-z0-9#]+;))"),
+        QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
+    // Latin-1 keeps regex offsets aligned with the original bytes. Convert once
+    // and scan immutable input, rather than converting and shifting on each match.
+    const QString input = QString::fromLatin1(data);
+    auto matches = bareAmpersand.globalMatch(input);
+    if (!matches.hasNext()) return data;
+
+    QByteArray repaired;
+    repaired.reserve(data.size());
+    qsizetype copied = 0;
+    while (matches.hasNext()) {
+      const qsizetype position = matches.next().capturedStart();
+      repaired.append(data.constData() + copied, position - copied);
+      repaired.append("&amp;");
+      copied = position + 1;
+    }
+    repaired.append(data.constData() + copied, data.size() - copied);
+    return repaired;
+  }
 
   bool removePath(const QString &path);
   bool matchDomain(const QString &pattern, const QString &domain);

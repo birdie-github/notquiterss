@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "opmlinput.h"
+#include "../common/common.h"
 #include "../network/feedurl.h"
 #include "../network/networkpolicy.h"
 #include <QRegularExpression>
@@ -13,17 +14,11 @@ QByteArray OpmlInput::prepare(QByteArray xmlData)
   QString convertData;
   bool codecOk = false;
 
-  QRegularExpression rx("&(?!([a-z0-9#]+;))",
-      QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-  int pos = 0;
-  // Latin-1 keeps match offsets aligned with the QByteArray being edited.
-  while ((pos = rx.match(QString::fromLatin1(xmlData), pos).capturedStart()) != -1) {
-    xmlData.replace(pos, 1, "&amp;");
-    pos += 1;
-  }
+  xmlData = Common::repairXmlAmpersands(xmlData);
 
-  rx.setPattern("encoding=\"([^\"]+)");
-  pos = rx.match(QString::fromUtf8(xmlData)).capturedStart();
+  QRegularExpression rx("encoding=\"([^\"]+)",
+      QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
+  int pos = rx.match(QString::fromUtf8(xmlData)).capturedStart();
   if (pos == -1) {
     rx.setPattern("encoding='([^']+)");
     pos = rx.match(QString::fromUtf8(xmlData)).capturedStart();

@@ -426,13 +426,7 @@ void RequestFeed::finished(QNetworkReply *reply)
           QByteArray data = reply->readAll();
           data = data.trimmed();
 
-          rx.setPattern("&(?!([a-z0-9#]+;))");
-          pos = 0;
-          // Latin-1 keeps match offsets aligned with the QByteArray being edited.
-          while ((pos = rx.match(QString::fromLatin1(data), pos).capturedStart()) != -1) {
-            data.replace(pos, 1, "&amp;");
-            pos += 1;
-          }
+          data = Common::repairXmlAmpersands(data);
 
           data.replace("<br>", "<br/>");
 
