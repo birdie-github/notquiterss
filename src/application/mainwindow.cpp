@@ -2632,6 +2632,12 @@ void MainWindow::slotImportFeeds()
   emit signalImportFeeds(xmlData, upgradeHttp);
 }
 
+void MainWindow::slotImportFinished(bool updatesQueued)
+{
+  // Successful imports keep requesting favicons until their updates finish.
+  if (!updatesQueued) isStartImportFeed_ = false;
+}
+
 /** @brief Export feeds to OPML-file
  *---------------------------------------------------------------------------*/
 void MainWindow::slotExportFeeds()

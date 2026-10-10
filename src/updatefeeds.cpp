@@ -18,6 +18,7 @@
 * ============================================================ */
 #include "network/feedurl.h"
 #include "databasebackup.h"
+#include "opmlinput.h"
 #include "feedhealth.h"
 #include <QTextCodec>
 #include "updatefeeds.h"
@@ -171,6 +172,8 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, SLOT(slotGetFeedsFolder(QString)));
     connect(parent, SIGNAL(signalImportFeeds(QByteArray,bool)),
             updateObject_, SLOT(slotImportFeeds(QByteArray,bool)));
+    connect(updateObject_, &UpdateObject::importFinished,
+            window, &MainWindow::slotImportFinished);
     connect(updateObject_, SIGNAL(showProgressBar(int)),
             parent, SLOT(showProgressBar(int)));
     connect(updateObject_, &UpdateObject::updateCycleStarted,
@@ -578,8 +581,23 @@ void UpdateObject::queueAllFeeds(bool manual)
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 {
+  auto reportFailure = [this](const QString &error) {
+    emit signalMessageStatusBar(error, 5000);
+    emit importFinished(false);
+  };
+  // Validate the entire prepared document before taking the database lock or
+  // writing any subscriptions. Keep the GUI and worker on the same policy.
+  int httpCount = 0;
+  QString validationError;
+  if (!OpmlInput::inspect(xmlData, httpCount, validationError)) {
+    reportFailure(validationError);
+    return;
+  }
+
   auto databaseAccess = Database::backgroundAccess();
   int outlineCount = 0;
+  int importedFolders = 0;
+  int skippedFeeds = 0;
   QSqlQuery q(db_);
   QList<int> idsList;
   QList<QString> urlsList;
@@ -588,21 +606,29 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 
   QHash<QString, int> knownUrls;
   if (!q.exec("SELECT id, xmlUrl FROM feeds WHERE xmlUrl != ''")) {
-    emit signalMessageStatusBar(tr("Could not check existing subscriptions."), 5000);
+    reportFailure(tr("Could not check existing subscriptions."));
     return;
   }
   while (q.next()) knownUrls.insert(FeedUrl::identity(FeedUrl::normalize(q.value(1).toString())), q.value(0).toInt());
+  if (q.lastError().isValid()) {
+    reportFailure(tr("Could not check existing subscriptions."));
+    return;
+  }
   q.finish();
 
   if (!db_.transaction()) {
-    emit signalMessageStatusBar(tr("Could not start the import transaction."), 5000);
+    reportFailure(tr("Could not start the import transaction."));
     return;
   }
-  auto failImport = [this, &q] {
-    const QString error = q.lastError().text();
+  auto failImport = [this, &q, &reportFailure](const QString &error) {
     q.finish();
-    db_.rollback();
-    emit signalMessageStatusBar(tr("Import failed: %1").arg(error), 5000);
+    if (!db_.rollback()) {
+      qCritical() << "Cannot roll back OPML import:" << db_.lastError().text();
+      reportFailure(tr("Import failed: %1. Could not roll back: %2")
+                    .arg(error, db_.lastError().text()));
+      return;
+    }
+    reportFailure(tr("Import failed: %1").arg(error));
   };
 
   // Store hierarchy of "outline" tags. Next nested outline is pushed to stack.
@@ -626,8 +652,9 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
         if (xmlUrlString.isEmpty()) {
           int rowToParent = 0;
           if (!q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
-                      arg(parentIdsStack.top()))) { failImport(); return; }
-          if (q.next()) rowToParent = q.value(0).toInt();
+                      arg(parentIdsStack.top()))) { failImport(q.lastError().text()); return; }
+          if (!q.next()) { failImport(q.lastError().text()); return; }
+          rowToParent = q.value(0).toInt();
 
           q.prepare("INSERT INTO feeds(text, title, xmlUrl, created, f_Expanded, parentId, rowToParent) "
                     "VALUES (:text, :title, :xmlUrl, :feedCreateTime, 0, :parentId, :rowToParent)");
@@ -638,8 +665,9 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
                       QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
           q.bindValue(":parentId", parentIdsStack.top());
           q.bindValue(":rowToParent", rowToParent);
-          if (!q.exec()) { failImport(); return; }
+          if (!q.exec()) { failImport(q.lastError().text()); return; }
           parentIdsStack.push(q.lastInsertId().toInt());
+          ++importedFolders;
         }
         // Feed finded
         else {
@@ -651,12 +679,14 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
           const QString identity = FeedUrl::identity(url);
           const bool isFeedDuplicated = knownUrls.contains(identity);
           if (isFeedDuplicated) {
+            ++skippedFeeds;
             qDebug() << "duplicate feed:" << xmlUrlString << textString;
           } else {
             int rowToParent = 0;
             if (!q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
-                        arg(parentIdsStack.top()))) { failImport(); return; }
-            if (q.next()) rowToParent = q.value(0).toInt();
+                        arg(parentIdsStack.top()))) { failImport(q.lastError().text()); return; }
+            if (!q.next()) { failImport(q.lastError().text()); return; }
+            rowToParent = q.value(0).toInt();
 
             q.prepare("INSERT INTO feeds(text, title, description, xmlUrl, htmlUrl, created, parentId, rowToParent) "
                       "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
@@ -668,7 +698,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
             q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
             q.addBindValue(parentIdsStack.top());
             q.addBindValue(rowToParent);
-            if (!q.exec()) { failImport(); return; }
+            if (!q.exec()) { failImport(q.lastError().text()); return; }
 
             knownUrls.insert(identity, q.lastInsertId().toInt());
             idsList.append(q.lastInsertId().toInt());
@@ -689,30 +719,32 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
     QString error = QString("Import error: Line = %1, Column = %2; Error = %3").
         arg(xml.lineNumber()).arg(xml.columnNumber()).arg(xml.errorString());
     qCritical() << error;
-    q.finish();
-    db_.rollback();
-    emit signalMessageStatusBar(error, 3000);
+    failImport(error);
     return;
   }
 
   q.finish();
   if (!db_.commit()) {
     const QString error = db_.lastError().text();
-    db_.rollback();
-    emit signalMessageStatusBar(tr("Import failed: %1").arg(error), 5000);
+    failImport(error);
     return;
   }
   DatabaseBackup::subscriptionsChanged("import OPML");
-  emit signalMessageStatusBar(tr("Import complete"), 3000);
+  emit signalMessageStatusBar(
+      tr("Import complete: %1 feeds and %2 folders imported; %3 duplicate feeds skipped.")
+          .arg(idsList.count()).arg(importedFolders).arg(skippedFeeds), 5000);
 
   // This connection is blocking: the UI must be able to acquire access while
   // rebuilding its feed model. The import transaction and query are finished.
   databaseAccess.unlock();
   emit signalUpdateFeedsModel();
 
+  bool updatesQueued = false;
   for (int i = 0; i < idsList.count(); i++) {
-    addFeedInQueue(idsList.at(i), urlsList.at(i), QDateTime(), 0);
+    if (addFeedInQueue(idsList.at(i), urlsList.at(i), QDateTime(), 0))
+      updatesQueued = true;
   }
+  emit importFinished(updatesQueued);
   emit showProgressBar(updateFeedsCount_);
 }
 

@@ -246,6 +246,7 @@ public slots:
   void addFolder();
   void deleteItemFeedsTree();
   void slotImportFeeds();
+  void slotImportFinished(bool updatesQueued);
   void slotExportFeeds();
   void slotFeedClicked(QModelIndex index);
   void slotFeedSelected(QModelIndex index, bool createTab = false);

@@ -110,6 +110,7 @@ signals:
   void updateCycleStarted();
   void showProgressBar(int value);
   void scheduledFeedsChecked();
+  void importFinished(bool updatesQueued);
   void feedProgressQueued(int feedId, QString name);
   void feedProgressStage(int feedId, QString stage);
   void feedProgressFinished(int feedId);
