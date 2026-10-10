@@ -693,12 +693,16 @@ void ParseObject::parseRss(const QString &feedUrl, const QDomDocument &doc)
                 newsItem.link = newsItem.id;
         }
     }
-    url = QUrl(newsItem.link);
-    if (url.host().isEmpty())
-      url.setHost(QUrl(feedUrl).host());
-    if (url.scheme().isEmpty())
-      url.setScheme(QUrl(feedUrl).scheme());
-    newsItem.link = url.toString();
+    // Keep an absent article link absent: inventing the feed's website URL
+    // would give every linkless entry the same duplicate identity.
+    if (!newsItem.link.isEmpty()) {
+      url = QUrl(newsItem.link);
+      if (url.host().isEmpty())
+        url.setHost(QUrl(feedUrl).host());
+      if (url.scheme().isEmpty())
+        url.setScheme(QUrl(feedUrl).scheme());
+      newsItem.link = url.toString();
+    }
 
     newsItem.description = newsList.item(i).namedItem("description").toElement().text();
     QDomNode nodeSummary = newsList.item(i).namedItem("description");
@@ -788,9 +792,11 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
       isDuplicate = hasCommonArticle(identityIndex, identity, titleIndex_, newsItem->title);
     }
   } else if (!newsItem->updated.isEmpty()) {
-    // With duplicate removal enabled, the existing rule matches any stored
-    // article when the incoming RSS entry has a date but no GUID or link.
-    isDuplicate = duplicateNewsMode_ ? !publishedIndex_.isEmpty()
+    // Without a GUID or link, duplicate removal needs a date and title from
+    // the same stored article, not merely any article already in the feed.
+    isDuplicate = duplicateNewsMode_
+        ? hasCommonArticle(publishedIndex_, newsItem->updated,
+                           titleIndex_, newsItem->title)
         : publishedIndex_.contains(newsItem->updated);
   } else if (!newsItem->title.isEmpty()) {
     isDuplicate = titleIndex_.contains(newsItem->title);
