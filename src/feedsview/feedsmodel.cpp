@@ -197,7 +197,7 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
       return QColor(countNewsUnreadColor_);
     }
 
-    QModelIndex currentIndex = ((FeedsProxyModel*)view_->model())->mapToSource(view_->currentIndex());
+    QModelIndex currentIndex = static_cast<FeedsProxyModel *>(view_->model())->mapToSource(view_->currentIndex());
     if ((index.row() == currentIndex.row()) && (index.parent() == currentIndex.parent()) &&
         view_->selectionModel()->selectedRows(0).count()) {
       return QColor(focusedFeedTextColor_);
@@ -216,7 +216,7 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
 
     return QColor(textColor_);
   } else if (role == Qt::BackgroundRole) {
-    QModelIndex currentIndex = ((FeedsProxyModel*)view_->model())->mapToSource(view_->currentIndex());
+    QModelIndex currentIndex = static_cast<FeedsProxyModel *>(view_->model())->mapToSource(view_->currentIndex());
     if ((index.row() == currentIndex.row()) && (index.parent() == currentIndex.parent()) &&
         view_->selectionModel()->selectedRows(0).count()) {
       if (!focusedFeedBGColor_.isEmpty())

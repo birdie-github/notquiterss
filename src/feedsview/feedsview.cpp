@@ -196,7 +196,7 @@ void FeedsView::setSourceModel(FeedsModel *sourceModel)
 void FeedsView::refresh()
 {
   sourceModel_->refresh();
-  ((FeedsProxyModel*)model())->reset();
+  static_cast<FeedsProxyModel *>(model())->reset();
   restoreExpanded();
 }
 
@@ -214,7 +214,7 @@ bool FeedsView::isFolder(const QModelIndex &index) const
 {
   if (!index.isValid())
     return false;
-  return sourceModel_->isFolder(((FeedsProxyModel*)model())->mapToSource(index));
+  return sourceModel_->isFolder(static_cast<FeedsProxyModel *>(model())->mapToSource(index));
 }
 
 void FeedsView::restoreExpanded()
@@ -222,7 +222,7 @@ void FeedsView::restoreExpanded()
   // Expansion can collapse other folders and change expandedList via signals.
   const auto expandedIds = expandedList;
   for (int id : expandedIds) {
-    QModelIndex index = ((FeedsProxyModel*)model())->mapFromSource(id);
+    QModelIndex index = static_cast<FeedsProxyModel *>(model())->mapFromSource(id);
     if (!isExpanded(index))
       setExpanded(index, true);
   }
@@ -232,7 +232,7 @@ void FeedsView::restoreExpanded()
  *----------------------------------------------------------------------------*/
 void FeedsView::slotExpanded(const QModelIndex &index)
 {
-  int feedId = sourceModel_->idByIndex(((FeedsProxyModel*)model())->mapToSource(index));
+  int feedId = sourceModel_->idByIndex(static_cast<FeedsProxyModel *>(model())->mapToSource(index));
   if (!expandedList.contains(feedId)) {
     expandedList.append(feedId);
     mainApp->sqlQueryExec(QString("UPDATE feeds SET f_Expanded=1 WHERE id=='%1'").arg(feedId));
@@ -241,7 +241,7 @@ void FeedsView::slotExpanded(const QModelIndex &index)
   if (!autocollapseFolder_ || (feedId == expandedOldId_))
     return;
 
-  QModelIndex indexCollapsed = ((FeedsProxyModel*)model())->mapFromSource(expandedOldId_);
+  QModelIndex indexCollapsed = static_cast<FeedsProxyModel *>(model())->mapFromSource(expandedOldId_);
   expandedOldId_ = feedId;
 
   if (index.parent() != indexCollapsed)
@@ -261,7 +261,7 @@ void FeedsView::slotExpanded(const QModelIndex &index)
  *----------------------------------------------------------------------------*/
 void FeedsView::slotCollapsed(const QModelIndex &index)
 {
-  int feedId = sourceModel_->idByIndex(((FeedsProxyModel*)model())->mapToSource(index));
+  int feedId = sourceModel_->idByIndex(static_cast<FeedsProxyModel *>(model())->mapToSource(index));
   expandedList.removeOne(feedId);
   mainApp->sqlQueryExec(QString("UPDATE feeds SET f_Expanded=0 WHERE id=='%1'").arg(feedId));
 }
@@ -304,7 +304,7 @@ QModelIndex FeedsView::indexNextUnread(const QModelIndex &indexCur, int nextCond
     // find next
     QModelIndex index = indexNext(indexCur);
     while (index.isValid()) {
-      int feedUnreadCount = sourceModel_->dataField(((FeedsProxyModel*)model())->mapToSource(index), "unread").toInt();
+      int feedUnreadCount = sourceModel_->dataField(static_cast<FeedsProxyModel *>(model())->mapToSource(index), "unread").toInt();
       if (0 < feedUnreadCount)
         return index;  // ok
 
@@ -316,7 +316,7 @@ QModelIndex FeedsView::indexNextUnread(const QModelIndex &indexCur, int nextCond
     // find previous
     QModelIndex index = indexPrevious(indexCur);
     while (index.isValid()) {
-      int feedUnreadCount = sourceModel_->dataField(((FeedsProxyModel*)model())->mapToSource(index), "unread").toInt();
+      int feedUnreadCount = sourceModel_->dataField(static_cast<FeedsProxyModel *>(model())->mapToSource(index), "unread").toInt();
       if (0 < feedUnreadCount)
         return index;  // ok
 
@@ -523,7 +523,7 @@ void FeedsView::mousePressEvent(QMouseEvent *event)
 
   if (event->buttons() & Qt::RightButton) {
     if (event->pos().x() >= rectText.x()) {
-      index = ((FeedsProxyModel*)model())->mapToSource(index);
+      index = static_cast<FeedsProxyModel *>(model())->mapToSource(index);
       selectId_ = sourceModel_->idByIndex(index);
     }
     return;
@@ -536,7 +536,7 @@ void FeedsView::mousePressEvent(QMouseEvent *event)
   }
 
   indexClicked_ = index;
-  index = ((FeedsProxyModel*)model())->mapToSource(index);
+  index = static_cast<FeedsProxyModel *>(model())->mapToSource(index);
   selectId_ = sourceModel_->idByIndex(index);
 
   if ((event->buttons() & Qt::MiddleButton)) {
@@ -611,7 +611,7 @@ void FeedsView::mouseReleaseEvent(QMouseEvent *event)
                                            const QModelIndex &previous)
 {
   if (selectIdEn_) {
-    QModelIndex index = ((FeedsProxyModel*)model())->mapToSource(current);
+    QModelIndex index = static_cast<FeedsProxyModel *>(model())->mapToSource(current);
     selectId_ = sourceModel_->idByIndex(index);
   }
   selectIdEn_ = true;
@@ -912,6 +912,6 @@ void FeedsView::handleDrop(QDropEvent *e)
       if (!dropIndex.isValid()) how = 1;
     }
   }
-  indexWhere = ((FeedsProxyModel*)model())->mapToSource(indexWhere);
+  indexWhere = static_cast<FeedsProxyModel *>(model())->mapToSource(indexWhere);
   emit signalDropped(indexWhere, how);
 }

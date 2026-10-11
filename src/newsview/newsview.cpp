@@ -40,7 +40,7 @@ NewsView::NewsView(QWidget * parent)
   indexClicked_ = indexAt(event->pos());
 
   QModelIndex index = indexAt(event->pos());
-  QSqlTableModel *model_ = (QSqlTableModel*)model();
+  QSqlTableModel *model_ = static_cast<QSqlTableModel *>(model());
   if (event->buttons() & Qt::LeftButton) {
     if (index.column() == model_->fieldIndex("starred")) {
       if (index.data(Qt::EditRole).toInt() == 0) {

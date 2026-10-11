@@ -436,7 +436,7 @@ void DownloadItem::openFolder()
   winFileName.replace(QLatin1Char('/'), "\\");
   QString shExArg = "/e,/select,\"" + winFileName + "\"";
   qInfo() << "Launching" << QStringLiteral("explorer.exe") << "arguments:" << shExArg;
-  ShellExecute(nullptr, nullptr, TEXT("explorer.exe"), (wchar_t*)shExArg.utf16(), nullptr, SW_SHOW);
+  ShellExecute(nullptr, nullptr, TEXT("explorer.exe"), reinterpret_cast<const wchar_t *>(shExArg.utf16()), nullptr, SW_SHOW);
 #else
   QFileInfo info(fileName_);
   qInfo() << "Opening" << info.path() << "using system folder handler";

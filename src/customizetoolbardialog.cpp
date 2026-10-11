@@ -205,7 +205,7 @@ void CustomizeToolbarDialog::acceptDialog()
 
   if (toolbar_->objectName() == "newsToolBar") {
     for (int i = 0; i < mainWindow->stackedWidget_->count(); i++) {
-      NewsTabWidget *widget = (NewsTabWidget*)mainWindow->stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(mainWindow->stackedWidget_->widget(i));
       QListIterator<QAction *> iter(widget->newsToolBar_->actions());
       while (iter.hasNext()) {
         QAction *pAction = iter.next();
@@ -299,7 +299,7 @@ void CustomizeToolbarDialog::acceptDialog()
     settings.setValue("Settings/newsToolBar", str);
 
     for (int i = 0; i < mainWindow->stackedWidget_->count(); i++) {
-      NewsTabWidget *widget = (NewsTabWidget*)mainWindow->stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(mainWindow->stackedWidget_->widget(i));
       for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
         if (actionStr == "Separator") {
           widget->newsToolBar_->addSeparator();

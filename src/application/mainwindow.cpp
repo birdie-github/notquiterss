@@ -335,7 +335,7 @@ void MainWindow::finishQuitApp()
   saveSettings();
 
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     widget->disconnectObjects();
   }
 
@@ -408,7 +408,7 @@ void MainWindow::changeEvent(QEvent *event)
 {
   if (event->type() == QEvent::WindowStateChange) {
     if (isMinimized()) {
-      oldState = ((QWindowStateChangeEvent*)event)->oldState();
+      oldState = static_cast<QWindowStateChangeEvent *>(event)->oldState();
     } else {
       oldState = windowState();
     }
@@ -692,7 +692,7 @@ void MainWindow::createToolBarNull()
 // ---------------------------------------------------------------------------
 void MainWindow::createNewsTab(int index)
 {
-  currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(index);
+  currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(index));
   currentNewsTab->setSettings();
   currentNewsTab->retranslateStrings();
   currentNewsTab->setBrowserPosition();
@@ -2298,14 +2298,14 @@ void MainWindow::saveSettings()
     if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)
       widget = currentNewsTab;
     else
-      widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+      widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
 
     widget->newsHeader_->saveStateColumns(widget);
     stateSettings.setValue("NewsTabSplitterState",
                       widget->newsTabWidgetSplitter_->saveState());
   }
 
-  NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+  NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
   stateSettings.setValue("feedSettings/currentId", widget->feedId_);
   stateSettings.setValue("feedSettings/filterName",
                     feedsFilterGroup_->checkedAction()->objectName());
@@ -2777,7 +2777,7 @@ void MainWindow::slotRecountCategoryCounts(CategoryCounts counts)
     font.setBold(false);
   categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem)->setFont(0, font);
 
-  NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(stackedWidget_->currentIndex());
+  NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(stackedWidget_->currentIndex()));
   if (widget && (widget->type_ > NewsTabWidget::TabTypeFeed) && (widget->type_ < NewsTabWidget::TabTypeDownloads)
       && categoriesTree_->currentIndex().isValid()) {
     int unreadCount = widget->getUnreadCount(categoriesTree_->currentItem()->text(4));
@@ -2968,7 +2968,7 @@ void MainWindow::slotFeedClicked(QModelIndex index)
   // Search open tab containing this feed
   int indexTab = -1;
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->feedId_ == feedIdCur) {
       indexTab = i;
       break;
@@ -2985,7 +2985,7 @@ void MainWindow::slotFeedClicked(QModelIndex index)
       QModelIndex currentIndex = feedsProxyModel_->mapFromSource(feedIdCur);
       feedsView_->setCurrentIndex(currentIndex);
 
-      currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+      currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
       newsModel_ = currentNewsTab->newsModel_;
       newsView_ = currentNewsTab->newsView_;
     } else {
@@ -3394,7 +3394,7 @@ void MainWindow::showOptionDlg(int index)
     int indexTab = -1;
     int tabLabelId = -1;
     for (int i = 0; i < stackedWidget_->count(); i++) {
-      NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
       if (widget->type_ == NewsTabWidget::TabTypeLabel) {
         indexTab = i;
         tabLabelId = widget->labelId_;
@@ -3425,7 +3425,7 @@ void MainWindow::showOptionDlg(int index)
 
       if (idLabel == tabLabelId) {
         closeTab = false;
-        NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(indexTab);
+        NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(indexTab));
         // Set icon and title for tab has opened
         widget->newsIconTitle_->setPixmap(imageLabel);
         widget->setTextTab(nameLabel);
@@ -3919,7 +3919,7 @@ void MainWindow::setFeedsFilter(bool clicked)
       (filterAct->objectName() == "filterFeedsUnread_")) {
     for (int i = 0; i < stackedWidget_->count(); i++) {
       if ((i == 0) && clicked && (stackedWidget_->currentIndex() == 0)) continue;
-      NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
       if (!idList.contains(widget->feedId_)) {
         idList.append(widget->feedId_);
         QModelIndex index = feedsModel_->indexById(widget->feedId_).parent();
@@ -4104,7 +4104,7 @@ void MainWindow::setFeedRead(int type, int feedId, FeedReedType feedReadType,
       idNewsList.append(newsId);
     }
     for (int i = 0; i < stackedWidget_->count(); i++) {
-      NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
       if ((widget->type_ < NewsTabWidget::TabTypeDownloads) &&
           !((feedReadType == FeedReadSwitchingFeed) && (i == TAB_WIDGET_PERMANENT))) {
         int row = widget->newsView_->currentIndex().row();
@@ -4736,7 +4736,7 @@ void MainWindow::retranslateStrings()
         }
       }
       for (int i = 0; i < stackedWidget_->count(); i++) {
-        NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+        NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
         if (widget->type_ == NewsTabWidget::TabTypeLabel) {
           if (widget->labelId_ == idLabel) {
             widget->setTextTab(trNameLabels().at(idLabel-1));
@@ -4912,14 +4912,14 @@ void MainWindow::showFeedPropertiesDlg()
   for (const QString &indexStr : std::as_const(indexColumnsList)) {
     properties.columnDefault.columns.append(indexStr.toInt());
   }
-  NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+  NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
   int sortBy = settings.value("sortBy", widget->newsModel_->fieldIndex("published")).toInt();
   properties.columnDefault.sortBy = sortBy;
   int sortType = settings.value("sortOrder", Qt::DescendingOrder).toInt();
   properties.columnDefault.sortType = sortType;
 
   if (feedsModel_->dataField(index, "columns").toString().isEmpty()) {
-    widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+    widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
     QListIterator<QAction *> iter(widget->newsHeader_->viewMenu_->actions());
     while (iter.hasNext()) {
       QAction *nextAction = iter.next();
@@ -4936,7 +4936,7 @@ void MainWindow::showFeedPropertiesDlg()
       properties.column.sortType = 1;
     }
   } else {
-    widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+    widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
     QListIterator<QAction *> iter(widget->newsHeader_->viewMenu_->actions());
     while (iter.hasNext()) {
       QAction *nextAction = iter.next();
@@ -5163,7 +5163,7 @@ void MainWindow::showFeedPropertiesDlg()
   }
 
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->feedId_ == feedId) {
       if (properties.general.text != properties_tmp.general.text) {
         widget->setTextTab(properties.general.text);
@@ -5253,7 +5253,7 @@ void MainWindow::slotIconFeedUpdate(int feedId, QByteArray faviconData)
   if (defaultIconFeeds_) return;
 
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->feedId_ == feedId) {
       QPixmap iconTab;
       if (!faviconData.isNull()) {
@@ -5671,7 +5671,7 @@ void MainWindow::slotOpenCategoryNewTab()
 void MainWindow::slotCloseTab(int index)
 {
   if (index != 0) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(index);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(index));
 
     setFeedRead(widget->type_, widget->feedId_, FeedReadClosingTab, widget);
 
@@ -5707,7 +5707,7 @@ void MainWindow::slotTabCurrentChanged(int index)
   }
   deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
 
-  NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(index);
+  NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(index));
 
   if ((widget->type_ == NewsTabWidget::TabTypeFeed) || (widget->type_ >= NewsTabWidget::TabTypeDownloads))
     categoriesTree_->setCurrentIndex(QModelIndex());
@@ -5741,7 +5741,7 @@ void MainWindow::slotTabCurrentChanged(int index)
   if (widget->type_ == NewsTabWidget::TabTypeFeed) {
     if (widget->feedId_ == 0)
       widget->hide();
-    currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(index);
+    currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(index));
     currentNewsTab->setSettings(false);
     currentNewsTab->retranslateStrings();
     currentNewsTab->setBrowserPosition();
@@ -5780,7 +5780,7 @@ void MainWindow::slotTabCurrentChanged(int index)
     }
     categoriesTree_->setCurrentItem(treeItems.at(0));
 
-    currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(index);
+    currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(index));
     currentNewsTab->setSettings(false);
     currentNewsTab->retranslateStrings();
     currentNewsTab->setBrowserPosition();
@@ -6244,7 +6244,7 @@ void MainWindow::slotOpenNew(int feedId, int newsId)
   // Search open tab containing this feed
   int indexTab = -1;
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->feedId_ == feedId) {
       indexTab = i;
       break;
@@ -6259,7 +6259,7 @@ void MainWindow::slotOpenNew(int feedId, int newsId)
       tabBar_->setCurrentIndex(TAB_WIDGET_PERMANENT);
       updateCurrentTab_ = true;
 
-      currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+      currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
       newsModel_ = currentNewsTab->newsModel_;
       newsView_ = currentNewsTab->newsView_;
     } else {
@@ -6515,7 +6515,7 @@ void MainWindow::setStayOnTop()
 {
   isMinimizeToTray_ = true;
 
-  int state = windowState();
+  const Qt::WindowStates state = windowState();
 
   if (stayOnTopAct_->isChecked())
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
@@ -6526,7 +6526,7 @@ void MainWindow::setStayOnTop()
     Settings settings;
     restoreGeometry(settings.value("GeometryState").toByteArray());
   }
-  setWindowState((Qt::WindowState)state);
+  setWindowState(state);
   show();
 #ifdef HAVE_X11
   if (allWorkspacesAct_ && allWorkspacesAct_->isChecked())
@@ -6700,7 +6700,7 @@ void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTa
   int indexTab = -1;
   if (!createTab) {
     for (int i = 0; i < stackedWidget_->count(); i++) {
-      NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(i);
+      NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
       if (widget->type_ == tabType) {
         if (widget->type_ == NewsTabWidget::TabTypeLabel) {
           if (widget->labelId_ == item->text(2).toInt()) {
@@ -6739,7 +6739,7 @@ void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTa
         updateCurrentTab_ = true;
         categoriesTree_->setCurrentIndex(curIndex);
 
-        currentNewsTab = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
+        currentNewsTab = static_cast<NewsTabWidget *>(stackedWidget_->widget(TAB_WIDGET_PERMANENT));
         newsModel_ = currentNewsTab->newsModel_;
         newsView_ = currentNewsTab->newsView_;
       } else {
@@ -7473,7 +7473,7 @@ void MainWindow::showDownloadManager(bool activate)
   int indexTab = -1;
   NewsTabWidget *widget;
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->type_ == NewsTabWidget::TabTypeDownloads) {
       indexTab = i;
       break;
@@ -7504,7 +7504,7 @@ void MainWindow::updateInfoDownloads(const QString &text)
 {
   NewsTabWidget *widget;
   for (int i = 0; i < stackedWidget_->count(); i++) {
-    widget = (NewsTabWidget*)stackedWidget_->widget(i);
+    widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
     if (widget->type_ == NewsTabWidget::TabTypeDownloads) {
       widget->setTextTab(QString("%1 %2").arg(tr("Downloads")).arg(text));
       break;
