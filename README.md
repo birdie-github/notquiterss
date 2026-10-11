@@ -31,7 +31,7 @@ Resource organization and platform deployment are documented in [resources/READM
 
 For feeds requiring browser verification, see [Website cookies](docs/COOKIES.md).
 
-### Dependencies and design choices explained
+## Dependencies and design choices explained
 
 NotQuiteRSS keeps QtSingleApplication because reliably enforcing a single running
 instance requires more than checking whether a local socket responds. Simultaneous
@@ -46,7 +46,9 @@ Launching system commands would introduce platform-dependent format support and 
 managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
 reader, keeping a consistent built-in audio backend is the more practical choice.
 
-### CPU Requirements (Windows x86-64)
+## CPU Requirements 
+
+### Windows x86-64
 
 The Windows 64-bit version of NotQuiteRSS targets the **x86-64-v2** architecture,
 requiring a processor with SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, and
@@ -56,3 +58,11 @@ CPUs manufactured since 2009 and AMD CPUs since 2011 meet these requirements, bu
 older models, including AMD Phenom and Phenom II, are **unsupported**. Attempting
 to run NotQuiteRSS on an incompatible CPU may result in an immediate crash with an
 *Illegal Instruction* exception (`0xC000001D`).
+
+### Windows 32bit
+
+There's a single minimally tested Windows 32-bit build targeting SSE2 CPUs and later.
+It should support Windows 7 and later. Provided as-is, without support. Bug reports
+specific to this build will **not be accepted**.
+
+It is available [here](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32).
