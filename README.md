@@ -13,13 +13,13 @@ Notification sounds use miniaudio with built-in decoding, without Qt Multimedia
 or GStreamer codec plugins. See INSTALL for the pinned header preparation step.
 
 Links:
-* Git repository: https://github.com/birdie-github/notquiterss
+* Git repository: you are here 😉️
 * Issue tracker: https://github.com/birdie-github/notquiterss/issues
+* Translations: https://hosted.weblate.org/projects/notquiterss
 
 Original project, QuiteRSS:
 * Website: https://quiterss.org
 * GitHub: https://github.com/QuiteRSS/quiterss
-* Translations: https://explore.transifex.com/quiterss_team/quiterss/
 
 See [PROJECT_METADATA.md](docs/PROJECT_METADATA.md) for the central project definition,
 new paths, packaging generation and update-check behavior.
