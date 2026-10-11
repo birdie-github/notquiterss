@@ -34,6 +34,8 @@ def main():
     parser.add_argument('--qmake', default='qmake', help='Qt 5.15 or Qt 6.2+ qmake executable')
     parser.add_argument('--make', default='make', help='make or mingw32-make executable')
     parser.add_argument('--config', choices=('release', 'debug'), default='release')
+    parser.add_argument('--qmake-arg', action='append', default=[],
+                        help='additional qmake argument (repeatable, e.g. CPU flags)')
     args = parser.parse_args()
     repo = Path(__file__).resolve().parent.parent
     work = Path(args.work_dir).expanduser().resolve()
@@ -84,7 +86,7 @@ INCLUDEPATH += {qpath(src)}
 SOURCES += {qpath(src / 'qtsingleapplication.cpp')} {qpath(src / 'qtlocalpeer.cpp')}
 HEADERS += {qpath(src / 'qtsingleapplication.h')} {qpath(src / 'qtlocalpeer.h')}
 ''', encoding='utf-8')
-        run(args.qmake, str(project), cwd=build)
+        run(args.qmake, str(project), *args.qmake_arg, cwd=build)
         run(args.make, '-j2', cwd=build)
         archive = build / 'lib' / ('lib' + target + '.a')
         if not archive.is_file():

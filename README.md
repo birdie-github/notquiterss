@@ -45,3 +45,14 @@ WAV, MP3, and FLAC. Users do not need to install or configure an external player
 Launching system commands would introduce platform-dependent format support and require
 managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
 reader, keeping a consistent built-in audio backend is the more practical choice.
+
+### CPU Requirements (Windows x86-64)
+
+The Windows 64-bit version of NotQuiteRSS targets the **x86-64-v2** architecture,
+requiring a processor with SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, and
+LAHF/SAHF support. This requirement reflects the CPU optimizations used not just by
+NotQuiteRSS but by its underlying Qt 6 framework and bundled libraries. Most Intel
+CPUs manufactured since 2009 and AMD CPUs since 2011 meet these requirements, but
+older models, including AMD Phenom and Phenom II, are **unsupported**. Attempting
+to run NotQuiteRSS on an incompatible CPU may result in an immediate crash with an
+*Illegal Instruction* exception (`0xC000001D`).

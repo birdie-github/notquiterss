@@ -27,7 +27,8 @@ USE_QT accepts only 5 or 6; a mismatch with qmake's Qt is an error.
 It cannot switch the libraries used by an already selected qmake executable.
 Use separate application build directories and QtSingleApplication work directories
 for each Qt/toolchain. Prepare the dependency with the SAME qmake as the application.
-The platform recipes below retain Qt 5 defaults. Only Windows CI selects Qt 6.
+The platform recipes below retain Qt 5 defaults. The main Windows CI build uses
+Qt 6; a separate Windows-Qt5-x86-SSE2 artifact targets older CPUs.
 
 For Qt 6 on MSYS2, substitute qt6-base, qt6-svg, qt6-tools and
 qt6-imageformats for the qt5 packages below, and add
@@ -170,6 +171,22 @@ Other Linux distributions need the equivalent development packages and Qt 5
 QtSingleApplication feature. qmake may be named qmake or qmake-qt5. For Clang on Linux,
 install clang and lld, then pass -spec linux-clang and QMAKE_LFLAGS+=-fuse-ld=lld
 to qmake so compiler-specific LTO flags match the compiler and linker.
+
+Windows legacy CPU CI package (Qt5, 32-bit x86)
+=============================================
+The separate windows-qt5-x86 job uses MSYS2 MINGW32 and builds pinned Qt 5.15.18
+sources because MSYS2 no longer supplies 32-bit Qt5 packages. Qt, the application
+and QtSingleApplication are built with -march=pentium4 -mtune=generic: SSE2 is
+required, but x86-64-v2 is not. This package also runs on 64-bit Windows with
+32-bit application support. CPU compatibility does not establish compatibility
+with obsolete Windows releases; those need testing on the actual target OS.
+
+Qt includes SVG/image-format plugins and widget translations. Packaging adds
+32-bit runtime dependencies and rejects any 64-bit EXE/DLL. The source-built Qt
+installation is cached against its build script and installed toolchain packages;
+the first build, or a cache miss after updates, takes substantially longer.
+SQLite, libxml2, OpenSSL and compiler runtime DLLs remain MSYS2 packages: their
+own CPU dispatch and OS requirements must also be tested on the target PC.
 
 Windows (MSYS2 UCRT64, x86-64)
 =============================

@@ -119,6 +119,148 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  windows-qt5-x86:
+    name: Windows legacy CPUs (Qt 5, x86/SSE2)
+    runs-on: windows-2022
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          install: >-
+            git
+            perl
+            mingw-w64-i686-gcc
+            mingw-w64-i686-make
+            mingw-w64-i686-python
+            mingw-w64-i686-pkgconf
+            mingw-w64-i686-sqlite3
+            mingw-w64-i686-libxml2
+            mingw-w64-i686-openssl
+            mingw-w64-i686-ntldd
+      - name: Identify Qt dependency cache
+        id: qt5-cache-key
+        run: |
+          set -euo pipefail
+          echo "packages=$(pacman -Q | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: qt5-cache
+        with:
+          path: ${{ runner.temp }}/qt5-x86
+          key: qt5-x86-${{ runner.os }}-${{ hashFiles('scripts/prepare-qt5-win32.py') }}-${{ steps.qt5-cache-key.outputs.packages }}
+      - name: Build pinned Qt5 for x86/SSE2
+        if: steps.qt5-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          export PKG_CONFIG_PATH="$(cygpath -m /mingw32/lib/pkgconfig)"
+          python3 scripts/prepare-qt5-win32.py \
+            --work-dir "$(cygpath -m "$RUNNER_TEMP/qt5-source")" \
+            --prefix "$(cygpath -m "$RUNNER_TEMP/qt5-x86")" --jobs "$(nproc)"
+      - uses: actions/cache/save@v4
+        if: steps.qt5-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/qt5-x86
+          key: ${{ steps.qt5-cache.outputs.cache-primary-key }}
+      - name: Prepare external dependencies and build
+        run: |
+          set -euo pipefail
+          export PATH="$(cygpath -u "$RUNNER_TEMP/qt5-x86")/bin:$PATH"
+          export PKG_CONFIG_PATH="$(cygpath -m /mingw32/lib/pkgconfig)"
+          test "$(gcc -dumpmachine)" = i686-w64-mingw32
+          test "$(qmake -query QT_VERSION)" = 5.15.18
+          # Qt5's supported 32-bit baseline includes SSE2, but no SSE3/SSSE3,
+          # SSE4, POPCNT or AVX requirement is introduced for our own code.
+          cpu_flags="-march=pentium4 -mtune=generic"
+          dep_work="$(cygpath -m "$RUNNER_TEMP/app-deps-x86")"
+          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" \
+            --qmake qmake --make mingw32-make \
+            --qmake-arg "QMAKE_CFLAGS+=$cpu_flags" \
+            --qmake-arg "QMAKE_CXXFLAGS+=$cpu_flags"
+          export QMAKEFEATURES="$dep_work/install/features"
+          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
+          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
+          python3 tests/resources/test_translation_build.py --qmake qmake --make mingw32-make
+          mkdir _build
+          cd _build
+          export MAKE=mingw32-make
+          qmake ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release \
+            CONFIG+=lto LTO_JOBS="$(nproc)" \
+            "QMAKE_CFLAGS+=$cpu_flags" "QMAKE_CXXFLAGS+=$cpu_flags"
+          # The x86_64-only optimization in app.pro must never enter this build.
+          if grep -F -- '-march=x86-64-v2' Makefile*; then
+            echo 'Unexpected x86-64-v2 compiler flag' >&2
+            exit 1
+          fi
+          mingw32-make -j"$(nproc)"
+          mingw32-make install
+          python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_EXECUTABLE="+d["executable"]); print("PROJECT_RESOURCE_ROOT="+d["root"])' >> "$GITHUB_ENV"
+      - name: Deploy Qt5 and 32-bit runtime dependencies
+        run: |
+          set -euo pipefail
+          qt_prefix="$(cygpath -u "$RUNNER_TEMP/qt5-x86")"
+          export PATH="$qt_prefix/bin:$PATH"
+          cd _build
+          DEPLOY_DIR=release/target
+          windeployqt --release --compiler-runtime --no-translations \
+            --no-angle --no-opengl-sw --verbose 1 "$DEPLOY_DIR/$PROJECT_EXECUTABLE.exe"
+          python3 ../scripts/deploy-qt-translations.py --source .. \
+            --resources "$DEPLOY_DIR/$PROJECT_RESOURCE_ROOT" \
+            --qt-translations "$(qmake -query QT_INSTALL_TRANSLATIONS)"
+          # Qt5 loads OpenSSL at runtime, so an import-table scan cannot find it.
+          cp /mingw32/bin/libssl-3.dll /mingw32/bin/libcrypto-3.dll "$DEPLOY_DIR/"
+          # Include libraries used outside Qt, plus their transitive dependencies.
+          find "$DEPLOY_DIR" \( -iname '*.exe' -o -iname '*.dll' \) -print0 |
+          while IFS= read -r -d '' binary; do
+            ntldd -R "$binary" 2>/dev/null || true
+          done |
+          awk '$2 == "=>" {
+            name=$1; path=$3; gsub(/\\/, "/", path)
+            if (tolower(path) ~ /\/mingw32\/bin\//) print name
+          }' | sort -fu |
+          while IFS= read -r dll; do
+            test -f "/mingw32/bin/$dll"
+            if [ ! -f "$DEPLOY_DIR/$dll" ]; then
+              cp "/mingw32/bin/$dll" "$DEPLOY_DIR/"
+            fi
+          done
+          mkdir -p "$DEPLOY_DIR/licenses"
+          cp -R "$qt_prefix/share/licenses/qt5" "$DEPLOY_DIR/licenses/"
+          cp -R "$RUNNER_TEMP/app-deps-x86/install/share/licenses/qtsingleapplication" "$DEPLOY_DIR/licenses/"
+          cp -R "$RUNNER_TEMP/app-deps-x86/miniaudio/share/licenses/miniaudio" "$DEPLOY_DIR/licenses/"
+          # Check PE headers directly: every deployed EXE/DLL must be 32-bit x86.
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          binaries = [p for p in Path('release/target').rglob('*')
+                      if p.suffix.lower() in ('.exe', '.dll')]
+          for path in binaries:
+              with path.open('rb') as stream:
+                  assert stream.read(2) == b'MZ', path
+                  stream.seek(0x3c)
+                  offset, = struct.unpack('<I', stream.read(4))
+                  stream.seek(offset)
+                  assert stream.read(4) == b'PE\0\0', path
+                  machine, = struct.unpack('<H', stream.read(2))
+                  assert machine == 0x14c, f'{path}: expected x86, got {machine:#x}'
+          assert binaries, 'No deployed Windows binaries'
+          print(f'Verified {len(binaries)} x86 binaries')
+          PY
+      - name: Upload Windows Qt5 x86 build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-Windows-Qt5-x86-SSE2-${{ github.sha }}
+          path: _build/release/target/
+          if-no-files-found: error
+          retention-days: 14
+
   windows:
     runs-on: windows-2022
     defaults:
