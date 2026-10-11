@@ -17,8 +17,8 @@ Links:
 * Issue tracker: https://github.com/birdie-github/notquiterss/issues
 * Translations: https://hosted.weblate.org/projects/notquiterss
 
-Original project, QuiteRSS:
-* Website: https://quiterss.org
+Original project, QuiteRSS (dormant since early 2021):
+* Website: https://web.archive.org/web/20220201032745/https://quiterss.org/
 * GitHub: https://github.com/QuiteRSS/quiterss
 
 See [PROJECT_METADATA.md](docs/PROJECT_METADATA.md) for the central project definition,
