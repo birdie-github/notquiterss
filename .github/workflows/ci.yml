@@ -157,6 +157,11 @@ jobs:
         if: steps.qt5-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
+          # Native configure.bat and MinGW need Windows paths from syncqt.
+          # Keep MinGW first so Strawberry's bundled tools cannot replace GCC
+          # or pkg-config; select native Perl ahead of MSYS /usr/bin/perl.
+          test -f /c/Strawberry/perl/bin/perl.exe
+          export PATH="/mingw32/bin:/c/Strawberry/perl/bin:$PATH"
           export PKG_CONFIG_PATH="$(cygpath -m /mingw32/lib/pkgconfig)"
           python3 scripts/prepare-qt5-win32.py \
             --work-dir "$(cygpath -m "$RUNNER_TEMP/qt5-source")" \

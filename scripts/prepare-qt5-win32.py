@@ -38,6 +38,11 @@ def main():
     for tool in ('git', 'gcc', 'g++', 'mingw32-make', 'perl', 'pkg-config'):
         if not shutil.which(tool):
             parser.error('Required executable not found: ' + tool)
+    # MSYS Perl canonicalizes source paths to /c/... or /d/... while Qt's
+    # native configure.bat supplies C:/... or D:/... build paths. syncqt then
+    # emits invalid relative includes. Require native Perl for all Qt modules.
+    if output('perl', '-e', 'print $^O') != 'MSWin32':
+        parser.error('Select native Windows Perl (e.g. Strawberry) ahead of MSYS Perl in PATH')
     if output('gcc', '-dumpmachine') != 'i686-w64-mingw32':
         parser.error('Select the 32-bit MINGW32 compiler')
     work = args.work_dir.resolve()
