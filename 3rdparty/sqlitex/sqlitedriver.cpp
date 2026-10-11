@@ -348,7 +348,7 @@ bool SQLiteResult::prepare(const QString &query)
 
   setSelect(false);
 
-  const void *pzTail = NULL;
+  const void *pzTail = nullptr;
 
 #if (SQLITE_VERSION_NUMBER >= 3003011)
   int res = sqlite3_prepare16_v2(d->access, query.constData(), (query.size() + 1) * sizeof(QChar),
@@ -360,7 +360,7 @@ bool SQLiteResult::prepare(const QString &query)
 
   if (res != SQLITE_OK) {
 #if defined(SQLITEDRIVER_DEBUG)
-    trace(NULL, query.toUtf8().constData());
+    trace(nullptr, query.toUtf8().constData());
 #endif
     setLastError(qMakeError(d->access, QCoreApplication::translate("SQLiteResult",
                                                                    "Unable to execute statement"), QSqlError::StatementError, res));
@@ -604,10 +604,10 @@ bool SQLiteDriver::open(const QString & db, const QString &, const QString &, co
   openMode |= sharedCache ? SQLITE_OPEN_SHAREDCACHE : SQLITE_OPEN_PRIVATECACHE;
   if (uri) openMode |= SQLITE_OPEN_URI;
 
-  if (sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, NULL) == SQLITE_OK) {
+  if (sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, nullptr) == SQLITE_OK) {
     sqlite3_busy_timeout(d->access, timeOut);
 #if defined(SQLITEDRIVER_DEBUG)
-    sqlite3_trace(d->access, trace, NULL);
+    sqlite3_trace(d->access, trace, nullptr);
 #endif
     setOpen(true);
     setOpenError(false);

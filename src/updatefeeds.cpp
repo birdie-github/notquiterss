@@ -95,14 +95,14 @@ void connectReadState(FeedReadState *state, MainWindow *window)
 
 UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
   : QObject(parent)
-  , updateObject_(NULL)
-  , requestFeed_(NULL)
-  , parseObject_(NULL)
-  , faviconObject_(NULL)
-  , updateFeedThread_(NULL)
-  , getFaviconThread_(NULL)
+  , updateObject_(nullptr)
+  , requestFeed_(nullptr)
+  , parseObject_(nullptr)
+  , faviconObject_(nullptr)
+  , updateFeedThread_(nullptr)
+  , getFaviconThread_(nullptr)
   , addFeed_(addFeed)
-  , saveMemoryDBTimer_(NULL)
+  , saveMemoryDBTimer_(nullptr)
 {
   getFeedThread_ = new QThread();
   getFeedThread_->setObjectName("getFeedThread_");
@@ -1047,7 +1047,7 @@ void UpdateObject::slotMarkAllFeedsOld()
   }
   slotRecountCategoryCounts();
 
-  if ((mainWindow_->currentNewsTab != NULL) && (mainWindow_->currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)) {
+  if ((mainWindow_->currentNewsTab != nullptr) && (mainWindow_->currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)) {
     emit signalUpdateNews(NewsTabWidget::RefreshWithPos);
   }
 

@@ -77,7 +77,7 @@ QString browserChallengeProvider(QNetworkReply *reply)
 RequestFeed::RequestFeed(int timeoutRequest, int numberRequests,
                          int numberRepeats, QObject *parent)
   : QObject(parent)
-  , networkManager_(NULL)
+  , networkManager_(nullptr)
   , timeoutRequest_(timeoutRequest)
   , numberRequests_(numberRequests)
   , numberRepeats_(numberRepeats)

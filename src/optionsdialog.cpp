@@ -35,7 +35,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   : Dialog(parent)
   , hadStoredCustomUserAgent_(false)
   , userAgentWarningAccepted_(false)
-  , notificationWidget_(NULL)
+  , notificationWidget_(nullptr)
 {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
@@ -2343,7 +2343,7 @@ void OptionsDialog::showNotification()
 void OptionsDialog::deleteNotification()
 {
   notificationWidget_->deleteLater();
-  notificationWidget_ = NULL;
+  notificationWidget_ = nullptr;
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::slotDeletePass()

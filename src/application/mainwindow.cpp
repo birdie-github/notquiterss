@@ -176,17 +176,17 @@ const char *colorSettingKey(int row)
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
   , isMinimizeToTray_(true)
-  , currentNewsTab(NULL)
-  , feedsFilterAction_(NULL)
-  , newsFilterAction_(NULL)
-  , newsView_(NULL)
+  , currentNewsTab(nullptr)
+  , feedsFilterAction_(nullptr)
+  , newsFilterAction_(nullptr)
+  , newsView_(nullptr)
   , soundPlayer_(new SoundPlayer(this))
-  , updateAppDialog_(NULL)
-  , notificationWidget(NULL)
+  , updateAppDialog_(nullptr)
+  , notificationWidget(nullptr)
   , feedIdOld_(-2)
   , isStartImportFeed_(false)
   , recountCategoryCountsOn_(false)
-  , optionsDialog_(NULL)
+  , optionsDialog_(nullptr)
 {
   quitTimer_.setInterval(25);
   connect(&quitTimer_, &QTimer::timeout, this, &MainWindow::finishQuitApp);
@@ -495,7 +495,7 @@ void MainWindow::slotActivationTray(QSystemTrayIcon::ActivationReason reason)
     }
     else
     {
-      if (notificationWidget == NULL)
+      if (notificationWidget == nullptr)
       {
         if (!timerTrayOpenNotify.isActive())
         {
@@ -505,7 +505,7 @@ void MainWindow::slotActivationTray(QSystemTrayIcon::ActivationReason reason)
       else
       {
         delete notificationWidget;
-        notificationWidget = NULL;
+        notificationWidget = nullptr;
       }
     }
 
@@ -3359,7 +3359,7 @@ void MainWindow::showOptionDlg(int index)
 
   if (result == QDialog::Rejected) {
     delete optionsDialog_;
-    optionsDialog_ = NULL;
+    optionsDialog_ = nullptr;
     return;
   }
 
@@ -3635,7 +3635,7 @@ void MainWindow::showOptionDlg(int index)
   }
 
   delete optionsDialog_;
-  optionsDialog_ = NULL;
+  optionsDialog_ = nullptr;
 
   AppSettings::autoUpdatefeedsStartUp.set(updateFeedsStartUp);
 
@@ -3643,7 +3643,7 @@ void MainWindow::showOptionDlg(int index)
   emit articleSettingsChanged(markIdenticalNewsRead_, avoidOldNews_, avoidedOldNewsDate_);
   shortcutRegistry_.save();
 
-  if (currentNewsTab != NULL) {
+  if (currentNewsTab != nullptr) {
     if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)
       currentNewsTab->newsHeader_->saveStateColumns(currentNewsTab);
     currentNewsTab->setSettings(false);
@@ -3961,7 +3961,7 @@ void MainWindow::setFeedsFilter(bool clicked)
  *---------------------------------------------------------------------------*/
 void MainWindow::setNewsFilter(QAction* pAct, bool clicked)
 {
-  if (currentNewsTab == NULL) return;
+  if (currentNewsTab == nullptr) return;
   if (currentNewsTab->type_ >= NewsTabWidget::TabTypeDownloads) {
     filterNewsAll_->setChecked(true);
     return;
@@ -4345,7 +4345,7 @@ void MainWindow::restoreFeedsOnStartUp()
 void MainWindow::slotFeedsFilter()
 {
   if (feedsFilterGroup_->checkedAction()->objectName() == "filterFeedsAll_") {
-    if (feedsFilterAction_ != NULL) {
+    if (feedsFilterAction_ != nullptr) {
       feedsFilterAction_->setChecked(true);
       setFeedsFilter();
     } else {
@@ -4377,7 +4377,7 @@ void MainWindow::slotFeedsFilter()
 void MainWindow::slotNewsFilter()
 {
   if (newsFilterGroup_->checkedAction()->objectName() == mainNewsFilter_) {
-    if (newsFilterAction_ != NULL) {
+    if (newsFilterAction_ != nullptr) {
       newsFilterAction_->setChecked(true);
       setNewsFilter(newsFilterAction_);
     } else {
@@ -5334,7 +5334,7 @@ void MainWindow::slotNewVersion(const QString &newVersion)
 {
   updateAppDialog_->disconnectObjects();
   delete updateAppDialog_;
-  updateAppDialog_ = NULL;
+  updateAppDialog_ = nullptr;
 
   if (!newVersion.isEmpty()) {
     trayIconController_->showMessage(tr("Check for updates"),
@@ -6162,7 +6162,7 @@ void MainWindow::showNotification(bool bShowRecentNews/*=false*/)
 
   timerTrayOpenNotify.stop();
 
-  if (notificationWidget != NULL)
+  if (notificationWidget != nullptr)
   {
     delete notificationWidget;
   }
@@ -6195,7 +6195,7 @@ void MainWindow::showNotification(bool bShowRecentNews/*=false*/)
 void MainWindow::deleteNotification()
 {
   notificationWidget->deleteLater();
-  notificationWidget = NULL;
+  notificationWidget = nullptr;
 }
 
 void MainWindow::clearNotification(bool bClearRecentNews/*=false*/)

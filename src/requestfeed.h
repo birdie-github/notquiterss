@@ -51,7 +51,7 @@ public slots:
 signals:
   void requestStarted(int feedId, QString identity, QDateTime startedAt);
   void getUrlDone(int result, int feedId, QString feedUrl = "",
-                  QString error = "", QByteArray data = NULL,
+                  QString error = "", QByteArray data = QByteArray(),
                   QDateTime dtReply = QDateTime(), QString codecName = "");
   void signalHead(const QUrl &getUrl, const int &id, const QString &feedUrl,
                   const QDateTime &date, const int &count = 0);

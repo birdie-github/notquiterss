@@ -91,7 +91,7 @@ QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
 
 FaviconObject::FaviconObject(QObject *parent)
   : QObject(parent)
-  , networkManager_(NULL)
+  , networkManager_(nullptr)
 {
   setObjectName("faviconObject_");
 

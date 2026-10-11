@@ -89,8 +89,8 @@ static void upperFunction(sqlite3_context* context, int /*argc*/, sqlite3_value*
 
 void installSQLiteExtension( sqlite3* db )
 {
-  sqlite3_create_collation( db, "LOCALE", SQLITE_UTF16, NULL, &localeCompare );
-  sqlite3_create_collation( db, "NOCASE", SQLITE_UTF16, NULL, &nocaseCompare );
-  sqlite3_create_function( db, "UPPER", 1, SQLITE_UTF16, NULL, &upperFunction, NULL, NULL );
-  sqlite3_create_function( db, "regexp", 2, SQLITE_UTF16, NULL, &regexpFunction, NULL, NULL );
+  sqlite3_create_collation( db, "LOCALE", SQLITE_UTF16, nullptr, &localeCompare );
+  sqlite3_create_collation( db, "NOCASE", SQLITE_UTF16, nullptr, &nocaseCompare );
+  sqlite3_create_function( db, "UPPER", 1, SQLITE_UTF16, nullptr, &upperFunction, nullptr, nullptr );
+  sqlite3_create_function( db, "regexp", 2, SQLITE_UTF16, nullptr, &regexpFunction, nullptr, nullptr );
 }
