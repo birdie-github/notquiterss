@@ -39,6 +39,7 @@
 #include "mainapplication.h"
 #include "globals.h"
 
+#include <QAuthenticator>
 #include <QNetworkRequest>
 
 NetworkManagerProxy::NetworkManagerProxy(QObject* parent)
