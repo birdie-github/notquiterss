@@ -1,3 +1,18 @@
+Version 0.95.5 BETA (2026-10-11)
+* CHANGE: Improve OPML import validation and feedback. Report how many feeds were imported or skipped as duplicates, and handle import errors more reliably.
+* CHANGE: Improve automatic backups to detect settings changes even when the feeds database has not changed.
+* CHANGE: Improve feed and favicon downloading with response size limits, safer redirects, and more reliable request and timeout handling.
+* CHANGE: Improve performance when processing malformed ampersands in feeds and OPML files.
+* CHANGE: Pause animated images in hidden article views and resume them when visible again, reducing unnecessary processing.
+* CHANGE: Improve macOS packaging to include the required Qt plugins and verify dependencies before signing.
+* CHANGE: Improve Windows build performance and resolve compiler warnings.
+* BUG FIX: Play only one notification sound per feed update cycle, even when additional feeds join an ongoing update.
+* BUG FIX: Restore the complete license text in the About dialog.
+* BUG FIX: Correct the "News doesn't contain" article filter to match articles only when neither the title nor the description contains the search term.
+* BUG FIX: Prevent unrelated articles from being marked as read when their titles contain SQL wildcard characters.
+* BUG FIX: Correct duplicate detection for RSS articles without GUIDs or links by comparing both publication dates and titles.
+* BUG FIX: Prevent feed and favicon requests sharing the same URL from interfering with each other.
+
 Version 0.95.4 BETA (2026-10-07)
 * NEW FEATURE: Catch up on overdue feed updates one minute after startup when "Update feeds on startup" is disabled. Respect individual feed schedules and disabled feeds.
 * CHANGE: Improve performance when checking for duplicate articles, cleaning up old articles, and copying the database.

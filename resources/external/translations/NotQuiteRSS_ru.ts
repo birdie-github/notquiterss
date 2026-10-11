@@ -525,32 +525,32 @@ Deleted articles may be downloaded again.</source>
 <context>
     <name>CookieJar</name>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="100"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="101"/>
         <source>Cookie files must be no larger than 8 MiB.</source>
         <translation>Файл с cookie не должен превышать 8 Мегабайт.</translation>
     </message>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="105"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="106"/>
         <source>Could not read the cookie file completely.</source>
         <translation>Не удалось полностью прочитать файл cookie.</translation>
     </message>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="119"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="120"/>
         <source>Invalid website entry on line %1.</source>
         <translation>Недопустимый веб-сайт в строке %1.</translation>
     </message>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="130"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="131"/>
         <source>Invalid Netscape cookie record on line %1.</source>
         <translation>Недопустимая запись файла cookie Netscape в строке %1.</translation>
     </message>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="289"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="290"/>
         <source>The cookie file could not be loaded. Repair or move it and restart before making changes.</source>
         <translation>Не удалось загрузить файл cookie. Восстановите или переместите его и перезапустите программу перед внесением изменений.</translation>
     </message>
     <message>
-        <location filename="../../../src/network/cookiejar.cpp" line="296"/>
+        <location filename="../../../src/network/cookiejar.cpp" line="297"/>
         <source>The cookie store exceeds its size limit.</source>
         <translation>Размер хранилища файлов cookie превышает допустимый предел.</translation>
     </message>
@@ -786,74 +786,84 @@ Expired cookies skipped: %1.</source>
 <context>
     <name>DatabaseBackup</name>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="65"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="66"/>
         <source>SQLite snapshot failed (code %1): %2</source>
         <translation>Ошибка создания снимка SQLite (код %1): %2</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="187"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="138"/>
+        <source>Cannot fingerprint the application settings.</source>
+        <translation>Не удалось создать слепок настроек приложения.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/application/databasebackup.cpp" line="144"/>
+        <source>Cannot read the application settings snapshot.</source>
+        <translation>Не удалось прочитать снимок настроек приложения.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/application/databasebackup.cpp" line="222"/>
         <source>Could not create a backup in %1:
 %2</source>
         <translation>Не удалось создать резервную копию в %1:
 %2</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="190"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="225"/>
         <source>Cannot create the backup directory.</source>
         <translation>Не могу создать директорию для резеврных копий.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="206"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="241"/>
         <source>Cannot open the database for backup.</source>
         <translation>Не удается открыть БД для резервного копирования.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="212"/>
-        <location filename="../../../src/application/databasebackup.cpp" line="238"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="247"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="273"/>
         <source>Cannot open the backup database.</source>
         <translation>Не удается открыть резервную копию БД.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="227"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="262"/>
         <source>Cannot open the database before upgrade.</source>
         <translation>Не удается открыть БД перед обновлением.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="231"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="266"/>
         <source>The live SQLite connection is unavailable.</source>
         <translation>Подключение к SQLite в режиме реального времени недоступно.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="234"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="269"/>
         <source>The live SQLite connection is closed.</source>
         <translation>Подключение к SQLite в режиме реального времени закрыто.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="256"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="285"/>
         <source>Cannot write the current application settings.</source>
         <translation>Не удается сохранить текущие настройки приложения.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="269"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="310"/>
         <source>Cannot publish the completed backup.</source>
         <translation>Не удается опубликовать готовую резервную копию.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="278"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="319"/>
         <source>Backup created in %1, but its scheduling state could not be saved.
 </source>
         <translation>Резервная копия создана в %1, но состояние планирования не удалось сохранить.
 </translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="299"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="340"/>
         <source>Backup created, but an old backup could not be removed: %1
 </source>
         <translation>Резервная копия создана, но удалить старую резервную копию не удалось: %1
 </translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="311"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="352"/>
         <source>Backup created:
 %1
 %2</source>
@@ -862,18 +872,18 @@ Expired cookies skipped: %1.</source>
 %2</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="318"/>
-        <location filename="../../../src/application/databasebackup.cpp" line="321"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="359"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="362"/>
         <source>Database Backup</source>
         <translation>Резервные копии БД</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="322"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="363"/>
         <source>Backup successfully created</source>
         <translation>Резервная копия успешно создана</translation>
     </message>
     <message>
-        <location filename="../../../src/application/databasebackup.cpp" line="324"/>
+        <location filename="../../../src/application/databasebackup.cpp" line="365"/>
         <source>Show</source>
         <translation>Показать</translation>
     </message>
@@ -1988,17 +1998,17 @@ All %2 feeds in this folder are disabled.</source>
         <translation>Не удалось запустить настроенный браузер. Проверьте настройки пользовательского браузера в разделе «Просмотр новостей».</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1466"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1503"/>
         <source>Shutdown cleanup</source>
         <translation>Очистка по завершении работы</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1469"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1506"/>
         <source>Database recovery</source>
         <translation>Восстановление БД</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1470"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1507"/>
         <source>The database was saved to:
 %1
 
@@ -2133,16 +2143,16 @@ Details:
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="2179"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4699"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6971"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6993"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4708"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6980"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7002"/>
         <source>Hide Categories</source>
         <translation>Скрыть категории</translation>
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="2183"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4697"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6977"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4706"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6986"/>
         <source>Show Categories</source>
         <translation>Показать категории</translation>
     </message>
@@ -2158,7 +2168,7 @@ Details:
     </message>
     <message>
         <location filename="../../../src/application/mainwindow.cpp" line="2589"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="2639"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="2645"/>
         <source>Select OPML File</source>
         <translation>Выберите OPML-файл</translation>
     </message>
@@ -2198,934 +2208,934 @@ Details:
         <translation>Повышение уровня безопасности URL лент с HTTP до HTTPS</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="2641"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="2647"/>
         <source>OPML Files (*.%1)</source>
         <translation>OPML-файлы (*.%1)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="2645"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="2651"/>
         <source>Export canceled</source>
         <translation>Отмена экспортирования</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="2651"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="2657"/>
         <source>Export: could not open file</source>
         <translation>Экспорт: не удалось открыть файл</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3780"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3786"/>
         <source>Force Update</source>
         <translation>Принудительно Обновить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3780"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3786"/>
         <source>Update Feed</source>
         <translation>Обновить ленту</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3782"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3788"/>
         <source>Update selected feeds once, including disabled feeds</source>
         <translation>Однократно обновить выбранные ленты, включая отключенные</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3783"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3789"/>
         <source>Update Current Feed</source>
         <translation>Обновить выбранную ленту</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3870"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4477"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3879"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4486"/>
         <source>Unread: %1</source>
         <translation>Непрочитанных: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="3871"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4481"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="3880"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4490"/>
         <source>All: %1</source>
         <translation>Всего: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4486"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="5253"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4495"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5262"/>
         <source>New Articles: %1</source>
         <translation>Свежие Новости: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4488"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="5255"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4497"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5264"/>
         <source>Unread Articles: %1</source>
         <translation>Непрочтённые Новости: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4491"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4500"/>
         <source>Menu</source>
         <translation>Меню</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4494"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4503"/>
         <source>All Workspaces</source>
         <translation>Все Рабочие Столы</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4497"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4506"/>
         <source>&amp;Add</source>
         <translation>&amp;Добавить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4498"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4501"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4507"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4510"/>
         <source>Add New Feed</source>
         <translation>Добавить новую ленту</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4500"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4509"/>
         <source>&amp;Feed...</source>
         <translation>&amp;Ленту...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4503"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4512"/>
         <source>Add Feed...</source>
         <translation>Добавить ленту...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4505"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4514"/>
         <source>F&amp;older...</source>
         <translation>&amp;Папку...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4506"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4515"/>
         <source>Add New Folder</source>
         <translation>Добавить новую папку</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4508"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4517"/>
         <source>Open in New Tab</source>
         <translation>Открыть в новой вкладке</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4510"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4519"/>
         <source>&amp;Delete...</source>
         <translation>&amp;Удалить...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4511"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4520"/>
         <source>Delete Selected Feed</source>
         <translation>Удалить ленту</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4513"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4522"/>
         <source>&amp;Import Feeds...</source>
         <translation>&amp;Импортировать ленты...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4514"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4523"/>
         <source>Import Feeds from OPML File</source>
         <translation>Импортировать ленты из OPML-файла</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4516"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4525"/>
         <source>&amp;Export Feeds...</source>
         <translation>&amp;Экспортировать ленты...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4517"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4526"/>
         <source>Export Feeds to OPML File</source>
         <translation>Экспортировать ленты из OPML-файла</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4519"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4528"/>
         <source>&amp;Create Backup...</source>
         <translation>&amp;Создать резервную копию...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4520"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4529"/>
         <source>S&amp;how Menu Bar</source>
         <translation>Показ&amp;ывать меню</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4522"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4531"/>
         <source>E&amp;xit</source>
         <translation>В&amp;ыход</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4526"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4535"/>
         <source>Update All</source>
         <translation>Обновить все</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4527"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4536"/>
         <source>Update All Feeds</source>
         <translation>Обновить все ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4529"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4530"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4538"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4539"/>
         <source>Stop Updating Feeds</source>
         <translation>Остановить Загрузку Лент</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4532"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4541"/>
         <source>Mark All Feeds Read</source>
         <translation>Отметить все ленты прочитанными</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4534"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4543"/>
         <source>Mark Article Read/Unread</source>
         <translation>Отметить Новость Прочитанной/Непрочитанной</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4535"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4544"/>
         <source>Mark Current Article Read/Unread</source>
         <translation>Отметить Текущую Новость Прочитанной/Непрочитанной</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4537"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4538"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4546"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4547"/>
         <source>Mark All Articles Read</source>
         <translation>Отметить Все Новости Прочитанными</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4540"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7547"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7552"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="7562"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4549"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7556"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7561"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7571"/>
         <source>Downloads</source>
         <translation>Загрузки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4542"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4551"/>
         <source>Clean Up...</source>
         <translation>Очистка...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4544"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4553"/>
         <source>Article Filters...</source>
         <translation>Фильтры Новостей...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4545"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4554"/>
         <source>Bulk configure feeds...</source>
         <translation>Массовая настройка лент...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4546"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4555"/>
         <source>Website cookies…</source>
         <translation>Cookies веб-сайта...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4547"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4556"/>
         <source>Filter Articles...</source>
         <translation>Фильтр Новостей...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4549"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4558"/>
         <source>Options...</source>
         <translation>Настройки...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4550"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4559"/>
         <source>Open Options Dialog</source>
         <translation>Открыть окно настроек</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4552"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4561"/>
         <source>Filter Feeds</source>
         <translation>Фильтр лент</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4553"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4560"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4562"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4569"/>
         <source>Show All</source>
         <translation>Показать все</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4554"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4561"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4563"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4570"/>
         <source>Show New</source>
         <translation>Показать новые</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4555"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4562"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4564"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4571"/>
         <source>Show Unread</source>
         <translation>Показать непрочитанные</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4556"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4565"/>
         <source>Show Starred Feeds</source>
         <translation>Показать избранные ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4557"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4566"/>
         <source>Show Not Working Feeds</source>
         <translation>Показать нерабочие ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4559"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4568"/>
         <source>Filter News</source>
         <translation>Фильтр новостей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4563"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4572"/>
         <source>Show Starred</source>
         <translation>Показать со звёздочкой</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4564"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4573"/>
         <source>Show Not Starred</source>
         <translation>Показать без звёздочки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4565"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4574"/>
         <source>Show Unread or Starred</source>
         <translation>Показать непрочитанные и со звёздочкой</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4566"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4575"/>
         <source>Show Last Day</source>
         <translation>Показать за последний день</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4567"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4576"/>
         <source>Show Last 7 Days</source>
         <translation>Показать за последние 7 дней</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4569"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4578"/>
         <source>About...</source>
         <translation>О программе...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4570"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4579"/>
         <source>Show &apos;About&apos; Dialog</source>
         <translation>Показать диалог &apos;О программе&apos;</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4572"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4581"/>
         <source>Check for Updates...</source>
         <translation>Проверить наличие обновлений...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4573"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4582"/>
         <source>Report a Problem...</source>
         <translation>Сообщить о проблеме...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4575"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4584"/>
         <source>Open Article</source>
         <translation>Открыть новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4576"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4585"/>
         <source>Open Article Description</source>
         <translation>Открыть Описание Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4577"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4578"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4586"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4587"/>
         <source>Open</source>
         <translation>Открыть</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4579"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4588"/>
         <source>Star</source>
         <translation>Звёздочка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4580"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4589"/>
         <source>Star Article</source>
         <translation>Пометить Новость Звёздочкой</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4581"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4590"/>
         <source>Delete</source>
         <translation>Удалить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4582"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4591"/>
         <source>Delete Selected Articles</source>
         <translation>Удалить Выбранные Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4583"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4592"/>
         <source>Delete All Articles</source>
         <translation>Удалить Все Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4584"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4593"/>
         <source>Delete All Articles from List</source>
         <translation>Удалить Все Новости из Списка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4585"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4594"/>
         <source>Restore</source>
         <translation>Восстановить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4586"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4595"/>
         <source>Restore Article</source>
         <translation>Восстановить Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4587"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4596"/>
         <source>Copy Link</source>
         <translation>Копировать адрес ссылки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4588"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4597"/>
         <source>Copy Article Link</source>
         <translation>Скопировать Ссылку на Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4590"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4599"/>
         <source>Restore Last Deleted Article</source>
         <translation>Восстановить Последнюю Удалённую Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4592"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4601"/>
         <source>Mark Read</source>
         <translation>Отметить прочитанной</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4593"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4602"/>
         <source>Mark Feed Read</source>
         <translation>Отметить ленту прочитанной</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4594"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4595"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4603"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4604"/>
         <source>Properties</source>
         <translation>Свойства</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4597"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4606"/>
         <source>&amp;File</source>
         <translation>&amp;Файл</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4598"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4607"/>
         <source>&amp;View</source>
         <translation>&amp;Вид</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4599"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4608"/>
         <source>Fee&amp;ds</source>
         <translation>&amp;Ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4600"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4609"/>
         <source>&amp;News</source>
         <translation>Новос&amp;ти</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4601"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4610"/>
         <source>&amp;Article</source>
         <translation>&amp;Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4602"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4611"/>
         <source>&amp;Tools</source>
         <translation>&amp;Инструменты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4603"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4612"/>
         <source>&amp;Help</source>
         <translation>Сп&amp;равка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4605"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4683"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4614"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4692"/>
         <source>Main Toolbar</source>
         <translation>Главная панель</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4606"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4615"/>
         <source>Customize Toolbar</source>
         <translation>Настройка панели инструментов</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4607"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4616"/>
         <source>Main Toolbar...</source>
         <translation>Главная панель...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4608"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4617"/>
         <source>Customize Toolbar...</source>
         <translation>Настройка панели инструментов...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4609"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4618"/>
         <source>Feeds Toolbar...</source>
         <translation>Панель лент...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4610"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4619"/>
         <source>News Toolbar...</source>
         <translation>Панель списка новостей...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4612"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4621"/>
         <source>Lock Toolbar</source>
         <translation>Закрепить панель инструментов</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4613"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4622"/>
         <source>Hide Toolbar</source>
         <translation>Скрыть панель инструментов</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4615"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4618"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4624"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4627"/>
         <source>Layout</source>
         <translation>Макет</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4616"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4625"/>
         <source>Classic</source>
         <translation>Классик</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4617"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4626"/>
         <source>Newspaper</source>
         <translation>Газета</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4620"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4629"/>
         <source>Application Theme</source>
         <translation>Тема Оформления</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4623"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4632"/>
         <source>Article Pane Position</source>
         <translation>Расположение Панели Новостей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4624"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4633"/>
         <source>Top</source>
         <translation>Вверху</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4625"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4634"/>
         <source>Bottom</source>
         <translation>Внизу</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4626"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4635"/>
         <source>Right</source>
         <translation>Справа</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4627"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4636"/>
         <source>Left</source>
         <translation>Слева</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4629"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4638"/>
         <source>Show Window</source>
         <translation>Показать окно</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4631"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4640"/>
         <source>Previous Feed</source>
         <translation>Предыдущая лента</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4632"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4641"/>
         <source>Next Feed</source>
         <translation>Следующая лента</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4633"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4642"/>
         <source>Previous Article</source>
         <translation>Предыдущаяя Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4634"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4643"/>
         <source>Next Article</source>
         <translation>Следующая Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4635"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4644"/>
         <source>Article Page Up</source>
         <translation>Старница Вверх в Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4636"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4645"/>
         <source>Article Page Down</source>
         <translation>Старница Вниз в Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4638"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4647"/>
         <source>Next Unread Article</source>
         <translation>Следующая Непрочтённая Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4639"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4648"/>
         <source>Previous Unread Article</source>
         <translation>Предыдущая Непрочтённая Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4641"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4650"/>
         <source>Switch Focus to Next Panel</source>
         <translation>Переключить фокус на следующую панель</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4643"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4652"/>
         <source>Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)</source>
         <translation>Переключить Фокус на Следующую Панель (Лерево Ленты, Список Новостей, Панель Новостей)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4644"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4653"/>
         <source>Switch Focus to Previous Panel</source>
         <translation>Переключить фокус на предыдущую панель</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4646"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4655"/>
         <source>Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)</source>
         <translation>Переключить Фокус на Предыдущую Панель (Лерево Ленты, Список Новостей, Панель Новостей)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4648"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4657"/>
         <source>Feeds Pane</source>
         <translation>Панель Лент</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4650"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4659"/>
         <source>Minimize to Tray</source>
         <translation>Минимизировать в трей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4651"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4660"/>
         <source>Minimize Application to Tray</source>
         <translation>Свернуть приложение в трей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4653"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4662"/>
         <source>Columns</source>
         <translation>Колонки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4654"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4663"/>
         <source>Number of unread articles</source>
         <translation>Количество непрочтённых новостей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4655"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4664"/>
         <source>Total number of articles</source>
         <translation>Всего новостей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4656"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4665"/>
         <source>Last update</source>
         <translation>Последнее обновление</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4658"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4667"/>
         <source>Enable Indentation</source>
         <translation>Использовать Отступ</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4660"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4661"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4669"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4670"/>
         <source>Search Feed</source>
         <translation>Поиск ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4663"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4672"/>
         <source>Zoom</source>
         <translation>Масштаб</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4664"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4673"/>
         <source>Zoom In</source>
         <translation>Увеличить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4665"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4674"/>
         <source>Zoom in</source>
         <translation>Увеличить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4666"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4675"/>
         <source>Zoom Out</source>
         <translation>Уменьшить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4667"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4676"/>
         <source>Zoom out</source>
         <translation>Уменьшить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4668"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4677"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4669"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4678"/>
         <source>Reset zoom</source>
         <translation>Сбросить зум</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4671"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4680"/>
         <source>Print...</source>
         <translation>Печать...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4672"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4681"/>
         <source>Print Article</source>
         <translation>Напечатать Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4673"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4682"/>
         <source>Print Preview...</source>
         <translation>Предварительный просмотр...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4674"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4683"/>
         <source>Preview Article</source>
         <translation>Предпросмотр Новости</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4676"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4685"/>
         <source>Page up (Article)</source>
         <translation>Страница вверх (Новость)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4677"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4686"/>
         <source>Page down (Article)</source>
         <translation>Страница вниз (Новость)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4679"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4688"/>
         <source>Save As...</source>
         <translation>Сохранить как...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4680"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4689"/>
         <source>Save Article As...</source>
         <translation>Сохранить Новость Как...</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4682"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4691"/>
         <source>Show/Hide</source>
         <translation>Показать/скрыть</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4684"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4693"/>
         <source>Feeds Toolbar</source>
         <translation>Панель лент</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4685"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4694"/>
         <source>News Toolbar</source>
         <translation>Панель списка новостей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4686"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4695"/>
         <source>Panel Categories</source>
         <translation>Панель категорий</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4687"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4696"/>
         <source>Status Bar</source>
         <translation>Строка состояния</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4689"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4690"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4698"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4699"/>
         <source>Full Screen</source>
         <translation>Во весь экран</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4692"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4693"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4701"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4702"/>
         <source>Stay On Top</source>
         <translation>Поверх всех окон</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4695"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4704"/>
         <source>Categories</source>
         <translation>Категории</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4701"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="4702"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4710"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4711"/>
         <source>Label</source>
         <translation>Метка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4703"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4712"/>
         <source>Show labels menu</source>
         <translation>Показать меню меток</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4705"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4714"/>
         <source>Close Tab</source>
         <translation>Закрыть вкладку</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4706"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4715"/>
         <source>Close Other Tabs</source>
         <translation>Закрыть другие вкладки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4707"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4716"/>
         <source>Close All Tabs</source>
         <translation>Закрыть все вкладки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4708"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4717"/>
         <source>Switch to next tab</source>
         <translation>Перейти к следующей вкладке</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4709"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4718"/>
         <source>Switch to previous tab</source>
         <translation>Перейти к предыдущей вкладке</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4711"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4720"/>
         <source>Unread</source>
         <translation>Непрочитанные</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4712"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4721"/>
         <source>Starred</source>
         <translation>Избранные</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4713"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4722"/>
         <source>Deleted</source>
         <translation>Удалённые</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4714"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4723"/>
         <source>Labels</source>
         <translation>Метки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4716"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4725"/>
         <source>Decrease article list / increase article pane</source>
         <translation>Уменьшить список новстей / увеличить панель новстей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4717"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4726"/>
         <source>Increase article list / decrease article pane</source>
         <translation>Увеличить список новстей / уменьшитьпанель новстей</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4719"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4728"/>
         <source>Find</source>
         <translation>Найти</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4721"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4730"/>
         <source>Open Feed Homepage</source>
         <translation>Открыть Домашнюю Страницу Ленты</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4722"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4731"/>
         <source>Sort by Name</source>
         <translation>Отсортировать по имени</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4723"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4732"/>
         <source>Collapse All Folders</source>
         <translation>Свернуть все папки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4724"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4733"/>
         <source>Expand All Folders</source>
         <translation>Развернуть все папки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4725"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4734"/>
         <source>Next Folder</source>
         <translation>Следующая папка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4726"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4735"/>
         <source>Previous Folder</source>
         <translation>Предыдущая папка</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4727"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4736"/>
         <source>Expand Folder</source>
         <translation>Развернуть папку</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4729"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4738"/>
         <source>Settings Page: Labels</source>
         <translation>Страница настроек: метки</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4731"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4740"/>
         <source>Share</source>
         <translation>Поделиться</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4733"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4742"/>
         <source>Sort By</source>
         <translation>Сортировать по</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4734"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4743"/>
         <source>Ascending</source>
         <translation>Возрастанию</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4735"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4744"/>
         <source>Descending</source>
         <translation>Убыванию</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5390"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5399"/>
         <source>Check for updates</source>
         <translation>Проверить наличие обновлений</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5391"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5400"/>
         <source>A new version of %1 is available</source>
         <translation>Доступна новая версия %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5498"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5507"/>
         <source>Change application theme</source>
         <translation>Изменить тему приложения</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="5499"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="5508"/>
         <source>Changing the application theme will reset your custom colors. Continue?</source>
         <translation>При смене темы приложения ваши настраиваемые цвета будут сброшены. Продолжить?</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="6529"/>
-        <location filename="../../../src/application/mainwindow.cpp" line="6540"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6538"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="6549"/>
         <source>Article</source>
         <translation>Новость</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7120"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7129"/>
         <source>Save As</source>
         <translation>Сохранить как</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7122"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7131"/>
         <source>HTML Files (*.%1)</source>
         <translation>HTML-файлы (*.%1)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7122"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7131"/>
         <source>Text files (*.%2)</source>
         <translation>Текстовые файлы (*.%2)</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7128"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7137"/>
         <source>Save As: could not open file</source>
         <translation>«Сохранить как»: не удалось открыть файл</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="7341"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="7350"/>
         <source>Article sharing</source>
         <translation>Поделиться новостью</translation>
     </message>
@@ -3163,12 +3173,12 @@ Details:
 <context>
     <name>NetworkPolicy::RejectedReply</name>
     <message>
-        <location filename="../../../src/network/networkpolicy.h" line="39"/>
+        <location filename="../../../src/network/networkpolicy.h" line="69"/>
         <source>Unsupported URL scheme: %1</source>
         <translation>Неподдерживаемая схема URL: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/network/networkpolicy.h" line="46"/>
+        <location filename="../../../src/network/networkpolicy.h" line="76"/>
         <source>Operation canceled</source>
         <translation>Операция отменена</translation>
     </message>
@@ -4637,22 +4647,22 @@ Details:
 <context>
     <name>ParseObject</name>
     <message>
-        <location filename="../../../src/parseobject.cpp" line="223"/>
+        <location filename="../../../src/parseobject.cpp" line="233"/>
         <source>Invalid XML at line %1, column %2: %3</source>
         <translation>Недопустимый XML в строке %1, столбце %2: %3</translation>
     </message>
     <message>
-        <location filename="../../../src/parseobject.cpp" line="224"/>
+        <location filename="../../../src/parseobject.cpp" line="234"/>
         <source>The response is not a supported RSS or Atom feed (root element: %1).</source>
         <translation>Ответ не является поддерживаемым RSS- или Atom лентой (корневой элемент: %1).</translation>
     </message>
     <message>
-        <location filename="../../../src/parseobject.cpp" line="254"/>
+        <location filename="../../../src/parseobject.cpp" line="264"/>
         <source>Database update failed: %1</source>
         <translation>Ошибка обновления базы данных: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/parseobject.cpp" line="1429"/>
+        <location filename="../../../src/parseobject.cpp" line="1443"/>
         <source>Database query failed.</source>
         <translation>Ошибка при выполнении запроса к БД.</translation>
     </message>
@@ -4660,17 +4670,17 @@ Details:
 <context>
     <name>QAbstractSpinBox</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4759"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4768"/>
         <source>&amp;Step up</source>
         <translation>Шаг вв&amp;ерх</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4760"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4769"/>
         <source>Step &amp;down</source>
         <translation>Шаг вн&amp;из</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4761"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4770"/>
         <source>&amp;Select All</source>
         <translation>&amp;Выделить всё</translation>
     </message>
@@ -4678,22 +4688,22 @@ Details:
 <context>
     <name>QDialogButtonBox</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4737"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4746"/>
         <source>Close</source>
         <translation>Закрыть</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4738"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4747"/>
         <source>Cancel</source>
         <translation>Отмена</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4739"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4748"/>
         <source>&amp;Yes</source>
         <translation>&amp;Да</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4740"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4749"/>
         <source>&amp;No</source>
         <translation>&amp;Нет</translation>
     </message>
@@ -4701,37 +4711,37 @@ Details:
 <context>
     <name>QLineEdit</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4742"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4751"/>
         <source>&amp;Undo</source>
         <translation>&amp;Отменить действие</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4743"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4752"/>
         <source>&amp;Redo</source>
         <translation>&amp;Повторить действие</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4744"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4753"/>
         <source>Cu&amp;t</source>
         <translation>&amp;Вырезать</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4745"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4754"/>
         <source>&amp;Copy</source>
         <translation>&amp;Копировать</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4746"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4755"/>
         <source>&amp;Paste</source>
         <translation>В&amp;ставить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4747"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4756"/>
         <source>Delete</source>
         <translation>Удалить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4748"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4757"/>
         <source>Select All</source>
         <translation>Выделить всё</translation>
     </message>
@@ -4739,7 +4749,7 @@ Details:
 <context>
     <name>QMultiInputContext</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4763"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4772"/>
         <source>Select IM</source>
         <translation>Выбор режима ввода</translation>
     </message>
@@ -4747,17 +4757,17 @@ Details:
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../../../src/application/opmlinput.cpp" line="63"/>
+        <location filename="../../../src/application/opmlinput.cpp" line="58"/>
         <source>The file is not an OPML document.</source>
         <translation>Этот файл не является документом OPML.</translation>
     </message>
     <message>
-        <location filename="../../../src/application/opmlinput.cpp" line="72"/>
+        <location filename="../../../src/application/opmlinput.cpp" line="67"/>
         <source>The OPML file contains an invalid feed URL: %1</source>
         <translation>Файл OPML содержит недопустимый URL-адрес ленты: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/application/opmlinput.cpp" line="78"/>
+        <location filename="../../../src/application/opmlinput.cpp" line="73"/>
         <source>Invalid OPML at line %1: %2</source>
         <translation>Недопустимый OPML в строке %1: %2</translation>
     </message>
@@ -4829,42 +4839,42 @@ Details:
 <context>
     <name>QTextControl</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4750"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4759"/>
         <source>&amp;Undo</source>
         <translation>&amp;Отменить действие</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4751"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4760"/>
         <source>&amp;Redo</source>
         <translation>&amp;Повторить действие</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4752"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4761"/>
         <source>Cu&amp;t</source>
         <translation>&amp;Вырезать</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4753"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4762"/>
         <source>&amp;Copy</source>
         <translation>&amp;Копировать</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4754"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4763"/>
         <source>&amp;Paste</source>
         <translation>В&amp;ставить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4755"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4764"/>
         <source>Delete</source>
         <translation>Удалить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4756"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4765"/>
         <source>Select All</source>
         <translation>Выделить всё</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4757"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4766"/>
         <source>Copy &amp;Link Location</source>
         <translation>Скопировать &amp;адрес ссылки</translation>
     </message>
@@ -4872,22 +4882,22 @@ Details:
 <context>
     <name>QWizard</name>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4765"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4774"/>
         <source>Cancel</source>
         <translation>Отмена</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4766"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4775"/>
         <source>&lt; &amp;Back</source>
         <translation>&lt; &amp;Назад</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4767"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4776"/>
         <source>&amp;Finish</source>
         <translation>&amp;Завершить</translation>
     </message>
     <message>
-        <location filename="../../../src/application/mainwindow.cpp" line="4768"/>
+        <location filename="../../../src/application/mainwindow.cpp" line="4777"/>
         <source>&amp;Next &gt;</source>
         <translation>&amp;Далее &gt;</translation>
     </message>
@@ -4895,7 +4905,7 @@ Details:
 <context>
     <name>RequestFeed</name>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="255"/>
+        <location filename="../../../src/requestfeed.cpp" line="257"/>
         <source>Checking…</source>
         <translation>Проверка…</translation>
     </message>
@@ -4916,6 +4926,11 @@ Details:
     </message>
     <message>
         <location filename="../../../src/requestfeed.cpp" line="333"/>
+        <source>Feed exceeds the %1 MiB size limit.</source>
+        <translation>Лента превышает лимит в %1 мегабайт.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/requestfeed.cpp" line="340"/>
         <source>%1 is blocking access to this feed.
 
 This website requires browser verification before allowing access. %2 cannot complete this verification because it does not include a full web browser.
@@ -4928,37 +4943,37 @@ You can try completing verification in your browser, then exporting cookies in N
 Вы можете попробовать пройти проверку в браузере, а затем экспортировать cookie в формате Netscape и импортировать их в разделе «Инструменты» &gt; «Cookie веб-сайтов». Возможно, также потребуется указать соответствующий User-Agent в файле overrides.ini. Импорт cookie не гарантирует доступ. В качестве альтернативы попросите оператора веб-сайта сделать исключение для RSS/Atom лент.</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="347"/>
+        <location filename="../../../src/requestfeed.cpp" line="354"/>
         <source>HTTP %1: %2</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="348"/>
+        <location filename="../../../src/requestfeed.cpp" line="355"/>
         <source>Network error: %1</source>
         <translation>Ошибка сети: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="351"/>
+        <location filename="../../../src/requestfeed.cpp" line="358"/>
         <source>TLS certificate error: %1</source>
         <translation>Ошибка сертификата TLS: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="381"/>
+        <location filename="../../../src/requestfeed.cpp" line="388"/>
         <source>Unsupported or unsafe redirect URL.</source>
         <translation>Неподдерживаемый или небезопасный URL-адрес перенаправления.</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="396"/>
+        <location filename="../../../src/requestfeed.cpp" line="403"/>
         <source>Redirect error!</source>
         <translation>Ошибка переадресации!</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="441"/>
+        <location filename="../../../src/requestfeed.cpp" line="442"/>
         <source>The server returned an empty feed response.</source>
         <translation>Сервер вернул пустой ответ.</translation>
     </message>
     <message>
-        <location filename="../../../src/requestfeed.cpp" line="487"/>
+        <location filename="../../../src/requestfeed.cpp" line="484"/>
         <source>Request timed out</source>
         <translation>Истекло время ожидания запроса</translation>
     </message>
@@ -5130,80 +5145,85 @@ You can try completing verification in your browser, then exporting cookies in N
 <context>
     <name>UpdateObject</name>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="588"/>
+        <location filename="../../../src/updatefeeds.cpp" line="609"/>
+        <location filename="../../../src/updatefeeds.cpp" line="614"/>
         <source>Could not check existing subscriptions.</source>
         <translation>Не удалось проверить имеющиеся подписки.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="595"/>
+        <location filename="../../../src/updatefeeds.cpp" line="620"/>
         <source>Could not start the import transaction.</source>
         <translation>Не удалось запустить транзакцию импорта.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="602"/>
-        <location filename="../../../src/updatefeeds.cpp" line="699"/>
+        <location filename="../../../src/updatefeeds.cpp" line="627"/>
+        <source>Import failed: %1. Could not roll back: %2</source>
+        <translation>Иморт %1 не удался. Не могу откатить: %2</translation>
+    </message>
+    <message>
+        <location filename="../../../src/updatefeeds.cpp" line="631"/>
         <source>Import failed: %1</source>
         <translation>Ошибка импорта: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="703"/>
-        <source>Import complete</source>
-        <translation>Импорт завершен</translation>
+        <location filename="../../../src/updatefeeds.cpp" line="734"/>
+        <source>Import complete: %1 feeds and %2 folders imported; %3 duplicate feeds skipped.</source>
+        <translation>Импорт завершён: %1 лент и %2 папок импортировано; %3 дупликатов лент пропущено.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="792"/>
+        <location filename="../../../src/updatefeeds.cpp" line="829"/>
         <source>Processing…</source>
         <translation>Обработка…</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1057"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1094"/>
         <source>Could not save the in-memory database: %1</source>
         <translation>Не удалось сохранить БД в памяти: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1068"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1105"/>
         <source>Cannot start cleanup: %1</source>
         <translation>Не удается запустить очистку: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1088"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1125"/>
         <source>Shutdown cleanup failed and was skipped. Previously committed changes from this session are preserved.
 %1</source>
         <translation>Очистка после завершения работы завершилась сбоем и была пропущена. Изменения, зафиксированные ранее в ходе этой сессии, сохранены.
 %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1115"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1152"/>
         <source>Cleanup completed, but database optimization failed: %1</source>
         <translation>Очистка завершена, но оптимизация БД завершилась с ошибкой: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1136"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1173"/>
         <source>The live SQLite connection is unavailable.</source>
         <translation>Подключение к SQLite в режиме реального времени недоступно.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1141"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1178"/>
         <source>Cannot roll back cleanup: %1</source>
         <translation>Невозможно откатить очистку: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1172"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1209"/>
         <source>A cleanup query did not return its expected result.</source>
         <translation>Запрос на очистку не вернул ожидаемый результат.</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1387"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1424"/>
         <source>Cannot select feeds for shutdown cleanup: %1</source>
         <translation>Не удается выбрать ленты для очистки по завершении работы: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1399"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1436"/>
         <source>Cannot read feeds for shutdown cleanup: %1</source>
         <translation>Не удается прочитать ленты для очистки по завершении работы: %1</translation>
     </message>
     <message>
-        <location filename="../../../src/updatefeeds.cpp" line="1454"/>
+        <location filename="../../../src/updatefeeds.cpp" line="1491"/>
         <source>Database saved, but database optimization failed: %1</source>
         <translation>База данных сохранена, но оптимизация БД завершилась неудачно: %1</translation>
     </message>
