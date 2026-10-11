@@ -84,15 +84,31 @@ def main():
     run('mingw32-make', '-j' + str(args.jobs), cwd=build)
     run('mingw32-make', 'install', cwd=build)
     qmake = prefix / 'bin' / 'qmake.exe'
-    for module in ('qtsvg', 'qtimageformats', 'qttools'):
+    for module in ('qtsvg', 'qtimageformats'):
         build = work / ('build-' + module)
         build.mkdir()
-        configure = ('--', '-no-feature-assistant', '-no-feature-designer') if module == 'qttools' else ()
         run(qmake, sources[module] / (module + '.pro'),
             'QMAKE_CFLAGS+=' + CPU_FLAGS, 'QMAKE_CXXFLAGS+=' + CPU_FLAGS,
-            *configure, cwd=build)
+            cwd=build)
         run('mingw32-make', '-j' + str(args.jobs), cwd=build)
         run('mingw32-make', 'install', cwd=build)
+
+    # Generate QtTools' configuration, but do not recursively build its tree.
+    # The Linguist GUI requires Designer's uitools-private module, which is
+    # deliberately disabled here. Its command-line siblings do not need it.
+    build = work / 'build-qttools'
+    build.mkdir()
+    run(qmake, sources['qttools'] / 'qttools.pro',
+        'QMAKE_CFLAGS+=' + CPU_FLAGS, 'QMAKE_CXXFLAGS+=' + CPU_FLAGS,
+        '--', '-no-feature-assistant', '-no-feature-designer', cwd=build)
+    for tool in ('src/linguist/lrelease', 'src/linguist/lupdate', 'src/windeployqt'):
+        tool_build = build / tool
+        tool_build.mkdir(parents=True)
+        run(qmake, sources['qttools'] / tool / (Path(tool).name + '.pro'),
+            'QMAKE_CFLAGS+=' + CPU_FLAGS, 'QMAKE_CXXFLAGS+=' + CPU_FLAGS,
+            cwd=tool_build)
+        run('mingw32-make', '-j' + str(args.jobs), cwd=tool_build)
+        run('mingw32-make', 'install', cwd=tool_build)
 
     translations = prefix / 'translations'
     translations.mkdir(exist_ok=True)
@@ -109,7 +125,7 @@ def main():
         (destination / 'SOURCE.txt').write_text(
             'https://github.com/qt/' + module + '.git\n' + REVISIONS[module] + '\n',
             encoding='utf-8')
-    for tool in ('qmake.exe', 'lrelease.exe', 'windeployqt.exe'):
+    for tool in ('qmake.exe', 'lrelease.exe', 'lupdate.exe', 'windeployqt.exe'):
         if not (prefix / 'bin' / tool).is_file():
             raise RuntimeError('Missing installed Qt tool: ' + tool)
     if not list(translations.glob('qtbase_*.qm')):
