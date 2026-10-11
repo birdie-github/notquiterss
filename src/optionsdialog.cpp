@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "projectmetadata.h"
+#include <utility>
 #include "logfile.h"
 #include "optionsdialog.h"
 #include "backupsettingspage.h"
@@ -2165,7 +2166,7 @@ void OptionsDialog::applyLabels()
   db_.transaction();
   QSqlQuery q;
 
-  foreach (QString idLabel, idLabels_) {
+  for (const QString &idLabel : std::as_const(idLabels_)) {
     QList<QTreeWidgetItem *> treeItems =
         labelsTree_->findItems(idLabel, Qt::MatchFixedString, 0);
     if (treeItems.count() == 0) {

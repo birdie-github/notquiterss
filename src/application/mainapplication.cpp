@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "databasebackup.h"
+#include <utility>
 #include "mainapplication.h"
 
 #include "common.h"
@@ -180,7 +181,7 @@ void MainApplication::receiveMessage(const QString &message)
     qWarning() << QString("Received message: %1").arg(message);
 
     QStringList params = message.split('\n');
-    foreach (QString param, params) {
+    for (const QString &param : std::as_const(params)) {
       if (param == "--show") {
         mainWindow_->showWindows();
       }

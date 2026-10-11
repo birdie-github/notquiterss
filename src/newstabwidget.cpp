@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "common.h"
+#include <utility>
 #include <QTimeZone>
 #include "newstabwidget.h"
 
@@ -213,7 +214,7 @@ void NewsTabWidget::createNewsList()
                           "newsFilter,Separator,deleteNewsAct";
   QString str = settings.value("Settings/newsToolBar", actionListStr).toString();
 
-  foreach (QString actionStr, str.split(",", Qt::SkipEmptyParts)) {
+  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
     if (actionStr == "Separator") {
       newsToolBar_->addSeparator();
     } else {
@@ -827,7 +828,7 @@ void NewsTabWidget::markNewsRead()
     }
     db_.commit();
 
-    foreach (QString feedId, feedIdList) {
+    for (const QString &feedId : std::as_const(feedIdList)) {
       mainWindow_->slotUpdateStatus(feedId.toInt());
     }
     mainWindow_->recountCategoryCounts();
@@ -871,7 +872,7 @@ void NewsTabWidget::markAllNewsRead()
 
   newsView_->setCurrentIndex(newsModel_->index(currentRow, newsModel_->fieldIndex("title")));
 
-  foreach (QString feedId, feedIdList) {
+  for (const QString &feedId : std::as_const(feedIdList)) {
     mainWindow_->slotUpdateStatus(feedId.toInt());
   }
   mainWindow_->recountCategoryCounts();
@@ -1016,7 +1017,7 @@ void NewsTabWidget::deleteNews()
   newsView_->setCurrentIndex(curIndex);
   slotNewsViewSelected(curIndex);
 
-  foreach (QString feedId, feedIdList) {
+  for (const QString &feedId : std::as_const(feedIdList)) {
     mainWindow_->slotUpdateStatus(feedId.toInt());
   }
   mainWindow_->recountCategoryCounts();
@@ -1070,7 +1071,7 @@ void NewsTabWidget::deleteAllNewsList()
 
   slotNewsViewSelected(QModelIndex());
 
-  foreach (QString feedId, feedIdList) {
+  for (const QString &feedId : std::as_const(feedIdList)) {
     mainWindow_->slotUpdateStatus(feedId.toInt());
   }
   mainWindow_->recountCategoryCounts();
@@ -1131,7 +1132,7 @@ void NewsTabWidget::restoreNews()
   mainWindow_->slotUpdateStatus(feedId_);
   mainWindow_->recountCategoryCounts();
 
-  foreach (QString feedId, feedIdList) {
+  for (const QString &feedId : std::as_const(feedIdList)) {
     mainWindow_->slotUpdateStatus(feedId.toInt());
   }
   mainWindow_->recountCategoryCounts();
@@ -1707,7 +1708,7 @@ void NewsTabWidget::openInExternalBrowserNews()
     }
 
     if (!feedIdList.isEmpty()) {
-      foreach (QString feedId, feedIdList) {
+      for (const QString &feedId : std::as_const(feedIdList)) {
         mainWindow_->slotUpdateStatus(feedId.toInt());
       }
       mainWindow_->recountCategoryCounts();
@@ -2164,7 +2165,7 @@ QString NewsTabWidget::getHtmlLabels(int row)
       split(",", Qt::SkipEmptyParts);
   QString labelsString;
   QList<QTreeWidgetItem *> labelListItems = mainWindow_->categoriesTree_->getLabelListItems();
-  foreach (QTreeWidgetItem *item, labelListItems) {
+  for (QTreeWidgetItem *item : std::as_const(labelListItems)) {
     if (strLabelIdList.contains(item->text(2))) {
       strLabelIdList.removeOne(item->text(2));
       QByteArray byteArray = item->data(0, CategoriesTreeWidget::ImageRole).toByteArray();

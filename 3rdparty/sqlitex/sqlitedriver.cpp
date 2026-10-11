@@ -21,6 +21,7 @@
 **************************************************************************/
 
 #include "sqlitedriver.h"
+#include <utility>
 
 #include "sqliteextension.h"
 
@@ -582,7 +583,7 @@ bool SQLiteDriver::open(const QString & db, const QString &, const QString &, co
   bool uri = false;
   d->immediateTransactions = false;
   QStringList opts=QString(conOpts).remove(QLatin1Char(' ')).split(QLatin1Char(';'));
-  foreach(const QString &option, opts) {
+  for (const QString &option : std::as_const(opts)) {
     if (option.startsWith(QLatin1String("QSQLITE_BUSY_TIMEOUT="))) {
       bool ok;
       int nt = option.mid(21).toInt(&ok);
@@ -624,7 +625,7 @@ void SQLiteDriver::close()
 {
   Q_ASSERT(QThread::currentThread() == thread());
   if (isOpen()) {
-    foreach (SQLiteResult *result, d->results)
+    for (SQLiteResult *result : std::as_const(d->results))
       result->d->finalize();
 
     if (sqlite3_close(d->access) != SQLITE_OK)

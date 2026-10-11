@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "opmlinput.h"
+#include <utility>
 #include "../network/feedurl.h"
 #include "databasebackup.h"
 #include "feedhealth.h"
@@ -1135,7 +1136,7 @@ void MainWindow::createActions()
   newsSortOrderGroup_->setExclusive(true);
   QStringList listAct;
   listAct << "sortOrderAsc" << "sortOrderDesc";
-  foreach (QString actionStr, listAct) {
+  for (const QString &actionStr : std::as_const(listAct)) {
     QAction *newsSortOrderAct = new QAction(this);
     newsSortOrderAct->setObjectName(actionStr);
     newsSortOrderAct->setCheckable(true);
@@ -1974,7 +1975,7 @@ void MainWindow::loadSettings()
                                "newAct,Separator,updateFeedAct,updateAllFeedsAct,"
                                "Separator,markFeedRead,Separator,autoLoadImagesToggle").toString();
 
-  foreach (QString actionStr, str.split(",", Qt::SkipEmptyParts)) {
+  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
     if (actionStr == "Separator") {
       mainToolbar_->addSeparator();
     } else {
@@ -1995,7 +1996,7 @@ void MainWindow::loadSettings()
                                "newAct,Separator,updateAllFeedsAct,markFeedRead,"
                                "Separator,feedsFilter,findFeedAct").toString();
 
-  foreach (QString actionStr, str.split(",", Qt::SkipEmptyParts)) {
+  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
     if (actionStr == "Separator") {
       feedsToolBar_->addSeparator();
     } else {
@@ -2465,7 +2466,7 @@ void MainWindow::deleteItemFeedsTree()
   QSqlQuery q;
   QString idStr;
   QString feedIdStr;
-  foreach (int feedId, idList) {
+  for (int feedId : std::as_const(idList)) {
     if (idStr.isEmpty()) {
       idStr.append(QString("id='%1'").arg(feedId));
       feedIdStr.append(QString("feedId='%1'").arg(feedId));
@@ -2494,7 +2495,7 @@ void MainWindow::deleteItemFeedsTree()
   db_.commit();
 
   // Correction row
-  foreach (int parentId, parentIdList) {
+  for (int parentId : std::as_const(parentIdList)) {
     QList<int> idCorrectList;
     q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
            arg(parentId));
@@ -2655,7 +2656,7 @@ void MainWindow::recountFeedCategories(const QList<int> &categoriesList)
   QSqlQuery q;
   QString qStr;
 
-  foreach (int categoryIdStart, categoriesList) {
+  for (int categoryIdStart : std::as_const(categoriesList)) {
     if (categoryIdStart < 1) continue;
 
     int categoryId = categoryIdStart;
@@ -3364,7 +3365,9 @@ void MainWindow::showOptionDlg(int index)
 
   // Apply accepted settings
 
-  foreach (QAction *action, shortcutRegistry_.actions()) {
+  // Removing actions changes the registry; iterate over its original contents.
+  const auto shortcutActions = shortcutRegistry_.actions();
+  for (QAction *action : shortcutActions) {
     QString objectName = action->objectName();
     if (objectName.contains("labelAction_")) {
       shortcutRegistry_.removeOne(action);
@@ -4141,7 +4144,7 @@ void MainWindow::markFeedRead()
     }
     indexList.removeAt(i);
   }
-  foreach (int id, idList) {
+  for (int id : std::as_const(idList)) {
     bool openFeedT = false;
     QModelIndex index = feedsModel_->indexById(id);
     int parentId = feedsModel_->dataField(index, "parentId").toInt();
@@ -4161,7 +4164,7 @@ void MainWindow::markFeedRead()
         isFolder = true;
       }
       QList<int> list = UpdateObject::getIdFeedsInList(db_, id);
-      foreach (int id1, list) {
+      for (int id1 : std::as_const(list)) {
         QModelIndex index1 = feedsModel_->indexById(id1);
         QModelIndex indexUnread = feedsModel_->indexSibling(index1, "unread");
         QModelIndex indexNew    = feedsModel_->indexSibling(index1, "newCount");
@@ -4291,7 +4294,7 @@ void MainWindow::loadSettingsFeeds()
 
   QString filterName = settings.value("feedSettings/filterName", "filterFeedsAll_").toString();
   QList<QAction*> listActions = feedsFilterGroup_->actions();
-  foreach(QAction *action, listActions) {
+  for (QAction *action : std::as_const(listActions)) {
     if (action->objectName() == filterName) {
       action->setChecked(true);
       break;
@@ -4299,7 +4302,7 @@ void MainWindow::loadSettingsFeeds()
   }
   filterName = settings.value("newsSettings/filterName", "filterNewsAll_").toString();
   listActions = newsFilterGroup_->actions();
-  foreach(QAction *action, listActions) {
+  for (QAction *action : std::as_const(listActions)) {
     if (action->objectName() == filterName) {
       action->setChecked(true);
       break;
@@ -4398,7 +4401,8 @@ void MainWindow::slotNewsFilter()
       }
     }
   } else {
-    foreach(QAction *action, newsFilterGroup_->actions()) {
+    const auto filterActions = newsFilterGroup_->actions();
+    for (QAction *action : filterActions) {
       if (action->objectName() == mainNewsFilter_) {
         action->setChecked(true);
         setNewsFilter(action);
@@ -4905,7 +4909,7 @@ void MainWindow::showFeedPropertiesDlg()
   Settings settings("NewsHeader");
   QString indexColumnsStr = settings.value("columns").toString();
   QStringList indexColumnsList = indexColumnsStr.split(",", Qt::SkipEmptyParts);
-  foreach (QString indexStr, indexColumnsList) {
+  for (const QString &indexStr : std::as_const(indexColumnsList)) {
     properties.columnDefault.columns.append(indexStr.toInt());
   }
   NewsTabWidget *widget = (NewsTabWidget*)stackedWidget_->widget(TAB_WIDGET_PERMANENT);
@@ -4941,7 +4945,7 @@ void MainWindow::showFeedPropertiesDlg()
     }
     indexColumnsStr = feedsModel_->dataField(index, "columns").toString();
     indexColumnsList = indexColumnsStr.split(",", Qt::SkipEmptyParts);
-    foreach (QString indexStr, indexColumnsList) {
+    for (const QString &indexStr : std::as_const(indexColumnsList)) {
       properties.column.columns.append(indexStr.toInt());
     }
     properties.column.sortBy = feedsModel_->dataField(index, "sort").toInt();
@@ -5650,7 +5654,7 @@ void MainWindow::slotOpenFeedNewTab()
   feedsView_->setCurrentIndex(index);
   slotFeedSelected(feedsProxyModel_->mapToSource(index), true);
 
-  foreach (QModelIndex indexProxy, indexList) {
+  for (const QModelIndex &indexProxy : std::as_const(indexList)) {
     QModelIndex index = feedsProxyModel_->mapToSource(indexProxy);
     creatFeedTab(feedsModel_->dataField(index, "id").toInt(),
                  feedsModel_->dataField(index, "parentId").toInt());
@@ -6392,12 +6396,12 @@ void MainWindow::slotMarkAllReadNewsInNotification()
       newsView_->viewport()->update();
     }
 
-    foreach (int newsId, idNewsList) {
+    for (int newsId : std::as_const(idNewsList)) {
       mainApp->sqlQueryExec(QString("UPDATE news SET new=0, read=1 WHERE id=='%1'").
                    arg(newsId));
     }
 
-    foreach (int feedId, idFeedList) {
+    for (int feedId : std::as_const(idFeedList)) {
       slotUpdateStatus(feedId);
     }
     recountCategoryCounts();
@@ -6979,7 +6983,7 @@ void MainWindow::getLabelNews()
   if (indexes.count() == 1) {
     QModelIndex index = indexes.at(0);
     QStringList strLabelIdList = index.data(Qt::EditRole).toString().split(",", Qt::SkipEmptyParts);
-    foreach (QString strLabelId, strLabelIdList) {
+    for (const QString &strLabelId : std::as_const(strLabelIdList)) {
       for (int i = 0; i < newsLabelGroup_->actions().count(); i++) {
         if (newsLabelGroup_->actions().at(i)->data().toString() == strLabelId)
           newsLabelGroup_->actions().at(i)->setChecked(true);
@@ -7225,7 +7229,7 @@ QString MainWindow::getIdFeedsString(int idFolder, int idException)
   QList<int> idList = UpdateObject::getIdFeedsInList(db_, idFolder);
   if (idList.count()) {
     QString str;
-    foreach (int id, idList) {
+    for (int id : std::as_const(idList)) {
       if (id == idException) continue;
       if (!str.isEmpty()) str.append(" OR ");
       str.append(QString("feedId=%1").arg(id));

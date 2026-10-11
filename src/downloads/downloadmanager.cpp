@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "downloadmanager.h"
+#include <utility>
 
 #include "mainapplication.h"
 #include "networkmanager.h"
@@ -248,7 +249,7 @@ void DownloadManager::updateInfo()
     remTimes.append(downItem->remainingTime());
   }
   QTime remaining;
-  foreach (const QTime &time, remTimes) {
+  for (const QTime &time : std::as_const(remTimes)) {
     if (time > remaining) {
       remaining = time;
     }

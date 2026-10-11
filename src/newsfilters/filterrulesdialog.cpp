@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "filterrulesdialog.h"
+#include <utility>
 
 #include "mainapplication.h"
 #include "settings.h"
@@ -209,7 +210,7 @@ void FilterRulesDialog::setData()
     const QString scope = q.value(2).toString();
     allFeeds_->setChecked(scope == "*");
     QStringList strIdFeeds = scope.split(",", Qt::SkipEmptyParts);
-    foreach (QString strIdFeed, strIdFeeds) {
+    for (const QString &strIdFeed : std::as_const(strIdFeeds)) {
       QList<QTreeWidgetItem *> treeItems =
           feedsTree_->findItems(strIdFeed,
                                 Qt::MatchFixedString | Qt::MatchRecursive,

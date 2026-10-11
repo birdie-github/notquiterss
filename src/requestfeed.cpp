@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "requestfeed.h"
+#include <utility>
 #include "networkpolicy.h"
 #include "mainapplication.h"
 #include "globals.h"
@@ -194,7 +195,7 @@ void RequestFeed::getQueuedUrl()
     QString feedUrl = feedsQueue_.head();
 
     if (hostList_.contains(QUrl(feedUrl).host())) {
-      foreach (QString url, currentFeeds_) {
+      for (const QString &url : std::as_const(currentFeeds_)) {
         if (QUrl(url).host() == QUrl(feedUrl).host()) {
           return;
         }

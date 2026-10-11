@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "projectmetadata.h"
+#include <utility>
 #include <QTimeZone>
 #include <QTextCodec>
 #include "parseobject.h"
@@ -199,7 +200,7 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
       QStringList codecNameList;
       codecNameList << "UTF-8" << "Windows-1251" << "KOI8-R" << "KOI8-U"
                     << "ISO 8859-5" << "IBM 866";
-      foreach (QString codecNameT, codecNameList) {
+      for (const QString &codecNameT : std::as_const(codecNameList)) {
         QTextCodec *codec = QTextCodec::codecForName(codecNameT.toUtf8());
         if (codec && codec->canEncode(xmlData)) {
           qDebug() << "Codec name (3):" << codecNameT;
@@ -1271,7 +1272,7 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
 
         if (!idLabelsList.isEmpty()) {
           QString idLabelsStr = q1.value(1).toString();
-          foreach (int idLabel, idLabelsList) {
+          for (int idLabel : std::as_const(idLabelsList)) {
             if (idLabelsStr.contains(QString(",%1,").arg(idLabel))) continue;
             if (idLabelsStr.isEmpty()) idLabelsStr.append(",");
             idLabelsStr.append(QString("%1,").arg(idLabel));

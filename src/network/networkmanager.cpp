@@ -74,7 +74,7 @@ void NetworkManager::loadCertificates()
   // CA Certificates
   QList<QSslCertificate> caCerts = QSslConfiguration::systemCaCertificates();
 
-  foreach (const QString &path, certPaths) {
+  for (const QString &path : certPaths) {
     QDirIterator it(path, QDir::Files, QDirIterator::FollowSymlinks | QDirIterator::Subdirectories);
     while (it.hasNext()) {
       QString filePath = it.next();

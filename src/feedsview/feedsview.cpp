@@ -219,7 +219,9 @@ bool FeedsView::isFolder(const QModelIndex &index) const
 
 void FeedsView::restoreExpanded()
 {
-  foreach (int id, expandedList) {
+  // Expansion can collapse other folders and change expandedList via signals.
+  const auto expandedIds = expandedList;
+  for (int id : expandedIds) {
     QModelIndex index = ((FeedsProxyModel*)model())->mapFromSource(id);
     if (!isExpanded(index))
       setExpanded(index, true);

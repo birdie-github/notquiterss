@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "feedreadstate.h"
+#include <utility>
 #include "database.h"
 #include "mainwindow.h"
 #include <QSqlDriver>
@@ -144,7 +145,7 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
     QList<int> idParList;
     QList<int> idList = getIdFeedsInList(db_, feedId);
     if (idList.count()) {
-      foreach (int id, idList) {
+      for (int id : std::as_const(idList)) {
         int parId = 0;
         q.exec(QString("SELECT parentId FROM feeds WHERE id=='%1'").arg(id));
         if (q.next())
@@ -212,7 +213,7 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
         return;
       }
 
-      foreach (int l_feedParId, idParList) {
+      for (int l_feedParId : std::as_const(idParList)) {
         while (l_feedParId) {
           QString updated;
 
@@ -298,7 +299,7 @@ QString FeedReadState::getIdFeedsString(int idFolder, int idException)
   QList<int> idList = getIdFeedsInList(db_, idFolder);
   if (idList.count()) {
     QString str;
-    foreach (int id, idList) {
+    for (int id : std::as_const(idList)) {
       if (id == idException) continue;
       if (!str.isEmpty()) str.append(" OR ");
       str.append(QString("feedId=%1").arg(id));
@@ -372,7 +373,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
       slotRefreshInfoTray();
   } else {
     QString idStr;
-    foreach (int newsId, idNewsList) {
+    for (int newsId : std::as_const(idNewsList)) {
       if (!idStr.isEmpty()) idStr.append(" OR ");
       idStr.append(QString("id='%1'").arg(newsId));
     }

@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "notificationswidget.h"
+#include <utility>
 #include <QScreen>
 
 #include "mainapplication.h"
@@ -367,7 +368,7 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
         pageLayout_->addWidget(newsItem);
       }
     }
-    foreach (int cntNews, cntNewNewsList) {
+    for (int cntNews : std::as_const(cntNewNewsList)) {
       cntAllNews_ = cntAllNews_ + cntNews;
     }
   }

@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "network/feedurl.h"
+#include <utility>
 #include "databasebackup.h"
 #include "opmlinput.h"
 #include "feedhealth.h"
@@ -994,7 +995,7 @@ void UpdateObject::slotMarkReadCategory(int type, int idLabel)
     idList.append(q.value(0).toInt());
   }
   emit signalMarkAllFeedsRead(0);
-  foreach (int id, idList) {
+  for (int id : std::as_const(idList)) {
     slotUpdateStatus(id, true);
   }
 }
@@ -1224,7 +1225,7 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
     }
 
     // Run Cleanup for all feeds, except categories
-    foreach (QString feedId, feedsIdList) {
+    for (const QString &feedId : std::as_const(feedsIdList)) {
       int countDelNews = 0;
       int countAllNews = 0;
 
@@ -1331,7 +1332,7 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
     }
 
     // Run categories recount, because cleanup may change counts
-    foreach (int folderIdStart, foldersIdList) {
+    for (int folderIdStart : std::as_const(foldersIdList)) {
       if (folderIdStart < 1) continue;
 
       int folderId = folderIdStart;

@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "faviconobject.h"
+#include <utility>
 #include "networkpolicy.h"
 #include "mainapplication.h"
 #include "globals.h"
@@ -147,7 +148,7 @@ void FaviconObject::getQueuedUrl()
     QString feedUrl = feedsQueue_.head();
 
     if (hostList_.contains(QUrl(feedUrl).host())) {
-      foreach (QString url, currentFeeds_) {
+      for (const QString &url : std::as_const(currentFeeds_)) {
         if (QUrl(url).host() == QUrl(feedUrl).host()) {
           return;
         }

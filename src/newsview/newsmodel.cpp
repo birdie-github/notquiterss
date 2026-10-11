@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "newsmodel.h"
+#include <utility>
 
 #include "mainapplication.h"
 
@@ -73,7 +74,7 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QString strIdLabels = index.data(Qt::EditRole).toString();
       QList<QTreeWidgetItem *> labelListItems = mainApp->mainWindow()->
           categoriesTree_->getLabelListItems();
-      foreach (QTreeWidgetItem *item, labelListItems) {
+      for (QTreeWidgetItem *item : std::as_const(labelListItems)) {
         if (strIdLabels.contains(QString(",%1,").arg(item->text(2)))) {
           icon = item->icon(0);
           break;
@@ -143,7 +144,7 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QString strIdLabels = index.data(Qt::EditRole).toString();
       QList<QTreeWidgetItem *> labelListItems = mainApp->mainWindow()->
           categoriesTree_->getLabelListItems();
-      foreach (QTreeWidgetItem *item, labelListItems) {
+      for (QTreeWidgetItem *item : std::as_const(labelListItems)) {
         if (strIdLabels.contains(QString(",%1,").arg(item->text(2)))) {
           nameLabelList << item->text(0);
         }
@@ -186,7 +187,7 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QString strIdLabels = QSqlTableModel::index(index.row(), fieldIndex("label")).data(Qt::EditRole).toString();
       QList<QTreeWidgetItem *> labelListItems = mainApp->mainWindow()->
           categoriesTree_->getLabelListItems();
-      foreach (QTreeWidgetItem *item, labelListItems) {
+      for (QTreeWidgetItem *item : std::as_const(labelListItems)) {
         if (strIdLabels.contains(QString(",%1,").arg(item->text(2)))) {
           QString strColor = item->data(0, CategoriesTreeWidget::colorBgRole).toString();
           if (!strColor.isEmpty())
@@ -204,7 +205,7 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QString strIdLabels = QSqlTableModel::index(index.row(), fieldIndex("label")).data(Qt::EditRole).toString();
       QList<QTreeWidgetItem *> labelListItems = mainApp->mainWindow()->
           categoriesTree_->getLabelListItems();
-      foreach (QTreeWidgetItem *item, labelListItems) {
+      for (QTreeWidgetItem *item : std::as_const(labelListItems)) {
         if (strIdLabels.contains(QString(",%1,").arg(item->text(2)))) {
           QString strColor = item->data(0, CategoriesTreeWidget::colorTextRole).toString();
           if (!strColor.isEmpty())

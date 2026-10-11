@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "opmlinput.h"
+#include <utility>
 #include "../common/common.h"
 #include "../network/feedurl.h"
 #include "../network/networkpolicy.h"
@@ -27,7 +28,7 @@ QByteArray OpmlInput::prepare(QByteArray xmlData)
     QStringList codecNameList;
     codecNameList << "UTF-8" << "Windows-1251" << "KOI8-R" << "KOI8-U"
                   << "ISO 8859-5" << "IBM 866";
-    foreach (QString codecNameT, codecNameList) {
+    for (const QString &codecNameT : std::as_const(codecNameList)) {
       QTextCodec *codec = QTextCodec::codecForName(codecNameT.toUtf8());
       if (codec && codec->canEncode(xmlData)) {
         convertData = codec->toUnicode(xmlData);

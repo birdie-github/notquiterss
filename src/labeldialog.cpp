@@ -131,7 +131,7 @@ void LabelDialog::selectIcon(QAction *action)
 void LabelDialog::loadIcon()
 {
   QString filter;
-  foreach (QByteArray imageFormat, QImageReader::supportedImageFormats()) {
+  for (const QByteArray &imageFormat : QImageReader::supportedImageFormats()) {
     if (!filter.isEmpty()) filter.append(" ");
     filter.append("*.").append(imageFormat);
   }

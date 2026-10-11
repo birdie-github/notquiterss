@@ -37,7 +37,7 @@ bool Common::removePath(const QString &path)
   QFileInfo info(path);
   if (info.isDir()) {
     QDir dir(path);
-    foreach (const QString &entry, dir.entryList(QDir::AllDirs | QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot)) {
+    for (const QString &entry : dir.entryList(QDir::AllDirs | QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot)) {
       result &= removePath(dir.absoluteFilePath(entry));
     }
     if (!info.dir().rmdir(info.fileName()))

@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "databasebackup.h"
+#include <utility>
 #include "database.h"
 
 #include "common.h"
@@ -474,7 +475,7 @@ void Database::addColumnsToFeedsTables(QSqlDatabase &db)
     columnsList.append(" avoidedOldSingleNewsDate varchar;");
 
     db.transaction();
-    foreach (QString col, columnsList) {
+    for (const QString &col : std::as_const(columnsList)) {
         QSqlQuery(db).exec("ALTER TABLE feeds ADD COLUMN" + col);
     }
     db.commit();
