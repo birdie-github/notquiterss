@@ -164,7 +164,11 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   page->setLayout(layout);
 
   connect(urlFeedEdit_, &QLineEdit::textChanged, this, &AddFeedWizard::urlFeedEditChanged);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  connect(titleFeedAsName_, &QCheckBox::checkStateChanged, this, &AddFeedWizard::titleFeedAsNameStateChanged);
+#else
   connect(titleFeedAsName_, &QCheckBox::stateChanged, this, &AddFeedWizard::titleFeedAsNameStateChanged);
+#endif
 
   return page;
 }
