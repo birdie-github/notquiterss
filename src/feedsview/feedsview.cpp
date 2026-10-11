@@ -177,8 +177,8 @@ FeedsView::FeedsView(QWidget * parent)
 
   connect(&dragAutoScrollTimer_, &QTimer::timeout,
           this, &FeedsView::dragAutoScroll);
-  connect(this, SIGNAL(expanded(QModelIndex)), SLOT(slotExpanded(QModelIndex)));
-  connect(this, SIGNAL(collapsed(QModelIndex)), SLOT(slotCollapsed(QModelIndex)));
+  connect(this, &QTreeView::expanded, this, &FeedsView::slotExpanded);
+  connect(this, &QTreeView::collapsed, this, &FeedsView::slotCollapsed);
 }
 
 void FeedsView::setSourceModel(FeedsModel *sourceModel)

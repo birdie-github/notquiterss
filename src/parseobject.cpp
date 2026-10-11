@@ -64,11 +64,9 @@ ParseObject::ParseObject(QObject *parent)
   parseTimer_ = new QTimer(this);
   parseTimer_->setSingleShot(true);
   parseTimer_->setInterval(10);
-  connect(parseTimer_, SIGNAL(timeout()), this, SLOT(getQueuedXml()),
-          Qt::QueuedConnection);
+  connect(parseTimer_, &QTimer::timeout, this, &ParseObject::getQueuedXml, Qt::QueuedConnection);
 
-  connect(this, SIGNAL(signalReadyParse(QByteArray,int,QDateTime,QString)),
-          SLOT(slotParse(QByteArray,int,QDateTime,QString)));
+  connect(this, &ParseObject::signalReadyParse, this, &ParseObject::slotParse);
 }
 
 ParseObject::~ParseObject()

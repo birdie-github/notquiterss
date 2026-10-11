@@ -58,9 +58,9 @@ NewsItem::NewsItem(int idFeed, int idNews, int width, QWidget * parent)
   mainLayout->addWidget(deleteButton_);
   setLayout(mainLayout);
 
-  connect(readButton_, SIGNAL(clicked()), this, SLOT(markRead()));
-  connect(openExternalBrowserButton_, SIGNAL(clicked()), this, SLOT(openExternalBrowser()));
-  connect(deleteButton_, SIGNAL(clicked()), this, SLOT(deleteNews()));
+  connect(readButton_, &QAbstractButton::clicked, this, &NewsItem::markRead);
+  connect(openExternalBrowserButton_, &QAbstractButton::clicked, this, &NewsItem::openExternalBrowser);
+  connect(deleteButton_, &QAbstractButton::clicked, this, &NewsItem::deleteNews);
 
   installEventFilter(this);
 }

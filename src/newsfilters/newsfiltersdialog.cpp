@@ -75,25 +75,25 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
   }
 
   QPushButton *newButton = new QPushButton(tr("Create..."), this);
-  connect(newButton, SIGNAL(clicked()), this, SLOT(newFilter()));
+  connect(newButton, &QAbstractButton::clicked, this, &NewsFiltersDialog::newFilter);
   editButton_ = new QPushButton(tr("Edit..."), this);
   editButton_->setEnabled(false);
-  connect(editButton_, SIGNAL(clicked()), this, SLOT(editFilter()));
+  connect(editButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::editFilter);
   deleteButton_ = new QPushButton(tr("Delete..."), this);
   deleteButton_->setEnabled(false);
-  connect(deleteButton_, SIGNAL(clicked()), this, SLOT(deleteFilter()));
+  connect(deleteButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::deleteFilter);
 
   moveUpButton_ = new QPushButton(tr("Move up"), this);
   moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, SIGNAL(clicked()), this, SLOT(moveUpFilter()));
+  connect(moveUpButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::moveUpFilter);
   moveDownButton_ = new QPushButton(tr("Move down"), this);
   moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, SIGNAL(clicked()), this, SLOT(moveDownFilter()));
+  connect(moveDownButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::moveDownFilter);
 
   runFilterButton_ = new QPushButton(tr("Apply Filter"), this);
   runFilterButton_->setEnabled(false);
   buttonsLayout->insertWidget(0, runFilterButton_);
-  connect(runFilterButton_, SIGNAL(clicked()), SLOT(applyFilter()));
+  connect(runFilterButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::applyFilter);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(newButton);
@@ -116,13 +116,10 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
 
   filtersTree_->setCurrentIndex(QModelIndex());
 
-  connect(filtersTree_, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
-          this, SLOT(slotCurrentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
-  connect(filtersTree_, SIGNAL(doubleClicked(QModelIndex)),
-          this, SLOT(editFilter()));
-  connect(filtersTree_, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-          this, SLOT(slotItemChanged(QTreeWidgetItem*,int)));
-  connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
+  connect(filtersTree_, &QTreeWidget::currentItemChanged, this, &NewsFiltersDialog::slotCurrentItemChanged);
+  connect(filtersTree_, &QAbstractItemView::doubleClicked, this, &NewsFiltersDialog::editFilter);
+  connect(filtersTree_, &QTreeWidget::itemChanged, this, &NewsFiltersDialog::slotItemChanged);
+  connect(this, &QDialog::finished, this, &NewsFiltersDialog::closeDialog);
 
   Settings settings;
   restoreGeometry(settings.value("newsFiltersDlg/geometry").toByteArray());

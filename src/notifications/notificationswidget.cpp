@@ -311,14 +311,11 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
         newsItem->deleteButton_->setVisible(showButtonDeleteNotify);
         pageLayout_->addWidget(newsItem);
 
-        connect(newsItem, SIGNAL(signalMarkRead(int, int, int)),
-                this, SLOT(slotMarkRead(int, int, int)));
-        connect(newsItem, SIGNAL(signalTitleClicked(int, int)),
-                this, SLOT(slotOpenNew(int, int)));
-        connect(newsItem, SIGNAL(signalOpenExternalBrowser(QUrl)),
-                this, SIGNAL(signalOpenExternalBrowser(QUrl)));
-        connect(newsItem, SIGNAL(signalDeleteNews(int,int)),
-                this, SLOT(slotDeleteNews(int, int)));
+        connect(newsItem, &NewsItem::signalMarkRead, this, &NotificationWidget::slotMarkRead);
+        connect(newsItem, &NewsItem::signalTitleClicked, this, &NotificationWidget::slotOpenNew);
+        connect(newsItem, &NewsItem::signalOpenExternalBrowser,
+                this, &NotificationWidget::signalOpenExternalBrowser);
+        connect(newsItem, &NewsItem::signalDeleteNews, this, &NotificationWidget::slotDeleteNews);
       }
     }
   }
@@ -383,18 +380,12 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   numPage_->setText(QString(tr("Page %1 of %2").arg("1").arg(stackedWidget_->count())));
 
   showTimer_ = new QTimer(this);
-  connect(showTimer_, SIGNAL(timeout()),
-          this, SIGNAL(signalClose()));
-  connect(closeButton_, SIGNAL(clicked()),
-          this, SIGNAL(signalClose()));
-  connect(prevButton_, SIGNAL(clicked()),
-          this, SLOT(previousPage()));
-  connect(nextButton_, SIGNAL(clicked()),
-          this, SLOT(nextPage()));
-  connect(markAllReadButton_, SIGNAL(clicked()),
-          this, SIGNAL(signalMarkAllRead()));
-  connect(markAllReadButton_, SIGNAL(clicked()),
-          this, SIGNAL(signalClose()));
+  connect(showTimer_, &QTimer::timeout, this, &NotificationWidget::signalClose);
+  connect(closeButton_, &QAbstractButton::clicked, this, &NotificationWidget::signalClose);
+  connect(prevButton_, &QAbstractButton::clicked, this, &NotificationWidget::previousPage);
+  connect(nextButton_, &QAbstractButton::clicked, this, &NotificationWidget::nextPage);
+  connect(markAllReadButton_, &QAbstractButton::clicked, this, &NotificationWidget::signalMarkAllRead);
+  connect(markAllReadButton_, &QAbstractButton::clicked, this, &NotificationWidget::signalClose);
 
   if (timeShowNews_ != 0)
     showTimer_->start(timeShowNews_*1000);

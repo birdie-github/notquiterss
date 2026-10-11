@@ -42,9 +42,9 @@ CleanUpWizard::CleanUpWizard(QWidget *parent)
   Settings settings;
   restoreGeometry(settings.value("CleanUpWizard/geometry").toByteArray());
 
-  connect(button(QWizard::FinishButton), SIGNAL(clicked()),
-          this, SLOT(finishButtonClicked()));
-  connect(this, SIGNAL(currentIdChanged(int)), SLOT(currentIdChanged(int)));
+  connect(button(QWizard::FinishButton), &QAbstractButton::clicked,
+          this, &CleanUpWizard::finishButtonClicked);
+  connect(this, &QWizard::currentIdChanged, this, &CleanUpWizard::currentIdChanged);
   UpdateObject *updater = mainApp->updateFeeds()->updateObject_;
   connect(this, &CleanUpWizard::signalStartCleanUp, updater, &UpdateObject::startCleanUp);
   connect(updater, &UpdateObject::signalFinishCleanUp, this, &CleanUpWizard::finishCleanUp);
@@ -147,8 +147,7 @@ QWizardPage *CleanUpWizard::createChooseFeedsPage()
   }
   feedsTree_->expandAll();
 
-  connect(feedsTree_, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-          this, SLOT(feedItemChanged(QTreeWidgetItem*,int)));
+  connect(feedsTree_, &QTreeWidget::itemChanged, this, &CleanUpWizard::feedItemChanged);
 
   QVBoxLayout *layout = new QVBoxLayout;
   layout->addWidget(feedsTree_);
@@ -166,15 +165,13 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   maxDayCleanUp_ = new QSpinBox();
   maxDayCleanUp_->setEnabled(false);
   maxDayCleanUp_->setRange(0, 9999);
-  connect(dayCleanUpOn_, SIGNAL(toggled(bool)),
-          maxDayCleanUp_, SLOT(setEnabled(bool)));
+  connect(dayCleanUpOn_, &QAbstractButton::toggled, maxDayCleanUp_, &QWidget::setEnabled);
 
   newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
   maxNewsCleanUp_ = new QSpinBox();
   maxNewsCleanUp_->setEnabled(false);
   maxNewsCleanUp_->setRange(0, 9999);
-  connect(newsCleanUpOn_, SIGNAL(toggled(bool)),
-          maxNewsCleanUp_, SLOT(setEnabled(bool)));
+  connect(newsCleanUpOn_, &QAbstractButton::toggled, maxNewsCleanUp_, &QWidget::setEnabled);
 
   readCleanUp_ = new QCheckBox(tr("Delete read articles"));
   neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread articles"));

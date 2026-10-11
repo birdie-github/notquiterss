@@ -46,9 +46,8 @@ FindFeed::FindFeed(QWidget *parent)
   findGroup_->addAction(findNameAct_);
   findGroup_->addAction(findLinkAct_);
 
-  connect(findButton_, SIGNAL(clicked()), this, SLOT(slotMenuFind()));
-  connect(findGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(slotSelectFind(QAction*)));
+  connect(findButton_, &QAbstractButton::clicked, this, &FindFeed::slotMenuFind);
+  connect(findGroup_, &QActionGroup::triggered, this, &FindFeed::slotSelectFind);
 
   clearButton_ = new QToolButton(this);
   clearButton_->setFocusPolicy(Qt::NoFocus);
@@ -58,9 +57,8 @@ FindFeed::FindFeed(QWidget *parent)
   clearButton_->setCursor(Qt::ArrowCursor);
   clearButton_->setStyleSheet("QToolButton { border: none; padding: 0px; background: none; }");
   clearButton_->hide();
-  connect(clearButton_, SIGNAL(clicked()), this, SLOT(slotClear()));
-  connect(this, SIGNAL(textChanged(const QString&)),
-          SLOT(updateClearButton(const QString&)));
+  connect(clearButton_, &QAbstractButton::clicked, this, &FindFeed::slotClear);
+  connect(this, &QLineEdit::textChanged, this, &FindFeed::updateClearButton);
 
   findLabel_ = new QLabel(this);
   findLabel_->setStyleSheet("QLabel { color: gray; background: none; }");

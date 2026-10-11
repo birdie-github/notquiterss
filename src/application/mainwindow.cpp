@@ -244,19 +244,19 @@ MainWindow::MainWindow(QWidget *parent)
 
   initUpdateFeeds();
 
-  QTimer::singleShot(5000, this, SLOT(slotUpdateAppCheck()));
+  QTimer::singleShot(5000, this, &MainWindow::slotUpdateAppCheck);
 
-  connect(this, SIGNAL(signalShowNotification(bool)),
-          SLOT(showNotification(bool)), Qt::QueuedConnection);
-  connect(this, SIGNAL(signalPlaySoundNewNews()),
-          SLOT(slotPlaySoundNewNews()), Qt::QueuedConnection);
+  connect(this, &MainWindow::signalShowNotification,
+          this, &MainWindow::showNotification, Qt::QueuedConnection);
+  connect(this, &MainWindow::signalPlaySoundNewNews,
+          this, &MainWindow::slotPlaySoundNewNews, Qt::QueuedConnection);
 
-  connect(mainApp->downloadManager(), SIGNAL(signalShowDownloads(bool)),
-          this, SLOT(showDownloadManager(bool)));
-  connect(mainApp->downloadManager(), SIGNAL(signalUpdateInfo(QString)),
-          this, SLOT(updateInfoDownloads(QString)));
+  connect(mainApp->downloadManager(), &DownloadManager::signalShowDownloads,
+          this, &MainWindow::showDownloadManager);
+  connect(mainApp->downloadManager(), &DownloadManager::signalUpdateInfo,
+          this, &MainWindow::updateInfoDownloads);
 
-  connect(&timerTrayOpenNotify, SIGNAL(timeout()), this, SLOT(slotTrayOpenNotifyTimer()));
+  connect(&timerTrayOpenNotify, &QTimer::timeout, this, &MainWindow::slotTrayOpenNotifyTimer);
   timerTrayOpenNotify.setSingleShot(true);
 
   retranslateStrings();
@@ -437,11 +437,11 @@ void MainWindow::slotPlaceToTray()
   hide();
 
   if (emptyWorking_)
-    QTimer::singleShot(10000, this, SLOT(myEmptyWorkingSet()));
+    QTimer::singleShot(10000, this, &MainWindow::myEmptyWorkingSet);
   if (markReadMinimize_)
     setFeedRead(currentNewsTab->type_, currentNewsTab->feedId_, FeedReadPlaceToTray, currentNewsTab);
   if (clearStatusNew_)
-    QTimer::singleShot(0, this, SIGNAL(signalMarkAllFeedsOld()));
+    QTimer::singleShot(0, this, &MainWindow::signalMarkAllFeedsOld);
   clearNotification(true);
 
   saveSettings();
@@ -647,44 +647,33 @@ void MainWindow::createFeedsWidget()
   feedsWidget_->setFrameStyle(QFrame::NoFrame);
   feedsWidget_->setLayout(feedsLayout);
 
-  connect(feedsView_, SIGNAL(pressed(QModelIndex)),
-          this, SLOT(slotFeedClicked(QModelIndex)));
-  connect(feedsView_, SIGNAL(signalMiddleClicked()),
-          this, SLOT(slotOpenFeedNewTab()));
-  connect(feedsView_, SIGNAL(signalDoubleClicked()),
-          this, SLOT(slotGetFeed()));
-  connect(feedsView_, SIGNAL(pressKeyUp()), this, SLOT(slotFeedUpPressed()));
-  connect(feedsView_, SIGNAL(pressKeyDown()), this, SLOT(slotFeedDownPressed()));
-  connect(feedsView_, SIGNAL(pressKeyHome()), this, SLOT(slotFeedHomePressed()));
-  connect(feedsView_, SIGNAL(pressKeyEnd()), this, SLOT(slotFeedEndPressed()));
-  connect(feedsView_, SIGNAL(pressKeyPageUp()), this, SLOT(slotFeedPageUpPressed()));
-  connect(feedsView_, SIGNAL(pressKeyPageDown()), this, SLOT(slotFeedPageDownPressed()));
-  connect(feedsView_, SIGNAL(signalDropped(QModelIndex,int)),
-          this, SLOT(slotMoveIndex(QModelIndex,int)));
-  connect(feedsView_, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(showContextMenuFeed(const QPoint &)));
+  connect(feedsView_, &QAbstractItemView::pressed, this, &MainWindow::slotFeedClicked);
+  connect(feedsView_, &FeedsView::signalMiddleClicked, this, &MainWindow::slotOpenFeedNewTab);
+  connect(feedsView_, &FeedsView::signalDoubleClicked, this, &MainWindow::slotGetFeed);
+  connect(feedsView_, &FeedsView::pressKeyUp, this, &MainWindow::slotFeedUpPressed);
+  connect(feedsView_, &FeedsView::pressKeyDown, this, &MainWindow::slotFeedDownPressed);
+  connect(feedsView_, &FeedsView::pressKeyHome, this, &MainWindow::slotFeedHomePressed);
+  connect(feedsView_, &FeedsView::pressKeyEnd, this, &MainWindow::slotFeedEndPressed);
+  connect(feedsView_, &FeedsView::pressKeyPageUp, this, &MainWindow::slotFeedPageUpPressed);
+  connect(feedsView_, &FeedsView::pressKeyPageDown, this, &MainWindow::slotFeedPageDownPressed);
+  connect(feedsView_, &FeedsView::signalDropped, this, &MainWindow::slotMoveIndex);
+  connect(feedsView_, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenuFeed);
 
-  connect(findFeeds_, SIGNAL(textChanged(QString)),
-          this, SLOT(slotFindFeeds(QString)));
-  connect(findFeeds_, SIGNAL(signalSelectFind()),
-          this, SLOT(slotSelectFind()));
-  connect(findFeeds_, SIGNAL(returnPressed()),
-          this, SLOT(slotSelectFind()));
-  connect(findFeeds_, SIGNAL(signalVisible(bool)),
-          this, SLOT(findFeedVisible(bool)));
+  connect(findFeeds_, &QLineEdit::textChanged, this, &MainWindow::slotFindFeeds);
+  connect(findFeeds_, &FindFeed::signalSelectFind, this, &MainWindow::slotSelectFind);
+  connect(findFeeds_, &QLineEdit::returnPressed, this, &MainWindow::slotSelectFind);
+  connect(findFeeds_, &FindFeed::signalVisible, this, &MainWindow::findFeedVisible);
 
-  connect(categoriesTree_, SIGNAL(itemPressed(QTreeWidgetItem*,int)),
-          this, SLOT(slotCategoriesClicked(QTreeWidgetItem*,int)));
-  connect(categoriesTree_, SIGNAL(signalMiddleClicked()),
-          this, SLOT(slotOpenCategoryNewTab()));
-  connect(categoriesTree_, SIGNAL(signalClearDeleted()),
-          this, SLOT(clearDeleted()));
-  connect(categoriesTree_, SIGNAL(signalMarkRead(QTreeWidgetItem*)),
-          this, SLOT(slotMarkReadCategory(QTreeWidgetItem*)));
-  connect(showCategoriesButton_, SIGNAL(clicked()),
-          this, SLOT(showNewsCategoriesTree()));
-  connect(feedsSplitter_, SIGNAL(splitterMoved(int,int)),
-          this, SLOT(feedsSplitterMoved(int,int)));
+  connect(categoriesTree_, &QTreeWidget::itemPressed,
+          this, [this](QTreeWidgetItem *item, int column) {
+    slotCategoriesClicked(item, column);
+  });
+  connect(categoriesTree_, &CategoriesTreeWidget::signalMiddleClicked,
+          this, &MainWindow::slotOpenCategoryNewTab);
+  connect(categoriesTree_, &CategoriesTreeWidget::signalClearDeleted, this, &MainWindow::clearDeleted);
+  connect(categoriesTree_, &CategoriesTreeWidget::signalMarkRead, this, &MainWindow::slotMarkReadCategory);
+  connect(showCategoriesButton_, &QAbstractButton::clicked, this, &MainWindow::showNewsCategoriesTree);
+  connect(feedsSplitter_, &QSplitter::splitterMoved, this, &MainWindow::feedsSplitterMoved);
 
   categoriesLabel_->installEventFilter(this);
   categoriesTree_->installEventFilter(this);
@@ -721,7 +710,7 @@ void MainWindow::createStatusBar()
 void MainWindow::createTray()
 {
   showWindowAct_ = new QAction(this);
-  connect(showWindowAct_, SIGNAL(triggered()), this, SLOT(showWindows()));
+  connect(showWindowAct_, &QAction::triggered, this, [this] { showWindows(); });
   QFont font = showWindowAct_->font();
   font.setBold(true);
   showWindowAct_->setFont(font);
@@ -731,10 +720,8 @@ void MainWindow::createTray()
         optionsAct_, exitAct_, this);
 
 #ifndef Q_OS_MAC
-  connect(trayIcon(), SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
-          this, SLOT(slotActivationTray(QSystemTrayIcon::ActivationReason)));
-  connect(this, SIGNAL(signalPlaceToTray()),
-          this, SLOT(slotPlaceToTray()), Qt::QueuedConnection);
+  connect(trayIcon(), &QSystemTrayIcon::activated, this, &MainWindow::slotActivationTray);
+  connect(this, &MainWindow::signalPlaceToTray, this, &MainWindow::slotPlaceToTray, Qt::QueuedConnection);
 #endif
 }
 
@@ -765,27 +752,21 @@ void MainWindow::createTabBarWidget()
   tabBarWidget_->setMinimumHeight(1);
   tabBarWidget_->setLayout(tabBarLayout);
 
-  connect(mainMenuButton_, SIGNAL(clicked()), this, SLOT(showMainMenu()));
-  connect(tabBar_, SIGNAL(closeTab(int)),
-          this, SLOT(slotCloseTab(int)));
+  connect(mainMenuButton_, &QAbstractButton::clicked, this, &MainWindow::showMainMenu);
+  connect(tabBar_, &TabBar::closeTab, this, &MainWindow::slotCloseTab);
   connect(tabBar_, &QTabBar::currentChanged, this, [this] {
     deferredDatabaseUi_.erase(DeferredDatabaseUi::FeedSelection);
     deferredDatabaseUi_.erase(DeferredDatabaseUi::TabSelection);
   });
-  connect(tabBar_, SIGNAL(currentChanged(int)),
-          this, SLOT(slotTabCurrentChanged(int)), Qt::QueuedConnection);
-  connect(tabBar_, SIGNAL(tabMoved(int,int)),
-          SLOT(slotTabMoved(int,int)));
-  connect(this, SIGNAL(signalSetCurrentTab(int,bool)),
-          SLOT(setCurrentTab(int,bool)), Qt::QueuedConnection);
+  connect(tabBar_, &QTabBar::currentChanged, this, &MainWindow::slotTabCurrentChanged, Qt::QueuedConnection);
+  connect(tabBar_, &QTabBar::tabMoved, this, &MainWindow::slotTabMoved);
+  connect(this, &MainWindow::signalSetCurrentTab, this, &MainWindow::setCurrentTab, Qt::QueuedConnection);
 
-  connect(closeTabAct_, SIGNAL(triggered()), tabBar_, SLOT(slotCloseTab()));
-  connect(closeOtherTabsAct_, SIGNAL(triggered()),
-          tabBar_, SLOT(slotCloseOtherTabs()));
-  connect(closeAllTabsAct_, SIGNAL(triggered()),
-          tabBar_, SLOT(slotCloseAllTab()));
-  connect(nextTabAct_, SIGNAL(triggered()), tabBar_, SLOT(slotNextTab()));
-  connect(prevTabAct_, SIGNAL(triggered()), tabBar_, SLOT(slotPrevTab()));
+  connect(closeTabAct_, &QAction::triggered, tabBar_, &TabBar::slotCloseTab);
+  connect(closeOtherTabsAct_, &QAction::triggered, tabBar_, &TabBar::slotCloseOtherTabs);
+  connect(closeAllTabsAct_, &QAction::triggered, tabBar_, &TabBar::slotCloseAllTab);
+  connect(nextTabAct_, &QAction::triggered, tabBar_, &TabBar::slotNextTab);
+  connect(prevTabAct_, &QAction::triggered, tabBar_, &TabBar::slotPrevTab);
 }
 
 void MainWindow::createCentralWidget()
@@ -837,61 +818,61 @@ void MainWindow::createActions()
   addAct_->setObjectName("newAct");
   addAct_->setIcon(QIcon(":/images/add"));
   this->addAction(addAct_);
-  connect(addAct_, SIGNAL(triggered()), this, SLOT(addFeed()));
+  connect(addAct_, &QAction::triggered, this, &MainWindow::addFeed);
 
   addFeedAct_ = new QAction(this);
   addFeedAct_->setObjectName("addFeedAct");
   addFeedAct_->setIcon(QIcon(":/images/feed"));
   this->addAction(addFeedAct_);
-  connect(addFeedAct_, SIGNAL(triggered()), this, SLOT(addFeed()));
+  connect(addFeedAct_, &QAction::triggered, this, &MainWindow::addFeed);
 
   addFeedTrayAct_ = new QAction(this);
   addFeedTrayAct_->setIcon(QIcon(":/images/feed"));
-  connect(addFeedTrayAct_, SIGNAL(triggered()), this, SLOT(addFeed()));
+  connect(addFeedTrayAct_, &QAction::triggered, this, &MainWindow::addFeed);
 
   addFolderAct_ = new QAction(this);
   addFolderAct_->setObjectName("addFolderAct");
   addFolderAct_->setIcon(QIcon(":/images/folder"));
   this->addAction(addFolderAct_);
-  connect(addFolderAct_, SIGNAL(triggered()), this, SLOT(addFolder()));
+  connect(addFolderAct_, &QAction::triggered, this, &MainWindow::addFolder);
 
   openFeedNewTabAct_ = new QAction(this);
   openFeedNewTabAct_->setObjectName("openNewTabAct");
   this->addAction(openFeedNewTabAct_);
-  connect(openFeedNewTabAct_, SIGNAL(triggered()), this, SLOT(slotOpenFeedNewTab()));
+  connect(openFeedNewTabAct_, &QAction::triggered, this, &MainWindow::slotOpenFeedNewTab);
 
   deleteFeedAct_ = new QAction(this);
   deleteFeedAct_->setObjectName("deleteFeedAct");
   deleteFeedAct_->setIcon(QIcon(":/images/delete"));
   this->addAction(deleteFeedAct_);
-  connect(deleteFeedAct_, SIGNAL(triggered()), this, SLOT(deleteItemFeedsTree()));
+  connect(deleteFeedAct_, &QAction::triggered, this, &MainWindow::deleteItemFeedsTree);
 
   importFeedsAct_ = new QAction(this);
   importFeedsAct_->setObjectName("importFeedsAct");
   importFeedsAct_->setIcon(QIcon(":/images/importFeeds"));
   this->addAction(importFeedsAct_);
-  connect(importFeedsAct_, SIGNAL(triggered()), this, SLOT(slotImportFeeds()));
+  connect(importFeedsAct_, &QAction::triggered, this, &MainWindow::slotImportFeeds);
 
   exportFeedsAct_ = new QAction(this);
   exportFeedsAct_->setObjectName("exportFeedsAct");
   exportFeedsAct_->setIcon(QIcon(":/images/exportFeeds"));
   this->addAction(exportFeedsAct_);
-  connect(exportFeedsAct_, SIGNAL(triggered()), this, SLOT(slotExportFeeds()));
+  connect(exportFeedsAct_, &QAction::triggered, this, &MainWindow::slotExportFeeds);
 
   createBackupAct_ = new QAction(this);
   createBackupAct_->setObjectName("createBackupAct");
   createBackupAct_->setIcon(QIcon(":/images/backup"));
   this->addAction(createBackupAct_);
-  connect(createBackupAct_, SIGNAL(triggered()), this, SLOT(createBackup()));
+  connect(createBackupAct_, &QAction::triggered, this, &MainWindow::createBackup);
 
   showMenuBarAct_ = new QAction(this);
   showMenuBarAct_->setCheckable(true);
-  connect(showMenuBarAct_, SIGNAL(triggered()), this, SLOT(showMenuBar()));
+  connect(showMenuBarAct_, &QAction::triggered, this, &MainWindow::showMenuBar);
 
   exitAct_ = new QAction(this);
   exitAct_->setObjectName("exitAct");
   this->addAction(exitAct_);
-  connect(exitAct_, SIGNAL(triggered()), this, SLOT(quitApp()));
+  connect(exitAct_, &QAction::triggered, this, &MainWindow::quitApp);
 
   mainToolbarToggle_ = new QAction(this);
   mainToolbarToggle_->setCheckable(true);
@@ -904,18 +885,14 @@ void MainWindow::createActions()
   statusBarToggle_ = new QAction(this);
   statusBarToggle_->setCheckable(true);
 
-  connect(feedsToolbarToggle_, SIGNAL(toggled(bool)),
-          feedsPanel_, SLOT(setVisible(bool)));
-  connect(categoriesPanelToggle_, SIGNAL(toggled(bool)),
-          categoriesWidget_, SLOT(setVisible(bool)));
-  connect(statusBarToggle_, SIGNAL(toggled(bool)),
-          statusBar(), SLOT(setVisible(bool)));
+  connect(feedsToolbarToggle_, &QAction::toggled, feedsPanel_, &QWidget::setVisible);
+  connect(categoriesPanelToggle_, &QAction::toggled, categoriesWidget_, &QWidget::setVisible);
+  connect(statusBarToggle_, &QAction::toggled, statusBar(), &QWidget::setVisible);
 
   customizeMainToolbarAct_ = new QAction(this);
   customizeMainToolbarAct_->setObjectName("customizeMainToolbarAct");
   customizeMainToolbarAct2_ = new QAction(this);
-  connect(customizeMainToolbarAct2_, SIGNAL(triggered()),
-          this, SLOT(customizeMainToolbar()));
+  connect(customizeMainToolbarAct2_, &QAction::triggered, this, &MainWindow::customizeMainToolbar);
 
   toolBarLockAct_ = new QAction(this);
   toolBarLockAct_->setCheckable(true);
@@ -941,8 +918,7 @@ void MainWindow::createActions()
   layoutToggle_->setObjectName("layoutToggle");
   layoutToggle_->setIcon(QIcon(":/images/layout_classic"));
   this->addAction(layoutToggle_);
-  connect(layoutToggle_, SIGNAL(triggered()),
-          this, SLOT(setNewsLayout()));
+  connect(layoutToggle_, &QAction::triggered, this, QOverload<>::of(&MainWindow::setNewsLayout));
 
   topBrowserPositionAct_ = new QAction(this);
   topBrowserPositionAct_->setCheckable(true);
@@ -966,18 +942,18 @@ void MainWindow::createActions()
   printAct_->setObjectName("printAct");
   printAct_->setIcon(QIcon(":/images/printer"));
   this->addAction(printAct_);
-  connect(printAct_, SIGNAL(triggered()), this, SLOT(slotPrint()));
+  connect(printAct_, &QAction::triggered, this, &MainWindow::slotPrint);
   printPreviewAct_ = new QAction(this);
   printPreviewAct_->setObjectName("printPreviewAct");
   printPreviewAct_->setIcon(QIcon(":/images/printer"));
   this->addAction(printPreviewAct_);
-  connect(printPreviewAct_, SIGNAL(triggered()), this, SLOT(slotPrintPreview()));
+  connect(printPreviewAct_, &QAction::triggered, this, &MainWindow::slotPrintPreview);
 
   savePageAsAct_ = new QAction(this);
   savePageAsAct_->setObjectName("savePageAsAct");
   savePageAsAct_->setIcon(QIcon(":/images/save_as"));
   this->addAction(savePageAsAct_);
-  connect(savePageAsAct_, SIGNAL(triggered()), this, SLOT(slotSavePageAs()));
+  connect(savePageAsAct_, &QAction::triggered, this, &MainWindow::slotSavePageAs);
 
   zoomInAct_ = new QAction(this);
   zoomInAct_->setObjectName("zoomInAct");
@@ -995,48 +971,44 @@ void MainWindow::createActions()
   updateFeedAct_->setObjectName("updateFeedAct");
   updateFeedAct_->setIcon(QIcon(":/images/updateFeed"));
   this->addAction(updateFeedAct_);
-  connect(updateFeedAct_, SIGNAL(triggered()), this, SLOT(slotGetFeed()));
+  connect(updateFeedAct_, &QAction::triggered, this, &MainWindow::slotGetFeed);
 
   updateAllFeedsAct_ = new QAction(this);
   updateAllFeedsAct_->setObjectName("updateAllFeedsAct");
   updateAllFeedsAct_->setIcon(QIcon(":/images/updateAllFeeds"));
   this->addAction(updateAllFeedsAct_);
-  connect(updateAllFeedsAct_, SIGNAL(triggered()), this, SLOT(slotGetAllFeeds()));
+  connect(updateAllFeedsAct_, &QAction::triggered, this, &MainWindow::slotGetAllFeeds);
 
   stopUpdateAct_ = new QAction(this);
   stopUpdateAct_->setObjectName("stopUpdateAct");
   stopUpdateAct_->setIcon(QIcon(":/images/close"));
   this->addAction(stopUpdateAct_);
-  connect(stopUpdateAct_, SIGNAL(triggered()), this, SLOT(slotStopUpdate()));
+  connect(stopUpdateAct_, &QAction::triggered, this, &MainWindow::slotStopUpdate);
 
   markAllFeedsRead_ = new QAction(this);
   markAllFeedsRead_->setObjectName("markAllFeedRead");
   markAllFeedsRead_->setIcon(QIcon(":/images/markReadAll"));
   this->addAction(markAllFeedsRead_);
-  connect(markAllFeedsRead_, SIGNAL(triggered()), this, SIGNAL(signalMarkAllFeedsRead()));
+  connect(markAllFeedsRead_, &QAction::triggered, this, &MainWindow::signalMarkAllFeedsRead);
 
   indentationFeedsTreeAct_ = new QAction(this);
   indentationFeedsTreeAct_->setCheckable(true);
-  connect(indentationFeedsTreeAct_, SIGNAL(triggered()),
-          this, SLOT(slotIndentationFeedsTree()));
+  connect(indentationFeedsTreeAct_, &QAction::triggered, this, &MainWindow::slotIndentationFeedsTree);
 
   sortedByTitleFeedsTreeAct_ = new QAction(this);
-  connect(sortedByTitleFeedsTreeAct_, SIGNAL(triggered()),
-          this, SLOT(sortedByTitleFeedsTree()));
+  connect(sortedByTitleFeedsTreeAct_, &QAction::triggered, this, &MainWindow::sortedByTitleFeedsTree);
 
   collapseAllFoldersAct_ = new QAction(this);
   collapseAllFoldersAct_->setObjectName("collapseAllFolderAct");
   collapseAllFoldersAct_->setIcon(QIcon(":/images/bulletMinus"));
   this->addAction(collapseAllFoldersAct_);
-  connect(collapseAllFoldersAct_, SIGNAL(triggered()),
-          feedsView_, SLOT(collapseAll()));
+  connect(collapseAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::collapseAll);
 
   expandAllFoldersAct_ = new QAction(this);
   expandAllFoldersAct_->setObjectName("expandAllFolderAct");
   expandAllFoldersAct_->setIcon(QIcon(":/images/bulletPlus"));
   this->addAction(expandAllFoldersAct_);
-  connect(expandAllFoldersAct_, SIGNAL(triggered()),
-          feedsView_, SLOT(expandAll()));
+  connect(expandAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::expandAll);
 
   markNewsRead_ = new QAction(this);
   markNewsRead_->setObjectName("markNewsRead");
@@ -1052,19 +1024,19 @@ void MainWindow::createActions()
   showDownloadManagerAct_->setObjectName("showDownloadManagerAct");
   showDownloadManagerAct_->setIcon(QIcon(":/images/download"));
   this->addAction(showDownloadManagerAct_);
-  connect(showDownloadManagerAct_, SIGNAL(triggered()), this, SLOT(showDownloadManager()));
+  connect(showDownloadManagerAct_, &QAction::triggered, this, [this] { showDownloadManager(); });
 
   showCleanUpWizardAct_ = new QAction(this);
   showCleanUpWizardAct_->setObjectName("showCleanUpWizardAct");
   showCleanUpWizardAct_->setIcon(QIcon(":/images/cleanup"));
   this->addAction(showCleanUpWizardAct_);
-  connect(showCleanUpWizardAct_, SIGNAL(triggered()), this, SLOT(cleanUp()));
+  connect(showCleanUpWizardAct_, &QAction::triggered, this, &MainWindow::cleanUp);
 
   setNewsFiltersAct_ = new QAction(this);
   setNewsFiltersAct_->setObjectName("setNewsFiltersAct");
   setNewsFiltersAct_->setIcon(QIcon(":/images/filterOff"));
   this->addAction(setNewsFiltersAct_);
-  connect(setNewsFiltersAct_, SIGNAL(triggered()), this, SLOT(showNewsFiltersDlg()));
+  connect(setNewsFiltersAct_, &QAction::triggered, this, [this] { showNewsFiltersDlg(); });
   bulkFeedSettingsAct_ = new QAction(this);
   bulkFeedSettingsAct_->setObjectName("bulkFeedSettingsAct");
   this->addAction(bulkFeedSettingsAct_);
@@ -1096,13 +1068,13 @@ void MainWindow::createActions()
   setFilterNewsAct_->setObjectName("setFilterNewsAct");
   setFilterNewsAct_->setIcon(QIcon(":/images/filterOff"));
   this->addAction(setFilterNewsAct_);
-  connect(setFilterNewsAct_, SIGNAL(triggered()), this, SLOT(showFilterRulesDlg()));
+  connect(setFilterNewsAct_, &QAction::triggered, this, &MainWindow::showFilterRulesDlg);
 
   optionsAct_ = new QAction(this);
   optionsAct_->setObjectName("optionsAct");
   optionsAct_->setIcon(QIcon(":/images/options"));
   this->addAction(optionsAct_);
-  connect(optionsAct_, SIGNAL(triggered()), this, SLOT(showOptionDlg()));
+  connect(optionsAct_, &QAction::triggered, this, [this] { showOptionDlg(); });
 
   feedsFilter_ = new QAction(this);
   feedsFilter_->setObjectName("feedsFilter");
@@ -1157,8 +1129,7 @@ void MainWindow::createActions()
 
   newsSortByColumnGroup_ = new QActionGroup(this);
   newsSortByColumnGroup_->setExclusive(true);
-  connect(newsSortByColumnGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setNewsSortByColumn()));
+  connect(newsSortByColumnGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
 
   newsSortOrderGroup_ = new QActionGroup(this);
   newsSortOrderGroup_->setExclusive(true);
@@ -1170,20 +1141,19 @@ void MainWindow::createActions()
     newsSortOrderAct->setCheckable(true);
     newsSortOrderGroup_->addAction(newsSortOrderAct);
   }
-  connect(newsSortOrderGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setNewsSortByColumn()));
+  connect(newsSortOrderGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
 
   aboutAct_ = new QAction(this);
   aboutAct_->setObjectName("AboutAct_");
-  connect(aboutAct_, SIGNAL(triggered()), this, SLOT(slotShowAboutDlg()));
+  connect(aboutAct_, &QAction::triggered, this, &MainWindow::slotShowAboutDlg);
 
   updateAppAct_ = new QAction(this);
   updateAppAct_->setObjectName("UpdateApp_");
-  connect(updateAppAct_, SIGNAL(triggered()), this, SLOT(slotShowUpdateAppDlg()));
+  connect(updateAppAct_, &QAction::triggered, this, &MainWindow::slotShowUpdateAppDlg);
 
   reportProblemAct_ = new QAction(this);
   reportProblemAct_->setObjectName("reportProblemAct_");
-  connect(reportProblemAct_, SIGNAL(triggered()), this, SLOT(slotReportProblem()));
+  connect(reportProblemAct_, &QAction::triggered, this, &MainWindow::slotReportProblem);
 
   openInExternalBrowserAct_ = new QAction(this);
   openInExternalBrowserAct_->setObjectName("openInExternalBrowserAct");
@@ -1211,28 +1181,28 @@ void MainWindow::createActions()
   restoreLastNewsAct_->setObjectName("restoreLastNewsAct");
   restoreLastNewsAct_->setIcon(QIcon(":/images/images/arrow_turn_left.png"));
   this->addAction(restoreLastNewsAct_);
-  connect(restoreLastNewsAct_, SIGNAL(triggered()), this, SLOT(restoreLastNews()));
+  connect(restoreLastNewsAct_, &QAction::triggered, this, &MainWindow::restoreLastNews);
 
   markFeedRead_ = new QAction(this);
   markFeedRead_->setObjectName("markFeedRead");
   markFeedRead_->setIcon(QIcon(":/images/markRead"));
   this->addAction(markFeedRead_);
-  connect(markFeedRead_, SIGNAL(triggered()), this, SLOT(markFeedRead()));
+  connect(markFeedRead_, &QAction::triggered, this, &MainWindow::markFeedRead);
 
   feedProperties_ = new QAction(this);
   feedProperties_->setObjectName("feedProperties");
   feedProperties_->setIcon(QIcon(":/images/preferencesFeed"));
   this->addAction(feedProperties_);
-  connect(feedProperties_, SIGNAL(triggered()), this, SLOT(showFeedPropertiesDlg()));
+  connect(feedProperties_, &QAction::triggered, this, &MainWindow::showFeedPropertiesDlg);
 
   feedKeyUpAct_ = new QAction(this);
   feedKeyUpAct_->setObjectName("feedKeyUp");
-  connect(feedKeyUpAct_, SIGNAL(triggered()), this, SLOT(slotFeedPrevious()));
+  connect(feedKeyUpAct_, &QAction::triggered, this, &MainWindow::slotFeedPrevious);
   this->addAction(feedKeyUpAct_);
 
   feedKeyDownAct_ = new QAction(this);
   feedKeyDownAct_->setObjectName("feedKeyDownAct");
-  connect(feedKeyDownAct_, SIGNAL(triggered()), this, SLOT(slotFeedNext()));
+  connect(feedKeyDownAct_, &QAction::triggered, this, &MainWindow::slotFeedNext);
   this->addAction(feedKeyDownAct_);
 
   newsKeyUpAct_ = new QAction(this);
@@ -1248,8 +1218,7 @@ void MainWindow::createActions()
     allWorkspacesAct_ = new QAction(this);
     allWorkspacesAct_->setObjectName("allWorkspacesAct");
     allWorkspacesAct_->setCheckable(true);
-    connect(allWorkspacesAct_, SIGNAL(triggered()),
-            this, SLOT(setAllWorkspaces()));
+    connect(allWorkspacesAct_, &QAction::triggered, this, &MainWindow::setAllWorkspaces);
   }
 #endif
   newsKeyPageUpAct_->setObjectName("newsKeyPageUpAct");
@@ -1260,18 +1229,18 @@ void MainWindow::createActions()
 
   switchFocusAct_ = new QAction(this);
   switchFocusAct_->setObjectName("switchFocusAct");
-  connect(switchFocusAct_, SIGNAL(triggered()), this, SLOT(slotSwitchFocus()));
+  connect(switchFocusAct_, &QAction::triggered, this, &MainWindow::slotSwitchFocus);
   this->addAction(switchFocusAct_);
   switchFocusPrevAct_ = new QAction(this);
   switchFocusPrevAct_->setObjectName("switchFocusPrevAct");
-  connect(switchFocusPrevAct_, SIGNAL(triggered()), this, SLOT(slotSwitchPrevFocus()));
+  connect(switchFocusPrevAct_, &QAction::triggered, this, &MainWindow::slotSwitchPrevFocus);
   this->addAction(switchFocusPrevAct_);
 
   feedsWidgetVisibleAct_ = new QAction(this);
   feedsWidgetVisibleAct_->setObjectName("visibleFeedsWidgetAct");
   feedsWidgetVisibleAct_->setCheckable(true);
-  connect(feedsWidgetVisibleAct_, SIGNAL(triggered()), this, SLOT(slotVisibledFeedsWidget()));
-  connect(pushButtonNull_, SIGNAL(clicked()), feedsWidgetVisibleAct_, SLOT(trigger()));
+  connect(feedsWidgetVisibleAct_, &QAction::triggered, this, &MainWindow::slotVisibledFeedsWidget);
+  connect(pushButtonNull_, &QAbstractButton::clicked, feedsWidgetVisibleAct_, &QAction::trigger);
   this->addAction(feedsWidgetVisibleAct_);
 
   showUnreadCount_ = new QAction(this);
@@ -1286,19 +1255,17 @@ void MainWindow::createActions()
 
   openDescriptionNewsAct_ = new QAction(this);
   openDescriptionNewsAct_->setObjectName("openDescriptionNewsAct");
-  connect(openDescriptionNewsAct_, SIGNAL(triggered()),
-          this, SLOT(slotOpenNewsWebView()));
+  connect(openDescriptionNewsAct_, &QAction::triggered, this, &MainWindow::slotOpenNewsWebView);
   this->addAction(openDescriptionNewsAct_);
 
   findTextAct_ = new QAction(this);
   findTextAct_->setObjectName("findTextAct");
-  connect(findTextAct_, SIGNAL(triggered()),
-          this, SLOT(findText()));
+  connect(findTextAct_, &QAction::triggered, this, &MainWindow::findText);
   this->addAction(findTextAct_);
 
   placeToTrayAct_ = new QAction(this);
   placeToTrayAct_->setObjectName("placeToTrayAct");
-  connect(placeToTrayAct_, SIGNAL(triggered()), this, SLOT(slotPlaceToTray()));
+  connect(placeToTrayAct_, &QAction::triggered, this, &MainWindow::slotPlaceToTray);
   this->addAction(placeToTrayAct_);
 
   findFeedAct_ = new QAction(this);
@@ -1307,22 +1274,19 @@ void MainWindow::createActions()
   findFeedAct_->setChecked(false);
   findFeedAct_->setIcon(QIcon(":/images/images/findFeed.png"));
   this->addAction(findFeedAct_);
-  connect(findFeedAct_, SIGNAL(triggered(bool)),
-          this, SLOT(findFeedVisible(bool)));
+  connect(findFeedAct_, &QAction::triggered, this, &MainWindow::findFeedVisible);
 
   fullScreenAct_ = new QAction(this);
   fullScreenAct_->setObjectName("fullScreenAct");
   fullScreenAct_->setIcon(QIcon(":/images/images/fullScreen.png"));
   this->addAction(fullScreenAct_);
-  connect(fullScreenAct_, SIGNAL(triggered()),
-          this, SLOT(setFullScreen()));
+  connect(fullScreenAct_, &QAction::triggered, this, &MainWindow::setFullScreen);
 
   stayOnTopAct_ = new QAction(this);
   stayOnTopAct_->setObjectName("stayOnTopAct");
   stayOnTopAct_->setCheckable(true);
   this->addAction(stayOnTopAct_);
-  connect(stayOnTopAct_, SIGNAL(triggered()),
-          this, SLOT(setStayOnTop()));
+  connect(stayOnTopAct_, &QAction::triggered, this, &MainWindow::setStayOnTop);
 
   newsLabelGroup_ = new QActionGroup(this);
   newsLabelGroup_->setExclusive(false);
@@ -1351,16 +1315,13 @@ void MainWindow::createActions()
     newsLabelAction_->setToolTip(newsLabelGroup_->actions().at(0)->text());
     newsLabelAction_->setData(newsLabelGroup_->actions().at(0)->data());
   }
-  connect(newsLabelAction_, SIGNAL(triggered()),
-          this, SLOT(setDefaultLabelNews()));
-  connect(newsLabelGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setLabelNews(QAction*)));
+  connect(newsLabelAction_, &QAction::triggered, this, &MainWindow::setDefaultLabelNews);
+  connect(newsLabelGroup_, &QActionGroup::triggered, this, &MainWindow::setLabelNews);
 
   showLabelsMenuAct_ = new QAction(this);
   showLabelsMenuAct_->setObjectName("showLabelsMenuAct");
   this->addAction(showLabelsMenuAct_);
-  connect(showLabelsMenuAct_, SIGNAL(triggered()),
-          this, SLOT(slotShowLabelsMenu()));
+  connect(showLabelsMenuAct_, &QAction::triggered, this, &MainWindow::slotShowLabelsMenu);
 
   closeTabAct_ = new QAction(this);
   closeTabAct_->setObjectName("closeTabAct");
@@ -1385,65 +1346,61 @@ void MainWindow::createActions()
   reduceNewsListAct_ = new QAction(this);
   reduceNewsListAct_->setObjectName("reduceNewsListAct");
   this->addAction(reduceNewsListAct_);
-  connect(reduceNewsListAct_, SIGNAL(triggered()),
-          this, SLOT(reduceNewsList()));
+  connect(reduceNewsListAct_, &QAction::triggered, this, &MainWindow::reduceNewsList);
   increaseNewsListAct_ = new QAction(this);
   increaseNewsListAct_->setObjectName("increaseNewsListAct");
   this->addAction(increaseNewsListAct_);
-  connect(increaseNewsListAct_, SIGNAL(triggered()),
-          this, SLOT(increaseNewsList()));
+  connect(increaseNewsListAct_, &QAction::triggered, this, &MainWindow::increaseNewsList);
 
   nextUnreadNewsAct_ = new QAction(this);
   nextUnreadNewsAct_->setObjectName("nextUnreadNewsAct");
   nextUnreadNewsAct_->setIcon(QIcon(":/images/moveDown"));
   this->addAction(nextUnreadNewsAct_);
-  connect(nextUnreadNewsAct_, SIGNAL(triggered()), this, SLOT(nextUnreadNews()));
+  connect(nextUnreadNewsAct_, &QAction::triggered, this, &MainWindow::nextUnreadNews);
   prevUnreadNewsAct_ = new QAction(this);
   prevUnreadNewsAct_->setObjectName("prevUnreadNewsAct");
   prevUnreadNewsAct_->setIcon(QIcon(":/images/moveUp"));
   this->addAction(prevUnreadNewsAct_);
-  connect(prevUnreadNewsAct_, SIGNAL(triggered()), this, SLOT(prevUnreadNews()));
+  connect(prevUnreadNewsAct_, &QAction::triggered, this, &MainWindow::prevUnreadNews);
 
   openHomeFeedAct_ = new QAction(this);
   openHomeFeedAct_->setObjectName("openHomeFeedsAct");
   openHomeFeedAct_->setIcon(QIcon(":/images/homePage"));
   this->addAction(openHomeFeedAct_);
-  connect(openHomeFeedAct_, SIGNAL(triggered()), this, SLOT(slotOpenHomeFeed()));
+  connect(openHomeFeedAct_, &QAction::triggered, this, &MainWindow::slotOpenHomeFeed);
 
   copyLinkAct_ = new QAction(this);
   copyLinkAct_->setObjectName("copyLinkAct");
   copyLinkAct_->setIcon(QIcon(":/images/copy"));
   this->addAction(copyLinkAct_);
-  connect(copyLinkAct_, SIGNAL(triggered()), this, SLOT(slotCopyLinkNews()));
+  connect(copyLinkAct_, &QAction::triggered, this, &MainWindow::slotCopyLinkNews);
 
   pageUpWebViewAct_ = new QAction(this);
   pageUpWebViewAct_->setObjectName("pageUpWebViewAct");
   this->addAction(pageUpWebViewAct_);
-  connect(pageUpWebViewAct_, SIGNAL(triggered()),
-          this, SLOT(slotPageUpWebView()));
+  connect(pageUpWebViewAct_, &QAction::triggered, this, &MainWindow::slotPageUpWebView);
   pageDownWebViewAct_ = new QAction(this);
   pageDownWebViewAct_->setObjectName("pageDownWebViewAct");
   this->addAction(pageDownWebViewAct_);
-  connect(pageDownWebViewAct_, SIGNAL(triggered()),
-          this, SLOT(slotPageDownWebView()));
+  connect(pageDownWebViewAct_, &QAction::triggered, this, &MainWindow::slotPageDownWebView);
 
   nextFolderAct_ = new QAction(this);
   nextFolderAct_->setObjectName("nextFolderAct");
   this->addAction(nextFolderAct_);
-  connect(nextFolderAct_, SIGNAL(triggered()), this, SLOT(slotNextFolder()));
+  connect(nextFolderAct_, &QAction::triggered, this, &MainWindow::slotNextFolder);
   prevFolderAct_ = new QAction(this);
   prevFolderAct_->setObjectName("prevFolderAct");
   this->addAction(prevFolderAct_);
-  connect(prevFolderAct_, SIGNAL(triggered()), this, SLOT(slotPrevFolder()));
+  connect(prevFolderAct_, &QAction::triggered, this, &MainWindow::slotPrevFolder);
   expandFolderAct_ = new QAction(this);
   expandFolderAct_->setObjectName("expandFolderAct");
   this->addAction(expandFolderAct_);
-  connect(expandFolderAct_, SIGNAL(triggered()), this, SLOT(slotExpandFolder()));
+  connect(expandFolderAct_, &QAction::triggered, this, &MainWindow::slotExpandFolder);
 
   settingPageLabelsAct_ = new QAction(this);
   settingPageLabelsAct_->setObjectName("settingPageLabelsAct");
   this->addAction(settingPageLabelsAct_);
-  connect(settingPageLabelsAct_, SIGNAL(triggered()), this, SLOT(showSettingPageLabels()));
+  connect(settingPageLabelsAct_, &QAction::triggered, this, &MainWindow::showSettingPageLabels);
 
   shareGroup_ = new QActionGroup(this);
   shareGroup_->setExclusive(false);
@@ -1484,30 +1441,19 @@ void MainWindow::createActions()
   connect(shareGroup_, &QActionGroup::triggered,
           this, &MainWindow::slotShareNews);
 
-  connect(markNewsRead_, SIGNAL(triggered()),
-          this, SLOT(markNewsRead()));
-  connect(markAllNewsRead_, SIGNAL(triggered()),
-          this, SLOT(markAllNewsRead()));
-  connect(markStarAct_, SIGNAL(triggered()),
-          this, SLOT(markNewsStar()));
-  connect(deleteNewsAct_, SIGNAL(triggered()),
-          this, SLOT(deleteNews()));
-  connect(deleteAllNewsAct_, SIGNAL(triggered()),
-          this, SLOT(deleteAllNewsList()));
-  connect(restoreNewsAct_, SIGNAL(triggered()),
-          this, SLOT(restoreNews()));
+  connect(markNewsRead_, &QAction::triggered, this, &MainWindow::markNewsRead);
+  connect(markAllNewsRead_, &QAction::triggered, this, &MainWindow::markAllNewsRead);
+  connect(markStarAct_, &QAction::triggered, this, &MainWindow::markNewsStar);
+  connect(deleteNewsAct_, &QAction::triggered, this, &MainWindow::deleteNews);
+  connect(deleteAllNewsAct_, &QAction::triggered, this, &MainWindow::deleteAllNewsList);
+  connect(restoreNewsAct_, &QAction::triggered, this, &MainWindow::restoreNews);
 
-  connect(newsKeyUpAct_, SIGNAL(triggered()),
-          this, SLOT(slotNewsUpPressed()));
-  connect(newsKeyDownAct_, SIGNAL(triggered()),
-          this, SLOT(slotNewsDownPressed()));
-  connect(newsKeyPageUpAct_, SIGNAL(triggered()),
-          this, SLOT(slotNewsPageUpPressed()));
-  connect(newsKeyPageDownAct_, SIGNAL(triggered()),
-          this, SLOT(slotNewsPageDownPressed()));
+  connect(newsKeyUpAct_, &QAction::triggered, this, &MainWindow::slotNewsUpPressed);
+  connect(newsKeyDownAct_, &QAction::triggered, this, &MainWindow::slotNewsDownPressed);
+  connect(newsKeyPageUpAct_, &QAction::triggered, this, &MainWindow::slotNewsPageUpPressed);
+  connect(newsKeyPageDownAct_, &QAction::triggered, this, &MainWindow::slotNewsPageDownPressed);
 
-  connect(openInExternalBrowserAct_, SIGNAL(triggered()),
-          this, SLOT(openInExternalBrowserNews()));
+  connect(openInExternalBrowserAct_, &QAction::triggered, this, &MainWindow::openInExternalBrowserNews);
 }
 // ---------------------------------------------------------------------------
 void MainWindow::createShortcut()
@@ -1873,28 +1819,23 @@ void MainWindow::createMenu()
   menuBar()->addMenu(toolsMenu_);
   menuBar()->addMenu(helpMenu_);
 
-  connect(customizeToolbarGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(showCustomizeToolbarDlg(QAction*)));
-  connect(styleGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setStyleApp(QAction*)));
-  connect(browserPositionGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setBrowserPosition(QAction*)));
-  connect(feedsFilterGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setFeedsFilter()));
-  connect(feedsFilter_, SIGNAL(triggered()), this, SLOT(slotFeedsFilter()));
-  connect(feedsColumnsGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(feedsColumnVisible(QAction*)));
-  connect(feedMenu_, SIGNAL(aboutToShow()), this, SLOT(slotFeedMenuShow()));
-  connect(newsLabelMenu_, SIGNAL(aboutToShow()), this, SLOT(getLabelNews()));
-  connect(shareMenuAct_, SIGNAL(triggered()), this, SLOT(showMenuShareNews()));
-  connect(newsFilterGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setNewsFilter(QAction*)));
-  connect(newsFilter_, SIGNAL(triggered()), this, SLOT(slotNewsFilter()));
-  connect(newsSortByMenu_, SIGNAL(aboutToShow()),
-          this, SLOT(showNewsSortByMenu()));
-  connect(newsMenu_, SIGNAL(aboutToShow()), this, SLOT(showNewsMenu()));
-  connect(browserZoomGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(browserZoom(QAction*)));
+  connect(customizeToolbarGroup_, &QActionGroup::triggered, this, &MainWindow::showCustomizeToolbarDlg);
+  connect(styleGroup_, &QActionGroup::triggered, this, &MainWindow::setStyleApp);
+  connect(browserPositionGroup_, &QActionGroup::triggered, this, &MainWindow::setBrowserPosition);
+  connect(feedsFilterGroup_, &QActionGroup::triggered, this, [this] { setFeedsFilter(); });
+  connect(feedsFilter_, &QAction::triggered, this, &MainWindow::slotFeedsFilter);
+  connect(feedsColumnsGroup_, &QActionGroup::triggered, this, &MainWindow::feedsColumnVisible);
+  connect(feedMenu_, &QMenu::aboutToShow, this, &MainWindow::slotFeedMenuShow);
+  connect(newsLabelMenu_, &QMenu::aboutToShow, this, &MainWindow::getLabelNews);
+  connect(shareMenuAct_, &QAction::triggered, this, &MainWindow::showMenuShareNews);
+  connect(newsFilterGroup_, &QActionGroup::triggered,
+          this, [this](QAction *action) {
+    setNewsFilter(action);
+  });
+  connect(newsFilter_, &QAction::triggered, this, &MainWindow::slotNewsFilter);
+  connect(newsSortByMenu_, &QMenu::aboutToShow, this, &MainWindow::showNewsSortByMenu);
+  connect(newsMenu_, &QMenu::aboutToShow, this, &MainWindow::showNewsMenu);
+  connect(browserZoomGroup_, &QActionGroup::triggered, this, &MainWindow::browserZoom);
 }
 // ---------------------------------------------------------------------------
 void MainWindow::createToolBar()
@@ -1905,13 +1846,11 @@ void MainWindow::createToolBar()
   mainToolbar_->setContextMenuPolicy(Qt::CustomContextMenu);
   addToolBar(mainToolbar_);
 
-  connect(mainToolbarToggle_, SIGNAL(toggled(bool)),
-          mainToolbar_, SLOT(setVisible(bool)));
-  connect(mainToolbar_, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(showContextMenuToolBar(const QPoint &)));
+  connect(mainToolbarToggle_, &QAction::toggled, mainToolbar_, &QWidget::setVisible);
+  connect(mainToolbar_, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenuToolBar);
 
-  connect(toolBarLockAct_, SIGNAL(toggled(bool)), this, SLOT(lockMainToolbar(bool)));
-  connect(toolBarHideAct_, SIGNAL(triggered()), this, SLOT(hideMainToolbar()));
+  connect(toolBarLockAct_, &QAction::toggled, this, &MainWindow::lockMainToolbar);
+  connect(toolBarHideAct_, &QAction::triggered, this, &MainWindow::hideMainToolbar);
 }
 
 /** @brief Load settings from ini-file
@@ -2099,8 +2038,7 @@ void MainWindow::loadSettings()
     classicLayoutAct_->setChecked(true);
     layoutToggle_->setIcon(QIcon(":/images/layout_classic"));
   }
-  connect(layoutGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(setNewsLayout(QAction*)));
+  connect(layoutGroup_, &QActionGroup::triggered, this, QOverload<QAction*>::of(&MainWindow::setNewsLayout));
 
   browserPosition_ = settings.value("browserPosition", BOTTOM_POSITION).toInt();
   switch (browserPosition_) {
@@ -3739,8 +3677,7 @@ void MainWindow::initUpdateFeeds()
   updateScheduleClock_.start();
 
   updateFeedsTimer_ = new QTimer(this);
-  connect(updateFeedsTimer_, SIGNAL(timeout()),
-          this, SLOT(slotGetFeedsTimer()));
+  connect(updateFeedsTimer_, &QTimer::timeout, this, &MainWindow::slotGetFeedsTimer);
   updateFeedsTimer_->start(1000);
 }
 // ----------------------------------------------------------------------------
@@ -5385,8 +5322,8 @@ void MainWindow::showFilterRulesDlg()
 void MainWindow::slotUpdateAppCheck()
 {
   updateAppDialog_ = new UpdateAppDialog(this, false);
-  connect(updateAppDialog_, SIGNAL(signalNewVersion(QString)),
-          this, SLOT(slotNewVersion(QString)), Qt::QueuedConnection);
+  connect(updateAppDialog_, &UpdateAppDialog::signalNewVersion,
+          this, &MainWindow::slotNewVersion, Qt::QueuedConnection);
 }
 // ----------------------------------------------------------------------------
 void MainWindow::slotNewVersion(const QString &newVersion)
@@ -5398,8 +5335,7 @@ void MainWindow::slotNewVersion(const QString &newVersion)
   if (!newVersion.isEmpty()) {
     trayIconController_->showMessage(tr("Check for updates"),
                                      tr("A new version of %1 is available").arg(QGuiApplication::applicationDisplayName()));
-    connect(trayIcon(), SIGNAL(messageClicked()),
-            this, SLOT(slotShowUpdateAppDlg()));
+    connect(trayIcon(), &QSystemTrayIcon::messageClicked, this, &MainWindow::slotShowUpdateAppDlg);
   }
 }
 
@@ -6235,19 +6171,17 @@ void MainWindow::showNotification(bool bShowRecentNews/*=false*/)
     clearNotification();
   }
 
-  connect(notificationWidget, SIGNAL(signalShow()), this, SLOT(showWindows()));
-  connect(notificationWidget, SIGNAL(signalClose()),
-          this, SLOT(deleteNotification()));
-  connect(notificationWidget, SIGNAL(signalOpenNews(int, int)),
-          this, SLOT(slotOpenNew(int, int)));
-  connect(notificationWidget, SIGNAL(signalOpenExternalBrowser(QUrl)),
-          this, SLOT(slotOpenNewBrowser(QUrl)));
-  connect(notificationWidget, SIGNAL(signalMarkRead(int,int,int)),
-          this, SLOT(slotMarkReadNewsInNotification(int,int,int)));
-  connect(notificationWidget, SIGNAL(signalDeleteNews(int,int)),
-          this, SLOT(slotDeleteNewsInNotification(int,int)));
-  connect(notificationWidget, SIGNAL(signalMarkAllRead()),
-          this, SLOT(slotMarkAllReadNewsInNotification()));
+  connect(notificationWidget, &NotificationWidget::signalShow, this, [this] { showWindows(); });
+  connect(notificationWidget, &NotificationWidget::signalClose, this, &MainWindow::deleteNotification);
+  connect(notificationWidget, &NotificationWidget::signalOpenNews, this, &MainWindow::slotOpenNew);
+  connect(notificationWidget, &NotificationWidget::signalOpenExternalBrowser,
+          this, &MainWindow::slotOpenNewBrowser);
+  connect(notificationWidget, &NotificationWidget::signalMarkRead,
+          this, &MainWindow::slotMarkReadNewsInNotification);
+  connect(notificationWidget, &NotificationWidget::signalDeleteNews,
+          this, &MainWindow::slotDeleteNewsInNotification);
+  connect(notificationWidget, &NotificationWidget::signalMarkAllRead,
+          this, &MainWindow::slotMarkAllReadNewsInNotification);
 
   notificationWidget->show();
 }

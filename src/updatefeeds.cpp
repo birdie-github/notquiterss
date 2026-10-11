@@ -22,6 +22,7 @@
 #include "feedhealth.h"
 #include <QTextCodec>
 #include "updatefeeds.h"
+#include "addfeedwizard.h"
 
 #include "mainapplication.h"
 #include "database.h"
@@ -78,19 +79,16 @@ private:
   QSqlDatabase database_;
 };
 
-void connectReadState(FeedReadState *state, QObject *window)
+void connectReadState(FeedReadState *state, MainWindow *window)
 {
-  QObject::connect(state, SIGNAL(signalRecountCategoryCounts(CategoryCounts)),
-                   window, SLOT(slotRecountCategoryCounts(CategoryCounts)),
-                   Qt::QueuedConnection);
-  QObject::connect(state, SIGNAL(feedCountsUpdate(FeedCountStruct)),
-                   window, SLOT(slotFeedCountsUpdate(FeedCountStruct)));
-  QObject::connect(state, SIGNAL(signalFeedsViewportUpdate()),
-                   window, SLOT(slotFeedsViewportUpdate()));
-  QObject::connect(state, SIGNAL(signalRefreshInfoTray(int,int)),
-                   window, SLOT(slotRefreshInfoTray(int,int)));
-  QObject::connect(state, SIGNAL(signalSetFeedsFilter(bool)),
-                   window, SLOT(setFeedsFilter(bool)), Qt::QueuedConnection);
+  QObject::connect(state, &FeedReadState::signalRecountCategoryCounts,
+          window, &MainWindow::slotRecountCategoryCounts, Qt::QueuedConnection);
+  QObject::connect(state, &FeedReadState::feedCountsUpdate, window, &MainWindow::slotFeedCountsUpdate);
+  QObject::connect(state, &FeedReadState::signalFeedsViewportUpdate,
+          window, &MainWindow::slotFeedsViewportUpdate);
+  QObject::connect(state, &FeedReadState::signalRefreshInfoTray, window, &MainWindow::slotRefreshInfoTray);
+  QObject::connect(state, &FeedReadState::signalSetFeedsFilter,
+          window, &MainWindow::setFeedsFilter, Qt::QueuedConnection);
 }
 }
 
@@ -129,16 +127,14 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
   parseObject_->setParent(sqlContext);
 
   if (addFeed_) {
-    connect(parent, SIGNAL(signalRequestUrl(int,QString,QDateTime,QString)),
-            requestFeed_, SLOT(requestUrl(int,QString,QDateTime,QString)));
-    connect(requestFeed_, SIGNAL(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)),
-            parent, SLOT(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)));
+    auto *wizard = qobject_cast<AddFeedWizard *>(parent);
+    connect(wizard, &AddFeedWizard::signalRequestUrl, requestFeed_, &RequestFeed::requestUrl);
+    connect(requestFeed_, &RequestFeed::getUrlDone, wizard, &AddFeedWizard::getUrlDone);
 
-    connect(parent, SIGNAL(xmlReadyParse(QByteArray,int,QDateTime,QString)),
-            parseObject_, SLOT(parseXml(QByteArray,int,QDateTime,QString)));
-    connect(parseObject_, SIGNAL(signalFinishUpdate(int,bool,int,QString)),
-            parent, SLOT(slotUpdateFeed(int,bool,int,QString)));
+    connect(wizard, &AddFeedWizard::xmlReadyParse, parseObject_, &ParseObject::parseXml);
+    connect(parseObject_, &ParseObject::signalFinishUpdate, wizard, &AddFeedWizard::slotUpdateFeed);
   } else {
+    auto *feedWindow = qobject_cast<MainWindow *>(parent);
     getFaviconThread_ = new QThread();
     getFaviconThread_->setObjectName("getFaviconThread_");
 
@@ -151,31 +147,23 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             requestFeed_, &RequestFeed::requestTrackedUrl);
     connect(requestFeed_, &RequestFeed::requestStarted,
             updateObject_, &UpdateObject::recordUpdateAttempt);
-    connect(requestFeed_, SIGNAL(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)),
-            updateObject_, SLOT(getUrlDone(int,int,QString,QString,QByteArray,QDateTime,QString)));
-    connect(requestFeed_, SIGNAL(setStatusFeed(int,QString)),
-            parent, SLOT(setStatusFeed(int,QString)));
-    connect(parent, SIGNAL(signalStopUpdate()),
-            requestFeed_, SLOT(stopRequest()));
+    connect(requestFeed_, &RequestFeed::getUrlDone, updateObject_, &UpdateObject::getUrlDone);
+    connect(requestFeed_, &RequestFeed::setStatusFeed, feedWindow, &MainWindow::setStatusFeed);
+    connect(feedWindow, &MainWindow::signalStopUpdate, requestFeed_, &RequestFeed::stopRequest);
 
     connect(window, &MainWindow::signalGetScheduledFeeds,
             updateObject_, &UpdateObject::slotGetScheduledFeeds);
     connect(updateObject_, &UpdateObject::scheduledFeedsChecked,
             window, &MainWindow::slotScheduledFeedsChecked);
-    connect(parent, SIGNAL(signalGetAllFeedsStartup()),
-            updateObject_, SLOT(slotGetAllFeedsStartup()));
-    connect(parent, SIGNAL(signalGetAllFeeds()),
-            updateObject_, SLOT(slotGetAllFeeds()));
-    connect(parent, SIGNAL(signalGetFeed(int,QString,QDateTime,int,bool)),
-            updateObject_, SLOT(slotGetFeed(int,QString,QDateTime,int,bool)));
-    connect(parent, SIGNAL(signalGetFeedsFolder(QString)),
-            updateObject_, SLOT(slotGetFeedsFolder(QString)));
-    connect(parent, SIGNAL(signalImportFeeds(QByteArray,bool)),
-            updateObject_, SLOT(slotImportFeeds(QByteArray,bool)));
+    connect(feedWindow, &MainWindow::signalGetAllFeedsStartup,
+            updateObject_, &UpdateObject::slotGetAllFeedsStartup);
+    connect(feedWindow, &MainWindow::signalGetAllFeeds, updateObject_, &UpdateObject::slotGetAllFeeds);
+    connect(feedWindow, &MainWindow::signalGetFeed, updateObject_, &UpdateObject::slotGetFeed);
+    connect(feedWindow, &MainWindow::signalGetFeedsFolder, updateObject_, &UpdateObject::slotGetFeedsFolder);
+    connect(feedWindow, &MainWindow::signalImportFeeds, updateObject_, &UpdateObject::slotImportFeeds);
     connect(updateObject_, &UpdateObject::importFinished,
             window, &MainWindow::slotImportFinished);
-    connect(updateObject_, SIGNAL(showProgressBar(int)),
-            parent, SLOT(showProgressBar(int)));
+    connect(updateObject_, &UpdateObject::showProgressBar, feedWindow, &MainWindow::showProgressBar);
     connect(updateObject_, &UpdateObject::updateCycleStarted,
             window, &MainWindow::startFeedUpdateCycle);
     connect(updateObject_, &UpdateObject::feedProgressQueued,
@@ -186,80 +174,66 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             mainApp->mainWindow(), &MainWindow::setFeedProgressStage);
     connect(updateObject_, &UpdateObject::feedProgressFinished,
             mainApp->mainWindow(), &MainWindow::finishFeedProgress);
-    connect(updateObject_, SIGNAL(signalMessageStatusBar(QString,int)),
-            parent, SLOT(showMessageStatusBar(QString,int)));
-    connect(updateObject_, SIGNAL(signalUpdateFeedsModel()),
-            parent, SLOT(feedsModelReload()),
-            Qt::BlockingQueuedConnection);
+    connect(updateObject_, &UpdateObject::signalMessageStatusBar,
+            feedWindow, &MainWindow::showMessageStatusBar);
+    connect(updateObject_, &UpdateObject::signalUpdateFeedsModel,
+            feedWindow, [feedWindow] {
+      feedWindow->feedsModelReload();
+    }, Qt::BlockingQueuedConnection);
 
-    connect(updateObject_, SIGNAL(xmlReadyParse(QByteArray,int,QDateTime,QString)),
-            parseObject_, SLOT(parseXml(QByteArray,int,QDateTime,QString)),
-            Qt::QueuedConnection);
-    connect(parseObject_, SIGNAL(signalFinishUpdate(int,bool,int,QString)),
-            updateObject_, SLOT(finishUpdate(int,bool,int,QString)),
-            Qt::QueuedConnection);
-    connect(updateObject_, SIGNAL(feedUpdated(int,bool,int,bool)),
-            parent, SLOT(slotUpdateFeed(int,bool,int,bool)));
-    connect(updateObject_, SIGNAL(setStatusFeed(int,QString)),
-            parent, SLOT(setStatusFeed(int,QString)));
+    connect(updateObject_, &UpdateObject::xmlReadyParse,
+            parseObject_, &ParseObject::parseXml, Qt::QueuedConnection);
+    connect(parseObject_, &ParseObject::signalFinishUpdate,
+            updateObject_, &UpdateObject::finishUpdate, Qt::QueuedConnection);
+    connect(updateObject_, &UpdateObject::feedUpdated, feedWindow, &MainWindow::slotUpdateFeed);
+    connect(updateObject_, &UpdateObject::setStatusFeed, feedWindow, &MainWindow::setStatusFeed);
 
     qRegisterMetaType<FeedCountStruct>("FeedCountStruct");
-    connect(parseObject_, SIGNAL(feedCountsUpdate(FeedCountStruct)),
-            parent, SLOT(slotFeedCountsUpdate(FeedCountStruct)));
+    connect(parseObject_, &ParseObject::feedCountsUpdate, feedWindow, &MainWindow::slotFeedCountsUpdate);
 
-    connect(parseObject_, SIGNAL(signalPlaySound(QString)),
-            parent, SLOT(slotPlaySound(QString)));
-    connect(parseObject_, SIGNAL(signalAddColorList(int,QString)),
-            parent, SLOT(slotAddColorList(int,QString)));
+    connect(parseObject_, &ParseObject::signalPlaySound, feedWindow, &MainWindow::slotPlaySound);
+    connect(parseObject_, &ParseObject::signalAddColorList, feedWindow, &MainWindow::slotAddColorList);
 
-    connect(parent, SIGNAL(signalNextUpdate(bool)),
-            updateObject_, SLOT(slotNextUpdateFeed(bool)));
-    connect(updateObject_, SIGNAL(signalUpdateModel(bool)),
-            parent, SLOT(feedsModelReload(bool)));
-    connect(updateObject_, SIGNAL(signalUpdateNews(int)),
-            parent, SLOT(slotUpdateNews(int)));
-    connect(updateObject_, SIGNAL(signalCountsStatusBar(int,int)),
-            parent, SLOT(slotCountsStatusBar(int,int)));
+    connect(feedWindow, &MainWindow::signalNextUpdate, updateObject_, &UpdateObject::slotNextUpdateFeed);
+    connect(updateObject_, &UpdateObject::signalUpdateModel, feedWindow, &MainWindow::feedsModelReload);
+    connect(updateObject_, &UpdateObject::signalUpdateNews, feedWindow, &MainWindow::slotUpdateNews);
+    connect(updateObject_, &UpdateObject::signalCountsStatusBar,
+            feedWindow, &MainWindow::slotCountsStatusBar);
 
-    connect(parent, SIGNAL(signalRecountCategoryCounts()),
-            updateObject_, SLOT(slotRecountCategoryCounts()));
+    connect(feedWindow, &MainWindow::signalRecountCategoryCounts,
+            updateObject_, &UpdateObject::slotRecountCategoryCounts);
     qRegisterMetaType<QList<int> >("QList<int>");
     qRegisterMetaType<CategoryCounts>("CategoryCounts");
-    connectReadState(updateObject_, parent);
+    connectReadState(updateObject_, feedWindow);
     auto *navigationState = new FeedReadState(mainApp->mainWindow(), this);
     navigationState->setDatabase(QSqlDatabase::database());
-    connectReadState(navigationState, parent);
+    connectReadState(navigationState, feedWindow);
     connect(navigationState, &FeedReadState::requestCategoryCounts,
             mainApp->mainWindow(), &MainWindow::recountCategoryCounts);
-    connect(parent, SIGNAL(signalRecountFeedCounts(int,bool)),
-            updateObject_, SLOT(slotRecountFeedCounts(int,bool)));
-    connect(parent, SIGNAL(signalSetFeedRead(int,int,int,QList<int>)),
-            navigationState, SLOT(slotSetFeedRead(int,int,int,QList<int>)),
-            Qt::DirectConnection);
-    connect(parent, SIGNAL(signalMarkFeedRead(int,bool,bool)),
-            updateObject_, SLOT(slotMarkFeedRead(int,bool,bool)));
-    connect(parent, SIGNAL(signalRefreshInfoTray()),
-            updateObject_, SLOT(slotRefreshInfoTray()));
-    connect(parent, SIGNAL(signalUpdateStatus(int,bool)),
-            updateObject_, SLOT(slotUpdateStatus(int,bool)));
-    connect(parent, SIGNAL(signalMarkAllFeedsRead()),
-            updateObject_, SLOT(slotMarkAllFeedsRead()));
-    connect(parent, SIGNAL(signalMarkReadCategory(int,int)),
-            updateObject_, SLOT(slotMarkReadCategory(int,int)));
-    connect(parent, SIGNAL(signalRefreshNewsView(int)),
-            updateObject_, SIGNAL(signalMarkAllFeedsRead(int)));
-    connect(updateObject_, SIGNAL(signalMarkAllFeedsRead(int)),
-            parent, SLOT(slotRefreshNewsView(int)));
-    connect(parent, SIGNAL(signalMarkAllFeedsOld()),
-            updateObject_, SLOT(slotMarkAllFeedsOld()));
+    connect(feedWindow, &MainWindow::signalRecountFeedCounts,
+            updateObject_, &UpdateObject::slotRecountFeedCounts);
+    connect(feedWindow, &MainWindow::signalSetFeedRead,
+            navigationState, &FeedReadState::slotSetFeedRead, Qt::DirectConnection);
+    connect(feedWindow, &MainWindow::signalMarkFeedRead, updateObject_, &UpdateObject::slotMarkFeedRead);
+    connect(feedWindow, &MainWindow::signalRefreshInfoTray,
+            updateObject_, &UpdateObject::slotRefreshInfoTray);
+    connect(feedWindow, &MainWindow::signalUpdateStatus, updateObject_, &UpdateObject::slotUpdateStatus);
+    connect(feedWindow, &MainWindow::signalMarkAllFeedsRead,
+            updateObject_, &UpdateObject::slotMarkAllFeedsRead);
+    connect(feedWindow, &MainWindow::signalMarkReadCategory,
+            updateObject_, &UpdateObject::slotMarkReadCategory);
+    connect(feedWindow, &MainWindow::signalRefreshNewsView,
+            updateObject_, &UpdateObject::signalMarkAllFeedsRead);
+    connect(updateObject_, &UpdateObject::signalMarkAllFeedsRead,
+            feedWindow, &MainWindow::slotRefreshNewsView);
+    connect(feedWindow, &MainWindow::signalMarkAllFeedsOld,
+            updateObject_, &UpdateObject::slotMarkAllFeedsOld);
 
-    connect(parent, SIGNAL(signalSetFeedsFilter(bool)),
-            updateObject_, SIGNAL(signalSetFeedsFilter(bool)));
+    connect(feedWindow, &MainWindow::signalSetFeedsFilter,
+            updateObject_, &UpdateObject::signalSetFeedsFilter);
 
-    connect(mainApp, SIGNAL(signalSqlQueryExec(QString)),
-            updateObject_, SLOT(slotSqlQueryExec(QString)));
-    connect(mainApp, SIGNAL(signalRunUserFilter(int, int)),
-            parseObject_, SLOT(runUserFilter(int, int)));
+    connect(mainApp, &MainApplication::signalSqlQueryExec, updateObject_, &UpdateObject::slotSqlQueryExec);
+    connect(mainApp, &MainApplication::signalRunUserFilter, parseObject_, &ParseObject::runUserFilter);
     connect(parseObject_, &ParseObject::signalUserFilterApplied,
             updateObject_, [updater = updateObject_](int feedId) {
       // Manual filtering is asynchronous. Recount and refresh only after commit,
@@ -270,19 +244,14 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     });
 
     // faviconObject_
-    connect(parent, SIGNAL(faviconRequestUrl(QString,QString)),
-            faviconObject_, SLOT(requestUrl(QString,QString)));
-    connect(faviconObject_, SIGNAL(signalIconRecived(QString,QByteArray,QString)),
-            parent, SLOT(slotIconFeedPreparing(QString,QByteArray,QString)));
-    connect(parent, SIGNAL(signalIconFeedReady(QString,QByteArray)),
-            updateObject_, SLOT(slotIconSave(QString,QByteArray)));
-    connect(updateObject_, SIGNAL(signalIconUpdate(int,QByteArray)),
-            parent, SLOT(slotIconFeedUpdate(int,QByteArray)));
+    connect(feedWindow, &MainWindow::faviconRequestUrl, faviconObject_, &FaviconObject::requestUrl);
+    connect(faviconObject_, &FaviconObject::signalIconRecived,
+            feedWindow, &MainWindow::slotIconFeedPreparing);
+    connect(feedWindow, &MainWindow::signalIconFeedReady, updateObject_, &UpdateObject::slotIconSave);
+    connect(updateObject_, &UpdateObject::signalIconUpdate, feedWindow, &MainWindow::slotIconFeedUpdate);
 
-    connect(parent, SIGNAL(signalQuitApp()),
-            updateObject_, SLOT(quitApp()));
-    connect(this, SIGNAL(signalSaveMemoryDatabase()),
-            updateObject_, SLOT(saveMemoryDatabase()));
+    connect(feedWindow, &MainWindow::signalQuitApp, updateObject_, &UpdateObject::quitApp);
+    connect(this, &UpdateFeeds::signalSaveMemoryDatabase, updateObject_, &UpdateObject::saveMemoryDatabase);
 
     faviconObject_->moveToThread(getFaviconThread_);
   }
@@ -346,7 +315,7 @@ void UpdateFeeds::startSaveTimer()
 
   if (!saveMemoryDBTimer_) {
     saveMemoryDBTimer_ = new QTimer(this);
-    connect(saveMemoryDBTimer_, SIGNAL(timeout()), this, SLOT(saveMemoryDatabase()));
+    connect(saveMemoryDBTimer_, &QTimer::timeout, this, &UpdateFeeds::saveMemoryDatabase);
   }
 
   int saveInterval = AppSettings::saveDBMemFileInterval.get();
@@ -371,11 +340,11 @@ UpdateObject::UpdateObject(QObject *parent)
 
   updateModelTimer_ = new QTimer(this);
   updateModelTimer_->setSingleShot(true);
-  connect(updateModelTimer_, SIGNAL(timeout()), this, SIGNAL(signalUpdateModel()));
+  connect(updateModelTimer_, &QTimer::timeout, this, [this] { emit signalUpdateModel(); });
 
   timerUpdateNews_ = new QTimer(this);
   timerUpdateNews_->setSingleShot(true);
-  connect(timerUpdateNews_, SIGNAL(timeout()), this, SIGNAL(signalUpdateNews()));
+  connect(timerUpdateNews_, &QTimer::timeout, this, [this] { emit signalUpdateNews(); });
 
 }
 

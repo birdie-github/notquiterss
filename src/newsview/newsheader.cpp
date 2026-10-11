@@ -36,8 +36,7 @@ NewsHeader::NewsHeader(NewsModel *model, QWidget *parent)
   viewMenu_ = new QMenu(this);
   columnVisibleActGroup_ = new QActionGroup(this);
   columnVisibleActGroup_->setExclusive(false);
-  connect(columnVisibleActGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(slotColumnVisible(QAction*)));
+  connect(columnVisibleActGroup_, &QActionGroup::triggered, this, &NewsHeader::slotColumnVisible);
 
   buttonColumnView_ = new QPushButton(this);
   buttonColumnView_->setIcon(QIcon(":/images/images/column.png"));
@@ -46,14 +45,14 @@ NewsHeader::NewsHeader(NewsModel *model, QWidget *parent)
   buttonColumnView_->setCursor(Qt::ArrowCursor);
   buttonColumnView_->setFocusPolicy(Qt::NoFocus);
   buttonColumnView_->setMaximumWidth(30);
-  connect(buttonColumnView_, SIGNAL(clicked()), this, SLOT(slotButtonColumnView()));
+  connect(buttonColumnView_, &QAbstractButton::clicked, this, &NewsHeader::slotButtonColumnView);
 
   QHBoxLayout *buttonLayout = new QHBoxLayout();
   buttonLayout->setContentsMargins(0, 0, 0, 0);
   buttonLayout->addWidget(buttonColumnView_, 0, Qt::AlignRight|Qt::AlignVCenter);
   setLayout(buttonLayout);
 
-  connect(this, SIGNAL(sectionMoved(int,int,int)), SLOT(slotSectionMoved(int, int, int)));
+  connect(this, &QHeaderView::sectionMoved, this, &NewsHeader::slotSectionMoved);
 
   this->installEventFilter(this);
 }

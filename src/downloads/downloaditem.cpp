@@ -105,9 +105,8 @@ DownloadItem::DownloadItem(QListWidgetItem *item,
   setLayout(mainLayout);
 
   setContextMenuPolicy(Qt::CustomContextMenu);
-  connect(this, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(customContextMenuRequested(QPoint)));
-  connect(&updateInfoTimer_, SIGNAL(timeout()), this, SLOT(updateInfo()));
+  connect(this, &QWidget::customContextMenuRequested, this, &DownloadItem::customContextMenuRequested);
+  connect(&updateInfoTimer_, &QTimer::timeout, this, &DownloadItem::updateInfo);
 }
 
 DownloadItem::~DownloadItem()
@@ -389,14 +388,14 @@ void DownloadItem::stop(bool askForDeleteFile)
 void DownloadItem::customContextMenuRequested(const QPoint &pos)
 {
   QMenu menu;
-  menu.addAction( tr("Open File"), this, SLOT(openFile()));
+  menu.addAction(tr("Open File"), this, &DownloadItem::openFile);
 
-  menu.addAction(tr("Open Folder"), this, SLOT(openFolder()));
+  menu.addAction(tr("Open Folder"), this, &DownloadItem::openFolder);
   menu.addSeparator();
-  menu.addAction(tr("Copy Download Link"), this, SLOT(copyDownloadLink()));
+  menu.addAction(tr("Copy Download Link"), this, &DownloadItem::copyDownloadLink);
   menu.addSeparator();
-  menu.addAction(tr("Cancel Download"), this, SLOT(stop()))->setEnabled(downloading_);
-  menu.addAction(tr("Remove"), this, SLOT(clear()))->setEnabled(!downloading_);
+  menu.addAction(tr("Cancel Download"), this, [this] { stop(); })->setEnabled(downloading_);
+  menu.addAction(tr("Remove"), this, &DownloadItem::clear)->setEnabled(!downloading_);
 
   if (downloading_ || downloadInfo_->text().startsWith(tr("Cancelled")) || downloadInfo_->text().startsWith(tr("Error"))) {
     menu.actions().at(0)->setEnabled(false);

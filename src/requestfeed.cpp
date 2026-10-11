@@ -85,19 +85,15 @@ RequestFeed::RequestFeed(int timeoutRequest, int numberRequests,
 
   timeout_ = new QTimer(this);
   timeout_->setInterval(1000);
-  connect(timeout_, SIGNAL(timeout()), this, SLOT(slotRequestTimeout()));
+  connect(timeout_, &QTimer::timeout, this, &RequestFeed::slotRequestTimeout);
 
   getUrlTimer_ = new QTimer(this);
   getUrlTimer_->setSingleShot(true);
   getUrlTimer_->setInterval(50);
-  connect(getUrlTimer_, SIGNAL(timeout()), this, SLOT(getQueuedUrl()));
+  connect(getUrlTimer_, &QTimer::timeout, this, &RequestFeed::getQueuedUrl);
 
-  connect(this, SIGNAL(signalHead(QUrl,int,QString,QDateTime,int)),
-          SLOT(slotHead(QUrl,int,QString,QDateTime,int)),
-          Qt::QueuedConnection);
-  connect(this, SIGNAL(signalGet(QUrl,int,QString,QDateTime,int)),
-          SLOT(slotGet(QUrl,int,QString,QDateTime,int)),
-          Qt::QueuedConnection);
+  connect(this, &RequestFeed::signalHead, this, &RequestFeed::slotHead, Qt::QueuedConnection);
+  connect(this, &RequestFeed::signalGet, this, &RequestFeed::slotGet, Qt::QueuedConnection);
 }
 
 RequestFeed::~RequestFeed()
@@ -136,8 +132,7 @@ void RequestFeed::requestTrackedUrl(int id, QString urlString, QDateTime date,
 
   if (!networkManager_) {
     networkManager_ = new NetworkManager(true, this);
-    connect(networkManager_, SIGNAL(finished(QNetworkReply*)),
-            this, SLOT(finished(QNetworkReply*)));
+    connect(networkManager_, &QNetworkAccessManager::finished, this, &RequestFeed::finished);
   }
 
   if (!timeout_->isActive())

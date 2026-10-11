@@ -282,6 +282,15 @@ public slots:
   void slotPrint();
   void slotPrintPreview();
 
+  void slotRecountCategoryCounts(CategoryCounts counts);
+  void slotFeedsViewportUpdate();
+  void slotRefreshNewsView(int nextUnread = -1);
+  void slotIconFeedPreparing(QString feedUrl, QByteArray byteArray, QString format);
+  void slotIconFeedUpdate(int feedId, QByteArray faviconData);
+  void findText();
+  void slotRefreshInfoTray(int newCount, int unreadCount);
+  void setTextTitle(const QString &text, NewsTabWidget *widget);
+
 signals:
   void articleSettingsChanged(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
   void signalQuitApp();
@@ -320,8 +329,6 @@ private slots:
   void setFeedRead(int type, int feedId, FeedReedType feedReadType,
                    NewsTabWidget *widgetTab = 0, int idException = -1);
   void markFeedRead();
-  void slotRecountCategoryCounts(CategoryCounts counts);
-  void slotFeedsViewportUpdate();
   void slotPlaySoundNewNews();
 
   void slotShowAboutDlg();
@@ -334,9 +341,6 @@ private slots:
   void showContextMenuToolBar(const QPoint &pos);
   void showFeedPropertiesDlg();
   void slotFeedMenuShow();
-  void slotRefreshNewsView(int nextUnread = -1);
-  void slotIconFeedPreparing(QString feedUrl, QByteArray byteArray, QString format);
-  void slotIconFeedUpdate(int feedId, QByteArray faviconData);
   void showNewsFiltersDlg(bool newFilter = false);
   void showFilterRulesDlg();
   void slotUpdateAppCheck();
@@ -384,7 +388,6 @@ private slots:
   void slotPageUpWebView();
   void slotPageDownWebView();
   void setCurrentTab(int index, bool updateCurrentTab = false);
-  void findText();
 
   void showNotification(bool bShowRecentNews=false);
   void deleteNotification();
@@ -413,7 +416,6 @@ private slots:
 
   void slotMoveIndex(const QModelIndex &indexWhere, int how);
 
-  void slotRefreshInfoTray(int newCount, int unreadCount);
 
   void slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTab = false);
   void clearDeleted();
@@ -425,7 +427,6 @@ private slots:
   void setDefaultLabelNews();
   void getLabelNews();
 
-  void setTextTitle(const QString &text, NewsTabWidget *widget);
 
   void lockMainToolbar(bool lock);
   void hideMainToolbar();

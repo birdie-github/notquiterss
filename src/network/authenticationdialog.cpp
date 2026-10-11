@@ -68,7 +68,7 @@ AuthenticationDialog::AuthenticationDialog(const QUrl &url,
 
     buttonBox->addButton(QDialogButtonBox::Ok);
     buttonBox->addButton(QDialogButtonBox::Cancel);
-    connect(buttonBox, SIGNAL(accepted()), this, SLOT(acceptDialog()));
+    connect(buttonBox, &QDialogButtonBox::accepted, this, &AuthenticationDialog::acceptDialog);
   }
 }
 

@@ -168,13 +168,12 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(acceptDialog()));
-  connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &OptionsDialog::acceptDialog);
+  connect(this, &QDialog::finished, this, &OptionsDialog::closeDialog);
 
-  connect(categoriesTree_, SIGNAL(itemPressed(QTreeWidgetItem*,int)),
-          this, SLOT(slotCategoriesItemClicked(QTreeWidgetItem*,int)));
-  connect(this, SIGNAL(signalCategoriesTreeKeyUpDownPressed()),
-          SLOT(slotCategoriesTreeKeyUpDownPressed()), Qt::QueuedConnection);
+  connect(categoriesTree_, &QTreeWidget::itemPressed, this, &OptionsDialog::slotCategoriesItemClicked);
+  connect(this, &OptionsDialog::signalCategoriesTreeKeyUpDownPressed,
+          this, &OptionsDialog::slotCategoriesTreeKeyUpDownPressed, Qt::QueuedConnection);
 
   categoriesTree_->installEventFilter(this);
 
@@ -359,8 +358,7 @@ void OptionsDialog::createGeneralWidget()
   saveDBMemFileWidget->setEnabled(false);
   saveDBMemFileWidget->setLayout(saveDBMemFileLayout);
 
-  connect(storeDBMemory_, SIGNAL(toggled(bool)),
-          saveDBMemFileWidget, SLOT(setEnabled(bool)));
+  connect(storeDBMemory_, &QAbstractButton::toggled, saveDBMemFileWidget, &QWidget::setEnabled);
 
   QVBoxLayout *generalLayout = new QVBoxLayout();
   generalLayout->addWidget(showSplashScreen_);
@@ -597,8 +595,7 @@ void OptionsDialog::createNetworkConnectionsWidget()
   networkConnectionsWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
   networkConnectionsWidget_->setLayout(networkConnectionsLayout);
 
-  connect(manualProxyButton_, SIGNAL(toggled(bool)),
-          this, SLOT(manualProxyToggle(bool)));
+  connect(manualProxyButton_, &QAbstractButton::toggled, this, &OptionsDialog::manualProxyToggle);
 }
 
 /** @brief Create widget "Browser"
@@ -657,7 +654,7 @@ void OptionsDialog::createBrowserWidget()
 
   downloadLocationEdit_ = new LineEdit();
   QPushButton *browse = new QPushButton(tr("Browse..."));
-  connect(browse, SIGNAL(clicked()), this, SLOT(selectionDownloadLocation()));
+  connect(browse, &QAbstractButton::clicked, this, &OptionsDialog::selectionDownloadLocation);
   askDownloadLocation_ = new QCheckBox(tr("Ask where to save each file before downloading"));
   QHBoxLayout *location = new QHBoxLayout();
   location->addWidget(downloadLocationEdit_);
@@ -689,16 +686,14 @@ void OptionsDialog::createFeedsWidget()
   updateFeedsInterval_ = new QSpinBox();
   updateFeedsInterval_->setEnabled(false);
   updateFeedsInterval_->setRange(1, 9999);
-  connect(updateFeedsEnable_, SIGNAL(toggled(bool)),
-          updateFeedsInterval_, SLOT(setEnabled(bool)));
+  connect(updateFeedsEnable_, &QAbstractButton::toggled, updateFeedsInterval_, &QWidget::setEnabled);
 
   updateIntervalType_ = new QComboBox(this);
   updateIntervalType_->setEnabled(false);
   QStringList intervalList;
   intervalList << tr("seconds") << tr("minutes")  << tr("hours");
   updateIntervalType_->addItems(intervalList);
-  connect(updateFeedsEnable_, SIGNAL(toggled(bool)),
-          updateIntervalType_, SLOT(setEnabled(bool)));
+  connect(updateFeedsEnable_, &QAbstractButton::toggled, updateIntervalType_, &QWidget::setEnabled);
 
   QHBoxLayout *updateFeedsLayout = new QHBoxLayout();
   updateFeedsLayout->setContentsMargins(0, 0, 0, 0);
@@ -712,8 +707,7 @@ void OptionsDialog::createFeedsWidget()
   positionUnreadNews_ = new QRadioButton(tr("Focus the first unread article"));
   openNewsWebViewOn_ = new QCheckBox(tr("Open the article"));
   nottoOpenNews_ = new QRadioButton(tr("Do nothing"));
-  connect(nottoOpenNews_, SIGNAL(toggled(bool)),
-          openNewsWebViewOn_, SLOT(setDisabled(bool)));
+  connect(nottoOpenNews_, &QAbstractButton::toggled, openNewsWebViewOn_, &QWidget::setDisabled);
 
   QGridLayout *openingFeedsLayout = new QGridLayout();
   openingFeedsLayout->setContentsMargins(15, 0, 0, 10);
@@ -815,8 +809,7 @@ void OptionsDialog::createFeedsWidget()
 
   styleSheetNewsEdit_ = new LineEdit();
   QPushButton *styleSheetNewsButton = new QPushButton(tr("Browse..."));
-  connect(styleSheetNewsButton, SIGNAL(clicked()),
-          this, SLOT(selectionUserStyleNews()));
+  connect(styleSheetNewsButton, &QAbstractButton::clicked, this, &OptionsDialog::selectionUserStyleNews);
 
   QGridLayout *styleSheetNewsLayout = new QGridLayout();
   styleSheetNewsLayout->setContentsMargins(15, 0, 5, 10);
@@ -857,8 +850,7 @@ void OptionsDialog::createFeedsWidget()
         markNewsReadTime_ = new QSpinBox();
         markNewsReadTime_->setEnabled(false);
         markNewsReadTime_->setRange(0, 100);
-        connect(markCurNewsRead_, SIGNAL(toggled(bool)),
-          markNewsReadTime_, SLOT(setEnabled(bool)));
+        connect(markCurNewsRead_, &QAbstractButton::toggled, markNewsReadTime_, &QWidget::setEnabled);
 
         curLayout->setContentsMargins(0, 0, 0, 0);
         curLayout->addWidget(markCurNewsRead_);
@@ -919,15 +911,13 @@ void OptionsDialog::createFeedsWidget()
   maxDayCleanUp_ = new QSpinBox();
   maxDayCleanUp_->setEnabled(false);
   maxDayCleanUp_->setRange(0, 9999);
-  connect(dayCleanUpOn_, SIGNAL(toggled(bool)),
-          maxDayCleanUp_, SLOT(setEnabled(bool)));
+  connect(dayCleanUpOn_, &QAbstractButton::toggled, maxDayCleanUp_, &QWidget::setEnabled);
 
   newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
   maxNewsCleanUp_ = new QSpinBox();
   maxNewsCleanUp_->setEnabled(false);
   maxNewsCleanUp_->setRange(0, 9999);
-  connect(newsCleanUpOn_, SIGNAL(toggled(bool)),
-          maxNewsCleanUp_, SLOT(setEnabled(bool)));
+  connect(newsCleanUpOn_, &QAbstractButton::toggled, maxNewsCleanUp_, &QWidget::setEnabled);
 
   readCleanUp_ = new QCheckBox(tr("Delete read news"));
   neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread news"));
@@ -983,20 +973,20 @@ void OptionsDialog::createLabelsWidget()
   labelsTree_->header()->hide();
 
   newLabelButton_ = new QPushButton(tr("Create..."), this);
-  connect(newLabelButton_, SIGNAL(clicked()), this, SLOT(newLabel()));
+  connect(newLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::newLabel);
   editLabelButton_ = new QPushButton(tr("Edit..."), this);
   editLabelButton_->setEnabled(false);
-  connect(editLabelButton_, SIGNAL(clicked()), this, SLOT(editLabel()));
+  connect(editLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::editLabel);
   deleteLabelButton_ = new QPushButton(tr("Delete..."), this);
   deleteLabelButton_->setEnabled(false);
-  connect(deleteLabelButton_, SIGNAL(clicked()), this, SLOT(deleteLabel()));
+  connect(deleteLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::deleteLabel);
 
   moveUpLabelButton_ = new QPushButton(tr("Move up"), this);
   moveUpLabelButton_->setEnabled(false);
-  connect(moveUpLabelButton_, SIGNAL(clicked()), this, SLOT(moveUpLabel()));
+  connect(moveUpLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::moveUpLabel);
   moveDownLabelButton_ = new QPushButton(tr("Move down"), this);
   moveDownLabelButton_->setEnabled(false);
-  connect(moveDownLabelButton_, SIGNAL(clicked()), this, SLOT(moveDownLabel()));
+  connect(moveDownLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::moveDownLabel);
 
   QVBoxLayout *buttonsLayout = new QVBoxLayout();
   buttonsLayout->addWidget(newLabelButton_);
@@ -1015,10 +1005,8 @@ void OptionsDialog::createLabelsWidget()
   labelsWidget_ = new QWidget(this);
   labelsWidget_->setLayout(labelsLayout);
 
-  connect(labelsTree_, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
-          this, SLOT(slotCurrentLabelChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
-  connect(labelsTree_, SIGNAL(doubleClicked(QModelIndex)),
-          this, SLOT(editLabel()));
+  connect(labelsTree_, &QTreeWidget::currentItemChanged, this, &OptionsDialog::slotCurrentLabelChanged);
+  connect(labelsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::editLabel);
 
   loadLabelsOk_ = false;
 }
@@ -1061,7 +1049,7 @@ void OptionsDialog::createNotifierWidget()
   timeShowNewsNotify_->setRange(0, 99999);
 
   QPushButton *showNotifer = new QPushButton(tr("Review"));
-  connect(showNotifer, SIGNAL(clicked()), this, SLOT(showNotification()));
+  connect(showNotifer, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
 
   QHBoxLayout *notifierLayout1 = new QHBoxLayout();
   notifierLayout1->addWidget(new QLabel(tr("Screen")));
@@ -1113,10 +1101,8 @@ void OptionsDialog::createNotifierWidget()
 
   createFeedsNotifierDlg();
 
-  connect(onlySelectedFeeds_, SIGNAL(toggled(bool)),
-          feedsNotiferButton, SLOT(setEnabled(bool)));
-  connect(feedsNotiferButton, SIGNAL(clicked()),
-          feedsNotifierDlg_, SLOT(exec()));
+  connect(onlySelectedFeeds_, &QAbstractButton::toggled, feedsNotiferButton, &QWidget::setEnabled);
+  connect(feedsNotiferButton, &QAbstractButton::clicked, feedsNotifierDlg_, &QDialog::exec);
 
   QVBoxLayout *notificationLayoutV = new QVBoxLayout();
   notificationLayoutV->setContentsMargins(10, 10, 10, 10);
@@ -1146,10 +1132,10 @@ void OptionsDialog::createNotifierWidget()
   selectionSoundNotifer_ = new QPushButton(tr("Browse..."));
   playSoundNotifer_ = new QPushButton(tr("Play"));
 
-  connect(selectionSoundNotifer_, SIGNAL(clicked()),
-          this, SLOT(selectionSoundNotifer()));
-  connect(playSoundNotifer_, SIGNAL(clicked()), this, SLOT(slotPlaySoundNotifer()));
-  connect(this, SIGNAL(signalPlaySound(QString)), parent(), SLOT(slotPlaySound(QString)));
+  connect(selectionSoundNotifer_, &QAbstractButton::clicked, this, &OptionsDialog::selectionSoundNotifer);
+  connect(playSoundNotifer_, &QAbstractButton::clicked, this, &OptionsDialog::slotPlaySoundNotifer);
+  connect(this, &OptionsDialog::signalPlaySound,
+          qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
 
   QHBoxLayout *soundNotifyLayoutH = new QHBoxLayout();
   soundNotifyLayoutH->addWidget(editSoundNotifer_, 1);
@@ -1202,8 +1188,7 @@ void OptionsDialog::createFeedsNotifierDlg()
   feedsNotifierDlg_->pageLayout->addWidget(feedsTreeNotify_);
   feedsNotifierDlg_->buttonBox->addButton(QDialogButtonBox::Close);
 
-  connect(feedsTreeNotify_, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-          this, SLOT(feedsTreeNotifyItemChanged(QTreeWidgetItem*,int)));
+  connect(feedsTreeNotify_, &QTreeWidget::itemChanged, this, &OptionsDialog::feedsTreeNotifyItemChanged);
 }
 
 /** @brief Create widget "Passwords"
@@ -1239,11 +1224,11 @@ void OptionsDialog::createPasswordsWidget()
   }
 
   QPushButton *deletePass = new QPushButton(tr("Delete"));
-  connect(deletePass, SIGNAL(clicked()), this, SLOT(slotDeletePass()));
+  connect(deletePass, &QAbstractButton::clicked, this, &OptionsDialog::slotDeletePass);
   QPushButton *deleteAllPass = new QPushButton(tr("Delete All"));
-  connect(deleteAllPass, SIGNAL(clicked()), this, SLOT(slotDeleteAllPass()));
+  connect(deleteAllPass, &QAbstractButton::clicked, this, &OptionsDialog::slotDeleteAllPass);
   QPushButton *showPass = new QPushButton(tr("Show Passwords"));
-  connect(showPass, SIGNAL(clicked()), this, SLOT(slotShowPass()));
+  connect(showPass, &QAbstractButton::clicked, this, &OptionsDialog::slotShowPass);
   QVBoxLayout *passButtonLayout = new QVBoxLayout();
   passButtonLayout->addWidget(deletePass);
   passButtonLayout->addWidget(deleteAllPass);
@@ -1333,13 +1318,12 @@ void OptionsDialog::createFontsColorsWidget()
   fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
 
   fontsTree_->setCurrentItem(fontsTree_->topLevelItem(0));
-  connect(fontsTree_, SIGNAL(doubleClicked(QModelIndex)),
-          this, SLOT(slotFontChange()));
+  connect(fontsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::slotFontChange);
 
   QPushButton *fontChange = new QPushButton(tr("Change..."));
-  connect(fontChange, SIGNAL(clicked()), this, SLOT(slotFontChange()));
+  connect(fontChange, &QAbstractButton::clicked, this, &OptionsDialog::slotFontChange);
   QPushButton *fontReset = new QPushButton(tr("Reset"));
-  connect(fontReset, SIGNAL(clicked()), this, SLOT(slotFontReset()));
+  connect(fontReset, &QAbstractButton::clicked, this, &OptionsDialog::slotFontReset);
   QVBoxLayout *fontsButtonLayout = new QVBoxLayout();
   fontsButtonLayout->addWidget(fontChange);
   fontsButtonLayout->addWidget(fontReset);
@@ -1434,13 +1418,12 @@ void OptionsDialog::createFontsColorsWidget()
 
   colorsTree_->setCurrentItem(colorsTree_->topLevelItem(0));
 
-  connect(colorsTree_, SIGNAL(doubleClicked(QModelIndex)),
-          this, SLOT(slotColorChange()));
+  connect(colorsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::slotColorChange);
 
   QPushButton *colorChange = new QPushButton(tr("Change..."));
-  connect(colorChange, SIGNAL(clicked()), this, SLOT(slotColorChange()));
+  connect(colorChange, &QAbstractButton::clicked, this, &OptionsDialog::slotColorChange);
   QPushButton *colorReset = new QPushButton(tr("Reset"));
-  connect(colorReset, SIGNAL(clicked()), this, SLOT(slotColorReset()));
+  connect(colorReset, &QAbstractButton::clicked, this, &OptionsDialog::slotColorReset);
   QVBoxLayout *colorsButtonLayout = new QVBoxLayout();
   colorsButtonLayout->addWidget(colorChange);
   colorsButtonLayout->addWidget(colorReset);
@@ -1516,16 +1499,12 @@ void OptionsDialog::createShortcutWidget()
   shortcutWidget_ = new QWidget();
   shortcutWidget_->setLayout(shortcutLayout);
 
-  connect(shortcutTree_, SIGNAL(clicked(QModelIndex)),
-          this, SLOT(shortcutTreeClicked(QModelIndex)));
-  connect(this, SIGNAL(signalShortcutTreeUpDownPressed()),
-          SLOT(slotShortcutTreeUpDownPressed()), Qt::QueuedConnection);
-  connect(editShortcut_, SIGNAL(signalClear()),
-          this, SLOT(slotClearShortcut()));
-  connect(resetShortcutButton, SIGNAL(clicked()),
-          this, SLOT(slotResetShortcut()));
-  connect(filterShortcut_, SIGNAL(textChanged(QString)),
-          this, SLOT(filterShortcutChanged(QString)));
+  connect(shortcutTree_, &QAbstractItemView::clicked, this, &OptionsDialog::shortcutTreeClicked);
+  connect(this, &OptionsDialog::signalShortcutTreeUpDownPressed,
+          this, &OptionsDialog::slotShortcutTreeUpDownPressed, Qt::QueuedConnection);
+  connect(editShortcut_, &LineEdit::signalClear, this, &OptionsDialog::slotClearShortcut);
+  connect(resetShortcutButton, &QAbstractButton::clicked, this, &OptionsDialog::slotResetShortcut);
+  connect(filterShortcut_, &QLineEdit::textChanged, this, &OptionsDialog::filterShortcutChanged);
 
   editShortcut_->installEventFilter(this);
 }
@@ -2353,8 +2332,7 @@ void OptionsDialog::showNotification()
                                                idColorList, colorList,
                                                this, this);
 
-  connect(notificationWidget_, SIGNAL(signalClose()),
-          this, SLOT(deleteNotification()));
+  connect(notificationWidget_, &NotificationWidget::signalClose, this, &OptionsDialog::deleteNotification);
 
   notificationWidget_->show();
 }

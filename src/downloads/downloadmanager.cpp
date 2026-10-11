@@ -60,10 +60,9 @@ DownloadManager::DownloadManager(QWidget *parent)
   mainLayout->addWidget(listWidget_);
   setLayout(mainLayout);
 
-  connect(listClaerAct_, SIGNAL(triggered()), this, SLOT(clearList()));
-  connect(this, SIGNAL(signalItemCreated(QListWidgetItem*,DownloadItem*)),
-          this, SLOT(itemCreated(QListWidgetItem*,DownloadItem*)));
-  connect(&updateInfoTimer_, SIGNAL(timeout()), this, SLOT(updateInfo()));
+  connect(listClaerAct_, &QAction::triggered, this, &DownloadManager::clearList);
+  connect(this, &DownloadManager::signalItemCreated, this, &DownloadManager::itemCreated);
+  connect(&updateInfoTimer_, &QTimer::timeout, this, &DownloadManager::updateInfo);
 
   updateInfoTimer_.start(2000);
 
@@ -204,7 +203,7 @@ void DownloadManager::startExternalApp(const QString &executable, const QUrl &ur
 
 void DownloadManager::itemCreated(QListWidgetItem* item, DownloadItem* downItem)
 {
-  connect(downItem, SIGNAL(deleteItem(DownloadItem*)), this, SLOT(deleteItem(DownloadItem*)));
+  connect(downItem, &DownloadItem::deleteItem, this, &DownloadManager::deleteItem);
 
   listWidget_->setItemWidget(item, downItem);
   item->setSizeHint(downItem->sizeHint());

@@ -151,7 +151,7 @@ MainApplication::MainApplication(int &argc, char **argv)
   closeSplashScreen();
 
   if (mainWindow_->showTrayIcon_) {
-    QTimer::singleShot(0, mainWindow_->trayIcon(), SLOT(show()));
+    QTimer::singleShot(0, mainWindow_->trayIcon(), &QSystemTrayIcon::show);
   }
 
   if (updateFeedsStartUp_) {
@@ -159,7 +159,7 @@ MainApplication::MainApplication(int &argc, char **argv)
   }
 
   DatabaseBackup::instance()->start();
-  connect(this, SIGNAL(messageReceived(QString)), SLOT(receiveMessage(QString)));
+  connect(this, &MainApplication::messageReceived, this, &MainApplication::receiveMessage);
   receiveMessage(message);
 }
 

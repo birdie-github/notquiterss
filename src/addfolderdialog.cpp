@@ -85,10 +85,9 @@ AddFolderDialog::AddFolderDialog(QWidget *parent, int curFolderId)
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
   buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
 
-  connect(nameFeedEdit_, SIGNAL(textChanged(const QString&)),
-          this, SLOT(nameFeedEditChanged(const QString&)));
+  connect(nameFeedEdit_, &QLineEdit::textChanged, this, &AddFolderDialog::nameFeedEditChanged);
 }
 
 void AddFolderDialog::nameFeedEditChanged(const QString& text)

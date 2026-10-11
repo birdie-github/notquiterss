@@ -96,15 +96,14 @@ FaviconObject::FaviconObject(QObject *parent)
 
   timeout_ = new QTimer(this);
   timeout_->setInterval(1000);
-  connect(timeout_, SIGNAL(timeout()), this, SLOT(slotRequestTimeout()));
+  connect(timeout_, &QTimer::timeout, this, &FaviconObject::slotRequestTimeout);
 
   getUrlTimer_ = new QTimer(this);
   getUrlTimer_->setSingleShot(true);
   getUrlTimer_->setInterval(20);
-  connect(getUrlTimer_, SIGNAL(timeout()), this, SLOT(getQueuedUrl()));
+  connect(getUrlTimer_, &QTimer::timeout, this, &FaviconObject::getQueuedUrl);
 
-  connect(this, SIGNAL(signalGet(QUrl,QString,int)),
-          SLOT(slotGet(QUrl,QString,int)));
+  connect(this, &FaviconObject::signalGet, this, &FaviconObject::slotGet);
 }
 
 void FaviconObject::disconnectObjects()
@@ -120,8 +119,7 @@ void FaviconObject::requestUrl(QString urlString, QString feedUrl)
 {
   if (!networkManager_) {
     networkManager_ = new NetworkManager(true, this);
-    connect(networkManager_, SIGNAL(finished(QNetworkReply*)),
-            this, SLOT(finished(QNetworkReply*)));
+    connect(networkManager_, &QNetworkAccessManager::finished, this, &FaviconObject::finished);
   }
 
   if (!timeout_->isActive())

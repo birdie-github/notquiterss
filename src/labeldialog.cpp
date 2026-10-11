@@ -85,28 +85,18 @@ LabelDialog::LabelDialog(QWidget *parent)
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
   buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
 
-  connect(nameEdit_, SIGNAL(textChanged(const QString&)),
-          this, SLOT(nameEditChanged(const QString&)));
-  connect(iconButton_, SIGNAL(clicked()),
-          iconButton_, SLOT(showMenu()));
-  connect(iconMenu, SIGNAL(triggered(QAction*)),
-          this, SLOT(selectIcon(QAction*)));
-  connect(newIcon, SIGNAL(triggered()),
-          this, SLOT(loadIcon()));
-  connect(colorTextButton_, SIGNAL(clicked()),
-          colorTextButton_, SLOT(showMenu()));
-  connect(colorTextMenu->actions().at(0), SIGNAL(triggered()),
-          this, SLOT(defaultColorText()));
-  connect(colorTextMenu->actions().at(2), SIGNAL(triggered()),
-          this, SLOT(selectColorText()));
-  connect(colorBgButton_, SIGNAL(clicked()),
-          colorBgButton_, SLOT(showMenu()));
-  connect(colorBgMenu->actions().at(0), SIGNAL(triggered()),
-          this, SLOT(defaultColorBg()));
-  connect(colorBgMenu->actions().at(2), SIGNAL(triggered()),
-          this, SLOT(selectColorBg()));
+  connect(nameEdit_, &QLineEdit::textChanged, this, &LabelDialog::nameEditChanged);
+  connect(iconButton_, &QAbstractButton::clicked, iconButton_, &QToolButton::showMenu);
+  connect(iconMenu, &QMenu::triggered, this, &LabelDialog::selectIcon);
+  connect(newIcon, &QAction::triggered, this, &LabelDialog::loadIcon);
+  connect(colorTextButton_, &QAbstractButton::clicked, colorTextButton_, &QToolButton::showMenu);
+  connect(colorTextMenu->actions().at(0), &QAction::triggered, this, &LabelDialog::defaultColorText);
+  connect(colorTextMenu->actions().at(2), &QAction::triggered, this, &LabelDialog::selectColorText);
+  connect(colorBgButton_, &QAbstractButton::clicked, colorBgButton_, &QToolButton::showMenu);
+  connect(colorBgMenu->actions().at(0), &QAction::triggered, this, &LabelDialog::defaultColorBg);
+  connect(colorBgMenu->actions().at(2), &QAction::triggered, this, &LabelDialog::selectColorBg);
 }
 
 void LabelDialog::loadData()

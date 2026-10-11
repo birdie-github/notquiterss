@@ -128,10 +128,10 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
   });
 
   if (!bulk_) {
-    connect(this, SIGNAL(signalLoadIcon(QString,QString)),
-            parent, SIGNAL(faviconRequestUrl(QString,QString)));
-    connect(parent, SIGNAL(signalIconFeedReady(QString,QByteArray)),
-            this, SLOT(slotFaviconUpdate(QString,QByteArray)));
+    connect(this, &FeedPropertiesDialog::signalLoadIcon,
+            qobject_cast<MainWindow *>(parent), &MainWindow::faviconRequestUrl);
+    connect(qobject_cast<MainWindow *>(parent), &MainWindow::signalIconFeedReady,
+            this, &FeedPropertiesDialog::slotFaviconUpdate);
   }
 }
 //------------------------------------------------------------------------------
@@ -240,18 +240,15 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
   tabLayout->addWidget(avoidedOldSingleNewsDateOn_);
   tabLayout->addStretch();
 
-  connect(addSingleNewsAnyDateOn_, SIGNAL(toggled(bool)),
-          this, SLOT(setGroupBoxCheckboxState(bool)));
-  connect(addSingleNewsAnyDateOn_, SIGNAL(toggled(bool)),
-          avoidedOldSingleNewsDateOn_, SLOT(setDisabled(bool)));
+  connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
+          this, &FeedPropertiesDialog::setGroupBoxCheckboxState);
+  connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
+          avoidedOldSingleNewsDateOn_, &QWidget::setDisabled);
 
-  connect(loadTitleButton, SIGNAL(clicked()), this, SLOT(setDefaultTitle()));
-  connect(selectIconButton_, SIGNAL(clicked()),
-          this, SLOT(selectIcon()));
-  connect(selectIconMenu->actions().at(0), SIGNAL(triggered()),
-          this, SLOT(loadDefaultIcon()));
-  connect(selectIconMenu->actions().at(2), SIGNAL(triggered()),
-          this, SLOT(selectIcon()));
+  connect(loadTitleButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::setDefaultTitle);
+  connect(selectIconButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::selectIcon);
+  connect(selectIconMenu->actions().at(0), &QAction::triggered, this, &FeedPropertiesDialog::loadDefaultIcon);
+  connect(selectIconMenu->actions().at(2), &QAction::triggered, this, &FeedPropertiesDialog::selectIcon);
 
   if (!isFeed_) {
     labelTitleCapt->setText(tr("Folder name:"));
@@ -339,24 +336,22 @@ QWidget *FeedPropertiesDialog::createColumnsTab()
   addButtonMenu_ = new QMenu(this);
   addButton_ = new QPushButton(tr("Add"));
   addButton_->setMenu(addButtonMenu_);
-  connect(addButtonMenu_, SIGNAL(aboutToShow()),
-          this, SLOT(showMenuAddButton()));
-  connect(addButtonMenu_, SIGNAL(triggered(QAction*)),
-          this, SLOT(addColumn(QAction*)));
+  connect(addButtonMenu_, &QMenu::aboutToShow, this, &FeedPropertiesDialog::showMenuAddButton);
+  connect(addButtonMenu_, &QMenu::triggered, this, &FeedPropertiesDialog::addColumn);
 
   removeButton_ = new QPushButton(tr("Remove"));
   removeButton_->setEnabled(false);
-  connect(removeButton_, SIGNAL(clicked()), this, SLOT(removeColumn()));
+  connect(removeButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::removeColumn);
 
   moveUpButton_ = new QPushButton(tr("Move up"));
   moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, SIGNAL(clicked()), this, SLOT(moveUpColumn()));
+  connect(moveUpButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::moveUpColumn);
   moveDownButton_ = new QPushButton(tr("Move down"));
   moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, SIGNAL(clicked()), this, SLOT(moveDownColumn()));
+  connect(moveDownButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::moveDownColumn);
 
   QPushButton *defaultButton = new QPushButton(tr("Default"));
-  connect(defaultButton, SIGNAL(clicked()), this, SLOT(defaultColumns()));
+  connect(defaultButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::defaultColumns);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(addButton_);
@@ -383,8 +378,8 @@ QWidget *FeedPropertiesDialog::createColumnsTab()
   }
   tabLayout->addWidget(columnsEditor);
 
-  connect(columnsTree_, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
-          this, SLOT(slotCurrentColumnChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
+  connect(columnsTree_, &QTreeWidget::currentItemChanged,
+          this, &FeedPropertiesDialog::slotCurrentColumnChanged);
 
   return tab;
 }
@@ -865,16 +860,14 @@ QGroupBox *FeedPropertiesDialog::createUpdateSchedule()
   updateInterval_ = new QSpinBox();
   updateInterval_->setEnabled(false);
   updateInterval_->setRange(1, 9999);
-  connect(updateEnable_, SIGNAL(toggled(bool)),
-          updateInterval_, SLOT(setEnabled(bool)));
+  connect(updateEnable_, &QAbstractButton::toggled, updateInterval_, &QWidget::setEnabled);
 
   updateIntervalType_ = new QComboBox(this);
   updateIntervalType_->setEnabled(false);
   QStringList intervalTypeList;
   intervalTypeList << tr("seconds") << tr("minutes")  << tr("hours");
   updateIntervalType_->addItems(intervalTypeList);
-  connect(updateEnable_, SIGNAL(toggled(bool)),
-          updateIntervalType_, SLOT(setEnabled(bool)));
+  connect(updateEnable_, &QAbstractButton::toggled, updateIntervalType_, &QWidget::setEnabled);
 
   QHBoxLayout *updateFeedsLayout = new QHBoxLayout();
   updateFeedsLayout->setContentsMargins(0, 0, 0, 0);

@@ -147,24 +147,22 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   addButtonMenu_ = new QMenu(this);
   addButton_ = new QPushButton(tr("Add"));
   addButton_->setMenu(addButtonMenu_);
-  connect(addButtonMenu_, SIGNAL(aboutToShow()),
-          this, SLOT(showMenuAddButton()));
-  connect(addButtonMenu_, SIGNAL(triggered(QAction*)),
-          this, SLOT(addShortcut(QAction*)));
+  connect(addButtonMenu_, &QMenu::aboutToShow, this, &CustomizeToolbarDialog::showMenuAddButton);
+  connect(addButtonMenu_, &QMenu::triggered, this, &CustomizeToolbarDialog::addShortcut);
 
   removeButton_ = new QPushButton(tr("Remove"));
   removeButton_->setEnabled(false);
-  connect(removeButton_, SIGNAL(clicked()), this, SLOT(removeShortcut()));
+  connect(removeButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::removeShortcut);
 
   moveUpButton_ = new QPushButton(tr("Move up"));
   moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, SIGNAL(clicked()), this, SLOT(moveUpShortcut()));
+  connect(moveUpButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::moveUpShortcut);
   moveDownButton_ = new QPushButton(tr("Move down"));
   moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, SIGNAL(clicked()), this, SLOT(moveDownShortcut()));
+  connect(moveDownButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::moveDownShortcut);
 
   QPushButton *defaultButton = new QPushButton(tr("Restore Defaults"));
-  connect(defaultButton, SIGNAL(clicked()), this, SLOT(defaultShortcut()));
+  connect(defaultButton, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::defaultShortcut);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(addButton_);
@@ -187,11 +185,11 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
 
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(acceptDialog()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &CustomizeToolbarDialog::acceptDialog);
 
-  connect(shortcutTree_, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
-          this, SLOT(slotCurrentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
-  connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
+  connect(shortcutTree_, &QTreeWidget::currentItemChanged,
+          this, &CustomizeToolbarDialog::slotCurrentItemChanged);
+  connect(this, &QDialog::finished, this, &CustomizeToolbarDialog::closeDialog);
 
   // Respect translated text, font metrics and theme sizing even when restoring
   // geometry saved with a smaller font or a different display scale.

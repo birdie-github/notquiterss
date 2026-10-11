@@ -78,8 +78,7 @@ NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feed
         "QToolButton:hover {"
         "image: url(:/images/closeHover); }"
         );
-  connect(closeButton_, SIGNAL(clicked()),
-          this, SLOT(slotTabClose()));
+  connect(closeButton_, &QAbstractButton::clicked, this, &NewsTabWidget::slotTabClose);
 
   QHBoxLayout *newsTitleLayout = new QHBoxLayout();
   // Layout margins use logical pixels; Qt applies the display scale factor.
@@ -152,8 +151,7 @@ NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feed
     }
   }
 
-  connect(this, SIGNAL(signalSetTextTab(QString,NewsTabWidget*)),
-          mainWindow_, SLOT(setTextTitle(QString,NewsTabWidget*)));
+  connect(this, &NewsTabWidget::signalSetTextTab, mainWindow_, &MainWindow::setTextTitle);
 
   if (type_ < TabTypeDownloads) {
     connect(newsView_->selectionModel(), &QItemSelectionModel::selectionChanged,
@@ -272,49 +270,29 @@ void NewsTabWidget::createNewsList()
   htmlString_ = Common::readAllFileContents(":/html/description");
   htmlRtlString_ = Common::readAllFileContents(":/html/description_rtl");
 
-  connect(newsView_, SIGNAL(pressed(QModelIndex)),
-          this, SLOT(slotNewsViewClicked(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyUp(QModelIndex)),
-          this, SLOT(slotNewsUpPressed(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyDown(QModelIndex)),
-          this, SLOT(slotNewsDownPressed(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyHome(QModelIndex)),
-          this, SLOT(slotNewsHomePressed(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyEnd(QModelIndex)),
-          this, SLOT(slotNewsEndPressed(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyPageUp(QModelIndex)),
-          this, SLOT(slotNewsPageUpPressed(QModelIndex)));
-  connect(newsView_, SIGNAL(pressKeyPageDown(QModelIndex)),
-          this, SLOT(slotNewsPageDownPressed(QModelIndex)));
-  connect(newsView_, SIGNAL(signalSetItemRead(QModelIndex, int)),
-          this, SLOT(slotSetItemRead(QModelIndex, int)));
-  connect(newsView_, SIGNAL(signalSetItemStar(QModelIndex,int)),
-          this, SLOT(slotSetItemStar(QModelIndex,int)));
-  connect(newsView_, SIGNAL(signalDoubleClicked(QModelIndex)),
-          this, SLOT(slotNewsViewDoubleClicked(QModelIndex)));
-  connect(newsView_, SIGNAL(signalMiddleClicked(QModelIndex)),
-          this, SLOT(slotNewsMiddleClicked(QModelIndex)));
-  connect(newsView_, SIGNAL(signaNewslLabelClicked(QModelIndex)),
-          this, SLOT(slotNewslLabelClicked(QModelIndex)));
-  connect(markNewsReadTimer_, SIGNAL(timeout()),
-          this, SLOT(slotMarkReadTimeout()));
-  connect(newsView_, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(showContextMenuNews(const QPoint &)));
+  connect(newsView_, &QAbstractItemView::pressed, this, &NewsTabWidget::slotNewsViewClicked);
+  connect(newsView_, &NewsView::pressKeyUp, this, &NewsTabWidget::slotNewsUpPressed);
+  connect(newsView_, &NewsView::pressKeyDown, this, &NewsTabWidget::slotNewsDownPressed);
+  connect(newsView_, &NewsView::pressKeyHome, this, &NewsTabWidget::slotNewsHomePressed);
+  connect(newsView_, &NewsView::pressKeyEnd, this, &NewsTabWidget::slotNewsEndPressed);
+  connect(newsView_, &NewsView::pressKeyPageUp, this, &NewsTabWidget::slotNewsPageUpPressed);
+  connect(newsView_, &NewsView::pressKeyPageDown, this, &NewsTabWidget::slotNewsPageDownPressed);
+  connect(newsView_, &NewsView::signalSetItemRead, this, &NewsTabWidget::slotSetItemRead);
+  connect(newsView_, &NewsView::signalSetItemStar, this, &NewsTabWidget::slotSetItemStar);
+  connect(newsView_, &NewsView::signalDoubleClicked, this, &NewsTabWidget::slotNewsViewDoubleClicked);
+  connect(newsView_, &NewsView::signalMiddleClicked, this, &NewsTabWidget::slotNewsMiddleClicked);
+  connect(newsView_, &NewsView::signaNewslLabelClicked, this, &NewsTabWidget::slotNewslLabelClicked);
+  connect(markNewsReadTimer_, &QTimer::timeout, this, &NewsTabWidget::slotMarkReadTimeout);
+  connect(newsView_, &QWidget::customContextMenuRequested, this, &NewsTabWidget::showContextMenuNews);
 
-  connect(newsModel_, SIGNAL(signalSort(int,int)),
-          this, SLOT(slotSort(int,int)));
+  connect(newsModel_, &NewsModel::signalSort, this, &NewsTabWidget::slotSort);
 
-  connect(findText_, SIGNAL(textChanged(QString)),
-          this, SLOT(slotFindText(QString)));
-  connect(findText_, SIGNAL(signalSelectFind()),
-          this, SLOT(slotSelectFind()));
-  connect(findText_, SIGNAL(returnPressed()),
-          this, SLOT(slotSelectFind()));
-  connect(findText_, SIGNAL(signalVisible(bool)),
-          mainWindow_, SLOT(findText()));
+  connect(findText_, &QLineEdit::textChanged, this, &NewsTabWidget::slotFindText);
+  connect(findText_, &FindTextContent::signalSelectFind, this, &NewsTabWidget::slotSelectFind);
+  connect(findText_, &QLineEdit::returnPressed, this, &NewsTabWidget::slotSelectFind);
+  connect(findText_, &FindTextContent::signalVisible, mainWindow_, &MainWindow::findText);
 
-  connect(mainWindow_->newsToolbarToggle_, SIGNAL(toggled(bool)),
-          newsPanelWidget_, SLOT(setVisible(bool)));
+  connect(mainWindow_->newsToolbarToggle_, &QAction::toggled, newsPanelWidget_, &QWidget::setVisible);
 }
 
 /** @brief Call context menu of selected news in news list
@@ -361,14 +339,13 @@ void NewsTabWidget::createArticleWidget()
   webWidget_ = new QWidget(this);
   webWidget_->setLayout(layout);
   webWidget_->setMinimumSize(100, 100);
-  connect(articleView_, SIGNAL(loadStarted()), this, SLOT(slotLoadStarted()));
-  connect(articleView_, SIGNAL(loadFinished(bool)), this, SLOT(slotLoadFinished(bool)));
-  connect(articleView_, SIGNAL(linkClicked(QUrl)), this, SLOT(slotLinkClicked(QUrl)));
-  connect(articleView_, SIGNAL(linkHovered(QString)),
-          this, SLOT(slotLinkHovered(QString)));
-  connect(articleView_, SIGNAL(loadProgress(int)), webViewProgress_, SLOT(setValue(int)));
-  connect(articleView_, SIGNAL(showContextMenu(QPoint)), this, SLOT(showArticleContextMenu(QPoint)));
-  connect(mainWindow_->autoLoadImagesToggle_, SIGNAL(triggered()), this, SLOT(setAutoLoadImages()));
+  connect(articleView_, &ArticleView::loadStarted, this, &NewsTabWidget::slotLoadStarted);
+  connect(articleView_, &ArticleView::loadFinished, this, &NewsTabWidget::slotLoadFinished);
+  connect(articleView_, &ArticleView::linkClicked, this, &NewsTabWidget::slotLinkClicked);
+  connect(articleView_, &ArticleView::linkHovered, this, &NewsTabWidget::slotLinkHovered);
+  connect(articleView_, &ArticleView::loadProgress, webViewProgress_, &QProgressBar::setValue);
+  connect(articleView_, &ArticleView::showContextMenu, this, &NewsTabWidget::showArticleContextMenu);
+  connect(mainWindow_->autoLoadImagesToggle_, &QAction::triggered, this, [this] { setAutoLoadImages(); });
 }
 
 /** @brief Reapply all visual state derived from the active theme/settings.
@@ -1885,7 +1862,7 @@ void NewsTabWidget::showArticleContextMenu(const QPoint &p)
   const QUrl link(articleView_->anchorAt(p));
   if (ArticleContent::isExternalLink(link)) {
     linkUrl_ = link;
-    menu.addAction(tr("Open"), this, SLOT(openUrlInExternalBrowser()));
+    menu.addAction(tr("Open"), this, &NewsTabWidget::openUrlInExternalBrowser);
     menu.addAction(tr("Copy Link"), [link]() { QApplication::clipboard()->setText(link.toString()); });
     if (ArticleContent::isRemoteImage(link)) {
       menu.addAction(tr("Save Link..."), [link]() {
@@ -1902,9 +1879,9 @@ void NewsTabWidget::showArticleContextMenu(const QPoint &p)
     menu.addAction(tr("Copy Image Address"), [imageUrl]() { QApplication::clipboard()->setText(imageUrl.toString()); });
     menu.addSeparator();
   }
-  QAction *copy = menu.addAction(tr("Copy"), articleView_, SLOT(copy()));
+  QAction *copy = menu.addAction(tr("Copy"), articleView_, &QTextEdit::copy);
   copy->setEnabled(articleView_->textCursor().hasSelection());
-  menu.addAction(tr("Select All"), articleView_, SLOT(selectAll()));
+  menu.addAction(tr("Select All"), articleView_, &QTextEdit::selectAll);
   menu.addSeparator();
   menu.addAction(mainWindow_->autoLoadImagesToggle_);
   menu.addAction(mainWindow_->printAct_);

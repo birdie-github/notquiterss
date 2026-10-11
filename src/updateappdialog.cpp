@@ -67,7 +67,7 @@ UpdateAppDialog::UpdateAppDialog(QWidget *parent, bool show)
 
     buttonBox->addButton(QDialogButtonBox::Close);
 
-    connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
+    connect(this, &QDialog::finished, this, &UpdateAppDialog::closeDialog);
 
     restoreGeometry(settings.value("updateAppDlg/geometry").toByteArray());
   }
@@ -172,7 +172,7 @@ void UpdateAppDialog::renderStatistics()
     connect(reply_, &QIODevice::readyRead, this, [this]() {
       if (reply_->bytesAvailable() > 1024 * 1024) reply_->abort();
     });
-    connect(reply_, SIGNAL(finished()), this, SLOT(finishUpdatesChecking()));
+    connect(reply_, &QNetworkReply::finished, this, &UpdateAppDialog::finishUpdatesChecking);
   } else {
     emit signalNewVersion();
   }

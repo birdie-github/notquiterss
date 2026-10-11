@@ -92,8 +92,7 @@ CategoriesTreeWidget::CategoriesTreeWidget(QWidget * parent)
     treeWidgetItem->addChild(childItem);
   }
 
-  connect(this, SIGNAL(customContextMenuRequested(QPoint)),
-          SLOT(showContextMenuCategory(const QPoint &)));
+  connect(this, &QWidget::customContextMenuRequested, this, &CategoriesTreeWidget::showContextMenuCategory);
 }
 
 void CategoriesTreeWidget::mousePressEvent(QMouseEvent *event)
@@ -130,13 +129,13 @@ void CategoriesTreeWidget::showContextMenuCategory(const QPoint &pos)
     if (pos.x() >= rectText.x()) {
       itemClicked_ = itemAt(pos);
       QMenu menu;
-      menu.addAction(tr("Open in New Tab"), this, SLOT(openCategoryNewTab()));
+      menu.addAction(tr("Open in New Tab"), this, &CategoriesTreeWidget::openCategoryNewTab);
       if (itemClicked_ == topLevelItem(2)) {
         menu.addSeparator();
-        menu.addAction(tr("Clear 'Deleted'"), this, SIGNAL(signalClearDeleted()));
+        menu.addAction(tr("Clear 'Deleted'"), this, &CategoriesTreeWidget::signalClearDeleted);
       } else {
         menu.addSeparator();
-        menu.addAction(tr("Mark Read"), this, SLOT(slotMarkRead()));
+        menu.addAction(tr("Mark Read"), this, &CategoriesTreeWidget::slotMarkRead);
       }
       menu.exec(viewport()->mapToGlobal(pos));
     }

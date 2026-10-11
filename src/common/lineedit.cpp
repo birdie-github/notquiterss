@@ -48,9 +48,8 @@ LineEdit::LineEdit(QWidget *parent, const QString &text)
     textLabel_->setText(text);
   }
 
-  connect(clearButton, SIGNAL(clicked()), this, SLOT(slotClear()));
-  connect(this, SIGNAL(textChanged(const QString&)),
-          SLOT(updateClearButton(const QString&)));
+  connect(clearButton, &QAbstractButton::clicked, this, &LineEdit::slotClear);
+  connect(this, &QLineEdit::textChanged, this, &LineEdit::updateClearButton);
   int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
   setStyleSheet(QString("QLineEdit { padding-right: %1px; }").
                 arg(clearButton->sizeHint().width() + frameWidth + 1));

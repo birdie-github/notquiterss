@@ -39,22 +39,18 @@ NetworkManager::NetworkManager(bool isThread, QObject* parent)
   qRegisterMetaType<QList<QSslError> >("QList<QSslError>");
 #endif
 
-  connect(this, SIGNAL(sslErrors(QNetworkReply*, QList<QSslError>)),
-          this, SLOT(slotSslError(QNetworkReply*, QList<QSslError>)));
+  connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkManager::slotSslError);
 
   if (isThread) {
-    connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)),
-            mainApp->networkManager(), SLOT(slotAuthentication(QNetworkReply*,QAuthenticator*)),
-            Qt::BlockingQueuedConnection);
-    connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)),
-            mainApp->networkManager(), SLOT(slotProxyAuthentication(QNetworkProxy,QAuthenticator*)),
-            Qt::BlockingQueuedConnection);
+    connect(this, &QNetworkAccessManager::authenticationRequired,
+            mainApp->networkManager(), &NetworkManager::slotAuthentication, Qt::BlockingQueuedConnection);
+    connect(this, &QNetworkAccessManager::proxyAuthenticationRequired,
+            mainApp->networkManager(), &NetworkManager::slotProxyAuthentication, Qt::BlockingQueuedConnection);
 
   } else {
-    connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)),
-            SLOT(slotAuthentication(QNetworkReply*,QAuthenticator*)));
-    connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)),
-            SLOT(slotProxyAuthentication(QNetworkProxy,QAuthenticator*)));
+    connect(this, &QNetworkAccessManager::authenticationRequired, this, &NetworkManager::slotAuthentication);
+    connect(this, &QNetworkAccessManager::proxyAuthenticationRequired,
+            this, &NetworkManager::slotProxyAuthentication);
 
     loadSettings();
   }

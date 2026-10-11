@@ -61,7 +61,7 @@ ItemCondition::ItemCondition(QWidget * parent)
 
   setLayout(buttonsLayout);
 
-  connect(deleteButton_, SIGNAL(clicked()), this, SLOT(deleteFilterRules()));
+  connect(deleteButton_, &QAbstractButton::clicked, this, &ItemCondition::deleteFilterRules);
   connect(comboBox1_, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, [this](int) { currentIndexChanged(comboBox1_->currentText()); });
 }

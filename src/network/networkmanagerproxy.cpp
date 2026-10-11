@@ -52,12 +52,12 @@ NetworkManagerProxy::NetworkManagerProxy(QObject* parent)
   qRegisterMetaType<QList<QSslError> >("QList<QSslError>");
 #endif
 
-  connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)),
-          mainApp->networkManager(), SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)));
-  connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)),
-          mainApp->networkManager(), SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
-  connect(this, SIGNAL(finished(QNetworkReply*)),
-          mainApp->networkManager(), SIGNAL(finished(QNetworkReply*)));
+  connect(this, &QNetworkAccessManager::authenticationRequired,
+          mainApp->networkManager(), &QNetworkAccessManager::authenticationRequired);
+  connect(this, &QNetworkAccessManager::proxyAuthenticationRequired,
+          mainApp->networkManager(), &QNetworkAccessManager::proxyAuthenticationRequired);
+  connect(this, &QNetworkAccessManager::finished,
+          mainApp->networkManager(), &QNetworkAccessManager::finished);
 
 }
 

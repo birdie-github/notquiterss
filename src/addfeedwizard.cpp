@@ -48,15 +48,11 @@ AddFeedWizard::AddFeedWizard(QWidget *parent, int curFolderId)
   updateFeeds_ = new UpdateFeeds(this, true);
   updateFeeds_->start();
 
-  connect(button(QWizard::BackButton), SIGNAL(clicked()),
-          this, SLOT(backButtonClicked()));
-  connect(button(QWizard::NextButton), SIGNAL(clicked()),
-          this, SLOT(nextButtonClicked()));
-  connect(button(QWizard::FinishButton), SIGNAL(clicked()),
-          this, SLOT(finishButtonClicked()));
-  connect(this, SIGNAL(currentIdChanged(int)),
-          SLOT(slotCurrentIdChanged(int)),
-          Qt::QueuedConnection);
+  connect(button(QWizard::BackButton), &QAbstractButton::clicked, this, &AddFeedWizard::backButtonClicked);
+  connect(button(QWizard::NextButton), &QAbstractButton::clicked, this, &AddFeedWizard::nextButtonClicked);
+  connect(button(QWizard::FinishButton), &QAbstractButton::clicked,
+          this, &AddFeedWizard::finishButtonClicked);
+  connect(this, &QWizard::currentIdChanged, this, &AddFeedWizard::slotCurrentIdChanged, Qt::QueuedConnection);
   resize(400, 300);
 
   Settings settings;
@@ -167,10 +163,8 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   layout->addWidget(progressBar_);
   page->setLayout(layout);
 
-  connect(urlFeedEdit_, SIGNAL(textChanged(const QString&)),
-          this, SLOT(urlFeedEditChanged(const QString&)));
-  connect(titleFeedAsName_, SIGNAL(stateChanged(int)),
-          this, SLOT(titleFeedAsNameStateChanged(int)));
+  connect(urlFeedEdit_, &QLineEdit::textChanged, this, &AddFeedWizard::urlFeedEditChanged);
+  connect(titleFeedAsName_, &QCheckBox::stateChanged, this, &AddFeedWizard::titleFeedAsNameStateChanged);
 
   return page;
 }
@@ -255,10 +249,8 @@ QWizardPage *AddFeedWizard::createNameFeedPage()
   layout->addWidget(foldersTree_);
   page->setLayout(layout);
 
-  connect(nameFeedEdit_, SIGNAL(textChanged(const QString&)),
-          this, SLOT(nameFeedEditChanged(const QString&)));
-  connect(newFolderButton, SIGNAL(clicked()),
-          this, SLOT(newFolder()));
+  connect(nameFeedEdit_, &QLineEdit::textChanged, this, &AddFeedWizard::nameFeedEditChanged);
+  connect(newFolderButton, &QAbstractButton::clicked, this, &AddFeedWizard::newFolder);
 
   return page;
 }
@@ -417,14 +409,14 @@ void AddFeedWizard::slotCurrentIdChanged(int idPage)
 void AddFeedWizard::showProgressBar()
 {
   progressBar_->show();
-  QTimer::singleShot(250, this, SLOT(slotProgressBarUpdate()));
+  QTimer::singleShot(250, this, &AddFeedWizard::slotProgressBarUpdate);
 }
 
 void AddFeedWizard::slotProgressBarUpdate()
 {
   progressBar_->update();
   if (progressBar_->isVisible())
-    QTimer::singleShot(250, this, SLOT(slotProgressBarUpdate()));
+    QTimer::singleShot(250, this, &AddFeedWizard::slotProgressBarUpdate);
 }
 
 void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,

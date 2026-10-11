@@ -64,8 +64,7 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
     feedsTree_->verticalScrollBar()->setValue(rowCount);
     feedsTree_->topLevelItem(0)->setCheckState(0, Qt::Unchecked);
   }
-  connect(feedsTree_, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-          this, SLOT(feedItemChanged(QTreeWidgetItem*,int)));
+  connect(feedsTree_, &QTreeWidget::itemChanged, this, &FilterRulesDialog::feedItemChanged);
 
   connect(allFeeds_, &QCheckBox::toggled, feedsTree_, &QWidget::setDisabled);
 
@@ -81,8 +80,8 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
            << tr("Match any condition");
   matchComboBox_->addItems(itemList);
   matchComboBox_->setCurrentIndex(1);
-  connect(matchComboBox_, SIGNAL(currentIndexChanged(int)),
-          this, SLOT(selectMatch(int)));
+  connect(matchComboBox_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, &FilterRulesDialog::selectMatch);
 
   QHBoxLayout *matchLayout = new QHBoxLayout();
   matchLayout->addWidget(matchComboBox_);
@@ -177,7 +176,7 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   buttonsLayout->insertWidget(0, warningWidget_, 1);
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
-  connect(buttonBox, SIGNAL(accepted()), this, SLOT(acceptDialog()));
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &FilterRulesDialog::acceptDialog);
 
   pageLayout->addWidget(mainSpliter);
 
@@ -189,9 +188,8 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   Settings settings;
   restoreGeometry(settings.value("filterRulesDlg/geometry").toByteArray());
 
-  connect(filterName_, SIGNAL(textChanged(QString)),
-          this, SLOT(filterNameChanged(QString)));
-  connect(this, SIGNAL(finished(int)), this, SLOT(closeDialog()));
+  connect(filterName_, &QLineEdit::textChanged, this, &FilterRulesDialog::filterNameChanged);
+  connect(this, &QDialog::finished, this, &FilterRulesDialog::closeDialog);
 }
 
 void FilterRulesDialog::setData()
@@ -465,17 +463,15 @@ ItemCondition *FilterRulesDialog::addCondition()
   conditionLayout_->addWidget(itemCondition);
   conditionLayout_->addStretch();
   conditionLayout_->addSpacing(25);
-  connect(itemCondition->addButton_, SIGNAL(clicked()), this, SLOT(addCondition()));
-  connect(itemCondition, SIGNAL(signalDeleteCondition(ItemCondition*)),
-          this, SLOT(deleteCondition(ItemCondition*)));
+  connect(itemCondition->addButton_, &QAbstractButton::clicked, this, &FilterRulesDialog::addCondition);
+  connect(itemCondition, &ItemCondition::signalDeleteCondition, this, &FilterRulesDialog::deleteCondition);
 
   QScrollBar *scrollBar = conditionScrollArea_->verticalScrollBar();
   scrollBar->setValue(scrollBar->maximum() -
                       scrollBar->minimum() +
                       scrollBar->pageStep());
   itemCondition->lineEdit_->setFocus();
-  connect(itemCondition->lineEdit_, SIGNAL(textChanged(QString)),
-          this, SLOT(filterNameChanged(QString)));
+  connect(itemCondition->lineEdit_, &QLineEdit::textChanged, this, &FilterRulesDialog::filterNameChanged);
   connect(itemCondition->comboBox1_, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, [this, itemCondition](int) {
     filterNameChanged(itemCondition->comboBox1_->currentText());
@@ -516,11 +512,10 @@ ItemAction *FilterRulesDialog::addAction()
   actionsLayout_->addWidget(itemAction);
   actionsLayout_->addStretch();
   actionsLayout_->addSpacing(25);
-  connect(itemAction, SIGNAL(signalPlaySound(QString)),
-          parent(), SLOT(slotPlaySound(QString)));
-  connect(itemAction->addButton_, SIGNAL(clicked()), this, SLOT(addAction()));
-  connect(itemAction, SIGNAL(signalDeleteAction(ItemAction*)),
-          this, SLOT(deleteAction(ItemAction*)));
+  connect(itemAction, &ItemAction::signalPlaySound,
+          qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
+  connect(itemAction->addButton_, &QAbstractButton::clicked, this, &FilterRulesDialog::addAction);
+  connect(itemAction, &ItemAction::signalDeleteAction, this, &FilterRulesDialog::deleteAction);
   return itemAction;
 }
 

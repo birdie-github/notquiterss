@@ -42,5 +42,5 @@ Dialog::Dialog(QWidget *parent, Qt::WindowFlags flag)
   mainLayout->addLayout(buttonsLayout);
   setLayout(mainLayout);
 
-  connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+  connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }

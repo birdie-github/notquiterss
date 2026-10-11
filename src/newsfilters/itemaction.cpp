@@ -82,12 +82,12 @@ ItemAction::ItemAction(QWidget * parent)
 
   setLayout(buttonsLayout);
 
-  connect(playSound_, SIGNAL(clicked()), this, SLOT(slotPlaySound()));
-  connect(deleteButton_, SIGNAL(clicked()), this, SLOT(deleteFilterAction()));
-  connect(comboBox1_, SIGNAL(currentIndexChanged(int)),
-          this, SLOT(currentIndexChanged(int)));
-  connect(selectionSound_, SIGNAL(clicked()), this, SLOT(selectionSound()));
-  connect(colorButton_, SIGNAL(clicked()), this, SLOT(selectColorText()));
+  connect(playSound_, &QAbstractButton::clicked, this, &ItemAction::slotPlaySound);
+  connect(deleteButton_, &QAbstractButton::clicked, this, &ItemAction::deleteFilterAction);
+  connect(comboBox1_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, &ItemAction::currentIndexChanged);
+  connect(selectionSound_, &QAbstractButton::clicked, this, &ItemAction::selectionSound);
+  connect(colorButton_, &QAbstractButton::clicked, this, &ItemAction::selectColorText);
 }
 
 void ItemAction::deleteFilterAction()

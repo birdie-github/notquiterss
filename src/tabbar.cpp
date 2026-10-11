@@ -42,8 +42,7 @@ TabBar::TabBar(QWidget *parent)
 
   addTab("");
 
-  connect(this, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(showContextMenuTabBar(const QPoint &)));
+  connect(this, &QWidget::customContextMenuRequested, this, &TabBar::showContextMenuTabBar);
 
   installEventFilter(this);
 }

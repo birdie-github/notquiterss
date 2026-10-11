@@ -76,9 +76,8 @@ FindTextContent::FindTextContent(QWidget *parent)
   findButton_->setCursor(Qt::ArrowCursor);
   findButton_->setStyleSheet("QToolButton { border: none; padding: 0px; background: none; }");
 
-  connect(findButton_, SIGNAL(clicked()), this, SLOT(slotMenuFind()));
-  connect(findGroup_, SIGNAL(triggered(QAction*)),
-          this, SLOT(slotSelectFind(QAction*)));
+  connect(findButton_, &QAbstractButton::clicked, this, &FindTextContent::slotMenuFind);
+  connect(findGroup_, &QActionGroup::triggered, this, &FindTextContent::slotSelectFind);
 
   clearButton_ = new QToolButton(this);
   clearButton_->setFocusPolicy(Qt::NoFocus);
@@ -88,9 +87,8 @@ FindTextContent::FindTextContent(QWidget *parent)
   clearButton_->setCursor(Qt::ArrowCursor);
   clearButton_->setStyleSheet("QToolButton { border: none; padding: 0px; background: none; }");
   clearButton_->hide();
-  connect(clearButton_, SIGNAL(clicked()), this, SLOT(slotClear()));
-  connect(this, SIGNAL(textChanged(const QString&)),
-          SLOT(updateClearButton(const QString&)));
+  connect(clearButton_, &QAbstractButton::clicked, this, &FindTextContent::slotClear);
+  connect(this, &QLineEdit::textChanged, this, &FindTextContent::updateClearButton);
 
   findLabel_ = new QLabel(tr("Find in News"), this);
   findLabel_->setStyleSheet("QLabel { color: gray; background: none; }");
