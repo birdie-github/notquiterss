@@ -121,6 +121,7 @@ jobs:
 
   windows-qt5-x86:
     name: Windows legacy CPUs (Qt 5, x86/SSE2)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
     timeout-minutes: 180
     defaults:

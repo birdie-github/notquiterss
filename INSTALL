@@ -174,6 +174,9 @@ to qmake so compiler-specific LTO flags match the compiler and linker.
 
 Windows legacy CPU CI package (Qt5, 32-bit x86)
 =============================================
+This job runs only when manually dispatching the "Qt builds and packages"
+workflow from GitHub Actions. Pushes and pull requests skip it; the normal CI
+builds still run automatically.
 The separate windows-qt5-x86 job uses MSYS2 MINGW32 and builds pinned Qt 5.15.18
 sources because MSYS2 no longer supplies 32-bit Qt5 packages. Qt, the application
 and QtSingleApplication are built with -march=pentium4 -mtune=generic: SSE2 is
