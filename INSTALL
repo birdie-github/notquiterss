@@ -100,6 +100,13 @@ acknowledgement is remembered even if Options is subsequently canceled. Merely
 loading saved settings does not show the warning. Window activation never
 restores a hidden or minimized reader or interrupts an open application dialog.
 
+On Windows, if ordinary foreground activation fails, this option briefly joins
+the foreground window's input queue to request activation, then detaches it.
+This follows the approach used by Qt's stronger Windows activation mode without
+requiring private Qt headers. A short responsiveness probe skips unresponsive
+foreground windows, but cannot guarantee that they remain responsive afterward.
+The workaround can affect keyboard state and is used only for this opt-in action.
+
 Article age retention
 =====================
 With shutdown cleanup and its maximum-age option enabled, ordinary RSS/Atom

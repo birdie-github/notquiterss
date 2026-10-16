@@ -65,6 +65,36 @@
 #include <algorithm>
 
 namespace {
+#ifdef Q_OS_WIN
+void requestWindowsLinkFocus(HWND window)
+{
+  if (!IsWindowVisible(window) || IsIconic(window)) return;
+  if (GetForegroundWindow() == window || SetForegroundWindow(window)) return;
+
+  // Like Qt's AlwaysActivateWindow path, temporarily share the foreground
+  // thread's input queue. Keep this local to the opt-in article-link action.
+  const HWND foreground = GetForegroundWindow();
+  if (!foreground) return;
+  const DWORD foregroundThread = GetWindowThreadProcessId(foreground, nullptr);
+  const DWORD currentThread = GetCurrentThreadId();
+  if (!foregroundThread || foregroundThread == currentThread) return;
+
+  // Probe before attaching: do not deliberately couple to an unresponsive app.
+  // This limits the probe, not the subsequent native activation calls.
+  if (!SendMessageTimeoutW(foreground, WM_NULL, 0, 0,
+                           SMTO_BLOCK | SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT,
+                           100, nullptr)) return;
+  if (GetForegroundWindow() != foreground ||
+      !IsWindowVisible(window) || IsIconic(window)) return;
+  if (!AttachThreadInput(currentThread, foregroundThread, TRUE)) return;
+
+  BringWindowToTop(window);
+  SetActiveWindow(window);
+  // Every successful attachment must be undone before returning to Qt.
+  AttachThreadInput(currentThread, foregroundThread, FALSE);
+}
+#endif
+
 #ifdef HAVE_X11
 // Keep X11 optional: use the small Xlib ABI surface required for the
 // _NET_WM_STATE_STICKY client message without linking to libX11 or requiring
@@ -198,8 +228,12 @@ MainWindow::MainWindow(QWidget *parent)
         quitTimer_.isActive() || !isVisible() || isMinimized() || isActiveWindow() ||
         QApplication::activeModalWidget() || QApplication::activePopupWidget()) return;
     // Request activation once; the desktop may refuse it. Never unhide a window.
+#ifdef Q_OS_WIN
+    requestWindowsLinkFocus(reinterpret_cast<HWND>(winId()));
+#else
     raise();
     activateWindow();
+#endif
   });
 
   databaseUiTimer_.setSingleShot(true);
