@@ -79,6 +79,7 @@ public:
   QSpinBox *defaultZoomPages_;
   QRadioButton *customExternalBrowser_;
   LineEdit *externalBrowser_;
+  QCheckBox *returnFocusAfterLink_;
 
   LineEdit *downloadLocationEdit_;
   QCheckBox *askDownloadLocation_;

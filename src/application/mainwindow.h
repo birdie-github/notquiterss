@@ -28,6 +28,7 @@
 #include <QPrinter>
 #include <QSet>
 #include <functional>
+#include <QUrl>
 #include <map>
 
 #include "categoriestreewidget.h"
@@ -74,6 +75,7 @@ public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
   void requestDefaultFeedIcons();
+  bool openArticleUrl(const QUrl &url);
 
   void loadSettings();
   void saveSettings();
@@ -472,6 +474,7 @@ private:
   QModelIndexList selectedFeedIndexes() const;
   void finishQuitApp();
   QTimer quitTimer_;
+  QTimer returnFocusAfterLinkTimer_;
 
   enum class DeferredDatabaseUi { FeedSelection, TabSelection, FeedsReload, NewsRefresh };
   void deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry);

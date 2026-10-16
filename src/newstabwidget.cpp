@@ -1783,7 +1783,7 @@ void NewsTabWidget::slotTabClose()
 bool NewsTabWidget::openUrl(const QUrl &url)
 {
   if (!ArticleContent::isExternalLink(url)) return false;
-  return mainApp->openExternalUrl(url);
+  return mainWindow_->openArticleUrl(url);
 }
 //----------------------------------------------------------------------------
 void NewsTabWidget::slotFindText(const QString &text)
@@ -2100,7 +2100,7 @@ void NewsTabWidget::slotShareNews(QAction *action)
       QMessageBox::warning(mainWindow_, tr("Article sharing"), message);
       continue;
     }
-    if (!openUrl(url)) {
+    if (!mainApp->openExternalUrl(url)) {
       const QString message = tr("The system could not open the sharing URL for %1.")
           .arg(action->text());
       ShareServiceLoader::writeDiagnostic(message);

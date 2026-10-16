@@ -25,6 +25,7 @@
 #include <QWindow>
 #include "articlecontent.h"
 #include <QDesktopServices>
+#include <QGuiApplication>
 
 #include "mainapplication.h"
 #include "labeldialog.h"
@@ -633,6 +634,19 @@ void OptionsDialog::createBrowserWidget()
   browserCommandLayout->addWidget(externalBrowser_, 1);
   browserCommandLayout->addWidget(browseBrowser);
 
+  returnFocusAfterLink_ = new QCheckBox(tr("Return focus to %1 after opening a link").arg(ProjectMetadata::name()));
+  returnFocusAfterLink_->setToolTip(tr("Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.").arg(ProjectMetadata::name()));
+  // clicked, rather than toggled: loading saved settings must not show a dialog.
+  connect(returnFocusAfterLink_, &QAbstractButton::clicked, this, [this](bool checked) {
+    if (!checked || !QGuiApplication::platformName().startsWith(QLatin1String("wayland")) ||
+        AppSettings::returnFocusWaylandWarningShown.get()) return;
+    QMessageBox::warning(this, tr("Returning focus"),
+                         tr("On Wayland, returning focus to %1 after opening a link may be unreliable or may not work at all.").arg(ProjectMetadata::name()),
+                         QMessageBox::Ok);
+    // Remember the acknowledgement even if the user cancels Options afterward.
+    AppSettings::returnFocusWaylandWarningShown.set(true);
+  });
+
   autoLoadImages_ = new QCheckBox(tr("Load images"));
   defaultZoomPages_ = new QSpinBox();
   defaultZoomPages_->setRange(30, 300);
@@ -649,6 +663,7 @@ void OptionsDialog::createBrowserWidget()
   articleLayout->addWidget(systemBrowser);
   articleLayout->addWidget(customExternalBrowser_);
   articleLayout->addLayout(browserCommandLayout);
+  articleLayout->addWidget(returnFocusAfterLink_);
   articleLayout->addStretch();
   QWidget *articleWidget = new QWidget();
   articleWidget->setLayout(articleLayout);

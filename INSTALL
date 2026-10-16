@@ -86,6 +86,20 @@ AudioToolbox frameworks directly. Miniaudio adds no runtime DLL to deploy on
 Windows. Its MIT-0/Unlicense text and source provenance are installed by the
 helper under share/licenses/miniaudio; include these in distribution notices.
 
+Returning focus after opening article links
+===========================================
+Article View -> Articles offers "Return focus to NotQuiteRSS after opening a
+link" (off by default). After a successful browser handoff from the active reader,
+it requests focus once after one second. Rapid openings restart the same timer.
+Email, sharing and application-information links do not request focus. Hiding,
+minimizing or closing the reader cancels the pending request.
+
+Focus restoration is best-effort and may be refused by the desktop. Native
+Wayland sessions show a one-time warning when the checkbox is enabled; its
+acknowledgement is remembered even if Options is subsequently canceled. Merely
+loading saved settings does not show the warning. Window activation never
+restores a hidden or minimized reader or interrupts an open application dialog.
+
 Article age retention
 =====================
 With shutdown cleanup and its maximum-age option enabled, ordinary RSS/Atom

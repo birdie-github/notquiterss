@@ -77,6 +77,8 @@ constexpr Setting<int> numberRepeats = {"Settings/numberRepeats", 2};
 
 constexpr Setting<int> externalBrowserOn = {"Settings/externalBrowserOn", 1};
 extern const Setting<QString> externalBrowser;
+constexpr Setting<bool> returnFocusAfterLink = {"Settings/returnFocusAfterLink", false};
+constexpr Setting<bool> returnFocusWaylandWarningShown = {"Settings/returnFocusWaylandWarningShown", false};
 
 extern const Setting<QString> toolBarStyle;
 extern const Setting<QString> toolBarIconSize;

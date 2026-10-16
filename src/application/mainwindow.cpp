@@ -191,6 +191,17 @@ MainWindow::MainWindow(QWidget *parent)
   quitTimer_.setInterval(25);
   connect(&quitTimer_, &QTimer::timeout, this, &MainWindow::finishQuitApp);
 
+  returnFocusAfterLinkTimer_.setSingleShot(true);
+  returnFocusAfterLinkTimer_.setInterval(1000);
+  connect(&returnFocusAfterLinkTimer_, &QTimer::timeout, this, [this]() {
+    if (!AppSettings::returnFocusAfterLink.get() || mainApp->isClosing() ||
+        quitTimer_.isActive() || !isVisible() || isMinimized() || isActiveWindow() ||
+        QApplication::activeModalWidget() || QApplication::activePopupWidget()) return;
+    // Request activation once; the desktop may refuse it. Never unhide a window.
+    raise();
+    activateWindow();
+  });
+
   databaseUiTimer_.setSingleShot(true);
   databaseUiTimer_.setInterval(25);
   connect(&databaseUiTimer_, &QTimer::timeout, this, &MainWindow::retryDatabaseUi);
@@ -284,6 +295,7 @@ MainWindow::~MainWindow()
 // ---------------------------------------------------------------------------
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+  returnFocusAfterLinkTimer_.stop();
   if (mainApp->isClosing())
     return;
 
@@ -304,6 +316,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
  *---------------------------------------------------------------------------*/
 void MainWindow::quitApp()
 {
+  returnFocusAfterLinkTimer_.stop();
   if (mainApp->isClosing() || quitTimer_.isActive()) return;
   // Always return to the event loop first, including for a tray menu action.
   quitTimer_.start();
@@ -348,6 +361,9 @@ void MainWindow::finishQuitApp()
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
   if (obj == this) {
+    if (event->type() == QEvent::Hide ||
+        (event->type() == QEvent::WindowStateChange && isMinimized()))
+      returnFocusAfterLinkTimer_.stop();
     if (event->type() == QEvent::KeyPress) {
       QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
       if ((keyEvent->key() == Qt::Key_Up) ||
@@ -3099,6 +3115,21 @@ void MainWindow::slotFeedSelected(QModelIndex index, bool createTab)
 }
 
 // ----------------------------------------------------------------------------
+bool MainWindow::openArticleUrl(const QUrl &url)
+{
+  // Preserve eligibility across a batch even if the first link takes focus.
+  const bool returnFocus = AppSettings::returnFocusAfterLink.get() &&
+      (isActiveWindow() || returnFocusAfterLinkTimer_.isActive()) &&
+      isVisible() && !isMinimized() && !mainApp->isClosing() &&
+      !quitTimer_.isActive() && url.scheme() != QLatin1String("mailto");
+  returnFocusAfterLinkTimer_.stop();
+  const bool opened = mainApp->openExternalUrl(url);
+  if (opened && returnFocus && isVisible() && !isMinimized() &&
+      !mainApp->isClosing() && !quitTimer_.isActive())
+    returnFocusAfterLinkTimer_.start();
+  return opened;
+}
+
 void MainWindow::showOptionDlg(int index)
 {
   static int pageIndex = 0;
@@ -3156,6 +3187,7 @@ void MainWindow::showOptionDlg(int index)
   const int browserMode = AppSettings::externalBrowserOn.get();
   optionsDialog_->customExternalBrowser_->setChecked(browserMode == 2 || browserMode == -1);
   optionsDialog_->externalBrowser_->setText(AppSettings::externalBrowser.get());
+  optionsDialog_->returnFocusAfterLink_->setChecked(AppSettings::returnFocusAfterLink.get());
 
   optionsDialog_->downloadLocationEdit_->setText(downloadLocation_);
   optionsDialog_->askDownloadLocation_->setChecked(askDownloadLocation_);
@@ -3499,6 +3531,8 @@ void MainWindow::showOptionDlg(int index)
   autoLoadImages_ = optionsDialog_->autoLoadImages_->isChecked();
   AppSettings::externalBrowserOn.set(optionsDialog_->customExternalBrowser_->isChecked() ? 2 : 1);
   AppSettings::externalBrowser.set(optionsDialog_->externalBrowser_->text());
+  AppSettings::returnFocusAfterLink.set(optionsDialog_->returnFocusAfterLink_->isChecked());
+  if (!optionsDialog_->returnFocusAfterLink_->isChecked()) returnFocusAfterLinkTimer_.stop();
   defaultZoomPages_ = optionsDialog_->defaultZoomPages_->value();
 
   downloadLocation_ = optionsDialog_->downloadLocationEdit_->text();
