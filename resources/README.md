@@ -9,7 +9,11 @@ All source assets live here. `project.json` defines runtime directory names;
   These files are embedded only. Qt resource aliases remain unchanged.
 - `external/icons/`: native `.ico`/`.icns` and desktop application icons.
   The same source PNGs are also referenced by QRC where needed. Linux desktop
-  icons continue to install into the standard hicolor directories.
+  icons install into the standard hicolor directories (plus the pixmaps fallback).
+  This source directory is excluded from runtime resource staging: no duplicate
+  PNGs, native icon sources, generator script or source SVGs are deployed there.
+  Windows embeds its `.ico` through the generated resource file; macOS uses its
+  `.icns` through the native application bundle rule.
 - `external/themes/`: editable application QSS, staged into the existing
   runtime `styles/` directory. Light/Dark also provide embedded fallbacks.
 - `external/sounds/`: notification sounds.
@@ -27,7 +31,7 @@ Installed external roots:
 | Windows (including portable builds) | `resources/` beside `notquiterss.exe` |
 | macOS | `NotQuiteRSS.app/Contents/Resources/` |
 
-Each root contains `icons/`, `styles/`, `sounds/`, `social-networks/`,
+Each root contains `styles/`, `sounds/`, `social-networks/`,
 `translations/`, and `overrides.ini.sample`. No `external/` or `embedded/`
 intermediate directory is installed.
 HTML and UI images need no external copies because they remain in the executable.
@@ -53,7 +57,7 @@ changing the layout: installation does not remove old files from your system.
 All platform install/bundle rules consume the same stage. Windows CI runs the
 normal install target and checks every external resource against the stage and
 source. There is no Windows list of individual styles, sounds or sharing icons.
-Adding files under external directories, including nested auxiliary images,
+Adding files under runtime external directories, including nested auxiliary images,
 requires no CI changes. Only `external/` is staged; new directories under
 `embedded/` can never become runtime dependencies by accident.
 Translation compilation and the source `themes/` to runtime `styles/`

@@ -34,6 +34,9 @@ class ResourceTests(unittest.TestCase):
         (root / 'themes/extra').mkdir()
         (root / 'themes/extra/decoration.png').write_bytes(b'extra image')
         (root / 'themes/added.qss').write_text('QWidget {color: red;}')
+        # An incremental build may still contain the old, overly broad stage.
+        # Remove the entire source-icon copy, including helpers and native icons.
+        shutil.copytree(root / 'icons', self.build / 'resources/icons')
         output = stage.stage(self.source, self.build)
         self.assertTrue((output / 'sounds/notification.wav').is_file())
         self.assertEqual((output / 'overrides.ini.sample').read_bytes(),
@@ -49,9 +52,8 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse((output / 'styles/news.css').exists())
         self.assertFalse((output / 'styles/fixed-indicators.css').exists())
         self.assertTrue((output / 'styles/light.qss').is_file())
-        self.assertTrue((output / 'icons/application.ico').is_file())
-        self.assertEqual((output / 'icons/128x128/notquiterss.png').read_bytes(),
-                         (root / 'icons/128x128/notquiterss.png').read_bytes())
+        self.assertFalse((output / 'icons').exists())
+        self.assertTrue((root / 'icons/application.ico').is_file())
         self.assertFalse(list(output.rglob('*.md')))
         installed = Path(self.temp.name) / 'installed'
         shutil.copytree(output, installed / 'resources')

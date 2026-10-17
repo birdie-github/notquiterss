@@ -13,13 +13,15 @@ def resource_files(source, build, allow_missing=False):
     root = source / names['root'] / 'external'
     files = {}
     files[Path('overrides.ini.sample')] = root / 'overrides.ini.sample'
-    # Only this subtree is installed. Keep existing runtime directory names;
-    # source themes are still discovered in the installed styles directory.
+    # Desktop/native application icons are build inputs, not runtime data:
+    # app.pro installs Linux icons into hicolor and handles native bundle icons;
+    # QRC embeds the application icons used by the reader itself.
+    # Keep existing runtime directory names for styles and other external data.
     # Construct paths through pathlib instead of retaining iterdir() paths:
     # MSYS2 can return mixed separators that break relative_to() after rglob().
     for name in sorted(os.listdir(root)):
         directory = root / name
-        if not directory.is_dir() or directory.name == names['translations']:
+        if not directory.is_dir() or directory.name in ('icons', names['translations']):
             continue
         for path in sorted(directory.rglob('*')):
             if path.is_file() and path.suffix.lower() not in ('.md', '.pri', '.bat'):
