@@ -54,7 +54,10 @@ class ResourceTests(unittest.TestCase):
         self.assertTrue((output / 'styles/light.qss').is_file())
         self.assertFalse((output / 'icons').exists())
         self.assertTrue((root / 'icons/application.ico').is_file())
-        self.assertFalse(list(output.rglob('*.md')))
+        self.assertEqual([p.relative_to(output) for p in output.rglob('*.md')],
+                         [Path('styles/README.md')])
+        self.assertEqual((output / 'styles/README.md').read_bytes(),
+                         (root / 'themes/README.md').read_bytes())
         installed = Path(self.temp.name) / 'installed'
         shutil.copytree(output, installed / 'resources')
         stage.verify(self.source, self.build, installed)

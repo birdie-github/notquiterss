@@ -16,6 +16,8 @@ All source assets live here. `project.json` defines runtime directory names;
   `.icns` through the native application bundle rule.
 - `external/themes/`: editable application QSS, staged into the existing
   runtime `styles/` directory. Light/Dark also provide embedded fallbacks.
+  The theme authoring guide is installed alongside them as `styles/README.md`;
+  other source Markdown files remain excluded from runtime staging.
 - `external/sounds/`: notification sounds.
 - `external/social-networks/`: `configuration.ini` and service icons together.
 - `external/overrides.ini.sample`: annotated sample, never loaded automatically.

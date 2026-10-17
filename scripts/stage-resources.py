@@ -13,6 +13,8 @@ def resource_files(source, build, allow_missing=False):
     root = source / names['root'] / 'external'
     files = {}
     files[Path('overrides.ini.sample')] = root / 'overrides.ini.sample'
+    # User-facing theme authoring instructions are installed beside the QSS files.
+    files[Path(names['styles']) / 'README.md'] = root / 'themes' / 'README.md'
     # Desktop/native application icons are build inputs, not runtime data:
     # app.pro installs Linux icons into hicolor and handles native bundle icons;
     # QRC embeds the application icons used by the reader itself.
