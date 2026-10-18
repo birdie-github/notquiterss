@@ -1,4 +1,4 @@
-Version 0.95.6 BETA (2026-10-11)
+Version 0.95.6 BETA (2026-10-18)
 * CHANGE: Addressing technical debt (Qt/C++ modernization)
 * NEW FEATURE: Restore optional focus return after opening article links
 
