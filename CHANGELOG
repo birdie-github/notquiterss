@@ -1,3 +1,7 @@
+Version 0.95.6 BETA (2026-10-11)
+* CHANGE: Addressing technical debt (Qt/C++ modernization)
+* NEW FEATURE: Restore optional focus return after opening article links
+
 Version 0.95.5 BETA (2026-10-11)
 * CHANGE: Improve OPML import validation and feedback. Report how many feeds were imported or skipped as duplicates, and handle import errors more reliably.
 * CHANGE: Improve automatic backups to detect settings changes even when the feeds database has not changed.
