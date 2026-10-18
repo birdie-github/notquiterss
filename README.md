@@ -61,8 +61,7 @@ to run NotQuiteRSS on an incompatible CPU may result in an immediate crash with 
 
 ### Windows 32bit
 
-There's a single minimally tested Windows 32-bit build targeting SSE2 CPUs and later.
-It should support Windows 7 and later. Provided as-is, without support. Bug reports
-specific to this build will **not be accepted**.
-
-It is available [here](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32).
+Minimally tested Windows 32-bit builds targeting SSE2 CPUs and supporting Windows 7
+and later are available [here](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32).
+Bug reports specific to these builds, unless you can reproduce them on a standard
+Qt6-based Windows 64 build, will **not be accepted**.
