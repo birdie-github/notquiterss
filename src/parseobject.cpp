@@ -460,8 +460,8 @@ void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
       if (community.isEmpty())
         community = getCommunity(nodeContent.namedItem("media:community"));
     }
-    if (!(newsItem.content.isEmpty() ||
-          (newsItem.description.length() > newsItem.content.length()))) {
+    // Atom content is the article body; a longer summary must not replace it.
+    if (!newsItem.content.isEmpty()) {
       newsItem.description = newsItem.content;
     }
     newsItem.content.clear();
