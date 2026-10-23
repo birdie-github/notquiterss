@@ -134,6 +134,7 @@ HEADERS += \
     src/database/feedbulksettings.h \
     src/database/feeddeletion.h \
     src/common/common.h \
+    src/common/feedxml.h \
     src/common/delegatewithoutfocus.h \
     src/common/dialog.h \
     src/common/lineedit.h \
@@ -201,6 +202,7 @@ SOURCES += \
     src/database/feeddeletion.cpp \
     src/database/pendingdatabase.cpp \
     src/common/common.cpp \
+    src/common/feedxml.cpp \
     src/common/delegatewithoutfocus.cpp \
     src/common/dialog.cpp \
     src/common/lineedit.cpp \

@@ -427,13 +427,6 @@ void RequestFeed::finished(QNetworkReply *reply)
 
           data.replace("<br>", "<br/>");
 
-          if (data.indexOf("</rss>") > 0)
-            data.resize(data.indexOf("</rss>") + 6);
-          if (data.indexOf("</feed>") > 0)
-            data.resize(data.indexOf("</feed>") + 7);
-          if (data.indexOf("</rdf:RDF>") > 0)
-            data.resize(data.indexOf("</rdf:RDF>") + 10);
-
           if (data.isEmpty() && reply->operation() != QNetworkAccessManager::HeadOperation &&
               reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 304)
             emit getUrlDone(-6, feedId, feedUrl, tr("The server returned an empty feed response."));

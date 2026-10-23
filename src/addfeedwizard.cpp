@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "feedxml.h"
 #include "logfile.h"
 #include "credentialscope.h"
 #include "network/feedurl.h"
@@ -435,17 +436,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
     int errorLine;
     int errorColumn;
     QDomDocument doc("parseDoc");
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    const auto parseResult = doc.setContent(data, QDomDocument::ParseOption::Default);
-    const bool parsed = bool(parseResult);
-    if (!parsed) {
-      errorStr = parseResult.errorMessage;
-      errorLine = int(parseResult.errorLine);
-      errorColumn = int(parseResult.errorColumn);
-    }
-#else
-    const bool parsed = doc.setContent(data, false, &errorStr, &errorLine, &errorColumn);
-#endif
+    const bool parsed = FeedXml::parse(doc, data, errorStr, errorLine, errorColumn);
     if (!parsed) {
       qWarning() << QString("Parse data error (1): url %1, id %2, line %3, column %4: %5").
                     arg(LogFile::urlForLog(QUrl(feedUrlStr))).arg(feedId).

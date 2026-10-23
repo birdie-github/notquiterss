@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "feedxml.h"
 #include "logfile.h"
 #include "projectmetadata.h"
 #include <utility>
@@ -216,17 +217,7 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
     }
   }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-  const auto parseResult = doc.setContent(convertData, QDomDocument::ParseOption::Default);
-  const bool parsed = bool(parseResult);
-  if (!parsed) {
-    errorStr = parseResult.errorMessage;
-    errorLine = int(parseResult.errorLine);
-    errorColumn = int(parseResult.errorColumn);
-  }
-#else
-  const bool parsed = doc.setContent(convertData, false, &errorStr, &errorLine, &errorColumn);
-#endif
+  const bool parsed = FeedXml::parse(doc, convertData, errorStr, errorLine, errorColumn);
   if (parsed) feedType = doc.documentElement().tagName();
   if (!parsed || (feedType != "feed" && feedType != "rss" && feedType != "rdf:RDF")) {
     const QString detail = !parsed
