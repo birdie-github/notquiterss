@@ -25,8 +25,16 @@ QString FeedDate::normalize(const QString &input)
 {
   QString body = input.simplified();
   if (body.isEmpty()) return QString();
-  const QDateTime iso = QDateTime::fromString(body, Qt::ISODate);
-  if (iso.isValid()) return stored(iso);
+  // Qt 5 accepts trailing text after ISO seconds, silently treating e.g. GMT
+  // as an absent zone. Validate the complete syntax before taking this path;
+  // named zones and legacy formats must reach the explicit handling below.
+  static const QRegularExpression isoSyntax(QStringLiteral(
+      "\\A[0-9]{4}-[0-9]{2}-[0-9]{2}(?:[Tt ][0-9]{2}:[0-9]{2}"
+      "(?::[0-9]{2})?(?:[.,][0-9]+)?(?:[Zz]|[+-][0-9]{2}(?::?[0-9]{2})?)?)?\\z"));
+  if (isoSyntax.match(body).hasMatch()) {
+    const QDateTime iso = QDateTime::fromString(body, Qt::ISODate);
+    if (iso.isValid()) return stored(iso);
+  }
 
   // Retain the existing weekday-prefix and localized-month fallbacks.
   const int comma = body.indexOf(QLatin1Char(','));

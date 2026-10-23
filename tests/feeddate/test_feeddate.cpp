@@ -18,6 +18,10 @@ private slots:
     QTest::newRow("ISO negative") << "2026-10-23T12:00:00-03:30" << "2026-10-23T15:30:00";
     QTest::newRow("compact offset") << "2026-10-23T12:00:00+0545" << "2026-10-23T06:15:00";
     QTest::newRow("fractional seconds") << "2026-10-23T12:00:00.123+05:30" << "2026-10-23T06:30:00";
+    QTest::newRow("comma fractional seconds") << "2026-10-23T12:00:00,123Z" << "2026-10-23T12:00:00";
+    QTest::newRow("fractional minutes") << "2026-10-23T12:00.5Z" << "2026-10-23T12:00:30";
+    QTest::newRow("ISO minutes") << "2026-10-23T12:00Z" << "2026-10-23T12:00:00";
+    QTest::newRow("ISO end of day") << "2026-10-23T24:00Z" << "2026-10-24T00:00:00";
     QTest::newRow("year boundary") << "2026-01-01T00:15:00+05:45" << "2025-12-31T18:30:00";
     QTest::newRow("RFC half hour") << "Fri, 23 Oct 2026 12:00:00 +0530" << "2026-10-23T06:30:00";
     QTest::newRow("RFC colon offset") << "23 Oct 2026 12:00:00 +05:45" << "2026-10-23T06:15:00";
@@ -27,12 +31,20 @@ private slots:
     QTest::newRow("RFC EST") << "23 Oct 2026 12:00:00 EST" << "2026-10-23T17:00:00";
     QTest::newRow("RFC comment") << "23 Oct 2026 12:00:00 +0530 (IST)" << "2026-10-23T06:30:00";
     QTest::newRow("legacy space") << "2026-10-23 12:00:00 +05:45" << "2026-10-23T06:15:00";
+    QTest::newRow("ISO-shaped GMT") << "2026-10-23 12:00:00 GMT" << "2026-10-23T12:00:00";
+    QTest::newRow("ISO-shaped EDT") << "2026-10-23T12:00:00 EDT" << "2026-10-23T16:00:00";
+    QTest::newRow("ISO-shaped lowercase zone") << "2026-10-23T12:00:00 est" << "2026-10-23T17:00:00";
+    QTest::newRow("ISO-shaped fractional GMT") << "2026-10-23T12:00:00.123 GMT" << "2026-10-23T12:00:00";
     QTest::newRow("legacy short year") << "23 Oct 26 12:00:00 GMT" << "2026-10-23T12:00:00";
     QTest::newRow("legacy DST gap wall fields") << "08 Mar 26 02:30:00 +0530" << "2026-03-07T21:00:00";
     QTest::newRow("legacy date only") << "23 Oct 2026 GMT" << "2026-10-23T00:00:00";
     QTest::newRow("invalid offset minutes") << "2026-10-23T12:00:00+05:99" << QString();
     QTest::newRow("invalid offset hours") << "23 Oct 2026 12:00:00 +2500" << QString();
     QTest::newRow("unknown zone") << "23 Oct 2026 12:00:00 XYZ" << QString();
+    QTest::newRow("ISO-shaped unknown zone") << "2026-10-23T12:00:00 XYZ" << QString();
+    QTest::newRow("ISO-shaped trailing text") << "2026-10-23T12:00:00garbage" << QString();
+    QTest::newRow("fractional trailing text") << "2026-10-23T12:00:00.123456garbage" << QString();
+    QTest::newRow("text before UTC suffix") << "2026-10-23T12:00:00garbageZ" << QString();
     QTest::newRow("bad date") << "31 Feb 2026 12:00:00 GMT" << QString();
     QTest::newRow("empty") << QString() << QString();
   }
@@ -48,7 +60,10 @@ private slots:
     const QDateTime local(QDate(2026, 1, 15), QTime(12, 30), QTimeZone::systemTimeZone());
     const QString expected = local.toUTC().toString("yyyy-MM-ddTHH:mm:ss");
     QCOMPARE(FeedDate::normalize("2026-01-15T12:30:00"), expected);
+    QCOMPARE(FeedDate::normalize("2026-01-15 12:30:00"), expected);
     QCOMPARE(FeedDate::normalize("15 Jan 2026 12:30:00"), expected);
+    const QDateTime midnight(QDate(2026, 1, 15), QTime(0, 0), QTimeZone::systemTimeZone());
+    QCOMPARE(FeedDate::normalize("2026-01-15"), midnight.toUTC().toString("yyyy-MM-ddTHH:mm:ss"));
   }
 
   void consistentArticleDates()
