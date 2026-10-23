@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "feeddeletion.h"
 #include "credentialscope.h"
 #include "opmlinput.h"
 #include <utility>
@@ -2465,7 +2466,23 @@ void MainWindow::addFolder()
  *---------------------------------------------------------------------------*/
 void MainWindow::deleteItemFeedsTree()
 {
-  if (!feedsView_->selectIndex().isValid()) return;
+  if (mainApp->isClosing() || !feedsView_->selectIndex().isValid()) return;
+
+  QModelIndex currentIndex = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
+  const int feedIdCur = feedsModel_->idByIndex(currentIndex);
+  QModelIndexList indexes = feedsView_->selectionModel()->selectedRows(0);
+  if (indexes.count() <= 1) {
+    indexes.clear();
+    indexes.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
+  }
+  // Capture the confirmed IDs before the modal dialog's event loop can reload
+  // the model. Never replay a destructive action against a later selection.
+  QList<int> ids;
+  for (const QModelIndex &proxyIndex : std::as_const(indexes)) {
+    const QModelIndex index = feedsProxyModel_->mapToSource(proxyIndex);
+    if (index.isValid()) ids.append(feedsModel_->idByIndex(index));
+  }
+  if (ids.isEmpty()) return;
 
   QMessageBox msgBox(this);
   msgBox.setIcon(QMessageBox::Question);
@@ -2473,99 +2490,36 @@ void MainWindow::deleteItemFeedsTree()
   msgBox.setText(tr("Are you sure you want to delete the selected items?"));
   msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
   msgBox.setDefaultButton(QMessageBox::No);
+  if (msgBox.exec() != QMessageBox::Yes || mainApp->isClosing()) return;
 
-  if (msgBox.exec() == QMessageBox::No) return;
-
-  QModelIndex currentIndex = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
-  int feedIdCur = feedsModel_->idByIndex(currentIndex);
-
-  QModelIndexList indexList = feedsView_->selectionModel()->selectedRows(0);
-  if (indexList.count() <= 1) {
-    indexList.clear();
-    indexList.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
-  }
-
-  QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-
-  QList<int> idList;
-  QList<int> parentIdList;
-  for (int i = indexList.count()-1; i >= 0; --i) {
-    QModelIndex index = feedsProxyModel_->mapToSource(indexList[i]);
-    if (feedsModel_->isFolder(index)) {
-      idList.append(feedsModel_->dataField(index, "id").toInt());
-      int parentId = feedsModel_->dataField(index, "parentId").toInt();
-      if (!parentIdList.contains(parentId)) {
-        parentIdList.append(parentId);
-      }
-      indexList.removeAt(i);
-    }
-  }
-  for (int i = indexList.count()-1; i >= 0; --i) {
-    QModelIndex index = feedsProxyModel_->mapToSource(indexList[i]);
-    int parentId = feedsModel_->dataField(index, "parentId").toInt();
-    if (!idList.contains(parentId)) {
-      idList.append(feedsModel_->dataField(index, "id").toInt());
-      int parentId = feedsModel_->dataField(index, "parentId").toInt();
-      if (!parentIdList.contains(parentId)) {
-        parentIdList.append(parentId);
-      }
-    }
-    indexList.removeAt(i);
-  }
-
-  db_.transaction();
-  QSqlQuery q;
-  QString idStr;
-  QString feedIdStr;
-  for (int feedId : std::as_const(idList)) {
-    if (idStr.isEmpty()) {
-      idStr.append(QString("id='%1'").arg(feedId));
-      feedIdStr.append(QString("feedId='%1'").arg(feedId));
+  QString error;
+  bool deleted = false;
+  {
+    auto databaseAccess = Database::tryAccess();
+    if (!databaseAccess.owns_lock()) {
+      error = tr("The database is busy. Please try deleting the selected items again shortly.");
     } else {
-      idStr.append(QString(" OR id='%1'").arg(feedId));
-      feedIdStr.append(QString(" OR feedId='%1'").arg(feedId));
-    }
-    QQueue<int> parentIds;
-    parentIds.enqueue(feedId);
-    while (!parentIds.empty()) {
-      int parentId = parentIds.dequeue();
-      q.exec(QString("SELECT id FROM feeds WHERE parentId='%1'").arg(parentId));
-      while (q.next()) {
-        int feedId = q.value(0).toInt();
-
-        idStr.append(QString(" OR id='%1'").arg(feedId));
-        feedIdStr.append(QString(" OR feedId='%1'").arg(feedId));
-
-        parentIds.enqueue(feedId);
+      QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+      deleted = FeedDeletion::apply(db_, ids, error);
+      if (deleted) {
+        feedsModelReload();
+        currentIndex = feedsProxyModel_->mapFromSource(feedIdCur);
+        feedsView_->setCurrentIndex(currentIndex);
+        slotFeedClicked(currentIndex);
       }
+      QApplication::restoreOverrideCursor();
     }
+  } // Release database access before displaying an error dialog.
+  if (!deleted) {
+    if (error.isEmpty()) error = tr("The database operation failed.");
+    qWarning().noquote() << "Feed deletion failed:" << error;
+    QMessageBox failure(QMessageBox::Warning, tr("Delete failed"),
+                        tr("Could not delete the selected items.\n\n%1").arg(error),
+                        QMessageBox::Ok, this);
+    failure.setTextFormat(Qt::PlainText);
+    failure.exec();
+    return;
   }
-  q.exec(QString("DELETE FROM feeds WHERE %1").arg(idStr));
-  q.exec(QString("DELETE FROM news WHERE %1").arg(feedIdStr));
-  q.exec(QString("DELETE FROM feeds_ex WHERE %1").arg(feedIdStr));
-  db_.commit();
-
-  // Correction row
-  for (int parentId : std::as_const(parentIdList)) {
-    QList<int> idCorrectList;
-    q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-           arg(parentId));
-    while (q.next()) {
-      idCorrectList << q.value(0).toInt();
-    }
-    for (int i = 0; i < idCorrectList.count(); i++) {
-      q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-             arg(i).arg(idCorrectList.at(i)));
-    }
-  }
-
-  recountFeedCategories(parentIdList);
-  feedsModelReload();
-  currentIndex = feedsProxyModel_->mapFromSource(feedIdCur);
-  feedsView_->setCurrentIndex(currentIndex);
-  slotFeedClicked(currentIndex);
-
-  QApplication::restoreOverrideCursor();
   DatabaseBackup::subscriptionsChanged("delete feeds or folders");
 }
 
