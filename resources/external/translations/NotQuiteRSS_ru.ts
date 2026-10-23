@@ -319,7 +319,7 @@
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="35"/>
         <source>After feed subscriptions are changed</source>
-        <translation>После изменений в летнах новостей</translation>
+        <translation>После изменений в лентах новостей</translation>
     </message>
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="36"/>
@@ -349,7 +349,7 @@
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="62"/>
         <source>Keep the most recent backup sets:</source>
-        <translation>Хранить столько послених резеврных копий:</translation>
+        <translation>Хранить столько последних резервных копий:</translation>
     </message>
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="69"/>
@@ -359,7 +359,7 @@
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="74"/>
         <source>Backups will exclude other articles</source>
-        <translation>Резеврные копии не будет включать остальные новости</translation>
+        <translation>Резервные копии не будут включать остальные новости</translation>
     </message>
     <message>
         <location filename="../../../src/application/backupsettingspage.cpp" line="75"/>
@@ -810,7 +810,7 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="225"/>
         <source>Cannot create the backup directory.</source>
-        <translation>Не могу создать директорию для резеврных копий.</translation>
+        <translation>Не могу создать директорию для резервных копий.</translation>
     </message>
     <message>
         <location filename="../../../src/application/databasebackup.cpp" line="241"/>
@@ -1968,7 +1968,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/application/mainapplication.cpp" line="256"/>
         <source>Backup failed</source>
-        <translation>Ошибка создания резеврной копии</translation>
+        <translation>Ошибка создания резервной копии</translation>
     </message>
     <message>
         <location filename="../../../src/application/mainapplication.cpp" line="257"/>
