@@ -20,6 +20,7 @@
 #include "requestfeed.h"
 #include <utility>
 #include "networkpolicy.h"
+#include "credentialscope.h"
 #include "mainapplication.h"
 #include "globals.h"
 #include "common.h"
@@ -380,7 +381,7 @@ void RequestFeed::finished(QNetworkReply *reply)
     } else {
       QUrl redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
       if (!redirectionTarget.isEmpty()) {
-        redirectionTarget = replyUrl.resolved(redirectionTarget);
+        redirectionTarget = CredentialScope::redirectTarget(replyUrl, redirectionTarget);
         if (!NetworkPolicy::isSafeRedirect(replyUrl, redirectionTarget)) {
           emit getUrlDone(-4, feedId, feedUrl, tr("Unsupported or unsafe redirect URL."));
         } else if (count < (numberRepeats_ + 3)) {

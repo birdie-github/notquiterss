@@ -48,6 +48,19 @@ private slots:
              CredentialScope::server(QUrl("https://[::1]:443/other"), "r"));
   }
 
+  void redirectCredentialScope()
+  {
+    const QUrl source("https://alice:secret@example.org/feed?account=one");
+    QCOMPARE(CredentialScope::redirectTarget(source, QUrl("#section")).userInfo(), source.userInfo());
+    for (const QUrl &target : {QUrl("/other"), QUrl("?account=two"),
+                              QUrl("https://example.org:8443/feed?account=one"),
+                              QUrl("https://other.org/feed"),
+                              QUrl("https://mallory:injected@example.org/other")})
+      QVERIFY(CredentialScope::redirectTarget(source, target).userInfo().isEmpty());
+    QCOMPARE(CredentialScope::redirectTarget(source,
+             QUrl("https://mallory:injected@example.org/feed?account=one")).userInfo(), source.userInfo());
+  }
+
   void normalization_data()
   {
     QTest::addColumn<QString>("input");

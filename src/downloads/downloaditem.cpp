@@ -38,6 +38,7 @@
 #include "mainapplication.h"
 #include "networkmanager.h"
 #include "networkpolicy.h"
+#include "credentialscope.h"
 
 #if defined(Q_OS_WIN)
 #include <qt_windows.h>
@@ -181,7 +182,7 @@ bool DownloadItem::followRedirect()
   if (status != 301 && status != 302 && status != 303 && status != 307 && status != 308)
     return false;
   const QUrl location = reply_->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
-  const QUrl target = reply_->url().resolved(location);
+  const QUrl target = CredentialScope::redirectTarget(reply_->url(), location);
   if (location.isEmpty() || !NetworkPolicy::isHttpUrl(target)) {
     fail(tr("Invalid redirect or unsupported redirect scheme; only HTTP and HTTPS are allowed."));
     return true;

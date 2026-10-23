@@ -30,7 +30,12 @@
 #include <QFile>
 
 NetworkManager::NetworkManager(bool isThread, QObject* parent)
-  : QNetworkAccessManager(parent)
+  : NetworkManager(isThread, parent, false)
+{
+}
+
+NetworkManager::NetworkManager(bool isThread, QObject *parent, bool isolatedTransport)
+  : QNetworkAccessManager(parent), isThread_(isThread), isolatedTransport_(isolatedTransport)
 {
   setCookieJar(mainApp->cookieJar()->createNetworkJar(this));
 
@@ -52,7 +57,7 @@ NetworkManager::NetworkManager(bool isThread, QObject* parent)
     connect(this, &QNetworkAccessManager::proxyAuthenticationRequired,
             this, &NetworkManager::slotProxyAuthentication);
 
-    loadSettings();
+    if (!isolatedTransport_) loadSettings();
   }
 }
 
@@ -145,5 +150,18 @@ QNetworkReply *NetworkManager::createRequest(QNetworkAccessManager::Operation op
   checked.setRawHeader("User-Agent", globals.requestUserAgent(checked.url()).toUtf8());
   // Feed, favicon and download callers resolve and validate redirects themselves.
   checked.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
+  if (!isolatedTransport_ && !checked.url().userInfo().isEmpty()) {
+    // Explicit feed credentials must not enter the shared origin/realm cache.
+    // A separate manager also isolates Qt's authenticated HTTP connections.
+    auto *transport = new NetworkManager(isThread_, this, true);
+    transport->setProxy(proxy());
+    // Return the raw reply: the outer head()/get() call installs Qt's normal
+    // reply forwarding once, while the HTTP backend belongs to this transport.
+    QNetworkReply *reply = transport->createRequest(op, checked, outgoingData);
+    // Callers may retain or reparent a finished reply (e.g. downloads). Keep its
+    // backend alive until the reply itself is released, including cancellation.
+    connect(reply, &QObject::destroyed, transport, &QObject::deleteLater);
+    return reply;
+  }
   return QNetworkAccessManager::createRequest(op, checked, outgoingData);
 }

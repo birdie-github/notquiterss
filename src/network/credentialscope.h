@@ -40,6 +40,15 @@ inline QString feed(const QUrl &url)
   endpoint.setPort(url.port(url.scheme() == QLatin1String("https") ? 443 : 80));
   return QStringLiteral("feed-auth:") + endpoint.toString(QUrl::FullyEncoded);
 }
+
+inline QUrl redirectTarget(const QUrl &source, const QUrl &location)
+{
+  QUrl target = source.resolved(location);
+  // A redirect cannot expand the scope or introduce credentials of its own.
+  target.setUserInfo(QString());
+  if (feed(source) == feed(target)) target.setUserInfo(source.userInfo());
+  return target;
+}
 }
 
 #endif // CREDENTIALSCOPE_H

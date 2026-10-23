@@ -37,6 +37,11 @@ public:
   void loadSettings();
   void loadCertificates();
 
+private:
+  NetworkManager(bool isThread, QObject *parent, bool isolatedTransport);
+  const bool isThread_;
+  const bool isolatedTransport_;
+
 private slots:
   void slotAuthentication(QNetworkReply *reply, QAuthenticator *auth);
   void slotProxyAuthentication(const QNetworkProxy &proxy, QAuthenticator *auth);

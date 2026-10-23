@@ -20,6 +20,7 @@
 #include "faviconobject.h"
 #include <utility>
 #include "networkpolicy.h"
+#include "credentialscope.h"
 #include "mainapplication.h"
 #include "globals.h"
 #include "common.h"
@@ -225,7 +226,7 @@ void FaviconObject::finished(QNetworkReply *reply)
       QUrl redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
       if (redirectionTarget.isValid()) {
         if ((cntRequests == 0) || (cntRequests == 1) || (cntRequests == 3)) {
-          redirectionTarget = reply->url().resolved(redirectionTarget);
+          redirectionTarget = CredentialScope::redirectTarget(reply->url(), redirectionTarget);
           if (NetworkPolicy::isSafeRedirect(reply->url(), redirectionTarget))
             requestResource(redirectionTarget, feedUrl, cntRequests+2, isIcon);
         }
