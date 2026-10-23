@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "feeddate.h"
 #include "newsmodel.h"
 #include <utility>
 
@@ -105,21 +106,9 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
       QModelIndex feedIndex = mainWindow->feedsModel_->indexById(feedId);
       return mainWindow->feedsModel_->dataField(feedIndex, "text").toString();
     } else if (QSqlTableModel::fieldIndex("published") == index.column()) {
-      QDateTime dtLocal;
-      QString strDate = index.data(Qt::EditRole).toString();
-
-      if (!strDate.isNull()) {
-        // Publisher dates are stored as UTC without a suffix; fallback dates
-        // already include one. Parse in UTC before converting, so historical
-        // DST offsets and local clock gaps do not affect interpretation.
-        if (strDate.size() == 19)
-          strDate.append(QLatin1Char('Z'));
-        dtLocal = QDateTime::fromString(strDate, Qt::ISODate).toLocalTime();
-      } else {
-        dtLocal = QDateTime::fromString(
-              QSqlTableModel::index(index.row(), fieldIndex("received")).data(Qt::EditRole).toString(),
-              Qt::ISODate);
-      }
+      const QDateTime dtLocal = FeedDate::articleLocalTime(
+          index.data(Qt::EditRole).toString(),
+          QSqlTableModel::index(index.row(), fieldIndex("received")).data(Qt::EditRole).toString());
       if (simplifiedDateTime_) {
         if (QDateTime::currentDateTime().date() <= dtLocal.date())
           return dtLocal.toString(formatTime_);

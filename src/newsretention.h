@@ -11,14 +11,10 @@ namespace NewsRetention {
 // Do not mistake those synthetic dates for publisher dates during cleanup.
 inline QDateTime publicationDate(const QString &value)
 {
-  if (value.size() != 19) return QDateTime();
-  QDateTime date = QDateTime::fromString(value, QStringLiteral("yyyy-MM-ddTHH:mm:ss"));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-  date.setTimeZone(QTimeZone(QTimeZone::UTC));
-#else
-  date.setTimeSpec(Qt::UTC);
-#endif
-  return date;
+  if (value.size() != 19 || value.at(10) != QLatin1Char('T')) return QDateTime();
+  // Parse in UTC from the outset; constructing a local date first can reject
+  // valid UTC wall-clock fields during the machine's spring DST gap.
+  return QDateTime::fromString(value + QLatin1Char('Z'), Qt::ISODate);
 }
 
 inline QDateTime cutoff(int days)

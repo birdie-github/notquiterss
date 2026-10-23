@@ -16,9 +16,9 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "feeddate.h"
 #include "common.h"
 #include <utility>
-#include <QTimeZone>
 #include "newstabwidget.h"
 
 #include "mainapplication.h"
@@ -1218,24 +1218,10 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
             arg(linkString, titleString);
       }
 
-      QDateTime dtLocal;
-      QString dateString = newsModel_->dataField(index.row(), "published").toString();
-      if (!dateString.isNull()) {
-        QDateTime dtLocalTime = QDateTime::currentDateTime();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), QTimeZone(QTimeZone::UTC));
-#else
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), Qt::UTC);
-#endif
-        int nTimeShift = dtLocalTime.secsTo(dtUTC);
-
-        QDateTime dt = QDateTime::fromString(dateString, Qt::ISODate);
-        dtLocal = dt.addSecs(nTimeShift);
-      } else {
-        dtLocal = QDateTime::fromString(
-              newsModel_->dataField(index.row(), "received").toString(),
-              Qt::ISODate);
-      }
+      const QDateTime dtLocal = FeedDate::articleLocalTime(
+          newsModel_->dataField(index.row(), "published").toString(),
+          newsModel_->dataField(index.row(), "received").toString());
+      QString dateString;
       if (QDateTime::currentDateTime().date() <= dtLocal.date())
         dateString = dtLocal.toString(mainWindow_->formatTime_);
       else
@@ -1459,24 +1445,10 @@ void NewsTabWidget::loadNewspaper(int refresh)
             arg(linkString, titleStyle, newsId, titleString);
       }
 
-      QDateTime dtLocal;
-      QString dateString = newsModel_->dataField(index.row(), "published").toString();
-      if (!dateString.isNull()) {
-        QDateTime dtLocalTime = QDateTime::currentDateTime();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), QTimeZone(QTimeZone::UTC));
-#else
-        QDateTime dtUTC(dtLocalTime.date(), dtLocalTime.time(), Qt::UTC);
-#endif
-        int nTimeShift = dtLocalTime.secsTo(dtUTC);
-
-        QDateTime dt = QDateTime::fromString(dateString, Qt::ISODate);
-        dtLocal = dt.addSecs(nTimeShift);
-      } else {
-        dtLocal = QDateTime::fromString(
-              newsModel_->dataField(index.row(), "received").toString(),
-              Qt::ISODate);
-      }
+      const QDateTime dtLocal = FeedDate::articleLocalTime(
+          newsModel_->dataField(index.row(), "published").toString(),
+          newsModel_->dataField(index.row(), "received").toString());
+      QString dateString;
       if (QDateTime::currentDateTime().date() <= dtLocal.date())
         dateString = dtLocal.toString(mainWindow_->formatTime_);
       else
