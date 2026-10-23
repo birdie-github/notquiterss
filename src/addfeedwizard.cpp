@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "credentialscope.h"
 #include "network/feedurl.h"
 #include "network/networkpolicy.h"
 #include "addfeedwizard.h"
@@ -608,7 +609,7 @@ void AddFeedWizard::finish()
 
   if (auth) {
     QUrl url(feedUrlString_);
-    QString server = url.host();
+    QString server = CredentialScope::feed(url);
 
     q.prepare("SELECT * FROM passwords WHERE server=?");
     q.addBindValue(server);

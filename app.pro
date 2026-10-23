@@ -75,7 +75,7 @@ SOURCES += src/application/releaseinfo.cpp
 HEADERS += src/application/languagecatalog.h
 SOURCES += src/application/languagecatalog.cpp
 
-HEADERS += src/network/networkpolicy.h src/articleview/articlecontent.h src/articleview/articleimages.h src/sharing/shareservice.h src/newsretention.h src/application/statusbarcontroller.h src/application/trayiconcontroller.h src/application/soundplayer.h
+HEADERS += src/network/credentialscope.h src/network/networkpolicy.h src/articleview/articlecontent.h src/articleview/articleimages.h src/sharing/shareservice.h src/newsretention.h src/application/statusbarcontroller.h src/application/trayiconcontroller.h src/application/soundplayer.h
 SOURCES += src/articleview/articlecontent.cpp src/articleview/articleimages.cpp src/sharing/shareservice.cpp src/application/statusbarcontroller.cpp src/application/trayiconcontroller.cpp src/application/soundplayer.cpp
 
 unix:!mac:DEFINES += HAVE_X11

@@ -21,6 +21,7 @@
 
 #include <QAuthenticator>
 #include <QNetworkReply>
+#include <QNetworkProxy>
 
 #include "dialog.h"
 #include "lineedit.h"
@@ -33,15 +34,21 @@ public:
   explicit AuthenticationDialog(const QUrl &url,
                                 QAuthenticator *auth,
                                 QWidget *parent = 0);
+  explicit AuthenticationDialog(const QNetworkProxy &proxy,
+                                QAuthenticator *auth,
+                                QWidget *parent = 0);
   QCheckBox* save_;
 
 private slots:
   void acceptDialog();
 
 private:
+  AuthenticationDialog(const QString &server, const QString &scope,
+                       QAuthenticator *auth, QWidget *parent);
   QAuthenticator *auth_;
 
   QString server_;
+  QString scope_;
   LineEdit *user_;
   LineEdit *pass_;
 

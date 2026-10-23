@@ -3,11 +3,51 @@
 #include "feedurl.h"
 #include "networkpolicy.h"
 #include "opmlinput.h"
+#include "credentialscope.h"
 
 class FeedUrlTest : public QObject
 {
   Q_OBJECT
 private slots:
+  void credentialProtectionSpaces()
+  {
+    const QUrl url("https://example.org/feed");
+    const QString key = CredentialScope::server(url, "private");
+    QCOMPARE(key, CredentialScope::server(QUrl("https://EXAMPLE.org:443/other"), "private"));
+    QVERIFY(key != CredentialScope::server(QUrl("http://example.org/feed"), "private"));
+    QVERIFY(key != CredentialScope::server(QUrl("https://example.org:8443/feed"), "private"));
+    QVERIFY(key != CredentialScope::server(url, "other"));
+    QVERIFY(key != CredentialScope::server(url, "private#suffix"));
+    QVERIFY(key != CredentialScope::server(url, "private%23suffix"));
+    QVERIFY(key != QStringLiteral("example.org"));
+
+    QNetworkProxy proxy(QNetworkProxy::HttpProxy, "example.org", 443);
+    const QString proxyKey = CredentialScope::proxy(proxy, "private");
+    QVERIFY(proxyKey != key);
+    proxy.setPort(8443);
+    QVERIFY(proxyKey != CredentialScope::proxy(proxy, "private"));
+    proxy.setPort(443);
+    proxy.setType(QNetworkProxy::Socks5Proxy);
+    QVERIFY(proxyKey != CredentialScope::proxy(proxy, "private"));
+    proxy.setType(QNetworkProxy::HttpProxy);
+    QVERIFY(proxyKey != CredentialScope::proxy(proxy, "other"));
+  }
+
+  void explicitFeedCredentials()
+  {
+    const QUrl url("https://example.org/feed?account=one");
+    const QString key = CredentialScope::feed(url);
+    QCOMPARE(key, CredentialScope::feed(QUrl("https://example.org:443/feed?account=one#section")));
+    QVERIFY(key != CredentialScope::feed(QUrl("http://example.org/feed?account=one")));
+    QVERIFY(key != CredentialScope::feed(QUrl("https://example.org:8443/feed?account=one")));
+    QVERIFY(key != CredentialScope::feed(QUrl("https://example.org/other?account=one")));
+    QVERIFY(key != CredentialScope::feed(QUrl("https://example.org/feed?account=two")));
+    QVERIFY(key != CredentialScope::server(url, QString()));
+    QVERIFY(key != QStringLiteral("example.org"));
+    QCOMPARE(CredentialScope::server(QUrl("https://[::1]/feed"), "r"),
+             CredentialScope::server(QUrl("https://[::1]:443/other"), "r"));
+  }
+
   void normalization_data()
   {
     QTest::addColumn<QString>("input");

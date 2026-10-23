@@ -17,26 +17,37 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "authenticationdialog.h"
+#include "credentialscope.h"
 
 #include <QSqlQuery>
 
 AuthenticationDialog::AuthenticationDialog(const QUrl &url,
                                            QAuthenticator *auth,
                                            QWidget *parent)
+  : AuthenticationDialog(CredentialScope::origin(url).toString(),
+                         CredentialScope::server(url, auth->realm()), auth, parent)
+{
+}
+
+AuthenticationDialog::AuthenticationDialog(const QNetworkProxy &proxy,
+                                           QAuthenticator *auth,
+                                           QWidget *parent)
+  : AuthenticationDialog(proxy.hostName() + QLatin1Char(':') + QString::number(proxy.port()),
+                         CredentialScope::proxy(proxy, auth->realm()), auth, parent)
+{
+}
+
+AuthenticationDialog::AuthenticationDialog(const QString &server, const QString &scope,
+                                           QAuthenticator *auth, QWidget *parent)
   : Dialog(parent, Qt::MSWindowsFixedSizeDialogHint),
-    auth_(auth)
+    auth_(auth), server_(server), scope_(scope)
 {
   save_ = new QCheckBox(tr("Save password"), this);
   save_->setChecked(false);
 
-  server_ = url.host();
-  if (server_.isEmpty()) {
-    server_ = url.toString();
-  }
-
   QSqlQuery q;
   q.prepare("SELECT username, password FROM passwords WHERE server=?");
-  q.addBindValue(server_);
+  q.addBindValue(scope_);
   q.exec();
   if (q.next()) {
     auth_->setUser(q.value(0).toString());
@@ -81,7 +92,7 @@ void AuthenticationDialog::acceptDialog()
     QSqlQuery q;
     q.prepare("INSERT INTO passwords (server, username, password) "
               "VALUES (:server, :username, :password)");
-    q.bindValue(":server", server_);
+    q.bindValue(":server", scope_);
     q.bindValue(":username", user_->text());
     q.bindValue(":password", pass_->text().toUtf8().toBase64());
     q.exec();

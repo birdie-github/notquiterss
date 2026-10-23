@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "credentialscope.h"
 #include "opmlinput.h"
 #include <utility>
 #include "../network/feedurl.h"
@@ -5027,7 +5028,7 @@ void MainWindow::showFeedPropertiesDlg()
   QUrl url(feedsModel_->dataField(index, "xmlUrl").toString());
   QSqlQuery q;
   q.prepare("SELECT username, password FROM passwords WHERE server=?");
-  q.addBindValue(url.host());
+  q.addBindValue(CredentialScope::feed(url));
   q.exec();
   if (q.next()) {
     properties.authentication.user = q.value(0).toString();
@@ -5157,18 +5158,18 @@ void MainWindow::showFeedPropertiesDlg()
 
   if (!(!feedsModel_->dataField(index, "authentication").toInt() && !properties.authentication.on)) {
     q.prepare("SELECT * FROM passwords WHERE server=?");
-    q.addBindValue(url.host());
+    q.addBindValue(CredentialScope::feed(QUrl(properties.general.url)));
     q.exec();
     if (q.next()) {
       q.prepare("UPDATE passwords SET username = ?, password = ? WHERE server=?");
       q.addBindValue(properties.authentication.user);
       q.addBindValue(properties.authentication.pass.toUtf8().toBase64());
-      q.addBindValue(url.host());
+      q.addBindValue(CredentialScope::feed(QUrl(properties.general.url)));
       q.exec();
     } else if (properties.authentication.on) {
       q.prepare("INSERT INTO passwords (server, username, password) "
                 "VALUES (:server, :username, :password)");
-      q.bindValue(":server", url.host());
+      q.bindValue(":server", CredentialScope::feed(QUrl(properties.general.url)));
       q.bindValue(":username", properties.authentication.user);
       q.bindValue(":password", properties.authentication.pass.toUtf8().toBase64());
       q.exec();

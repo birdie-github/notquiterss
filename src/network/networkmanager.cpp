@@ -114,7 +114,7 @@ void NetworkManager::slotAuthentication(QNetworkReply *reply, QAuthenticator *au
 void NetworkManager::slotProxyAuthentication(const QNetworkProxy &proxy, QAuthenticator *auth)
 {
   AuthenticationDialog *authenticationDialog =
-      new AuthenticationDialog(proxy.hostName(), auth);
+      new AuthenticationDialog(proxy, auth);
 
   if (!authenticationDialog->save_->isChecked())
     authenticationDialog->exec();

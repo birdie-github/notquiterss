@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "credentialscope.h"
 #include "network/feedurl.h"
 #include <utility>
 #include "databasebackup.h"
@@ -765,7 +766,7 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
       QSqlQuery q(db_);
       QUrl url(feedUrl);
       q.prepare("SELECT username, password FROM passwords WHERE server=?");
-      q.addBindValue(url.host());
+      q.addBindValue(CredentialScope::feed(url));
       q.exec();
       if (q.next()) {
         userInfo = QString("%1:%2").arg(q.value(0).toString()).
