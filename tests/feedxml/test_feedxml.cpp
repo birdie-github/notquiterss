@@ -6,6 +6,82 @@ class FeedXmlTest : public QObject
 {
   Q_OBJECT
 private slots:
+  void atomText_data()
+  {
+    QTest::addColumn<QByteArray>("input");
+    QTest::addColumn<QString>("expected");
+    QTest::newRow("default text") << QByteArray("<content>Use &lt;b&gt;bold&lt;/b&gt; literally.</content>")
+        << QString("Use &lt;b&gt;bold&lt;/b&gt; literally.");
+    QTest::newRow("explicit text") << QByteArray("<content type='text'>&lt;img src='https://example.org/x.png'/&gt;</content>")
+        << QString("&lt;img src='https://example.org/x.png'/&gt;");
+    QTest::newRow("plain summary") << QByteArray("<summary>&lt;a href='https://example.org/'&gt;literal&lt;/a&gt;</summary>")
+        << QString("&lt;a href='https://example.org/'&gt;literal&lt;/a&gt;");
+    QTest::newRow("title") << QByteArray("<title type='text'>Literal &lt;b&gt;title&lt;/b&gt;</title>")
+        << QString("Literal &lt;b&gt;title&lt;/b&gt;");
+    QTest::newRow("plain MIME") << QByteArray("<content type='text/plain'>&lt;b&gt;text&lt;/b&gt;</content>")
+        << QString("&lt;b&gt;text&lt;/b&gt;");
+    QTest::newRow("unknown type") << QByteArray("<content type='unknown'>&lt;b&gt;text&lt;/b&gt;</content>")
+        << QString("&lt;b&gt;text&lt;/b&gt;");
+    QTest::newRow("escape once") << QByteArray("<content>&amp;lt;b&amp;gt; &amp; text</content>")
+        << QString("&amp;lt;b&amp;gt; &amp; text");
+    QTest::newRow("line breaks") << QByteArray("<content><![CDATA[one\r\ntwo\rthree\nfour]]></content>")
+        << QString("one<br/>two<br/>three<br/>four");
+    QTest::newRow("HTML") << QByteArray("<content type='html'>&lt;b&gt;bold&lt;/b&gt;</content>")
+        << QString("<b>bold</b>");
+    QTest::newRow("HTML summary") << QByteArray("<summary type='html'><![CDATA[<img src='https://example.org/x.png'/>]]></summary>")
+        << QString("<img src='https://example.org/x.png'/>");
+    QTest::newRow("HTML MIME") << QByteArray("<content type='text/html; charset=UTF-8'>&lt;b&gt;bold&lt;/b&gt;</content>")
+        << QString("<b>bold</b>");
+    QTest::newRow("empty") << QByteArray("<content/>") << QString();
+  }
+  void atomText()
+  {
+    QFETCH(QByteArray, input);
+    QFETCH(QString, expected);
+    QDomDocument doc;
+    QString error;
+    int line = 0, column = 0;
+    QVERIFY2(FeedXml::parse(doc, input, error, line, column), qPrintable(error));
+    QCOMPARE(FeedXml::atomText(doc.documentElement()), expected);
+  }
+
+  void atomXhtml_data()
+  {
+    QTest::addColumn<QString>("name");
+    QTest::newRow("content") << QString("content");
+    QTest::newRow("summary") << QString("summary");
+  }
+  void atomXhtml()
+  {
+    QFETCH(QString, name);
+    const QString input = "<" + name + " type='xhtml'><div xmlns='http://www.w3.org/1999/xhtml'>"
+        "<p>Words <b>bold</b></p><img src='https://example.org/x.png'/></div></" + name + ">";
+    QDomDocument doc;
+    QString error;
+    int line = 0, column = 0;
+    QVERIFY2(FeedXml::parse(doc, input, error, line, column), qPrintable(error));
+    const QString markup = FeedXml::atomText(doc.documentElement());
+    QVERIFY(markup.contains("<b>bold</b>"));
+    QVERIFY(markup.contains("<img"));
+    QVERIFY(!markup.contains("<" + name));
+    QVERIFY(!markup.contains("&lt;img"));
+  }
+
+  void atomEmptyContentUsesSummary()
+  {
+    QDomDocument doc;
+    QString error;
+    int line = 0, column = 0;
+    QVERIFY(FeedXml::parse(doc, QByteArray("<entry><content/><summary>fallback &lt;b&gt;text&lt;/b&gt;</summary></entry>"),
+                           error, line, column));
+    const auto entry = doc.documentElement();
+    const QString content = FeedXml::atomText(entry.namedItem("content").toElement());
+    const QString summary = FeedXml::atomText(entry.namedItem("summary").toElement());
+    QVERIFY(content.isEmpty());
+    QCOMPARE(summary, QString("fallback &lt;b&gt;text&lt;/b&gt;"));
+    QVERIFY(FeedXml::atomText(QDomElement()).isEmpty());
+  }
+
   void validDocumentIsNotTruncated()
   {
     const QByteArray input = "<rss><channel><item><description><![CDATA["

@@ -346,7 +346,7 @@ void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
   FeedItemStruct feedItem;
 
   feedItem.linkBase = rootElem.attribute("xml:base");
-  feedItem.title = toPlainText(rootElem.namedItem("title").toElement().text());
+  feedItem.title = toPlainText(FeedXml::atomText(rootElem.namedItem("title").toElement()));
   feedItem.description = rootElem.namedItem("subtitle").toElement().text();
   feedItem.updated = rootElem.namedItem("updated").toElement().text();
   feedItem.updated = parseDate(feedItem.updated, feedUrl);
@@ -413,7 +413,7 @@ void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
   for (int i = 0; i < newsList.size(); i++) {
     NewsItemStruct newsItem;
     newsItem.id = newsList.item(i).namedItem("id").toElement().text();
-    newsItem.title = toPlainText(newsList.item(i).namedItem("title").toElement().text());
+    newsItem.title = toPlainText(FeedXml::atomText(newsList.item(i).namedItem("title").toElement()));
     newsItem.updated = newsList.item(i).namedItem("published").toElement().text();
     if (newsItem.updated.isEmpty())
       newsItem.updated = newsList.item(i).namedItem("updated").toElement().text();
@@ -426,22 +426,11 @@ void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
       newsItem.authorEmail = authorElem.namedItem("email").toElement().text();
     }
 
-    newsItem.description = newsList.item(i).namedItem("summary").toElement().text();
-    QDomNode nodeSummary = newsList.item(i).namedItem("summary");
-    if (!nodeSummary.isNull() && newsItem.description.isEmpty()) {
-      QTextStream in(&newsItem.description);
-      nodeSummary.save(in, 0);
-    }
-    QDomNode nodeContent = newsList.item(i).namedItem("content");
-    if (nodeContent.toElement().attribute("type") == "xhtml") {
-      QTextStream in(&newsItem.content);
-      nodeContent.save(in, 0);
-    } else {
-      newsItem.content = nodeContent.toElement().text();
-    }
+    newsItem.description = FeedXml::atomText(newsList.item(i).namedItem("summary").toElement());
+    newsItem.content = FeedXml::atomText(newsList.item(i).namedItem("content").toElement());
     QString imgUrl = newsList.item(i).namedItem("media:thumbnail").toElement().attribute("url");
     QString community = getCommunity(newsList.item(i).namedItem("media:community"));
-    nodeContent = newsList.item(i).namedItem("media:group");
+    QDomNode nodeContent = newsList.item(i).namedItem("media:group");
     if (!nodeContent.isNull()) {
       QString description = nodeContent.namedItem("media:description").toElement().text();
       if (description.length() > newsItem.content.length())

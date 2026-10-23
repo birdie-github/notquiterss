@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "feedxml.h"
 
+#include <QTextStream>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
@@ -80,4 +81,28 @@ bool FeedXml::parse(QDomDocument &doc, const QByteArray &input, QString &error, 
 bool FeedXml::parse(QDomDocument &doc, const QString &input, QString &error, int &line, int &column)
 {
   return parseFeed(doc, input, error, line, column);
+}
+
+QString FeedXml::atomText(const QDomElement &element)
+{
+  if (element.isNull()) return QString();
+  const QString type = element.attribute(QStringLiteral("type"), QStringLiteral("text"))
+                           .section(QLatin1Char(';'), 0, 0).trimmed().toLower();
+  if (type == QLatin1String("html") || type == QLatin1String("text/html"))
+    return element.text();
+  if (type == QLatin1String("xhtml") || type == QLatin1String("application/xhtml+xml")) {
+    QString markup;
+    QTextStream output(&markup);
+    for (QDomNode child = element.firstChild(); !child.isNull(); child = child.nextSibling())
+      child.save(output, 0);
+    output.flush();
+    return markup;
+  }
+  // XML decoding has already happened. Escape once before the HTML stage so
+  // literal tags/entities cannot become formatting, links or image requests.
+  QString text = element.text().toHtmlEscaped();
+  text.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+  text.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+  text.replace(QLatin1Char('\n'), QStringLiteral("<br/>"));
+  return text;
 }
