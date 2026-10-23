@@ -46,6 +46,29 @@ class LoggingTest : public QObject
 {
   Q_OBJECT
 private slots:
+  void urlRedaction()
+  {
+    const QUrl original("https://alice:password@example.org:8443/feed?token=private#secret");
+    QCOMPARE(LogFile::urlForLog(original), QString("https://example.org:8443/feed"));
+    QCOMPARE(original.userName(), QString("alice"));
+    QCOMPARE(original.password(), QString("password"));
+    QCOMPARE(original.query(), QString("token=private"));
+    QCOMPARE(LogFile::urlForLog(QUrl("/feed?token=private")), QString("/feed"));
+    QCOMPARE(LogFile::urlForLog(QUrl("https://[::1]:8443/feed?key=x")),
+             QString("https://[::1]:8443/feed"));
+    QCOMPARE(LogFile::urlForLog(QUrl("https://example.org/feed?token=private%20value")),
+             QString("https://example.org/feed"));
+
+    const QString message = "HEAD \"https://alice:password@example.org/feed?token=private#secret\" "
+                            "redirect https://other.org/rss?key=another "
+                            "mailto:reader@example.org?body=confidential";
+    const QString redacted = LogFile::redactUrls(message);
+    QCOMPARE(redacted, QString("HEAD \"https://example.org/feed\" "
+                               "redirect https://other.org/rss mailto:reader@example.org"));
+    QCOMPARE(LogFile::redactUrls(redacted), redacted);
+    QCOMPARE(LogFile::redactUrls("connection refused"), QString("connection refused"));
+  }
+
   void arguments()
   {
     const auto parsed = CommandLine::parse({"reader", "--debug", "--show", "feed:https://example.org/--exit"});
@@ -98,10 +121,22 @@ private slots:
       StderrCapture capture;
       QVERIFY(capture.active);
       LogFile::msgHandler(QtDebugMsg, {}, "both sinks");
-      QVERIFY(capture.finish().contains("both sinks"));
+      LogFile::msgHandler(QtWarningMsg, {},
+                          "Error downloading https://alice:password@example.org/feed?token=private#secret");
+      const QByteArray both = capture.finish();
+      QVERIFY(both.contains("both sinks"));
+      QVERIFY(both.contains("https://example.org/feed"));
+      for (const QByteArray &secret : {QByteArray("alice"), QByteArray("password"),
+                                     QByteArray("private"), QByteArray("secret")})
+        QVERIFY(!both.contains(secret));
     }
     QVERIFY(file.open(QIODevice::ReadOnly));
-    QVERIFY(file.readAll().contains("both sinks"));
+    const QByteArray persisted = file.readAll();
+    QVERIFY(persisted.contains("both sinks"));
+    QVERIFY(persisted.contains("https://example.org/feed"));
+    for (const QByteArray &secret : {QByteArray("alice"), QByteArray("password"),
+                                   QByteArray("private"), QByteArray("secret")})
+      QVERIFY(!persisted.contains(secret));
     LogFile::configure(QString(), false, true);
   }
 };

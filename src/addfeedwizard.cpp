@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "credentialscope.h"
 #include "network/feedurl.h"
 #include "network/networkpolicy.h"
@@ -447,7 +448,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
 #endif
     if (!parsed) {
       qWarning() << QString("Parse data error (1): url %1, id %2, line %3, column %4: %5").
-                    arg(feedUrlStr).arg(feedId).
+                    arg(LogFile::urlForLog(QUrl(feedUrlStr))).arg(feedId).
                     arg(errorLine).arg(errorColumn).arg(errorStr);
     } else {
       QDomElement docElem = doc.documentElement();
@@ -482,7 +483,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
             return;
           }
           linkFeedString = url.toString();
-          qDebug() << "Parse feed URL, valid:" << linkFeedString;
+          qDebug() << "Parse feed URL, valid:" << LogFile::urlForLog(QUrl(linkFeedString));
 
           QSqlQuery q;
           int duplicateFoundId = -1;
@@ -537,7 +538,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
       textWarning->setText(tr("Request failed"));
     warningWidget_->setVisible(true);
     qWarning() << QString("Request failed: result = %1, error - %2, url - %3").
-                  arg(result).arg(error).arg(feedUrlStr);
+                  arg(result).arg(error).arg(LogFile::urlForLog(QUrl(feedUrlStr)));
 
     deleteFeed();
     progressBar_->hide();
@@ -549,7 +550,7 @@ void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
 
 void AddFeedWizard::slotUpdateFeed(int feedId, bool, int newCount, QString)
 {
-  qDebug() << "ParseDone: " << feedUrlString_;
+  qDebug() << "ParseDone: " << LogFile::urlForLog(QUrl(feedUrlString_));
   selectedPage = true;
   newCount_ = newCount;
 

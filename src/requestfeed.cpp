@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "requestfeed.h"
 #include <utility>
 #include "networkpolicy.h"
@@ -148,7 +149,7 @@ void RequestFeed::requestTrackedUrl(int id, QString urlString, QDateTime date,
   if (!getUrlTimer_->isActive())
     getUrlTimer_->start();
 
-  qDebug() << "requestUrl() <<" << urlString << "countQueue=" << feedsQueue_.count();
+  qDebug() << "requestUrl() <<" << LogFile::urlForLog(QUrl(urlString)) << "countQueue=" << feedsQueue_.count();
 }
 
 void RequestFeed::stopRequest()
@@ -213,7 +214,7 @@ void RequestFeed::getQueuedUrl()
 //      getUrl.addQueryItem("auth", getUrl.scheme());
     }
 
-    qDebug() << "getQueuedUrl() >>" << feedUrl << "countQueue=" << feedsQueue_.count();
+    qDebug() << "getQueuedUrl() >>" << LogFile::urlForLog(QUrl(feedUrl)) << "countQueue=" << feedsQueue_.count();
     QDateTime currentDate = dateQueue_.dequeue();
     const QString identity = identitiesQueue_.dequeue();
     if (!identity.isEmpty())
@@ -240,7 +241,7 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
   if (count)
     Common::sleep(30);
 
-  qDebug() << objectName() << "::head:" << getUrl.toEncoded() << "feed:" << feedUrl << "countRepeats:" << count;
+  qDebug() << objectName() << "::head:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" << count;
   QNetworkRequest request(getUrl);
 
   currentIds_.append(id);
@@ -271,7 +272,7 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
   if (count)
     Common::sleep(30);
 
-  qDebug() << objectName() << "::get:" << getUrl.toEncoded() << "feed:" << feedUrl << "countRepeats:" <<count;
+  qDebug() << objectName() << "::get:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" <<count;
   QNetworkRequest request(getUrl);
   request.setRawHeader("Accept", "application/atom+xml,application/rss+xml;q=0.9,application/xml;q=0.8,text/xml;q=0.7,*/*;q=0.6");
 
@@ -302,10 +303,10 @@ void RequestFeed::finished(QNetworkReply *reply)
 {
   QUrl replyUrl = reply->url();
 
-  qDebug() << "reply.finished():" << replyUrl.toString();
+  qDebug() << "reply.finished():" << LogFile::urlForLog(replyUrl);
   qDebug() << reply->header(QNetworkRequest::ContentTypeHeader);
   qDebug() << reply->header(QNetworkRequest::ContentLengthHeader);
-  qDebug() << reply->header(QNetworkRequest::LocationHeader);
+  qDebug() << "Location:" << LogFile::urlForLog(replyUrl.resolved(reply->header(QNetworkRequest::LocationHeader).toUrl()));
   qDebug() << reply->header(QNetworkRequest::LastModifiedHeader);
   // Cookie values are credentials; never write raw cookie headers to the log.
 
@@ -387,11 +388,11 @@ void RequestFeed::finished(QNetworkReply *reply)
             emit signalGet(replyUrl, feedId, feedUrl, feedDate);
           } else {
             if (reply->operation() == QNetworkAccessManager::HeadOperation) {
-              qDebug() << objectName() << "  head redirect..." << redirectionTarget.toString();
+              qDebug() << objectName() << "  head redirect..." << LogFile::urlForLog(redirectionTarget);
               emit signalHead(redirectionTarget, feedId, feedUrl, feedDate, count);
             }
             else {
-              qDebug() << objectName() << "  get redirect..." << redirectionTarget.toString();
+              qDebug() << objectName() << "  get redirect..." << LogFile::urlForLog(redirectionTarget);
               emit signalGet(redirectionTarget, feedId, feedUrl, feedDate, count);
             }
           }

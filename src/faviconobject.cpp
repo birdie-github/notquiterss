@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "faviconobject.h"
 #include <utility>
 #include "networkpolicy.h"
@@ -235,7 +236,7 @@ void FaviconObject::finished(QNetworkReply *reply)
             const QUrl iconUrl = faviconUrl(data, url);
             const QString linkFavicon = iconUrl.toString();
             if (!linkFavicon.isEmpty()) {
-              qDebug() << "Favicon URL:" << linkFavicon;
+              qDebug() << "Favicon URL:" << LogFile::urlForLog(QUrl(linkFavicon));
               emit signalGet(iconUrl, feedUrl, cntRequests+1);
             }
             if (linkFavicon.isEmpty()) {
@@ -266,7 +267,7 @@ void FaviconObject::finished(QNetworkReply *reply)
       if ((cntRequests == 0) || (cntRequests == 1)) {
         QString link = QString("%1://%2").arg(url.scheme()).arg(url.host());
         emit signalGet(link, feedUrl, 2);
-        qDebug() << "Request Url error: " << reply->url().toString() << reply->errorString();
+        qDebug() << "Request Url error: " << LogFile::urlForLog(reply->url()) << reply->errorString();
       }
     }
   } else {

@@ -22,6 +22,7 @@
 #include <QDir>
 #include <cstdio>
 #include <QMutex>
+#include <QRegularExpression>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <io.h>
@@ -109,6 +110,32 @@ void LogFile::setFileLoggingEnabled(bool enabled)
   state.fileEnabled = enabled;
 }
 
+QString LogFile::urlForLog(const QUrl &url)
+{
+  if (!url.isValid()) return QStringLiteral("[invalid URL]");
+  return url.adjusted(QUrl::RemoveUserInfo | QUrl::RemoveQuery | QUrl::RemoveFragment)
+      .toString(QUrl::FullyEncoded);
+}
+
+QString LogFile::redactUrls(const QString &message)
+{
+  // Qt errors and process-argument diagnostics can contain embedded URLs.
+  // Structured URL fields should use urlForLog() before QDebug formats them.
+  static const QRegularExpression urls(QStringLiteral("\\b(?:https?|mailto):[^\\s\"<>]+"),
+                                      QRegularExpression::CaseInsensitiveOption);
+  QString result;
+  int offset = 0;
+  auto matches = urls.globalMatch(message);
+  while (matches.hasNext()) {
+    const auto match = matches.next();
+    result += message.mid(offset, match.capturedStart() - offset);
+    result += urlForLog(QUrl(match.captured()));
+    offset = int(match.capturedEnd());
+  }
+  result += message.mid(offset);
+  return result;
+}
+
 void LogFile::msgHandler(QtMsgType type, const QMessageLogContext &, const QString &msg)
 {
   auto &state = logState();
@@ -124,7 +151,7 @@ void LogFile::msgHandler(QtMsgType type, const QMessageLogContext &, const QStri
   default: break;
   }
   const QByteArray line = (QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.zzz") +
-      " " + QLatin1String(level) + ": " + msg + '\n').toUtf8();
+      " " + QLatin1String(level) + ": " + redactUrls(msg) + '\n').toUtf8();
   if (state.consoleEnabled) {
     std::fwrite(line.constData(), 1, size_t(line.size()), stderr);
     std::fflush(stderr);

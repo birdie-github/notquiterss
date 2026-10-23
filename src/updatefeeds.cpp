@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "credentialscope.h"
 #include "network/feedurl.h"
 #include <utility>
@@ -651,7 +652,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
           const bool isFeedDuplicated = knownUrls.contains(identity);
           if (isFeedDuplicated) {
             ++skippedFeeds;
-            qDebug() << "duplicate feed:" << xmlUrlString << textString;
+            qDebug() << "duplicate feed:" << LogFile::urlForLog(QUrl(xmlUrlString)) << textString;
           } else {
             int rowToParent = 0;
             if (!q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
@@ -785,7 +786,7 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
                               QString error, QByteArray data, QDateTime dtReply,
                               QString codecName)
 {
-  qDebug() << "getUrl result = " << result << "error: " << error << "url: " << feedUrlStr;
+  qDebug() << "getUrl result = " << result << "error: " << error << "url: " << LogFile::urlForLog(QUrl(feedUrlStr));
 
   // Stop also cancels requests still waiting in the queue. Apply the ordinary
   // interval so the next scheduler tick does not immediately restart them.
@@ -806,7 +807,7 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
     } else if (result < 0) {
       status = QString("%1 %2").arg(result).arg(error);
       qWarning() << QString("Request failed: result = %1, error - %2, url - %3").
-                    arg(result).arg(error).arg(feedUrlStr);
+                    arg(result).arg(error).arg(LogFile::urlForLog(QUrl(feedUrlStr)));
     }
     finishUpdate(feedId, false, 0, status);
   }

@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "downloadmanager.h"
 #include <utility>
 
@@ -188,7 +189,7 @@ void DownloadManager::startExternalApp(const QString &executable, const QUrl &ur
   QStringList arguments;
   arguments.append(url.toEncoded());
 
-  qInfo() << "Opening" << QString::fromUtf8(url.toEncoded()) << "using" << executable << "arguments:" << arguments;
+  qInfo() << "Opening" << LogFile::urlForLog(url) << "using" << executable;
   bool success = QProcess::startDetached(executable, arguments);
 
   if (!success) {

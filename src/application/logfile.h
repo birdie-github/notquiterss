@@ -24,6 +24,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QTextStream>
+#include <QUrl>
 
 const size_t maxLogFileSize = 1 * 1024 * 1024; //1 MB
 
@@ -38,6 +39,8 @@ public:
   static bool fileLoggingEnabled();
   static void setFileLoggingEnabled(bool enabled);
   static void showLocation();
+  static QString urlForLog(const QUrl &url);
+  static QString redactUrls(const QString &message);
 
 private:
   explicit LogFile();

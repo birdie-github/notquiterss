@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "logfile.h"
 #include "projectmetadata.h"
 #include <utility>
 #include <QTimeZone>
@@ -308,7 +309,7 @@ bool ParseObject::storeFeed(const QDomDocument &doc, int feedId, int &newCount,
     return true;
   }
 
-  qDebug() << QString("Feed '%1' found with id = %2").arg(feedUrl).arg(parseFeedId_);
+  qDebug() << QString("Feed '%1' found with id = %2").arg(LogFile::urlForLog(QUrl(feedUrl))).arg(parseFeedId_);
 
   if (!checkQuery(q.exec(QString("SELECT guid, title, published, link_href FROM news WHERE feedId='%1'").arg(feedId)), q)) return false;
   // Build once per feed update, without adding newly inserted articles to
@@ -773,7 +774,7 @@ void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
   q.setForwardOnly(true);
   QString qStr;
   qDebug() << "guid:     " << newsItem->id;
-  qDebug() << "link_href:" << newsItem->link;
+  qDebug() << "link_href:" << LogFile::urlForLog(QUrl(newsItem->link));
   qDebug() << "title:"     << newsItem->title;
   qDebug() << "published:" << newsItem->updated;
 
@@ -987,7 +988,7 @@ QString ParseObject::parseDate(const QString &dateString, const QString &urlStri
   }
 
   qWarning().noquote() << "parseDate: unable to parse date" << dateString
-                       << "for feed" << urlString;
+                       << "for feed" << LogFile::urlForLog(QUrl(urlString));
   return QString();
 }
 
