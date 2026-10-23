@@ -130,6 +130,7 @@ HEADERS += \
     src/network/networkmanager.h \
     src/articleview/articleview.h \
     src/database/database.h \
+    src/database/pendingdatabase.h \
     src/database/feedbulksettings.h \
     src/common/common.h \
     src/common/delegatewithoutfocus.h \
@@ -196,6 +197,7 @@ SOURCES += \
     src/network/networkmanager.cpp \
     src/articleview/articleview.cpp \
     src/database/database.cpp \
+    src/database/pendingdatabase.cpp \
     src/common/common.cpp \
     src/common/delegatewithoutfocus.cpp \
     src/common/dialog.cpp \

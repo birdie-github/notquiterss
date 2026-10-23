@@ -16,6 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
+#include "pendingdatabase.h"
 #include "databasebackup.h"
 #include <utility>
 #include "mainapplication.h"
@@ -276,18 +277,18 @@ bool MainApplication::confirmPrerelease()
 
 bool MainApplication::connectDatabase()
 {
-  QString fileName(dbFileName() % ".bak");
-  if (QFile(fileName).exists()) {
-    QString sourceFileName = QFile::symLinkTarget(dbFileName());
-    if (sourceFileName.isEmpty()) {
-      sourceFileName = dbFileName();
-    }
-    if (QFile::remove(sourceFileName)) {
-      if (!QFile::rename(fileName, sourceFileName))
-        qCritical() << "Failed to rename new database file!";
-    } else {
-      qCritical() << "Failed to delete old database file!";
-    }
+  QString replacementError;
+  if (!PendingDatabase::install(dbFileName(), replacementError)) {
+    const QString message = tr("Cannot finish the pending database replacement. "
+                               "The application has not started.\n\n%1\n\n"
+                               "The pending file has been retained at:\n%2")
+                                .arg(replacementError, dbFileName() + ".bak");
+    qCritical().noquote() << message;
+    QMessageBox dialog(QMessageBox::Critical, tr("Database replacement failed"),
+                       message, QMessageBox::Ok);
+    dialog.setTextFormat(Qt::PlainText);
+    dialog.exec();
+    return false;
   }
 
   if (QFile(dbFileName()).exists()) {
