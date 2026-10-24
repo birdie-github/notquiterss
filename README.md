@@ -46,6 +46,26 @@ Launching system commands would introduce platform-dependent format support and 
 managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
 reader, keeping a consistent built-in audio backend is the more practical choice.
 
+## Migrating your data from QuiteRSS
+
+The new application is fully compatible with QuiteRSS data, but you will need to copy
+the files manually. To achieve the best results, it is recommended that you export your
+feeds and then import them into the new application.
+
+On Linux:
+* The new INI file is `~/.config/NotQuiteRSS/NotQuiteRSS.ini` vs. `~/.config/QuiteRss/QuiteRss.ini`
+  before.
+* The new data path is `~/.local/share/NotQuiteRSS` vs `~/.local/share/QuiteRss/QuiteRss`
+  before.
+* Cookies are saved in an entirely new format. They cannot be migrated.
+
+On Windows:
+ * INI, before: `AppData\Roaming\QuiteRss\QuiteRSS.ini`,
+   now `AppData\Roaming\NotQuiteRss\NotQuiteRSS.ini`.
+ * Data, before: `AppData\Local\QuiteRss\QuiteRss`,
+   now `AppData\Local\NotQuiteRSS`.
+   
+
 ## CPU Requirements 
 
 ### Windows x86-64
