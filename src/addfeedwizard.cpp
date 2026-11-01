@@ -275,6 +275,7 @@ void AddFeedWizard::configureFeed(const QString &url, int position, int total)
   setUrlFeed(url);
   page(1)->setSubTitle(url.toHtmlEscaped());
   setWindowTitle(tr("Create New Feed (%1 of %2)").arg(position).arg(total));
+  if (position < total) setButtonText(QWizard::FinishButton, tr("Add and Continue"));
   setOption(QWizard::HaveCustomButton1, total > 1);
   setButtonText(QWizard::CustomButton1, tr("Skip"));
   connect(button(QWizard::CustomButton1), &QAbstractButton::clicked, this, [this] { done(FeedSkipped); });
