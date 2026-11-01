@@ -106,6 +106,7 @@ void NetworkManager::loadCertificates()
  *---------------------------------------------------------------------------*/
 void NetworkManager::slotAuthentication(QNetworkReply *reply, QAuthenticator *auth)
 {
+  if (reply->request().attribute(NetworkPolicy::DiscoveryProbe).toBool()) return;
   AuthenticationDialog *authenticationDialog =
       new AuthenticationDialog(reply->url(), auth);
 

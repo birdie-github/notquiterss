@@ -2385,33 +2385,40 @@ void MainWindow::addFeed()
     curFolderId = feedsModel_->paridByIndex(curIndex);
   }
 
-  AddFeedWizard *addFeedWizard = new AddFeedWizard(this, curFolderId);
-  addFeedWizard->show();
+  QStringList urls;
+  int position = 0;
+  do {
+    AddFeedWizard wizard(this, curFolderId);
+    if (!urls.isEmpty()) {
+      wizard.configureFeed(urls.at(position), position + 1, urls.size());
+      ++position;
+    }
+    const int result = wizard.exec();
+    if (mainApp->isClosing() || result == QDialog::Rejected) return;
+    if (result == AddFeedWizard::FeedsSelected) {
+      urls = wizard.selectedUrls();
+      position = 0;
+      continue;
+    }
+    if (result == AddFeedWizard::FeedSkipped) continue;
+    emit faviconRequestUrl(wizard.htmlUrlString_, wizard.feedUrlString_);
 
-  int result = addFeedWizard->exec();
-  if (result == QDialog::Rejected) {
-    delete addFeedWizard;
-    return;
-  }
+    QList<int> categoriesList;
+    categoriesList << wizard.feedParentId_;
+    recountFeedCategories(categoriesList);
 
-  emit faviconRequestUrl(addFeedWizard->htmlUrlString_, addFeedWizard->feedUrlString_);
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    feedsView_->setCurrentIndex(QModelIndex());
+    feedsModelReload();
+    QModelIndex index = feedsProxyModel_->mapFromSource(wizard.feedId_);
+    feedsView_->selectIdEn_ = true;
+    feedsView_->setCurrentIndex(index);
+    slotFeedClicked(index);
+    QApplication::restoreOverrideCursor();
+    slotUpdateFeed(wizard.feedId_, true, wizard.newCount_, false);
 
-  QList<int> categoriesList;
-  categoriesList << addFeedWizard->feedParentId_;
-  recountFeedCategories(categoriesList);
-
-  QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-  feedsView_->setCurrentIndex(QModelIndex());
-  feedsModelReload();
-  QModelIndex index = feedsProxyModel_->mapFromSource(addFeedWizard->feedId_);
-  feedsView_->selectIdEn_ = true;
-  feedsView_->setCurrentIndex(index);
-  slotFeedClicked(index);
-  QApplication::restoreOverrideCursor();
-  slotUpdateFeed(addFeedWizard->feedId_, true, addFeedWizard->newCount_, false);
-
-  delete addFeedWizard;
-  DatabaseBackup::subscriptionsChanged("add feed");
+    DatabaseBackup::subscriptionsChanged("add feed");
+  } while (position < urls.size());
 }
 
 /** @brief Add folder to feed list

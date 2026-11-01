@@ -32,20 +32,23 @@ public:
   explicit AddFeedWizard(QWidget *parent, int curFolderId);
   ~AddFeedWizard();
 
+  enum Result { FeedsSelected = QDialog::Accepted + 1, FeedSkipped };
+  QStringList selectedUrls() const { return selectedUrls_; }
+  void configureFeed(const QString &url, int position, int total);
   void setUrlFeed(const QString &feedUrl);
 
   LineEdit *nameFeedEdit_;
   LineEdit *urlFeedEdit_;
   QString htmlUrlString_;
   QString feedUrlString_;
-  int feedId_;
+  int feedId_ = 0;
   int feedParentId_;
   int newCount_;
 
 public slots:
   void getUrlDone(int result, int feedId, QString feedUrlStr,
                   QString error, QByteArray data,
-                  QDateTime dtReply, QString codecName);
+                  QDateTime dtReply, QString codecName, QUrl effective, QString mimeType);
   void slotUpdateFeed(int feedId, bool, int newCount, QString);
 
 signals:
@@ -72,6 +75,11 @@ private slots:
 
 private:
   void addFeed();
+  void failed(const QString &message);
+  bool insertFeed();
+  QStringList selectedUrls_;
+  int scanId_ = RequestFeed::FirstProbe;
+  bool configuring_ = false;
   void deleteFeed();
   void showProgressBar();
   void finish();

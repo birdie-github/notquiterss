@@ -35,6 +35,8 @@ public:
   explicit RequestFeed(int timeoutRequest, int numberRequests,
                        int numberRepeats, QObject *parent = 0);
   ~RequestFeed();
+  // Database IDs are positive. The wizard assigns a distinct negative ID per scan.
+  static constexpr int FirstProbe = -2;
 
   void disconnectObjects();
 
@@ -52,7 +54,7 @@ signals:
   void requestStarted(int feedId, QString identity, QDateTime startedAt);
   void getUrlDone(int result, int feedId, QString feedUrl = "",
                   QString error = "", QByteArray data = QByteArray(),
-                  QDateTime dtReply = QDateTime(), QString codecName = "");
+                  QDateTime dtReply = QDateTime(), QString codecName = "", QUrl effective = {}, QString mimeType = {});
   void signalHead(const QUrl &getUrl, const int &id, const QString &feedUrl,
                   const QDateTime &date, const int &count = 0);
   void signalGet(const QUrl &getUrl, const int &id, const QString &feedUrl,

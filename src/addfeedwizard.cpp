@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "feedxml.h"
+#include "feeddiscovery.h"
 #include "logfile.h"
 #include "credentialscope.h"
 #include "network/feedurl.h"
@@ -73,8 +74,8 @@ AddFeedWizard::~AddFeedWizard()
 
 /*virtual*/ void AddFeedWizard::done(int result)
 {
-  if (result == QDialog::Rejected) {
-    if (progressBar_->isVisible() || (currentId() == 1))
+  if (result == QDialog::Rejected || result == FeedSkipped) {
+    if (feedId_ > 0)
       deleteFeed();
   }
   QWizard::done(result);
@@ -134,6 +135,7 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
   QLabel *iconWarning = new QLabel(this);
   iconWarning->setPixmap(QPixmap(":/images/warning"));
   textWarning = new QLabel(this);
+  textWarning->setTextFormat(Qt::PlainText);
   textWarning->setWordWrap(true);
   QFont font = textWarning->font();
   font.setBold(true);
@@ -262,6 +264,18 @@ QWizardPage *AddFeedWizard::createNameFeedPage()
   return page;
 }
 
+void AddFeedWizard::configureFeed(const QString &url, int position, int total)
+{
+  configuring_ = true;
+  setUrlFeed(url);
+  page(1)->setSubTitle(url.toHtmlEscaped());
+  setWindowTitle(tr("Create New Feed (%1 of %2)").arg(position).arg(total));
+  setOption(QWizard::HaveCustomButton1, total > 1);
+  setButtonText(QWizard::CustomButton1, tr("Skip"));
+  connect(button(QWizard::CustomButton1), &QAbstractButton::clicked, this, [this] { done(FeedSkipped); });
+  QTimer::singleShot(0, this, &AddFeedWizard::nextButtonClicked);
+}
+
 void AddFeedWizard::setUrlFeed(const QString &feedUrl)
 {
   urlFeedEdit_->setText(feedUrl);
@@ -304,8 +318,10 @@ void AddFeedWizard::backButtonClicked()
 
 void AddFeedWizard::nextButtonClicked()
 {
-  if (currentId() == 0)
+  if (currentId() == 0) {
+    finishOn = false;
     addFeed();
+  }
 }
 
 void AddFeedWizard::finishButtonClicked()
@@ -320,6 +336,7 @@ void AddFeedWizard::finishButtonClicked()
 
 void AddFeedWizard::addFeed()
 {
+  if (!page(0)->isEnabled()) return;
   QUrl feedUrl = FeedUrl::normalize(urlFeedEdit_->text());
   if (!FeedUrl::confirm(this, feedUrl)) return;
   feedUrlString_ = feedUrl.toString();
@@ -349,32 +366,26 @@ void AddFeedWizard::addFeed()
     page(0)->setEnabled(false);
     showProgressBar();
 
-    // Calculate row's number to insert new feed
-    int rowToParent = 0;
-    q.exec("SELECT count(id) FROM feeds WHERE parentId=0");
-    if (q.next()) rowToParent = q.value(0).toInt();
-
-    int auth = 0;
-    QString userInfo;
-    if (authentication_->isChecked()) {
-      auth = 1;
-      userInfo = QString("%1:%2").arg(user_->text()).arg(pass_->text());
-    }
-
-    // Insert feed
-    q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication, disableUpdate) "
-              "VALUES (:feedUrl, :feedCreateTime, :rowToParent, :authentication, 1)");
-    q.bindValue(":feedUrl", feedUrlString_);
-    q.bindValue(":feedCreateTime", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
-    q.bindValue(":rowToParent", rowToParent);
-    q.bindValue(":authentication", auth);
-    q.exec();
-
-    feedId_ = q.lastInsertId().toInt();
-    q.finish();
-
-    emit signalRequestUrl(feedId_, feedUrlString_, QDateTime(), userInfo);
+    const QString credentials = authentication_->isChecked()
+        ? QString("%1:%2").arg(user_->text(), pass_->text()) : QString();
+    emit signalRequestUrl(0, feedUrlString_, QDateTime(), credentials);
   }
+}
+
+bool AddFeedWizard::insertFeed()
+{
+  QSqlQuery q;
+  q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication, disableUpdate) "
+            "SELECT ?, ?, count(*), ?, 1 FROM feeds WHERE parentId=0 "
+            "HAVING NOT EXISTS (SELECT 1 FROM feeds WHERE xmlUrl=?)");
+  q.addBindValue(feedUrlString_);
+  q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+  q.addBindValue(int(authentication_->isChecked()));
+  q.addBindValue(feedUrlString_);
+  if (!q.exec()) { failed(q.lastError().text()); return false; }
+  if (q.numRowsAffected() != 1) { failed(tr("Duplicate feed")); return false; }
+  feedId_ = q.lastInsertId().toInt();
+  return true;
 }
 
 void AddFeedWizard::deleteFeed()
@@ -384,6 +395,7 @@ void AddFeedWizard::deleteFeed()
   q.exec(QString("DELETE FROM news WHERE feedId='%1'").arg(feedId_));
   q.exec(QString("DELETE FROM feeds_ex WHERE feedId='%1'").arg(feedId_));
 
+  feedId_ = 0;
   // Correct rowToParent field
   QList<int> idList;
   q.exec("SELECT id FROM feeds WHERE parentId=0 ORDER BY rowToParent");
@@ -426,122 +438,63 @@ void AddFeedWizard::slotProgressBarUpdate()
     QTimer::singleShot(250, this, &AddFeedWizard::slotProgressBarUpdate);
 }
 
-void AddFeedWizard::getUrlDone(int result, int feedId, QString feedUrlStr,
-                               QString error, QByteArray data,
-                               QDateTime dtReply, QString codecName)
+void AddFeedWizard::failed(const QString &message)
 {
-  if (!data.isEmpty()) {
-    bool isFeed = false;
-    QString errorStr;
-    int errorLine;
-    int errorColumn;
-    QDomDocument doc("parseDoc");
-    const bool parsed = FeedXml::parse(doc, data, errorStr, errorLine, errorColumn);
-    if (!parsed) {
-      qWarning() << QString("Parse data error (1): url %1, id %2, line %3, column %4: %5").
-                    arg(LogFile::urlForLog(QUrl(feedUrlStr))).arg(feedId).
-                    arg(errorLine).arg(errorColumn).arg(errorStr);
-    } else {
-      QDomElement docElem = doc.documentElement();
-      if ((docElem.tagName() == "rss") || (docElem.tagName() == "feed") ||
-          (docElem.tagName() == "rdf:RDF"))
-        isFeed = true;
-    }
+  progressBar_->hide();
+  page(0)->setEnabled(true);
+  selectedPage = false;
+  finishOn = false;
+  button(QWizard::CancelButton)->setEnabled(true);
+  urlFeedEditChanged(urlFeedEdit_->text());
+  textWarning->setText(message);
+  warningWidget_->setVisible(true);
+}
 
-    if (!isFeed) {
-      QString str = QString::fromUtf8(data);
-
-      QRegularExpression rx("<link[^>]+(atom|rss)\\+xml[^>]+>",
-          QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-      QRegularExpressionMatch match = rx.match(str);
-      int pos = match.capturedStart();
-      if (pos > -1) {
-        str = match.captured(0);
-        rx.setPattern("href=\"([^\"]+)");
-        match = rx.match(str);
-        pos = match.capturedStart();
-        if (pos > -1) {
-          QString linkFeedString = match.captured(1);
-          linkFeedString.replace("&amp;", "&", Qt::CaseInsensitive);
-          QUrl url = QUrl(feedUrlStr).resolved(QUrl(linkFeedString));
-          if (!FeedUrl::confirm(this, url)) {
-            deleteFeed();
-            progressBar_->hide();
-            page(0)->setEnabled(true);
-            selectedPage = false;
-            button(QWizard::CancelButton)->setEnabled(true);
-            urlFeedEditChanged(urlFeedEdit_->text());
-            return;
-          }
-          linkFeedString = url.toString();
-          qDebug() << "Parse feed URL, valid:" << LogFile::urlForLog(QUrl(linkFeedString));
-
-          QSqlQuery q;
-          int duplicateFoundId = -1;
-          q.prepare("SELECT id FROM feeds WHERE xmlUrl = :xmlUrl");
-          q.bindValue(":xmlUrl", linkFeedString);
-          q.exec();
-          if (q.next()) duplicateFoundId = q.value(0).toInt();
-
-          if (0 <= duplicateFoundId) {
-            if (feedUrlString_ != linkFeedString)
-              textWarning->setText(tr("Duplicate feed!"));
-            warningWidget_->setVisible(true);
-
-            deleteFeed();
-            progressBar_->hide();
-            page(0)->setEnabled(true);
-            selectedPage = false;
-            button(QWizard::CancelButton)->setEnabled(true);
-          } else {
-            feedUrlString_ = linkFeedString;
-            q.prepare("UPDATE feeds SET xmlUrl = :xmlUrl WHERE id == :id");
-            q.bindValue(":xmlUrl", linkFeedString);
-            q.bindValue(":id", feedId);
-            q.exec();
-
-            authentication_->setChecked(false);
-
-            emit signalRequestUrl(feedId, linkFeedString, QDateTime(), "");
-          }
-        }
-      }
-      if (pos < 0) {
-        textWarning->setText(tr("The server returned content that is not a valid RSS or Atom feed."));
-        warningWidget_->setVisible(true);
-
-        deleteFeed();
-        progressBar_->hide();
-        page(0)->setEnabled(true);
-        selectedPage = false;
-        button(QWizard::CancelButton)->setEnabled(true);
-      }
-      return;
-    }
-
-    emit xmlReadyParse(data, feedId, dtReply, codecName);
+void AddFeedWizard::getUrlDone(int result, int id, QString, QString error, QByteArray data,
+                               QDateTime dtReply, QString codecName, QUrl effective, QString mimeType)
+{
+  if (id != 0) return; // Probe completions belong to the discovery dialog.
+  if (result < 0 || data.isEmpty()) {
+    failed(error.isEmpty() ? tr("Request failed") : error);
+    return;
+  }
+  QDomDocument doc;
+  int line, column;
+  if (FeedXml::parse(doc, data, error, line, column) && FeedXml::isFeed(doc)) {
+    if (!insertFeed()) return;
+    if (configuring_) button(QWizard::CustomButton1)->setEnabled(false);
+    emit xmlReadyParse(data, feedId_, dtReply, codecName);
+    return;
   }
 
-  if ((result < 0) || data.isEmpty()) {
-    if ((result >= -5) && (result <= -1))
-      textWarning->setText(error);
-    else
-      textWarning->setText(tr("Request failed"));
-    warningWidget_->setVisible(true);
-    qWarning() << QString("Request failed: result = %1, error - %2, url - %3").
-                  arg(result).arg(error).arg(LogFile::urlForLog(QUrl(feedUrlStr)));
+  const QByteArray prefix = data.left(512).trimmed().toLower();
+  if (configuring_ || !NetworkPolicy::isHttpUrl(effective) ||
+      !(mimeType == "text/html" || mimeType == "application/xhtml+xml" ||
+        prefix.startsWith("<!doctype html") || prefix.startsWith("<html"))) {
+    failed(tr("The server returned content that is not a valid RSS or Atom feed."));
+    return;
+  }
 
-    deleteFeed();
-    progressBar_->hide();
-    page(0)->setEnabled(true);
-    selectedPage = false;
-    button(QWizard::CancelButton)->setEnabled(true);
+  FeedDiscovery discovery(data, codecName, effective, scanId_--, this);
+  auto *worker = updateFeeds_->requestFeed_;
+  connect(&discovery, &FeedDiscovery::stopRequests, worker, &RequestFeed::stopRequest);
+  connect(&discovery, &FeedDiscovery::requestUrl, worker, &RequestFeed::requestUrl);
+  connect(worker, &RequestFeed::getUrlDone, &discovery, &FeedDiscovery::received);
+  const int choice = discovery.exec();
+  QMetaObject::invokeMethod(worker, &RequestFeed::stopRequest, Qt::QueuedConnection);
+  if (choice == QDialog::Accepted && !mainApp->isClosing()) {
+    selectedUrls_ = discovery.selection();
+    done(FeedsSelected);
+  } else {
+    failed(QString());
+    warningWidget_->hide();
   }
 }
 
 void AddFeedWizard::slotUpdateFeed(int feedId, bool, int newCount, QString)
 {
   qDebug() << "ParseDone: " << LogFile::urlForLog(QUrl(feedUrlString_));
+  if (configuring_) button(QWizard::CustomButton1)->setEnabled(true);
   selectedPage = true;
   newCount_ = newCount;
 

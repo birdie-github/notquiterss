@@ -92,6 +92,7 @@ HEADERS += \
     src/updateappdialog.h \
     src/feedpropertiesdialog.h \
     src/feedsview/feedselectiontree.h \
+    src/feeddiscovery.h \
     src/addfeedwizard.h \
     src/newstabwidget.h \
     src/findtext.h \
@@ -159,6 +160,7 @@ SOURCES += \
     src/feedpropertiesdialog.cpp \
     src/database/feedbulksettings.cpp \
     src/application/feedsettings.cpp \
+    src/feeddiscovery.cpp \
     src/addfeedwizard.cpp \
     src/newstabwidget.cpp \
     src/findtext.cpp \

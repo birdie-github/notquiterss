@@ -11,6 +11,11 @@ namespace FeedXml {
 // when trailing material makes the full document invalid.
 bool parse(QDomDocument &doc, const QByteArray &input, QString &error, int &line, int &column);
 bool parse(QDomDocument &doc, const QString &input, QString &error, int &line, int &column);
+inline bool isFeed(const QDomDocument &doc)
+{
+  const QString root = doc.documentElement().tagName();
+  return root == "rss" || root == "feed" || root == "rdf:RDF";
+}
 // Convert an Atom text construct into HTML for the existing rendering pipeline.
 // Missing/unknown types are plain text; declared HTML/XHTML still need sanitizing.
 QString atomText(const QDomElement &element);

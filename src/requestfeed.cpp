@@ -275,6 +275,10 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
 
   qDebug() << objectName() << "::get:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" <<count;
   QNetworkRequest request(getUrl);
+  if (id <= FirstProbe) {
+    request.setAttribute(NetworkPolicy::DiscoveryProbe, true);
+    request.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
+  }
   request.setRawHeader("Accept", "application/atom+xml,application/rss+xml;q=0.9,application/xml;q=0.8,text/xml;q=0.7,*/*;q=0.6");
 
   currentIds_.append(id);
@@ -369,7 +373,7 @@ void RequestFeed::finished(QNetworkReply *reply)
             }
           }
 
-          if (count < numberRepeats_) {
+          if (feedId > FirstProbe && count < numberRepeats_) {
             emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
           } else {
             emit getUrlDone(-1, feedId, feedUrl, diagnostic);
@@ -382,7 +386,9 @@ void RequestFeed::finished(QNetworkReply *reply)
       QUrl redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
       if (!redirectionTarget.isEmpty()) {
         redirectionTarget = CredentialScope::redirectTarget(replyUrl, redirectionTarget);
-        if (!NetworkPolicy::isSafeRedirect(replyUrl, redirectionTarget)) {
+        if (!NetworkPolicy::isSafeRedirect(replyUrl, redirectionTarget) ||
+            (feedId <= FirstProbe &&
+             CredentialScope::origin(redirectionTarget) != CredentialScope::origin(QUrl(feedUrl)))) {
           emit getUrlDone(-4, feedId, feedUrl, tr("Unsupported or unsafe redirect URL."));
         } else if (count < (numberRepeats_ + 3)) {
           if (headOk && (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 302)) {
@@ -432,7 +438,9 @@ void RequestFeed::finished(QNetworkReply *reply)
               reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 304)
             emit getUrlDone(-6, feedId, feedUrl, tr("The server returned an empty feed response."));
           else
-            emit getUrlDone(feedsQueue_.count(), feedId, feedUrl, "", data, replyLocalDate, codecName);
+            emit getUrlDone(feedsQueue_.count(), feedId, feedUrl, "", data, replyLocalDate, codecName,
+                            replyUrl.adjusted(QUrl::RemoveUserInfo | QUrl::RemoveFragment),
+                            reply->header(QNetworkRequest::ContentTypeHeader).toString().section(';', 0, 0).trimmed().toLower());
         }
       }
     }
@@ -469,7 +477,7 @@ void RequestFeed::slotRequestTimeout()
       reply->abort();
       reply->deleteLater();
 
-      if (count < numberRepeats_) {
+      if (feedId > FirstProbe && count < numberRepeats_) {
         emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
       } else {
         emit getUrlDone(-3, feedId, feedUrl, tr("Request timed out"));

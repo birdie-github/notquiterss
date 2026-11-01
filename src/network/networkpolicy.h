@@ -8,6 +8,7 @@
 #include <QVariant>
 
 namespace NetworkPolicy {
+constexpr auto DiscoveryProbe = static_cast<QNetworkRequest::Attribute>(QNetworkRequest::User + 1);
 inline bool isHttpUrl(const QUrl &url)
 {
   return url.isValid() && !url.host().isEmpty() &&
