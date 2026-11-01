@@ -78,7 +78,12 @@ AddFeedWizard::~AddFeedWizard()
     if (feedId_ > 0)
       deleteFeed();
   }
-  QWizard::done(result);
+  // Selection and skipping return control to the feed queue without
+  // finishing the current subscription. Its page may still be incomplete.
+  if (result == FeedsSelected || result == FeedSkipped)
+    QDialog::done(result);
+  else
+    QWizard::done(result);
 }
 
 void AddFeedWizard::changeEvent(QEvent *event)

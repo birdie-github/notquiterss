@@ -234,6 +234,5 @@ void FeedDiscovery::finishScan()
   buttons_->button(QDialogButtonBox::Ok)->setEnabled(!selection().isEmpty());
   if (!incomplete_ && list_->topLevelItemCount() == 1 && !list_->topLevelItem(0)->isDisabled()) {
     list_->topLevelItem(0)->setCheckState(0, Qt::Checked);
-    accept();
   }
 }
