@@ -29,6 +29,8 @@ signals:
 private:
   void next();
   void finishScan();
+  void addResult(const QUrl &url, QString title, const QString &detail = {});
+  QSet<QUrl> advertised_;
   const int scanId_;
   QList<QUrl> pending_;
   QSet<QUrl> found_;
