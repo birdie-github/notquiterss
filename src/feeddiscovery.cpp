@@ -75,7 +75,7 @@ struct Links {
 };
 }
 
-FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, const QUrl &page,
+FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, const QUrl &page, const QUrl &enteredUrl,
                              int scanId, QWidget *parent) : QDialog(parent), scanId_(scanId)
 {
   setWindowTitle(tr("Discover Feeds"));
@@ -132,18 +132,22 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
     enqueue(page.resolved(QUrl(QString::fromLatin1(path))));
   // Automatic probes contact only the page origin. Ask before contacting
   // additional origins advertised in untrusted HTML.
-  const QUrl origin = CredentialScope::origin(page);
+  // The user entered one origin and the initial request already visited the final page.
+  const QSet<QUrl> trusted = {CredentialScope::origin(enteredUrl), CredentialScope::origin(page)};
   QStringList hosts;
   for (const QUrl &url : std::as_const(pending_)) {
     const QUrl other = CredentialScope::origin(url);
-    if (other != origin && !hosts.contains(other.toString())) hosts.append(other.toString());
+    if (trusted.contains(other)) continue;
+    QUrl display = other;
+    if (display.port() == (display.scheme() == "https" ? 443 : 80)) display.setPort(-1);
+    if (!hosts.contains(display.toString())) hosts.append(display.toString());
   }
-  QTimer::singleShot(0, this, [this, origin, hosts] {
+  QTimer::singleShot(0, this, [this, trusted, hosts] {
     if (!hosts.isEmpty() && QMessageBox::question(this, tr("Discover Feeds"),
         tr("Also check feed links on these sites?\n\n%1").arg(hosts.join('\n')),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes) {
       for (auto it = pending_.begin(); it != pending_.end();) {
-        if (CredentialScope::origin(*it) != origin) it = pending_.erase(it);
+        if (!trusted.contains(CredentialScope::origin(*it))) it = pending_.erase(it);
         else ++it;
       }
     }

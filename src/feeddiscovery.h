@@ -16,7 +16,7 @@ class FeedDiscovery final : public QDialog
 {
   Q_OBJECT
 public:
-  FeedDiscovery(const QByteArray &html, const QString &charset, const QUrl &page, int scanId,
+  FeedDiscovery(const QByteArray &html, const QString &charset, const QUrl &page, const QUrl &enteredUrl, int scanId,
                 QWidget *parent);
   QStringList selection() const;
 

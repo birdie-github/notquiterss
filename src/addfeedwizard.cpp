@@ -475,7 +475,7 @@ void AddFeedWizard::getUrlDone(int result, int id, QString, QString error, QByte
     return;
   }
 
-  FeedDiscovery discovery(data, codecName, effective, scanId_--, this);
+  FeedDiscovery discovery(data, codecName, effective, QUrl(feedUrlString_), scanId_--, this);
   auto *worker = updateFeeds_->requestFeed_;
   connect(&discovery, &FeedDiscovery::stopRequests, worker, &RequestFeed::stopRequest);
   connect(&discovery, &FeedDiscovery::requestUrl, worker, &RequestFeed::requestUrl);
