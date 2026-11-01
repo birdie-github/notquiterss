@@ -41,12 +41,15 @@ struct Links {
   QString base;
   QStringList hrefs;
   QSet<QString> advertised;
+  QHash<QString, QString> names;
   bool truncated = false;
 
-  void walk(xmlNode *node, bool *anchorHint = nullptr)
+  void walk(xmlNode *node, bool *anchorHint = nullptr, QString *altLabel = nullptr)
   {
     for (; node; node = node->next) {
       if (named(node, "script") || named(node, "style") || named(node, "template")) continue;
+      if (altLabel && altLabel->isEmpty() && named(node, "img"))
+        *altLabel = attr(node, "alt").simplified();
       if (anchorHint && !*anchorHint) {
         if (node->type == XML_TEXT_NODE)
           *anchorHint = feedHint(QString::fromUtf8(reinterpret_cast<const char *>(node->content)));
@@ -64,14 +67,23 @@ struct Links {
         match = (type == "application/rss+xml" || type == "application/atom+xml") &&
             attr(node, "rel").simplified().toLower().split(' ').contains("alternate");
       }
-      walk(node->children, anchor ? &match : anchorHint);
+      QString imageAlt;
+      walk(node->children, anchor ? &match : anchorHint, anchor ? &imageAlt : altLabel);
       if (match) {
         const QString href = attr(node, "href").trimmed();
         if (href.isEmpty()) continue;
-        if (!anchor && (hrefs.contains(href) || hrefs.size() < 32)) advertised.insert(href);
-        if (hrefs.contains(href)) continue;
-        if (hrefs.size() < 32) hrefs.append(href);
-        else truncated = true;
+        if (!hrefs.contains(href)) {
+          if (hrefs.size() >= 32) { truncated = true; continue; }
+          hrefs.append(href);
+        }
+        if (!anchor) advertised.insert(href);
+        QString label = attr(node, "title").simplified();
+        if (anchor && label.isEmpty()) label = attr(node, "aria-label").simplified();
+        if (anchor && label.isEmpty()) label = takeText(xmlNodeGetContent(node)).simplified();
+        if (anchor && label.isEmpty()) label = attr(node, "alt").simplified();
+        if (label.isEmpty()) label = imageAlt;
+        if (!label.isEmpty() && (!anchor || !names.contains(href)))
+          names.insert(href, label.left(256));
       }
     }
   }
@@ -122,17 +134,19 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
   incomplete_ |= links.truncated;
   QUrl base = page.resolved(QUrl(links.base));
   if (!NetworkPolicy::isHttpUrl(base)) base = page;
-  auto enqueue = [&](QUrl url, bool advertised = false) {
+  auto enqueue = [&](QUrl url, bool advertised = false, const QString &name = QString()) {
     url.setFragment(QString());
     if (!NetworkPolicy::isHttpUrl(url) || !url.userInfo().isEmpty()) return;
     // Only the page's own HTTP origin has already received consent.
     if (url.scheme() == "http" && CredentialScope::origin(url) != CredentialScope::origin(page))
       url = FeedUrl::upgrade(url);
     if (url == page) return;
+    if (!name.isEmpty() && (advertised || !names_.contains(url))) names_.insert(url, name);
     if (advertised) advertised_.insert(url);
     if (!pending_.contains(url)) pending_.append(url);
   };
-  for (const QString &href : std::as_const(links.hrefs)) enqueue(base.resolved(QUrl(href)), links.advertised.contains(href));
+  for (const QString &href : std::as_const(links.hrefs))
+    enqueue(base.resolved(QUrl(href)), links.advertised.contains(href), links.names.value(href));
   for (const char *path : {"/feed/", "/rss.xml", "/atom.xml", "/feed.xml"})
     enqueue(page.resolved(QUrl(QString::fromLatin1(path))));
   // Automatic probes contact only the page origin. Ask before contacting
@@ -197,11 +211,12 @@ void FeedDiscovery::received(int result, int id, QString requested, QString diag
       FeedXml::isFeed(doc)) {
     QDomElement container = doc.documentElement();
     if (container.tagName() != "feed") container = container.firstChildElement("channel");
-    addResult(effective, container.firstChildElement("title").text().simplified());
+    QString title = container.firstChildElement("title").text().simplified();
+    addResult(effective, title.isEmpty() ? names_.value(url) : title);
   } else if (advertised) {
     incomplete_ = true;
     if (diagnostic.isEmpty()) diagnostic = result < 0 ? tr("Request failed") : tr("Response was not a supported feed");
-    addResult(url, tr("Advertised feed (unverified)"), diagnostic);
+    addResult(url, names_.value(url), diagnostic);
   }
   next();
 }
@@ -214,6 +229,8 @@ void FeedDiscovery::addResult(const QUrl &url, QString title, const QString &det
   q.prepare("SELECT id FROM feeds WHERE xmlUrl=?");
   q.addBindValue(url.toString());
   bool subscribed = q.exec() && q.next();
+  if (title.isEmpty()) title = url.host() + url.path();
+  if (!detail.isEmpty()) title = tr("%1 (unverified)").arg(title);
   if (subscribed) title += tr(" (Already subscribed)");
   auto *item = new QTreeWidgetItem(list_, {title, url.toString()});
   item->setCheckState(0, Qt::Unchecked);
@@ -228,7 +245,9 @@ void FeedDiscovery::finishScan()
 {
   finished_ = true;
   for (const QUrl &url : std::as_const(advertised_))
-    addResult(url, tr("Advertised feed (unverified)"), tr("Verification did not finish"));
+    addResult(url, names_.value(url), tr("Verification did not finish"));
+  list_->resizeColumnToContents(0);
+  list_->setColumnWidth(0, qMin(list_->columnWidth(0), list_->viewport()->width() / 2));
   status_->setText(incomplete_ ? (list_->topLevelItemCount() ? tr("Scan incomplete. Unverified feeds can be retried.") : tr("Scan incomplete. No feeds were verified.")) :
                    list_->topLevelItemCount() ? tr("Select feeds to add.") : tr("No feeds found."));
   buttons_->button(QDialogButtonBox::Ok)->setEnabled(!selection().isEmpty());

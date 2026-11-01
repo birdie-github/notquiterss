@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QStringList>
 #include <QList>
+#include <QHash>
 #include <QSet>
 #include <QUrl>
 
@@ -31,6 +32,7 @@ private:
   void finishScan();
   void addResult(const QUrl &url, QString title, const QString &detail = {});
   QSet<QUrl> advertised_;
+  QHash<QUrl, QString> names_;
   const int scanId_;
   QList<QUrl> pending_;
   QSet<QUrl> found_;
