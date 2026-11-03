@@ -1773,6 +1773,48 @@ bool NewsTabWidget::openUrl(const QUrl &url)
   return mainWindow_->openArticleUrl(url);
 }
 //----------------------------------------------------------------------------
+void NewsTabWidget::appendSearchFilter(QString &filterStr) const
+{
+  const QString objectName = findText_->findGroup_->checkedAction()->objectName();
+  if (objectName == QLatin1String("findInBrowserAct"))
+    return;
+
+  QString findText = findText_->text();
+  if (findText.isEmpty())
+    return;
+
+  findText.replace(QLatin1String("'"), QLatin1String("''"));
+  findText.replace(QLatin1String("!"), QLatin1String("!!"));
+  findText.replace(QLatin1String("%"), QLatin1String("!%"));
+  findText.replace(QLatin1String("_"), QLatin1String("!_"));
+  findText = findText.toUpper();
+
+  if (objectName == QLatin1String("findTitleAct")) {
+    filterStr.append(
+        QStringLiteral(" AND UPPER(title) LIKE '%%1%' ESCAPE '!'").arg(findText));
+  } else if (objectName == QLatin1String("findAuthorAct")) {
+    filterStr.append(
+        QStringLiteral(" AND UPPER(author_name) LIKE '%%1%' ESCAPE '!'").arg(findText));
+  } else if (objectName == QLatin1String("findCategoryAct")) {
+    filterStr.append(
+        QStringLiteral(" AND UPPER(category) LIKE '%%1%' ESCAPE '!'").arg(findText));
+  } else if (objectName == QLatin1String("findContentAct")) {
+    filterStr.append(
+        QStringLiteral(" AND (UPPER(content) LIKE '%%1%' ESCAPE '!' OR UPPER(description) LIKE '%%1%' ESCAPE '!')")
+        .arg(findText));
+  } else if (objectName == QLatin1String("findLinkAct")) {
+    filterStr.append(
+        QStringLiteral(" AND UPPER(link_href) LIKE '%%1%' ESCAPE '!'").arg(findText));
+  } else {
+    filterStr.append(
+        QStringLiteral(" AND (UPPER(title) LIKE '%%1%' ESCAPE '!' OR UPPER(author_name) LIKE '%%1%' ESCAPE '!' "
+                       "OR UPPER(category) LIKE '%%1%' ESCAPE '!' OR UPPER(content) LIKE '%%1%' ESCAPE '!' "
+                       "OR UPPER(description) LIKE '%%1%' ESCAPE '!')")
+        .arg(findText));
+  }
+}
+
+//----------------------------------------------------------------------------
 void NewsTabWidget::slotFindText(const QString &text)
 {
   QString objectName = findText_->findGroup_->checkedAction()->objectName();
@@ -1793,34 +1835,7 @@ void NewsTabWidget::slotFindText(const QString &text)
       filterStr = mainWindow_->newsFilterStr;
     }
 
-    if (!text.isEmpty()) {
-      QString findText = text;
-      findText = findText.replace("'", "''").toUpper();
-      if (objectName == "findTitleAct") {
-        filterStr.append(
-              QString(" AND UPPER(title) LIKE '%%1%'").arg(findText));
-      } else if (objectName == "findAuthorAct") {
-        filterStr.append(
-              QString(" AND UPPER(author_name) LIKE '%%1%'").arg(findText));
-      } else if (objectName == "findCategoryAct") {
-        filterStr.append(
-              QString(" AND UPPER(category) LIKE '%%1%'").arg(findText));
-      } else if (objectName == "findContentAct") {
-        filterStr.append(
-              QString(" AND (UPPER(content) LIKE '%%1%' OR UPPER(description) LIKE '%%1%')").
-              arg(findText));
-      } else if (objectName == "findLinkAct") {
-        filterStr.append(
-              QString(" AND link_href LIKE '%%1%'").
-              arg(findText));
-      } else {
-        filterStr.append(
-              QString(" AND (UPPER(title) LIKE '%%1%' OR UPPER(author_name) LIKE '%%1%' "
-                      "OR UPPER(category) LIKE '%%1%' OR UPPER(content) LIKE '%%1%' "
-                      "OR UPPER(description) LIKE '%%1%')").
-              arg(findText));
-      }
-    }
+    appendSearchFilter(filterStr);
 
     newsModel_->setFilter(filterStr);
 

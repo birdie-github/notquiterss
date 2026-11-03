@@ -97,6 +97,7 @@ public:
 
   void setTextTab(const QString &text);
   void updateActionStates();
+  void appendSearchFilter(QString &filterStr) const;
 
   void slotShareNews(QAction *action);
 
