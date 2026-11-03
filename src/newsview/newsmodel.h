@@ -41,9 +41,6 @@ public:
   void setFilter(const QString &filter);
   bool select();
 
-protected:
-  virtual QString selectStatement() const;
-
   QString formatDate_;
   QString formatTime_;
   bool simplifiedDateTime_;
@@ -55,6 +52,9 @@ protected:
 
 signals:
   void signalSort(int column, int order);
+
+protected:
+  virtual QString selectStatement() const;
 
 private:
   QTreeView *view_;
