@@ -126,16 +126,21 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
   QSet<QUrl> used;
   articleAnchors_.clear();
   anchorPositions_.clear();
+  imageSpans_.clear();
   for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
     for (auto it = block.begin(); !it.atEnd(); ++it) {
-      for (const QString &name : it.fragment().charFormat().anchorNames()) {
+      const QTextFragment fragment = it.fragment();
+      const QTextCharFormat format = fragment.charFormat();
+      for (const QString &name : format.anchorNames()) {
         if (name.startsWith("article-")) {
-          articleAnchors_.insert(it.fragment().position(), name);
-          anchorPositions_.insert(name, it.fragment().position());
+          articleAnchors_.insert(fragment.position(), name);
+          anchorPositions_.insert(name, fragment.position());
         }
       }
-      if (it.fragment().charFormat().isImageFormat())
-        used.insert(QUrl(it.fragment().charFormat().toImageFormat().name()));
+      if (format.isImageFormat()) {
+        used.insert(QUrl(format.toImageFormat().name()));
+        imageSpans_.append({fragment.position(), fragment.length()});
+      }
     }
   }
   for (auto it = imagesCache_.begin(); it != imagesCache_.end();) {
@@ -226,7 +231,7 @@ void ArticleView::installImage(const QUrl &url, const QImage &image) {
   imagesCache_.insert(url, image);
   document()->addResource(QTextDocument::ImageResource, url, image);
   if (changedSize) {
-    scaleDocument();
+    scaleDocument(false);
     document()->markContentsDirty(0, document()->characterCount());
     restoreView(state);
   }
@@ -277,50 +282,67 @@ void ArticleView::restoreView(const ViewState &state) {
   horizontalScrollBar()->setValue(state.horizontal);
 }
 
-void ArticleView::scaleDocument() {
+void ArticleView::scaleDocument(bool scaleText) {
   if (scaling_) return;
+  if (!scaleText && imageSpans_.isEmpty()) return;
   scaling_ = true;
+
+  auto scaleImageCursor = [this](QTextCursor &cursor, const QTextCharFormat &format) {
+    QTextImageFormat image = format.toImageFormat();
+    if (!image.hasProperty(OriginalImageWidth)) {
+      image.setProperty(OriginalImageWidth, image.width());
+      image.setProperty(OriginalImageHeight, image.height());
+    }
+    const QImage pixels = imagesCache_.value(QUrl(image.name()), placeholder());
+    qreal w = image.doubleProperty(OriginalImageWidth);
+    qreal h = image.doubleProperty(OriginalImageHeight);
+    if (w <= 0 && h <= 0) { w = pixels.width(); h = pixels.height(); }
+    else if (w <= 0) w = h * pixels.width() / qMax(1, pixels.height());
+    else if (h <= 0) h = w * pixels.height() / qMax(1, pixels.width());
+    const qreal width = qMin(w * zoom_, qreal(qMax(16, viewport()->width() - 32)));
+    image.setWidth(width);
+    image.setHeight(h * width / qMax(qreal(1), w));
+    if (format != image) cursor.setCharFormat(image);
+  };
+
   QTextCursor edit(document());
   edit.beginEditBlock();
-  for (QTextBlock block = document()->begin(); block.isValid(); block = block.next()) {
-    // Collect ranges first because format changes invalidate fragment iterators.
-    QList<QTextCursor> fragments;
-    for (auto it = block.begin(); !it.atEnd(); ++it) {
-      const QTextFragment fragment = it.fragment();
-      QTextCursor cursor(document()); cursor.setPosition(fragment.position());
-      cursor.setPosition(fragment.position() + fragment.length(), QTextCursor::KeepAnchor);
-      fragments.append(cursor);
+  if (!scaleText) {
+    for (const ImageSpan &span : std::as_const(imageSpans_)) {
+      QTextCursor cursor(document());
+      cursor.setPosition(span.position);
+      cursor.setPosition(span.position + span.length, QTextCursor::KeepAnchor);
+      const QTextCharFormat format = cursor.charFormat();
+      if (format.isImageFormat())
+        scaleImageCursor(cursor, format);
     }
-    for (QTextCursor cursor : fragments) {
-      QTextCharFormat format = cursor.charFormat();
-      if (format.isImageFormat()) {
-        QTextImageFormat image = format.toImageFormat();
-        if (!image.hasProperty(OriginalImageWidth)) {
-          image.setProperty(OriginalImageWidth, image.width());
-          image.setProperty(OriginalImageHeight, image.height());
+  } else {
+    for (QTextBlock block = document()->begin(); block.isValid(); block = block.next()) {
+      // Collect ranges first because format changes invalidate fragment iterators.
+      QList<QTextCursor> fragments;
+      for (auto it = block.begin(); !it.atEnd(); ++it) {
+        const QTextFragment fragment = it.fragment();
+        QTextCursor cursor(document()); cursor.setPosition(fragment.position());
+        cursor.setPosition(fragment.position() + fragment.length(), QTextCursor::KeepAnchor);
+        fragments.append(cursor);
+      }
+      for (QTextCursor cursor : fragments) {
+        QTextCharFormat format = cursor.charFormat();
+        if (format.isImageFormat()) {
+          scaleImageCursor(cursor, format);
+        } else {
+          if (!format.hasProperty(OriginalFontSize)) {
+            qreal size = format.font().pointSizeF();
+            if (size <= 0 && format.intProperty(QTextFormat::FontPixelSize) > 0)
+              size = format.intProperty(QTextFormat::FontPixelSize) * 72.0 / logicalDpiY();
+            if (size <= 0) size = document()->defaultFont().pointSizeF();
+            format.setProperty(OriginalFontSize, qMax(qreal(1), size));
+          }
+          format.clearProperty(QTextFormat::FontPixelSize);
+          format.clearProperty(QTextFormat::FontSizeAdjustment);
+          format.setFontPointSize(format.doubleProperty(OriginalFontSize) * zoom_);
+          if (cursor.charFormat() != format) cursor.setCharFormat(format);
         }
-        const QImage pixels = imagesCache_.value(QUrl(image.name()), placeholder());
-        qreal w = image.doubleProperty(OriginalImageWidth);
-        qreal h = image.doubleProperty(OriginalImageHeight);
-        if (w <= 0 && h <= 0) { w = pixels.width(); h = pixels.height(); }
-        else if (w <= 0) w = h * pixels.width() / qMax(1, pixels.height());
-        else if (h <= 0) h = w * pixels.height() / qMax(1, pixels.width());
-        const qreal width = qMin(w * zoom_, qreal(qMax(16, viewport()->width() - 32)));
-        image.setWidth(width);
-        image.setHeight(h * width / qMax(qreal(1), w));
-        if (cursor.charFormat() != image) cursor.setCharFormat(image);
-      } else {
-        if (!format.hasProperty(OriginalFontSize)) {
-          qreal size = format.font().pointSizeF();
-          if (size <= 0 && format.intProperty(QTextFormat::FontPixelSize) > 0)
-            size = format.intProperty(QTextFormat::FontPixelSize) * 72.0 / logicalDpiY();
-          if (size <= 0) size = document()->defaultFont().pointSizeF();
-          format.setProperty(OriginalFontSize, qMax(qreal(1), size));
-        }
-        format.clearProperty(QTextFormat::FontPixelSize);
-        format.clearProperty(QTextFormat::FontSizeAdjustment);
-        format.setFontPointSize(format.doubleProperty(OriginalFontSize) * zoom_);
-        if (cursor.charFormat() != format) cursor.setCharFormat(format);
       }
     }
   }
@@ -329,9 +351,11 @@ void ArticleView::scaleDocument() {
 }
 
 void ArticleView::setZoomFactor(qreal factor) {
+  const qreal clamped = qBound(qreal(0.3), factor, qreal(5.0));
+  if (qFuzzyCompare(zoom_, clamped)) return;
   const ViewState state = saveView();
-  zoom_ = qBound(qreal(0.3), factor, qreal(5.0));
-  scaleDocument();
+  zoom_ = clamped;
+  scaleDocument(true);
   restoreView(state);
 }
 void ArticleView::highlightText(const QString &text, bool reveal) {
@@ -422,9 +446,11 @@ void ArticleView::wheelEvent(QWheelEvent *event) {
   QTextBrowser::wheelEvent(event);
 }
 void ArticleView::resizeEvent(QResizeEvent *event) {
+  const bool widthChanged = event->oldSize().width() != event->size().width();
   const ViewState state = saveView();
   QTextBrowser::resizeEvent(event);
-  scaleDocument();
+  if (widthChanged && !imageSpans_.isEmpty())
+    scaleDocument(false);
   restoreView(state);
 }
 

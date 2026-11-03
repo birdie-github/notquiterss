@@ -25,6 +25,7 @@
 #include <QImage>
 #include <QSet>
 #include <QTextDocument>
+#include <QVector>
 
 class ArticleImages;
 class ArticleDocument;
@@ -82,11 +83,12 @@ private:
   friend class ArticleDocument;
   struct Location { QString article; int offset = 0; int absolute = 0; };
   struct ViewState { Location top, position, anchor; int topOffset = 0; int horizontal = 0; };
+  struct ImageSpan { int position = 0; int length = 0; };
   Location location(int position) const;
   int position(const Location &location) const;
   ViewState saveView() const;
   void restoreView(const ViewState &state);
-  void scaleDocument();
+  void scaleDocument(bool scaleText = true);
   void requestImage(const QUrl &url);
   void installImage(const QUrl &url, const QImage &image);
   void updateProgress();
@@ -97,6 +99,7 @@ private:
   QSet<QUrl> allowedImages_, pending_, failed_;
   QMap<int, QString> articleAnchors_;
   QHash<QString, int> anchorPositions_;
+  QVector<ImageSpan> imageSpans_;
   QString search_;
   qreal zoom_ = 1.0;
   int generation_ = 0;
