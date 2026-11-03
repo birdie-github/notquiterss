@@ -648,6 +648,16 @@ void OptionsDialog::createBrowserWidget()
   });
 
   autoLoadImages_ = new QCheckBox(tr("Load images"));
+  preloadNewspaperPages_ = new QSpinBox();
+  preloadNewspaperPages_->setRange(0, 10);
+  preloadNewspaperPages_->setToolTip(tr("0 disables image preloading"));
+  QHBoxLayout *preloadLayout = new QHBoxLayout();
+  preloadLayout->addWidget(new QLabel(tr("Preload up to")));
+  preloadLayout->addWidget(preloadNewspaperPages_);
+  preloadLayout->addWidget(new QLabel(tr("pages in newspaper mode")));
+  preloadLayout->addStretch();
+  connect(autoLoadImages_, &QAbstractButton::toggled, preloadNewspaperPages_, &QWidget::setEnabled);
+
   defaultZoomPages_ = new QSpinBox();
   defaultZoomPages_->setRange(30, 300);
   defaultZoomPages_->setSuffix(" %");
@@ -657,6 +667,7 @@ void OptionsDialog::createBrowserWidget()
   zoomLayout->addStretch();
   QVBoxLayout *articleLayout = new QVBoxLayout();
   articleLayout->addWidget(autoLoadImages_);
+  articleLayout->addLayout(preloadLayout);
   articleLayout->addLayout(zoomLayout);
   articleLayout->addSpacing(12);
   articleLayout->addWidget(new QLabel(tr("Open links in:")));

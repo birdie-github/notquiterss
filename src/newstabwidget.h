@@ -179,6 +179,7 @@ private:
 
   void createNewsList();
   void createArticleWidget();
+  int effectivePreloadPages() const;
   QString formatArticleDate(int row) const;
   const CachedArticle &prepareCachedArticle(int row, int newsId, const QUrl &baseUrl,
                                             const QModelIndex &feedIndex,

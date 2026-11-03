@@ -1997,6 +1997,7 @@ void MainWindow::loadSettings()
   askDownloadLocation_ = settings.value("askDownloadLocation", true).toBool();
   defaultZoomPages_ = settings.value("defaultZoomPages", 100).toInt();
   autoLoadImages_ = settings.value("autoLoadImages", true).toBool();
+  preloadNewspaperPages_ = qBound(0, settings.value("preloadNewspaperPages", 2).toInt(), 10);
 
   soundNewNews_ = settings.value("soundNewNews", true).toBool();
   soundNotifyPath_ = settings.value("soundNotifyPath", mainApp->soundNotifyDefaultFile()).toString();
@@ -2271,6 +2272,7 @@ void MainWindow::saveSettings()
   settings.setValue("askDownloadLocation", askDownloadLocation_);
   settings.setValue("defaultZoomPages", defaultZoomPages_);
   settings.setValue("autoLoadImages", autoLoadImages_);
+  settings.setValue("preloadNewspaperPages", preloadNewspaperPages_);
 
   settings.setValue("soundNewNews", soundNewNews_);
   settings.setValue("soundNotifyPath", soundNotifyPath_);
@@ -3204,6 +3206,8 @@ void MainWindow::showOptionDlg(int index)
   optionsDialog_->numberRepeats_->setValue(numberRepeats);
 
   optionsDialog_->autoLoadImages_->setChecked(autoLoadImages_);
+  optionsDialog_->preloadNewspaperPages_->setValue(preloadNewspaperPages_);
+  optionsDialog_->preloadNewspaperPages_->setEnabled(autoLoadImages_);
   optionsDialog_->defaultZoomPages_->setValue(defaultZoomPages_);
   const int browserMode = AppSettings::externalBrowserOn.get();
   optionsDialog_->customExternalBrowser_->setChecked(browserMode == 2 || browserMode == -1);
@@ -3550,6 +3554,7 @@ void MainWindow::showOptionDlg(int index)
   AppSettings::numberRepeats.set(numberRepeats);
 
   autoLoadImages_ = optionsDialog_->autoLoadImages_->isChecked();
+  preloadNewspaperPages_ = optionsDialog_->preloadNewspaperPages_->value();
   AppSettings::externalBrowserOn.set(optionsDialog_->customExternalBrowser_->isChecked() ? 2 : 1);
   AppSettings::externalBrowser.set(optionsDialog_->externalBrowser_->text());
   AppSettings::returnFocusAfterLink.set(optionsDialog_->returnFocusAfterLink_->isChecked());
@@ -4903,6 +4908,11 @@ void MainWindow::showFeedPropertiesDlg()
       feedsModel_->dataField(index, "displayOnStartup").toInt();
   properties.display.displayEmbeddedImages =
       feedsModel_->dataField(index, "displayEmbeddedImages").toInt();
+  const QVariant preloadVar = feedsModel_->dataField(index, "preloadImages");
+  const int preloadVal = preloadVar.isNull() ? -1 : preloadVar.toInt();
+  properties.display.useGlobalPreload = (preloadVal < 0);
+  properties.display.globalPreloadDescription = imagePreloadDescription();
+  properties.display.preloadPages = preloadVal < 0 ? preloadNewspaperPages_ : qBound(0, preloadVal, 10);
   properties.display.javaScriptEnable =
       feedsModel_->dataField(index, "javaScriptEnable").toInt();
   properties.display.displayNews = feedsModel_->dataField(index, "displayNews").toInt();
@@ -5081,8 +5091,9 @@ void MainWindow::showFeedPropertiesDlg()
 
   index = feedsModel_->indexById(feedId);
 
+  const int preloadMode = properties.display.useGlobalPreload ? -1 : properties.display.preloadPages;
   q.prepare("UPDATE feeds SET text = ?, xmlUrl = ?, displayOnStartup = ?, "
-            "displayEmbeddedImages = ?, displayNews = ?, layoutDirection = ?, "
+            "displayEmbeddedImages = ?, preloadImages = ?, displayNews = ?, layoutDirection = ?, "
             "label = ?, duplicateNewsMode = ?, addSingleNewsAnyDateOn = ?, avoidedOldSingleNewsDateOn = ?, avoidedOldSingleNewsDate = ?,"
             " authentication = ?, disableUpdate = ?, "
             "javaScriptEnable = ? WHERE id == ?");
@@ -5090,6 +5101,7 @@ void MainWindow::showFeedPropertiesDlg()
   q.addBindValue(properties.general.url);
   q.addBindValue(properties.general.displayOnStartup);
   q.addBindValue(properties.display.displayEmbeddedImages);
+  q.addBindValue(preloadMode);
   q.addBindValue(properties.display.displayNews);
   q.addBindValue(properties.display.layoutDirection);
   if (properties.general.starred)
@@ -5151,6 +5163,7 @@ void MainWindow::showFeedPropertiesDlg()
   QPersistentModelIndex indexUrl     = feedsModel_->indexSibling(index, "xmlUrl");
   QPersistentModelIndex indexStartup = feedsModel_->indexSibling(index, "displayOnStartup");
   QModelIndex indexImages  = feedsModel_->indexSibling(index, "displayEmbeddedImages");
+  QModelIndex indexPreload = feedsModel_->indexSibling(index, "preloadImages");
   QModelIndex indexNews    = feedsModel_->indexSibling(index, "displayNews");
   QModelIndex indexRTL     = feedsModel_->indexSibling(index, "layoutDirection");
   QModelIndex indexLabel   = feedsModel_->indexSibling(index, "label");
@@ -5165,6 +5178,7 @@ void MainWindow::showFeedPropertiesDlg()
   feedsModel_->setData(indexUrl, properties.general.url);
   feedsModel_->setData(indexStartup, properties.general.displayOnStartup);
   feedsModel_->setData(indexImages, properties.display.displayEmbeddedImages);
+  feedsModel_->setData(indexPreload, preloadMode);
   feedsModel_->setData(indexNews, properties.display.displayNews);
   feedsModel_->setData(indexRTL, properties.display.layoutDirection);
   feedsModel_->setData(indexLabel, properties.general.starred ? "starred" : "");
@@ -5213,8 +5227,12 @@ void MainWindow::showFeedPropertiesDlg()
 
   if (!mainApp->storeDBMemory())
     db_.commit();
+  const bool preloadChanged =
+      properties.display.useGlobalPreload != properties_tmp.display.useGlobalPreload ||
+      (!properties.display.useGlobalPreload &&
+       properties.display.preloadPages != properties_tmp.display.preloadPages);
   refreshFeedSettings({feedId}, false,
-                      properties.display.displayEmbeddedImages != properties_tmp.display.displayEmbeddedImages,
+                      properties.display.displayEmbeddedImages != properties_tmp.display.displayEmbeddedImages || preloadChanged,
                       properties.display.layoutDirection != properties_tmp.display.layoutDirection);
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged("save feed properties");

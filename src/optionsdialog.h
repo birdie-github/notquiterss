@@ -76,6 +76,7 @@ public:
 
   // browser
   QCheckBox *autoLoadImages_;
+  QSpinBox *preloadNewspaperPages_;
   QSpinBox *defaultZoomPages_;
   QRadioButton *customExternalBrowser_;
   LineEdit *externalBrowser_;

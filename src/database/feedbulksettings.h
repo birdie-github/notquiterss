@@ -24,6 +24,7 @@ struct Changes {
   std::optional<bool> disabled;
   std::optional<Schedule> schedule;
   std::optional<int> images; // Qt check state: 0 off, 1 global, 2 on
+  std::optional<int> preloadImages; // -1: global, 0..10: pages
   std::optional<bool> rightToLeft;
   std::optional<Columns> columns;
 

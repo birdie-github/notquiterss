@@ -31,6 +31,7 @@ class ArticleImages;
 class ArticleDocument;
 class QMovie;
 class QPrinter;
+class QTimer;
 
 // A feed document viewer. All resources go through the article image policy;
 // QTextBrowser's source loading, history and automatic navigation are disabled.
@@ -42,6 +43,7 @@ public:
   QString prepareArticle(const QString &html, const QUrl &base, const QString &prefix,
                          bool images, QSet<QUrl> *allowedUrls = nullptr);
   void allowImages(const QSet<QUrl> &urls);
+  void setPreloadPages(int pages);
   void setArticleHtml(const QString &html, bool preservePosition = false);
   bool updateArticleReadState(int newsId, bool isNew, bool isRead);
   bool updateArticleStarState(int newsId, bool isStarred);
@@ -87,16 +89,20 @@ private:
   friend class ArticleDocument;
   struct Location { QString article; int offset = 0; int absolute = 0; };
   struct ViewState { Location top, position, anchor; int topOffset = 0; int horizontal = 0; };
-  struct ImageSpan { int position = 0; int length = 0; };
+  struct ImageSpan { int position = 0; int length = 0; QUrl url; };
   Location location(int position) const;
   int position(const Location &location) const;
   ViewState saveView() const;
   void restoreView(const ViewState &state);
+  void scaleImageCursor(QTextCursor &cursor, const QTextCharFormat &format);
   void scaleDocument(bool scaleText = true);
+  void schedulePreload();
+  void preloadImages();
   void requestImage(const QUrl &url);
   void installImage(const QUrl &url, const QImage &image);
   void updateProgress();
   ArticleImages *images_;
+  QTimer *preloadTimer_ = nullptr;
   QHash<QUrl, QImage> imagesCache_;
   QHash<QUrl, QMovie *> movies_;
   QSet<QMovie *> pausedMovies_;
@@ -106,6 +112,7 @@ private:
   QVector<ImageSpan> imageSpans_;
   QString search_;
   qreal zoom_ = 1.0;
+  int preloadPages_ = 0;
   int generation_ = 0;
   int requested_ = 0;
   int completed_ = 0;

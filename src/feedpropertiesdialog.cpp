@@ -41,7 +41,7 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     bulkState_->addItems({tr("Enabled"), tr("Disabled")});
     layoutDirection_ = new QCheckBox(tr("Right-to-left layout"));
     bulkEditors_ << bulkState_ << createUpdateSchedule() << createImageEditor()
-                 << layoutDirection_ << createColumnsTab();
+                 << createImagePreloadEditor() << layoutDirection_ << createColumnsTab();
     auto *splitter = new QSplitter(this);
 //    auto *actions = new QGroupBox(tr("Action to apply"));
     auto *actions = new QGroupBox();
@@ -50,6 +50,7 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     bulkAction_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     bulkAction_->addItems({tr("Choose an action..."), tr("Enable/disable"),
                           tr("Update schedule"), tr("Image loading"),
+                          tr("Article image preloading"),
                           tr("Text direction"), tr("Columns and sorting")});
     actionsLayout->addWidget(bulkAction_);
     auto *pages = new QStackedWidget();
@@ -59,7 +60,7 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
       auto *layout = new QVBoxLayout(page);
       layout->setContentsMargins(0, 0, 0, 0);
       layout->addWidget(bulkEditors_.at(i));
-      if (i != 4) layout->addStretch();
+      if (i != bulkEditors_.size() - 1) layout->addStretch();
       pages->addWidget(page);
     }
     actionsLayout->addWidget(pages, 1);
@@ -275,6 +276,11 @@ QWidget *FeedPropertiesDialog::createDisplayTab()
   QWidget *tab = new QWidget();
 
   QWidget *imageEditor = createImageEditor();
+  QGroupBox *imagePreload = createImagePreloadEditor();
+  connect(imagePolicy_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          imagePreload, [imagePreload](int index) {
+    imagePreload->setEnabled(index != 0);
+  });
 
   layoutDirection_ = new QCheckBox(tr("Right-to-left layout"));
 
@@ -287,6 +293,7 @@ QWidget *FeedPropertiesDialog::createDisplayTab()
     tabLayout->addWidget(hint);
   }
   tabLayout->addWidget(imageEditor);
+  tabLayout->addWidget(imagePreload);
   tabLayout->addWidget(layoutDirection_);
 
   tabLayout->addStretch();
@@ -500,6 +507,13 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   }
 
   imagePolicy_->setCurrentIndex(feedProperties.display.displayEmbeddedImages);
+  useGlobalPreload_->setText(tr("Use global settings (%1)")
+                             .arg(feedProperties.display.globalPreloadDescription));
+  useGlobalPreload_->setChecked(feedProperties.display.useGlobalPreload);
+  customPreload_->setChecked(!feedProperties.display.useGlobalPreload);
+  preloadPages_->setValue(feedProperties.display.preloadPages);
+  if (!bulk_)
+    imagePreloadGroup_->setEnabled(feedProperties.display.displayEmbeddedImages != 0);
   layoutDirection_->setChecked(feedProperties.display.layoutDirection);
 
   for (int i = 0; i < feedProperties.column.columns.count(); ++i) {
@@ -636,6 +650,8 @@ FEED_PROPERTIES FeedPropertiesDialog::getFeedProperties()
   feedProperties.general.displayOnStartup = displayOnStartup->isChecked();
   feedProperties.general.starred = starredOn_->isChecked();
   feedProperties.display.displayEmbeddedImages = imagePolicy_->currentIndex();
+  feedProperties.display.useGlobalPreload = useGlobalPreload_->isChecked();
+  feedProperties.display.preloadPages = preloadPages_->value();
   feedProperties.general.duplicateNewsMode = duplicateNewsMode_->isChecked();
   feedProperties.display.layoutDirection = layoutDirection_->isChecked();
   feedProperties.general.addSingleNewsAnyDateOn = addSingleNewsAnyDateOn_->isChecked();
@@ -839,9 +855,12 @@ FeedBulkSettings::Changes FeedPropertiesDialog::bulkChanges()
     changes.images = imagePolicy_->currentIndex();
     break;
   case 4:
-    changes.rightToLeft = layoutDirection_->isChecked();
+    changes.preloadImages = useGlobalPreload_->isChecked() ? -1 : preloadPages_->value();
     break;
   case 5:
+    changes.rightToLeft = layoutDirection_->isChecked();
+    break;
+  case 6:
     changes.columns = columnSettings();
     break;
   default:
@@ -895,6 +914,30 @@ QWidget *FeedPropertiesDialog::createImageEditor()
   imageLayout->addStretch();
 
   return imageEditor;
+}
+
+QGroupBox *FeedPropertiesDialog::createImagePreloadEditor()
+{
+  imagePreloadGroup_ = new QGroupBox(tr("Article image preloading"));
+  useGlobalPreload_ = new QRadioButton(imagePreloadGroup_);
+  customPreload_ = new QRadioButton(tr("Preload up to"), imagePreloadGroup_);
+  preloadPages_ = new QSpinBox(imagePreloadGroup_);
+  preloadPages_->setRange(0, 10);
+  preloadPages_->setEnabled(false);
+  preloadPages_->setToolTip(tr("0 disables image preloading"));
+  connect(customPreload_, &QAbstractButton::toggled, preloadPages_, &QWidget::setEnabled);
+
+  auto *customLayout = new QHBoxLayout();
+  customLayout->setContentsMargins(0, 0, 0, 0);
+  customLayout->addWidget(customPreload_);
+  customLayout->addWidget(preloadPages_);
+  customLayout->addWidget(new QLabel(tr("pages"), imagePreloadGroup_));
+  customLayout->addStretch();
+
+  auto *preloadLayout = new QVBoxLayout(imagePreloadGroup_);
+  preloadLayout->addWidget(useGlobalPreload_);
+  preloadLayout->addLayout(customLayout);
+  return imagePreloadGroup_;
 }
 
 void FeedPropertiesDialog::setFolderDisabledCounts(int total, int disabled)

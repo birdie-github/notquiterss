@@ -465,6 +465,7 @@ void NewsTabWidget::setSettings(bool init, bool newTab)
 
   refreshAppearance(!init);
   setAutoLoadImages(false);
+  articleView_->setPreloadPages(effectivePreloadPages());
 
   if (!newTab)
     newsModel_->setFilter("feedId=-1");
@@ -516,6 +517,7 @@ void NewsTabWidget::refreshFeedDisplay(bool images)
     autoLoadImages_ = policy == 2 || (policy == 1 && mainWindow_->autoLoadImages_);
     setAutoLoadImages(false);
   }
+  articleView_->setPreloadPages(effectivePreloadPages());
   if (mainWindow_->newsLayout_ == 1)
     loadNewspaper(RefreshWithPos);
   else if (newsView_->currentIndex().isValid())
@@ -526,6 +528,7 @@ void NewsTabWidget::setAutoLoadImages(bool apply)
 {
   if (type_ == TabTypeDownloads || mainWindow_->currentNewsTab != this) return;
   if (apply) autoLoadImages_ = !autoLoadImages_;
+  articleView_->setPreloadPages(effectivePreloadPages());
   mainWindow_->autoLoadImagesToggle_->setText(autoLoadImages_ ? tr("Hide Images") : tr("Load Images"));
   mainWindow_->autoLoadImagesToggle_->setToolTip(autoLoadImages_ ?
       tr("Hide images in this article pane") : tr("Load images in this article pane"));
@@ -534,6 +537,22 @@ void NewsTabWidget::setAutoLoadImages(bool apply)
     if (mainWindow_->newsLayout_ == 1) loadNewspaper(RefreshWithPos);
     else updateArticleView(newsView_->currentIndex());
   }
+}
+
+int NewsTabWidget::effectivePreloadPages() const
+{
+  if (!autoLoadImages_ || mainWindow_->newsLayout_ != 1)
+    return 0;
+  if (type_ == TabTypeFeed) {
+    const QModelIndex feedIndex = feedsModel_->indexById(feedId_);
+    if (feedIndex.isValid()) {
+      const QVariant v = feedsModel_->dataField(feedIndex, "preloadImages");
+      const int preload = v.isNull() ? -1 : v.toInt();
+      if (preload >= 0)
+        return qBound(0, preload, 10);
+    }
+  }
+  return qBound(0, mainWindow_->preloadNewspaperPages_, 10);
 }
 
 /** @brief Process mouse click in news list
@@ -1392,6 +1411,7 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
   }
 
   articleView_->beginArticles();
+  articleView_->setPreloadPages(0);
   const int row = index.row();
   const int newsIdInt = newsModel_->dataField(row, "id").toInt();
   const QString newsId = QString::number(newsIdInt);
@@ -1447,6 +1467,7 @@ void NewsTabWidget::loadNewspaper(int refresh)
 {
   if (mainWindow_->newsLayout_ != 1) return;
   articleView_->beginArticles();
+  articleView_->setPreloadPages(effectivePreloadPages());
   QString htmlStr;
   bool ltr = true;
 
@@ -1614,7 +1635,8 @@ void NewsTabWidget::slotLinkHovered(const QString &link)
 void NewsTabWidget::slotLoadStarted()
 {
   webViewProgress_->setValue(0);
-  webViewProgress_->show();
+  if (mainWindow_->newsLayout_ != 1)
+    webViewProgress_->show();
 }
 //----------------------------------------------------------------------------
 void NewsTabWidget::slotLoadFinished(bool)
@@ -1678,6 +1700,7 @@ void NewsTabWidget::setNewsLayout()
 
   switch (mainWindow_->newsLayout_) {
   case 1:
+    webViewProgress_->hide();
     newsWidget_->setVisible(false);
     loadNewspaper();
     break;

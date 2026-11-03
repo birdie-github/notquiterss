@@ -72,6 +72,9 @@ typedef struct {
     quint16 groupType; //!< Group mode
     int displayNews; //!< Display news mode
     int displayEmbeddedImages; //!< Display embedded images
+    bool useGlobalPreload; //!< Inherit global newspaper image preloading setting
+    QString globalPreloadDescription;
+    int preloadPages; //!< Preload pages in newspaper mode (0-10)
     bool loadMoviesAndOtherContent; //!< Flag to load media content
     bool openLink; //!< Flag to open news link
     int layoutDirection; //!< LTR or RTL layout
@@ -189,9 +192,14 @@ private:
   QWidget *createGeneralTab();
   QGroupBox *createUpdateSchedule();
   QWidget *createImageEditor();
+  QGroupBox *createImagePreloadEditor();
 
   // Tab "Display"
   QComboBox *imagePolicy_;
+  QGroupBox *imagePreloadGroup_;
+  QRadioButton *useGlobalPreload_;
+  QRadioButton *customPreload_;
+  QSpinBox *preloadPages_;
   QCheckBox *layoutDirection_;
 
   QWidget *createDisplayTab();

@@ -68,13 +68,21 @@ QImage placeholder() {
 }
 }
 
-ArticleView::ArticleView(QWidget *parent) : QTextBrowser(parent), images_(new ArticleImages(this)) {
+ArticleView::ArticleView(QWidget *parent)
+  : QTextBrowser(parent)
+  , images_(new ArticleImages(this))
+  , preloadTimer_(new QTimer(this))
+{
   setReadOnly(true);
   setOpenLinks(false);
   setOpenExternalLinks(false);
   setAcceptDrops(false);
   setUndoRedoEnabled(false);
   setDocument(new ArticleDocument(this));
+  preloadTimer_->setSingleShot(true);
+  preloadTimer_->setInterval(50);
+  connect(preloadTimer_, &QTimer::timeout, this, &ArticleView::preloadImages);
+  connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &ArticleView::schedulePreload);
   connect(this, &QTextBrowser::anchorClicked, this, &ArticleView::linkClicked);
   connect(this, QOverload<const QUrl &>::of(&QTextBrowser::highlighted), this,
           [this](const QUrl &url) { emit linkHovered(url.toString()); });
@@ -82,6 +90,7 @@ ArticleView::ArticleView(QWidget *parent) : QTextBrowser(parent), images_(new Ar
 
 void ArticleView::disconnectObjects() {
   ++generation_;
+  preloadTimer_->stop();
   images_->reset();
   for (QMovie *movie : movies_) movie->stop();
   pausedMovies_.clear();
@@ -90,6 +99,7 @@ void ArticleView::disconnectObjects() {
 
 void ArticleView::beginArticles() {
   ++generation_;
+  preloadTimer_->stop();
   images_->reset();
   allowedImages_.clear();
   pending_.clear();
@@ -112,6 +122,13 @@ void ArticleView::allowImages(const QSet<QUrl> &urls) {
   if (urls.isEmpty()) return;
   allowedImages_ += urls;
   images_->allow(urls);
+}
+
+void ArticleView::setPreloadPages(int pages) {
+  const int clamped = qBound(0, pages, 10);
+  if (preloadPages_ == clamped) return;
+  preloadPages_ = clamped;
+  schedulePreload();
 }
 
 void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
@@ -145,8 +162,9 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
         }
       }
       if (format.isImageFormat()) {
-        used.insert(QUrl(format.toImageFormat().name()));
-        imageSpans_.append({fragment.position(), fragment.length()});
+        const QUrl url(format.toImageFormat().name());
+        used.insert(url);
+        imageSpans_.append({fragment.position(), fragment.length(), url});
       }
     }
   }
@@ -160,10 +178,11 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
       it = imagesCache_.erase(it);
     } else ++it;
   }
-  scaleDocument();
+  scaleDocument(!qFuzzyCompare(zoom_, 1.0));
   highlightText(search_);
   if (preservePosition) restoreView(state);
   else { moveCursor(QTextCursor::Start); verticalScrollBar()->setValue(0); }
+  schedulePreload();
   updateProgress();
   // Notify after replacement is complete. Connections to the old document
   // cannot observe subsequent article replacements or empty-feed clears.
@@ -300,6 +319,19 @@ QVariant ArticleView::loadResource(int type, const QUrl &url) {
       return image;
     }
   }
+  if (ArticleContent::isInlineImage(url)) {
+    const QString text = url.toString(QUrl::FullyEncoded);
+    const int comma = text.indexOf(QLatin1Char(','));
+    const QImage image = comma > 0
+        ? QImage::fromData(QByteArray::fromBase64(text.mid(comma + 1).toLatin1()))
+        : QImage();
+    if (!image.isNull()) {
+      imagesCache_.insert(url, image);
+      return image;
+    }
+    failed_.insert(url);
+    return placeholder();
+  }
   if (!pending_.contains(url) && !failed_.contains(url)) {
     pending_.insert(url);
     ++requested_;
@@ -309,6 +341,36 @@ QVariant ArticleView::loadResource(int type, const QUrl &url) {
     });
   }
   return placeholder();
+}
+
+void ArticleView::schedulePreload() {
+  if (preloadPages_ <= 0 || imageSpans_.isEmpty() || allowedImages_.isEmpty()) return;
+  if (!preloadTimer_->isActive())
+    preloadTimer_->start();
+}
+
+void ArticleView::preloadImages() {
+  if (preloadPages_ <= 0 || imageSpans_.isEmpty() || allowedImages_.isEmpty()) return;
+  const int vpHeight = viewport()->height();
+  if (vpHeight <= 0) return;
+
+  const int startPos = cursorForPosition(QPoint(1, 1)).position();
+  const int maxViewportY = vpHeight * (1 + preloadPages_);
+  for (const ImageSpan &span : std::as_const(imageSpans_)) {
+    if (span.position + span.length < startPos) continue;
+    const QUrl &url = span.url;
+    if (imagesCache_.contains(url) || pending_.contains(url) || failed_.contains(url))
+      continue;
+    if (!allowedImages_.contains(url) || !ArticleContent::isRemoteImage(url))
+      continue;
+    QTextCursor cursor(document());
+    cursor.setPosition(span.position);
+    if (cursorRect(cursor).top() > maxViewportY)
+      break;
+    pending_.insert(url);
+    ++requested_;
+    requestImage(url);
+  }
 }
 
 void ArticleView::requestImage(const QUrl &url) {
@@ -357,13 +419,38 @@ void ArticleView::requestImage(const QUrl &url) {
 void ArticleView::installImage(const QUrl &url, const QImage &image) {
   if (image.isNull()) return;
   const bool changedSize = !imagesCache_.contains(url) || imagesCache_.value(url).size() != image.size();
-  const ViewState state = changedSize ? saveView() : ViewState();
+  bool preserveView = false;
+  if (changedSize) {
+    const int topPos = cursorForPosition(QPoint(1, 1)).position();
+    for (const ImageSpan &span : std::as_const(imageSpans_)) {
+      if (span.url == url && span.position <= topPos) {
+        preserveView = true;
+        break;
+      }
+    }
+  }
+  const ViewState state = preserveView ? saveView() : ViewState();
   imagesCache_.insert(url, image);
   document()->addResource(QTextDocument::ImageResource, url, image);
   if (changedSize) {
-    scaleDocument(false);
-    document()->markContentsDirty(0, document()->characterCount());
-    restoreView(state);
+    QTextCursor edit(document());
+    edit.beginEditBlock();
+    for (const ImageSpan &span : std::as_const(imageSpans_)) {
+      if (span.url != url) continue;
+      QTextCursor cursor(document());
+      cursor.setPosition(span.position);
+      cursor.setPosition(span.position + span.length, QTextCursor::KeepAnchor);
+      const QTextCharFormat format = cursor.charFormat();
+      if (format.isImageFormat())
+        scaleImageCursor(cursor, format);
+    }
+    edit.endEditBlock();
+    for (const ImageSpan &span : std::as_const(imageSpans_)) {
+      if (span.url == url)
+        document()->markContentsDirty(span.position, span.length);
+    }
+    if (preserveView)
+      restoreView(state);
   }
   viewport()->update();
 }
@@ -373,6 +460,7 @@ void ArticleView::updateProgress() {
   if (pending_.isEmpty() && loading_) {
     loading_ = false;
     emit loadFinished(failed_.isEmpty());
+    schedulePreload();
   }
 }
 
@@ -412,28 +500,28 @@ void ArticleView::restoreView(const ViewState &state) {
   horizontalScrollBar()->setValue(state.horizontal);
 }
 
+void ArticleView::scaleImageCursor(QTextCursor &cursor, const QTextCharFormat &format) {
+  QTextImageFormat image = format.toImageFormat();
+  if (!image.hasProperty(OriginalImageWidth)) {
+    image.setProperty(OriginalImageWidth, image.width());
+    image.setProperty(OriginalImageHeight, image.height());
+  }
+  const QImage pixels = imagesCache_.value(QUrl(image.name()), placeholder());
+  qreal w = image.doubleProperty(OriginalImageWidth);
+  qreal h = image.doubleProperty(OriginalImageHeight);
+  if (w <= 0 && h <= 0) { w = pixels.width(); h = pixels.height(); }
+  else if (w <= 0) w = h * pixels.width() / qMax(1, pixels.height());
+  else if (h <= 0) h = w * pixels.height() / qMax(1, pixels.width());
+  const qreal width = qMin(w * zoom_, qreal(qMax(16, viewport()->width() - 32)));
+  image.setWidth(width);
+  image.setHeight(h * width / qMax(qreal(1), w));
+  if (format != image) cursor.setCharFormat(image);
+}
+
 void ArticleView::scaleDocument(bool scaleText) {
   if (scaling_) return;
   if (!scaleText && imageSpans_.isEmpty()) return;
   scaling_ = true;
-
-  auto scaleImageCursor = [this](QTextCursor &cursor, const QTextCharFormat &format) {
-    QTextImageFormat image = format.toImageFormat();
-    if (!image.hasProperty(OriginalImageWidth)) {
-      image.setProperty(OriginalImageWidth, image.width());
-      image.setProperty(OriginalImageHeight, image.height());
-    }
-    const QImage pixels = imagesCache_.value(QUrl(image.name()), placeholder());
-    qreal w = image.doubleProperty(OriginalImageWidth);
-    qreal h = image.doubleProperty(OriginalImageHeight);
-    if (w <= 0 && h <= 0) { w = pixels.width(); h = pixels.height(); }
-    else if (w <= 0) w = h * pixels.width() / qMax(1, pixels.height());
-    else if (h <= 0) h = w * pixels.height() / qMax(1, pixels.width());
-    const qreal width = qMin(w * zoom_, qreal(qMax(16, viewport()->width() - 32)));
-    image.setWidth(width);
-    image.setHeight(h * width / qMax(qreal(1), w));
-    if (format != image) cursor.setCharFormat(image);
-  };
 
   QTextCursor edit(document());
   edit.beginEditBlock();
@@ -582,6 +670,7 @@ void ArticleView::resizeEvent(QResizeEvent *event) {
   if (widthChanged && !imageSpans_.isEmpty())
     scaleDocument(false);
   restoreView(state);
+  schedulePreload();
 }
 
 void ArticleView::hideEvent(QHideEvent *event) {

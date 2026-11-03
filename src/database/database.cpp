@@ -146,7 +146,8 @@ const QString kCreateFeedsTableQuery(
     // Version 17
     "SingleClickAction integer default 0, " // ENewsClickAction
     "DoubleClickAction integer default 0, " // ENewsClickAction
-    "MiddleClickAction integer default 0 "  // ENewsClickAction
+    "MiddleClickAction integer default 0, " // ENewsClickAction
+    "preloadImages integer default -1 "     // -1: global, 0..10: pages
     ")");
 
 const QString kCreateNewsTableQuery(
@@ -239,6 +240,7 @@ const QString kAddColumnsFeedsTableQuery(
         "ALTER TABLE feeds ADD COLUMN addSingleNewsAnyDateOn integer default 1;"
         "ALTER TABLE feeds ADD COLUMN avoidedOldSingleNewsDateOn integer default 0;"
         "ALTER TABLE feeds ADD COLUMN avoidedOldSingleNewsDate varchar;"
+        "ALTER TABLE feeds ADD COLUMN preloadImages integer default -1;"
         );
 
 int Database::version()
@@ -494,6 +496,7 @@ void Database::addColumnsToFeedsTables(QSqlDatabase &db)
     columnsList.append(" addSingleNewsAnyDateOn integer default 1;");
     columnsList.append(" avoidedOldSingleNewsDateOn integer default 0;");
     columnsList.append(" avoidedOldSingleNewsDate varchar;");
+    columnsList.append(" preloadImages integer default -1;");
 
     db.transaction();
     for (const QString &col : std::as_const(columnsList)) {

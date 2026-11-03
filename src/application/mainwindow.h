@@ -211,6 +211,7 @@ public:
   QDate avoidedOldNewsDate_;
 
   bool autoLoadImages_;
+  int preloadNewspaperPages_;
 
   QString downloadLocation_;
   bool askDownloadLocation_;
@@ -486,6 +487,7 @@ private:
 
   void showBulkFeedSettings();
   QString updateScheduleDescription() const;
+  QString imagePreloadDescription() const;
   void applyBulkFeedSettings(FeedPropertiesDialog *dialog);
   void saveFolderProperties(FeedPropertiesDialog *dialog, int folderId);
   void refreshFeedSettings(const QList<int> &ids, bool columns, bool images, bool direction);

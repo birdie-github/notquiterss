@@ -38,7 +38,8 @@ void MainWindow::applyBulkFeedSettings(FeedPropertiesDialog *dialog)
     for (auto it = values.cbegin(); it != values.cend(); ++it)
       feedsModel_->setData(feedsModel_->indexSibling(index, it.key()), it.value());
   }
-  refreshFeedSettings(ids, changes.columns.has_value(), changes.images.has_value(),
+  refreshFeedSettings(ids, changes.columns.has_value(),
+                      changes.images.has_value() || changes.preloadImages.has_value(),
                       changes.rightToLeft.has_value());
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged("apply bulk feed settings");
@@ -60,10 +61,12 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
     if (changeDisabled && !db_.rollback()) error += "\n" + db_.lastError().text();
     QMessageBox::warning(this, tr("Could not save folder properties"), error);
   };
-  q.prepare("UPDATE feeds SET text = ?, displayEmbeddedImages = ?, layoutDirection = ?, "
+  const int preloadMode = properties.display.useGlobalPreload ? -1 : properties.display.preloadPages;
+  q.prepare("UPDATE feeds SET text = ?, displayEmbeddedImages = ?, preloadImages = ?, layoutDirection = ?, "
             "columns = ?, sort = ?, sortType = ? WHERE id = ? AND COALESCE(xmlUrl, '') = ''");
   q.addBindValue(properties.general.text);
   q.addBindValue(properties.display.displayEmbeddedImages);
+  q.addBindValue(preloadMode);
   q.addBindValue(properties.display.layoutDirection);
   q.addBindValue(columns.columns);
   q.addBindValue(columns.sortBy);
@@ -109,8 +112,10 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
                         properties.general.disableUpdate ? 1 : 0);
   }
   const QPersistentModelIndex index = feedsModel_->indexById(folderId);
+  const QVariant oldPreloadVar = feedsModel_->dataField(index, "preloadImages");
+  const int oldPreloadMode = oldPreloadVar.isNull() ? -1 : oldPreloadVar.toInt();
   const bool imagesChanged = feedsModel_->dataField(index, "displayEmbeddedImages").toInt()
-      != properties.display.displayEmbeddedImages;
+      != properties.display.displayEmbeddedImages || oldPreloadMode != preloadMode;
   const bool directionChanged = feedsModel_->dataField(index, "layoutDirection").toInt()
       != properties.display.layoutDirection;
   const bool columnsChanged = feedsModel_->dataField(index, "columns").toString() != columns.columns ||
@@ -118,6 +123,7 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
       feedsModel_->dataField(index, "sortType").toInt() != columns.sortOrder;
   feedsModel_->setData(feedsModel_->indexSibling(index, "text"), properties.general.text);
   feedsModel_->setData(feedsModel_->indexSibling(index, "displayEmbeddedImages"), properties.display.displayEmbeddedImages);
+  feedsModel_->setData(feedsModel_->indexSibling(index, "preloadImages"), preloadMode);
   feedsModel_->setData(feedsModel_->indexSibling(index, "layoutDirection"), properties.display.layoutDirection);
   feedsModel_->setData(feedsModel_->indexSibling(index, "columns"), columns.columns);
   feedsModel_->setData(feedsModel_->indexSibling(index, "sort"), columns.sortBy);
@@ -163,6 +169,15 @@ QString MainWindow::updateScheduleDescription() const
   return updateFeedsInterval_ == 1 ? tr("every hour") : tr("every %1 hours").arg(updateFeedsInterval_);
 }
 
+QString MainWindow::imagePreloadDescription() const
+{
+  if (!autoLoadImages_ || preloadNewspaperPages_ <= 0)
+    return tr("disabled");
+  return preloadNewspaperPages_ == 1
+      ? tr("up to 1 page")
+      : tr("up to %1 pages").arg(preloadNewspaperPages_);
+}
+
 void MainWindow::showBulkFeedSettings()
 {
   FeedPropertiesDialog dialog(false, this, true);
@@ -173,6 +188,9 @@ void MainWindow::showBulkFeedSettings()
   properties.general.intervalType = updateFeedsIntervalType_;
   properties.general.avoidedOldSingleNewsDate = QDate::currentDate();
   properties.display.displayEmbeddedImages = 1;
+  properties.display.useGlobalPreload = true;
+  properties.display.globalPreloadDescription = imagePreloadDescription();
+  properties.display.preloadPages = preloadNewspaperPages_;
 
   Settings settings("NewsHeader");
   for (const QString &column : settings.value("columns").toString().split(",", Qt::SkipEmptyParts))

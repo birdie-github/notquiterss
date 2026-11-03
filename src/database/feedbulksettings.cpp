@@ -17,6 +17,7 @@ QMap<QString, QVariant> Changes::values() const
     result.insert("updateIntervalType", schedule->unit);
   }
   if (images) result.insert("displayEmbeddedImages", *images);
+  if (preloadImages) result.insert("preloadImages", *preloadImages);
   if (rightToLeft) result.insert("layoutDirection", *rightToLeft ? 1 : 0);
   if (columns) {
     result.insert("columns", columns->columns);
