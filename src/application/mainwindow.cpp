@@ -6454,22 +6454,29 @@ void MainWindow::slotMarkAllReadNewsInNotification()
   if (NotificationWidget *notificationWidget = qobject_cast<NotificationWidget*>(sender())) {
     QList<int> idFeedList = notificationWidget->idFeedList();
     QList<int> idNewsList = notificationWidget->idNewsList();
+    const QSet<int> idNewsSet(idNewsList.begin(), idNewsList.end());
 
-    if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads) {
+    if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads && !idNewsSet.isEmpty()) {
+      const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+      const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
+      const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
       for (int i = 0; i < newsModel_->rowCount(); ++i) {
-        if (idNewsList.contains(newsModel_->index(i, newsModel_->fieldIndex("id")).data().toInt())) {
-          newsModel_->setData(
-                newsModel_->index(i, newsModel_->fieldIndex("new")), 0);
-          newsModel_->setData(
-                newsModel_->index(i, newsModel_->fieldIndex("read")), 1);
+        if (idNewsSet.contains(newsModel_->index(i, idCol).data().toInt())) {
+          newsModel_->setData(newsModel_->index(i, newCol), 0);
+          newsModel_->setData(newsModel_->index(i, readCol), 1);
         }
       }
       newsView_->viewport()->update();
     }
 
-    for (int newsId : std::as_const(idNewsList)) {
-      mainApp->sqlQueryExec(QString("UPDATE news SET new=0, read=1 WHERE id=='%1'").
-                   arg(newsId));
+    if (!idNewsList.isEmpty()) {
+      QStringList idStrs;
+      idStrs.reserve(idNewsList.size());
+      for (int newsId : std::as_const(idNewsList)) {
+        idStrs.append(QString::number(newsId));
+      }
+      mainApp->sqlQueryExec(QStringLiteral("UPDATE news SET new=0, read=1 WHERE id IN (%1)")
+                            .arg(idStrs.join(QLatin1Char(','))));
     }
 
     for (int feedId : std::as_const(idFeedList)) {

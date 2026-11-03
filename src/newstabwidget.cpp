@@ -801,38 +801,43 @@ void NewsTabWidget::markNewsRead()
       slotSetItemRead(curIndex, 0);
     }
   } else {
-    QStringList feedIdList;
+    QSet<int> feedIds;
+    QStringList idList;
+    idList.reserve(cnt);
+
+    const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+    const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+    const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
+    const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
 
     bool markRead = false;
     for (int i = cnt-1; i >= 0; --i) {
       curIndex = indexes.at(i);
-      if (newsModel_->dataField(curIndex.row(), "read").toInt() == 0) {
+      if (newsModel_->index(curIndex.row(), readCol).data(Qt::EditRole).toInt() == 0) {
         markRead = true;
         break;
       }
     }
 
-    db_.transaction();
-    QSqlQuery q;
     for (int i = cnt-1; i >= 0; --i) {
       curIndex = indexes.at(i);
-      newsModel_->setData(
-            newsModel_->index(curIndex.row(), newsModel_->fieldIndex("new")),
-            0);
-      newsModel_->setData(
-            newsModel_->index(curIndex.row(), newsModel_->fieldIndex("read")),
-            markRead);
+      newsModel_->setData(newsModel_->index(curIndex.row(), newCol), 0);
+      newsModel_->setData(newsModel_->index(curIndex.row(), readCol), markRead ? 1 : 0);
 
-      int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-      q.exec(QString("UPDATE news SET new=0, read='%1' WHERE id=='%2'").
-             arg(markRead).arg(newsId));
-      QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-      if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+      const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+      idList.append(QString::number(newsId));
+      feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
     }
-    db_.commit();
 
-    for (const QString &feedId : std::as_const(feedIdList)) {
-      mainWindow_->slotUpdateStatus(feedId.toInt());
+    if (!idList.isEmpty()) {
+      QSqlQuery q(db_);
+      q.exec(QStringLiteral("UPDATE news SET new=0, read=%1 WHERE id IN (%2)")
+             .arg(markRead ? 1 : 0)
+             .arg(idList.join(QLatin1Char(','))));
+    }
+
+    for (int feedId : std::as_const(feedIds)) {
+      mainWindow_->slotUpdateStatus(feedId);
     }
     mainWindow_->recountCategoryCounts();
     newsView_->viewport()->update();
@@ -850,19 +855,29 @@ void NewsTabWidget::markAllNewsRead()
   int cnt = newsModel_->rowCount();
   if (cnt == 0) return;
 
-  QStringList feedIdList;
+  QSet<int> feedIds;
+  QStringList idList;
+  idList.reserve(cnt);
 
-  db_.transaction();
-  QSqlQuery q;
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+  const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
+  const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
+
   for (int i = cnt-1; i >= 0; --i) {
-    int newsId = newsModel_->dataField(i, "id").toInt();
-    q.exec(QString("UPDATE news SET read=1 WHERE id=='%1' AND read=0").arg(newsId));
-    q.exec(QString("UPDATE news SET new=0 WHERE id=='%1' AND new=1").arg(newsId));
-
-    QString feedId = newsModel_->dataField(i, "feedId").toString();
-    if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+    const int isRead = newsModel_->index(i, readCol).data(Qt::EditRole).toInt();
+    const int isNew = newsModel_->index(i, newCol).data(Qt::EditRole).toInt();
+    if (isRead == 0 || isNew == 1) {
+      idList.append(QString::number(newsModel_->index(i, idCol).data(Qt::EditRole).toInt()));
+      feedIds.insert(newsModel_->index(i, feedIdCol).data(Qt::EditRole).toInt());
+    }
   }
-  db_.commit();
+
+  if (idList.isEmpty()) return;
+
+  QSqlQuery q(db_);
+  q.exec(QStringLiteral("UPDATE news SET read = CASE WHEN read = 0 THEN 1 ELSE read END, new = 0 WHERE id IN (%1)")
+         .arg(idList.join(QLatin1Char(','))));
 
   int currentRow = newsView_->currentIndex().row();
 
@@ -875,8 +890,8 @@ void NewsTabWidget::markAllNewsRead()
 
   newsView_->setCurrentIndex(newsModel_->index(currentRow, newsModel_->fieldIndex("title")));
 
-  for (const QString &feedId : std::as_const(feedIdList)) {
-    mainWindow_->slotUpdateStatus(feedId.toInt());
+  for (int feedId : std::as_const(feedIds)) {
+    mainWindow_->slotUpdateStatus(feedId);
   }
   mainWindow_->recountCategoryCounts();
 }
@@ -911,17 +926,24 @@ void NewsTabWidget::markNewsStar()
       }
     }
 
-    db_.transaction();
+    const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+    QStringList idList;
+    idList.reserve(cnt);
+
     for (int i = cnt-1; i >= 0; --i) {
       curIndex = indexes.at(i);
-      newsModel_->setData(curIndex, markStar);
+      newsModel_->setData(curIndex, markStar ? 1 : 0);
 
-      int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-      QSqlQuery q;
-      q.exec(QString("UPDATE news SET starred='%1' WHERE id=='%2'").
-             arg(markStar).arg(newsId));
+      const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+      idList.append(QString::number(newsId));
     }
-    db_.commit();
+
+    if (!idList.isEmpty()) {
+      QSqlQuery q(db_);
+      q.exec(QStringLiteral("UPDATE news SET starred=%1 WHERE id IN (%2)")
+             .arg(markStar ? 1 : 0)
+             .arg(idList.join(QLatin1Char(','))));
+    }
 
     mainWindow_->recountCategoryCounts();
   }
@@ -940,15 +962,19 @@ void NewsTabWidget::deleteNews()
   int cnt = indexes.count();
   if (cnt == 0) return;
 
-  QStringList feedIdList;
+  QSet<int> feedIds;
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+  const int starredCol = newsModel_->fieldIndex(QStringLiteral("starred"));
+  const int labelCol = newsModel_->fieldIndex(QStringLiteral("label"));
 
   if (type_ != TabTypeDel) {
     if (cnt == 1) {
       curIndex = indexes.at(0);
-      if (newsModel_->dataField(curIndex.row(), "starred").toInt() &&
+      if (newsModel_->index(curIndex.row(), starredCol).data(Qt::EditRole).toInt() &&
           mainWindow_->notDeleteStarred_)
         return;
-      QString labelStr = newsModel_->dataField(curIndex.row(), "label").toString();
+      QString labelStr = newsModel_->index(curIndex.row(), labelCol).data(Qt::EditRole).toString();
       if (!(labelStr.isEmpty() || (labelStr == ",")) && mainWindow_->notDeleteLabeled_)
         return;
 
@@ -958,54 +984,59 @@ void NewsTabWidget::deleteNews()
       newsModel_->setData(newsModel_->index(curIndex.row(), newsModel_->fieldIndex("deleteDate")),
                           QDateTime::currentDateTime().toString(Qt::ISODate));
 
-      QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-      if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+      feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
 
       newsModel_->submitAll();
     } else {
-      db_.transaction();
-      QSqlQuery q;
+      QStringList idList;
+      idList.reserve(cnt);
+
       for (int i = cnt-1; i >= 0; --i) {
         curIndex = indexes.at(i);
-        if (newsModel_->dataField(curIndex.row(), "starred").toInt() &&
+        if (newsModel_->index(curIndex.row(), starredCol).data(Qt::EditRole).toInt() &&
             mainWindow_->notDeleteStarred_)
           continue;
-        QString labelStr = newsModel_->dataField(curIndex.row(), "label").toString();
+        QString labelStr = newsModel_->index(curIndex.row(), labelCol).data(Qt::EditRole).toString();
         if (!(labelStr.isEmpty() || (labelStr == ",")) && mainWindow_->notDeleteLabeled_)
           continue;
 
-        int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-        q.exec(QString("UPDATE news SET new=0, read=2, deleted=1, deleteDate='%1' WHERE id=='%2'").
-               arg(QDateTime::currentDateTime().toString(Qt::ISODate)).
-               arg(newsId));
-
-        QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-        if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+        const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+        idList.append(QString::number(newsId));
+        feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
       }
-      db_.commit();
 
-      newsModel_->select();
+      if (!idList.isEmpty()) {
+        QSqlQuery q(db_);
+        q.prepare(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=? WHERE id IN (%1)")
+                  .arg(idList.join(QLatin1Char(','))));
+        q.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
+        q.exec();
+
+        newsModel_->select();
+      }
     }
   }
   else {
-    db_.transaction();
-    QSqlQuery q;
+    QStringList idList;
+    idList.reserve(cnt);
+
     for (int i = cnt-1; i >= 0; --i) {
       curIndex = indexes.at(i);
-
-      int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-      q.exec(QString("UPDATE news SET description='', content='', received='', "
-                     "author_name='', author_uri='', author_email='', "
-                     "category='', new='', read='', starred='', label='', "
-                     "deleteDate='', feedParentId='', deleted=2 WHERE id=='%1'").
-             arg(newsId));
-
-      QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-      if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+      const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+      idList.append(QString::number(newsId));
+      feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
     }
-    db_.commit();
 
-    newsModel_->select();
+    if (!idList.isEmpty()) {
+      QSqlQuery q(db_);
+      q.exec(QStringLiteral("UPDATE news SET description='', content='', received='', "
+                            "author_name='', author_uri='', author_email='', "
+                            "category='', new='', read='', starred='', label='', "
+                            "deleteDate='', feedParentId='', deleted=2 WHERE id IN (%1)")
+             .arg(idList.join(QLatin1Char(','))));
+
+      newsModel_->select();
+    }
   }
 
   while (newsModel_->canFetchMore())
@@ -1020,8 +1051,8 @@ void NewsTabWidget::deleteNews()
   newsView_->setCurrentIndex(curIndex);
   slotNewsViewSelected(curIndex);
 
-  for (const QString &feedId : std::as_const(feedIdList)) {
-    mainWindow_->slotUpdateStatus(feedId.toInt());
+  for (int feedId : std::as_const(feedIds)) {
+    mainWindow_->slotUpdateStatus(feedId);
   }
   mainWindow_->recountCategoryCounts();
   loadNewspaper(RefreshWithPos);
@@ -1036,37 +1067,45 @@ void NewsTabWidget::deleteAllNewsList()
   int cnt = newsModel_->rowCount();
   if (cnt == 0) return;
 
-  QStringList feedIdList;
+  QSet<int> feedIds;
+  QStringList idList;
+  idList.reserve(cnt);
 
-  db_.transaction();
-  QSqlQuery q;
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+  const int starredCol = newsModel_->fieldIndex(QStringLiteral("starred"));
+  const int labelCol = newsModel_->fieldIndex(QStringLiteral("label"));
+
   for (int i = cnt-1; i >= 0; --i) {
-    int newsId = newsModel_->dataField(i, "id").toInt();
-
     if (type_ != TabTypeDel) {
-      if (newsModel_->dataField(i, "starred").toInt() &&
+      if (newsModel_->index(i, starredCol).data(Qt::EditRole).toInt() &&
           mainWindow_->notDeleteStarred_)
         continue;
-      QString labelStr = newsModel_->dataField(i, "label").toString();
+      QString labelStr = newsModel_->index(i, labelCol).data(Qt::EditRole).toString();
       if (!(labelStr.isEmpty() || (labelStr == ",")) && mainWindow_->notDeleteLabeled_)
         continue;
-
-      q.exec(QString("UPDATE news SET new=0, read=2, deleted=1, deleteDate='%1' WHERE id=='%2'").
-             arg(QDateTime::currentDateTime().toString(Qt::ISODate)).
-             arg(newsId));
-    }
-    else {
-      q.exec(QString("UPDATE news SET description='', content='', received='', "
-                     "author_name='', author_uri='', author_email='', "
-                     "category='', new='', read='', starred='', label='', "
-                     "deleteDate='', feedParentId='', deleted=2 WHERE id=='%1'").
-             arg(newsId));
     }
 
-    QString feedId = newsModel_->dataField(i, "feedId").toString();
-    if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+    const int newsId = newsModel_->index(i, idCol).data(Qt::EditRole).toInt();
+    idList.append(QString::number(newsId));
+    feedIds.insert(newsModel_->index(i, feedIdCol).data(Qt::EditRole).toInt());
   }
-  db_.commit();
+
+  if (idList.isEmpty()) return;
+
+  QSqlQuery q(db_);
+  if (type_ != TabTypeDel) {
+    q.prepare(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=? WHERE id IN (%1)")
+              .arg(idList.join(QLatin1Char(','))));
+    q.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
+    q.exec();
+  } else {
+    q.exec(QStringLiteral("UPDATE news SET description='', content='', received='', "
+                          "author_name='', author_uri='', author_email='', "
+                          "category='', new='', read='', starred='', label='', "
+                          "deleteDate='', feedParentId='', deleted=2 WHERE id IN (%1)")
+           .arg(idList.join(QLatin1Char(','))));
+  }
 
   newsModel_->select();
   while (newsModel_->canFetchMore()) newsModel_->fetchMore();
@@ -1074,8 +1113,8 @@ void NewsTabWidget::deleteAllNewsList()
 
   slotNewsViewSelected(QModelIndex());
 
-  for (const QString &feedId : std::as_const(feedIdList)) {
-    mainWindow_->slotUpdateStatus(feedId.toInt());
+  for (int feedId : std::as_const(feedIds)) {
+    mainWindow_->slotUpdateStatus(feedId);
   }
   mainWindow_->recountCategoryCounts();
 }
@@ -1092,7 +1131,12 @@ void NewsTabWidget::restoreNews()
   int cnt = indexes.count();
   if (cnt == 0) return;
 
-  QStringList feedIdList;
+  QSet<int> feedIds;
+  if (feedId_ > 0)
+    feedIds.insert(feedId_);
+
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
 
   if (cnt == 1) {
     curIndex = indexes.at(0);
@@ -1100,23 +1144,25 @@ void NewsTabWidget::restoreNews()
     newsModel_->setData(newsModel_->index(curIndex.row(), newsModel_->fieldIndex("deleteDate")), "");
     newsModel_->submitAll();
 
-    QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-    if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+    feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
   } else {
-    db_.transaction();
-    QSqlQuery q;
+    QStringList idList;
+    idList.reserve(cnt);
+
     for (int i = cnt-1; i >= 0; --i) {
       curIndex = indexes.at(i);
-      int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-      q.exec(QString("UPDATE news SET deleted=0, deleteDate='' WHERE id=='%1'").
-             arg(newsId));
-
-      QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-      if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+      const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+      idList.append(QString::number(newsId));
+      feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
     }
-    db_.commit();
 
-    newsModel_->select();
+    if (!idList.isEmpty()) {
+      QSqlQuery q(db_);
+      q.exec(QStringLiteral("UPDATE news SET deleted=0, deleteDate='' WHERE id IN (%1)")
+             .arg(idList.join(QLatin1Char(','))));
+
+      newsModel_->select();
+    }
   }
 
   while (newsModel_->canFetchMore())
@@ -1132,11 +1178,9 @@ void NewsTabWidget::restoreNews()
     curIndex = newsModel_->index(curIndex.row(), newsModel_->fieldIndex("title"));
   newsView_->setCurrentIndex(curIndex);
   slotNewsViewSelected(curIndex);
-  mainWindow_->slotUpdateStatus(feedId_);
-  mainWindow_->recountCategoryCounts();
 
-  for (const QString &feedId : std::as_const(feedIdList)) {
-    mainWindow_->slotUpdateStatus(feedId.toInt());
+  for (int feedId : std::as_const(feedIds)) {
+    mainWindow_->slotUpdateStatus(feedId);
   }
   mainWindow_->recountCategoryCounts();
 }
@@ -1621,34 +1665,38 @@ void NewsTabWidget::openInExternalBrowserNews()
 
   if (type_ != TabTypeDownloads) {
     QList<QModelIndex> indexes = newsView_->selectionModel()->selectedRows(0);
-    QStringList feedIdList;
+    QSet<int> feedIds;
+    QStringList unreadIds;
 
     int cnt = indexes.count();
     if (cnt == 0) return;
 
-    for (int i = cnt-1; i >= 0; --i) {
-      QSqlQuery q;
-      QModelIndex curIndex = indexes.at(i);
-      if (newsModel_->dataField(curIndex.row(), "read").toInt() == 0) {
-        newsModel_->setData(
-              newsModel_->index(curIndex.row(), newsModel_->fieldIndex("new")),
-              0);
-        newsModel_->setData(
-              newsModel_->index(curIndex.row(), newsModel_->fieldIndex("read")),
-              1);
+    const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+    const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+    const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
+    const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
 
-        int newsId = newsModel_->dataField(curIndex.row(), "id").toInt();
-        q.exec(QString("UPDATE news SET new=0, read=1 WHERE id=='%2'").arg(newsId));
-        QString feedId = newsModel_->dataField(curIndex.row(), "feedId").toString();
-        if (!feedIdList.contains(feedId)) feedIdList.append(feedId);
+    for (int i = cnt-1; i >= 0; --i) {
+      QModelIndex curIndex = indexes.at(i);
+      if (newsModel_->index(curIndex.row(), readCol).data(Qt::EditRole).toInt() == 0) {
+        newsModel_->setData(newsModel_->index(curIndex.row(), newCol), 0);
+        newsModel_->setData(newsModel_->index(curIndex.row(), readCol), 1);
+
+        const int newsId = newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt();
+        unreadIds.append(QString::number(newsId));
+        feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
       }
 
-      openUrl(articleUrl(indexes.at(i).row()));
+      openUrl(articleUrl(curIndex.row()));
     }
 
-    if (!feedIdList.isEmpty()) {
-      for (const QString &feedId : std::as_const(feedIdList)) {
-        mainWindow_->slotUpdateStatus(feedId.toInt());
+    if (!unreadIds.isEmpty()) {
+      QSqlQuery q(db_);
+      q.exec(QStringLiteral("UPDATE news SET new=0, read=1 WHERE id IN (%1)")
+             .arg(unreadIds.join(QLatin1Char(','))));
+
+      for (int feedId : std::as_const(feedIds)) {
+        mainWindow_->slotUpdateStatus(feedId);
       }
       mainWindow_->recountCategoryCounts();
       newsView_->viewport()->update();
@@ -1881,7 +1929,10 @@ void NewsTabWidget::setLabelNews(int labelId)
       }
     }
 
+    const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
     db_.transaction();
+    QSqlQuery q(db_);
+    q.prepare(QStringLiteral("UPDATE news SET label=? WHERE id=?"));
     for (int i = cnt-1; i >= 0; --i) {
       QModelIndex index = indexes.at(i);
       QString strIdLabels = index.data(Qt::EditRole).toString();
@@ -1895,11 +1946,11 @@ void NewsTabWidget::setLabelNews(int labelId)
       }
       newsModel_->setData(index, strIdLabels);
 
-      int newsId = newsModel_->dataField(index.row(), "id").toInt();
+      const int newsId = newsModel_->index(index.row(), idCol).data(Qt::EditRole).toInt();
 
-      QSqlQuery q;
-      q.exec(QString("UPDATE news SET label='%1' WHERE id=='%2'").
-             arg(strIdLabels).arg(newsId));
+      q.bindValue(0, strIdLabels);
+      q.bindValue(1, newsId);
+      q.exec();
       if (newsId != currentNewsIdOld) {
         newsView_->selectionModel()->select(
               index, QItemSelectionModel::Deselect|QItemSelectionModel::Rows);

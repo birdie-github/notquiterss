@@ -1154,36 +1154,49 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
     if (!checkQuery(q1.exec(QString("SELECT id, label FROM news").append(whereStr)), q1)) return;
     {
       QSqlQuery q2(db_);
+      if (!idLabelsList.isEmpty()) {
+        if (!checkQuery(q2.prepare(QStringLiteral("UPDATE news SET label=? WHERE id=?")), q2))
+          return;
+      }
+
+      QStringList matchedIds;
       bool isPlaySound = false;
 
       while (q1.next()) {
+        const int newsId = q1.value(0).toInt();
         if (!qStr.isEmpty()) {
-          qStr1 = qStr % QString(" WHERE id='%1'").arg(q1.value(0).toInt());
-          if (!checkQuery(q2.exec(qStr1), q2)) return;
+          matchedIds.append(QString::number(newsId));
         }
 
         if (!idLabelsList.isEmpty()) {
-          QString idLabelsStr = q1.value(1).toString();
+          const QString origLabelsStr = q1.value(1).toString();
+          QString idLabelsStr = origLabelsStr;
           for (int idLabel : std::as_const(idLabelsList)) {
             if (idLabelsStr.contains(QString(",%1,").arg(idLabel))) continue;
             if (idLabelsStr.isEmpty()) idLabelsStr.append(",");
             idLabelsStr.append(QString("%1,").arg(idLabel));
-
           }
-          if (!checkQuery(q2.prepare("UPDATE news SET label=? WHERE id=?"), q2)) return;
-          q2.addBindValue(idLabelsStr);
-          q2.addBindValue(q1.value(0).toInt());
-          if (!checkQuery(q2.exec(), q2)) return;
+          if (idLabelsStr != origLabelsStr) {
+            q2.bindValue(0, idLabelsStr);
+            q2.bindValue(1, newsId);
+            if (!checkQuery(q2.exec(), q2)) return;
+          }
         }
 
         if (!colorList.isEmpty()) {
-          filterEffects.colors.append(qMakePair(q1.value(0).toInt(), colorList.at(0)));
+          filterEffects.colors.append(qMakePair(newsId, colorList.at(0)));
         }
 
         isPlaySound = true;
       }
 
       if (!checkQuery(!q1.lastError().isValid(), q1)) return;
+
+      if (!qStr.isEmpty() && !matchedIds.isEmpty()) {
+        qStr1 = qStr % QStringLiteral(" WHERE id IN (") % matchedIds.join(QLatin1Char(',')) % QLatin1Char(')');
+        if (!checkQuery(q2.exec(qStr1), q2)) return;
+      }
+
       if (isPlaySound && !soundList.isEmpty()) {
         filterEffects.sound = soundList.at(0);
         filterEffects.playSound = true;
