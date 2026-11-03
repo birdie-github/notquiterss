@@ -375,6 +375,8 @@ void Database::prepareDatabase()
           q.exec("ALTER table feeds ADD COLUMN MiddleClickAction integer default 0");
         }
 
+        ensureIndexes(db);
+
         // Update appVersion anyway
         if (appVersion.isEmpty()) {
           q.prepare("INSERT INTO info(name, value) VALUES('appVersion', :appVersion)");
@@ -439,14 +441,33 @@ void Database::createTables(QSqlDatabase &db)
           "name text, "         // parameter name
           "value text"          // parameter value
           ")");
-  // Create labels table
+  // Create label and password tables
   QSqlQuery(db).exec(kCreateLabelsTable);
-  // Create password table
   QSqlQuery(db).exec(kCreatePasswordsTable);
-  //
   QSqlQuery(db).exec("CREATE TABLE info(id integer primary key, name varchar, value varchar)");
 
+  ensureIndexes(db);
+
   db.commit();
+}
+
+void Database::ensureIndexes(QSqlDatabase &db)
+{
+  static const char *const indexes[] = {
+    "CREATE INDEX IF NOT EXISTS feedId ON news(feedId)",
+    "CREATE INDEX IF NOT EXISTS idx_news_feed_state ON news(feedId, deleted, read, new)",
+    "CREATE INDEX IF NOT EXISTS idx_news_category_state ON news(deleted, starred, read)",
+    "CREATE INDEX IF NOT EXISTS idx_feeds_parent_row ON feeds(parentId, rowToParent)",
+    "CREATE INDEX IF NOT EXISTS idx_feeds_ex_feed_name ON feeds_ex(feedId, name)",
+    "CREATE INDEX IF NOT EXISTS idx_news_ex_feed ON news_ex(feedId)",
+    "CREATE INDEX IF NOT EXISTS idx_news_ex_news ON news_ex(newsId)"
+  };
+  QSqlQuery q(db);
+  for (const char *sql : indexes) {
+    if (!q.exec(QLatin1String(sql))) {
+      qWarning() << "Could not create index:" << sql << q.lastError().text();
+    }
+  }
 }
 
 void Database::createLabels(QSqlDatabase &db)
