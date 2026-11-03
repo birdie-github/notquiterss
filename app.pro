@@ -194,6 +194,7 @@ SOURCES += \
     src/application/mainwindow_notifications.cpp \
     src/application/mainwindow_settings.cpp \
     src/application/mainwindow_theme.cpp \
+    src/application/mainwindow_ui.cpp \
     src/application/opmlexporter.cpp \
     src/application/shortcutregistry.cpp \
     src/main/globals.cpp \
