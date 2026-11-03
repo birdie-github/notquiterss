@@ -171,8 +171,18 @@ private slots:
   void slotNewslLabelClicked(QModelIndex index);
 
 private:
+  struct CachedArticle {
+    QString sanitizedAuthor;
+    QString sanitizedContent;
+    QSet<QUrl> allowedImages;
+  };
+
   void createNewsList();
   void createArticleWidget();
+  QString formatArticleDate(int row) const;
+  const CachedArticle &prepareCachedArticle(int row, int newsId, const QUrl &baseUrl,
+                                            const QModelIndex &feedIndex,
+                                            const QHash<int, QString> *prefetchedBodies = nullptr);
   QString getHtmlLabels(int row);
   void actionNewspaper(QUrl url);
 
@@ -201,6 +211,8 @@ private:
   QString htmlString_;
   QString htmlRtlString_;
   QString cssString_;
+  QHash<int, CachedArticle> newspaperCache_;
+  bool newspaperCacheAutoLoadImages_ = false;
 
 };
 

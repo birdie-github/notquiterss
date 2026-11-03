@@ -39,8 +39,12 @@ class ArticleView : public QTextBrowser {
 public:
   explicit ArticleView(QWidget *parent = nullptr);
   void beginArticles();
-  QString prepareArticle(const QString &html, const QUrl &base, const QString &prefix, bool images);
+  QString prepareArticle(const QString &html, const QUrl &base, const QString &prefix,
+                         bool images, QSet<QUrl> *allowedUrls = nullptr);
+  void allowImages(const QSet<QUrl> &urls);
   void setArticleHtml(const QString &html, bool preservePosition = false);
+  bool updateArticleReadState(int newsId, bool isNew, bool isRead);
+  bool updateArticleStarState(int newsId, bool isStarred);
   void highlightText(const QString &text, bool reveal = false);
   qreal zoomFactor() const { return zoom_; }
   void setZoomFactor(qreal factor);

@@ -39,6 +39,7 @@ public:
       ) const;
   QVariant dataField(int row, const QString &fieldName) const;
   QString articleBody(int row) const;
+  QHash<int, QString> articleBodies(const QVector<int> &newsIds) const;
   void setFilter(const QString &filter);
   bool select();
 

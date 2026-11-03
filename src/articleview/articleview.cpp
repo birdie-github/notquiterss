@@ -97,14 +97,21 @@ void ArticleView::beginArticles() {
   requested_ = completed_ = 0;
 }
 
-QString ArticleView::prepareArticle(const QString &html, const QUrl &base, const QString &prefix, bool enabled) {
+QString ArticleView::prepareArticle(const QString &html, const QUrl &base, const QString &prefix,
+                                    bool enabled, QSet<QUrl> *allowedUrls) {
   QSet<QUrl> urls;
   const QString result = ArticleContent::sanitize(html, base, prefix, enabled, &urls);
-  allowedImages_ += urls;
-  images_->allow(urls);
+  allowImages(urls);
+  if (allowedUrls) *allowedUrls = urls;
   ArticleImages::trace(QString("article %1 images-enabled=%2 allowed-images=%3")
                        .arg(prefix).arg(enabled).arg(urls.size()));
   return result;
+}
+
+void ArticleView::allowImages(const QSet<QUrl> &urls) {
+  if (urls.isEmpty()) return;
+  allowedImages_ += urls;
+  images_->allow(urls);
 }
 
 void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
@@ -163,6 +170,122 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
   emit articleContentChanged();
 }
 
+bool ArticleView::updateArticleReadState(int newsId, bool isNew, bool isRead) {
+  const QString anchor = QStringLiteral("article-%1").arg(newsId);
+  const auto anchorIt = anchorPositions_.constFind(anchor);
+  if (anchorIt == anchorPositions_.cend())
+    return false;
+
+  const int startPos = anchorIt.value();
+  const auto nextIt = articleAnchors_.upperBound(startPos);
+  const int endPos = (nextIt != articleAnchors_.cend())
+      ? nextIt.key() : document()->characterCount();
+
+  const QString readHref = QStringLiteral("quiterss://read.action.ui?#%1").arg(newsId);
+  const QString iconUrl = isNew
+      ? QStringLiteral("qrc:/images/bulletNew")
+      : (!isRead ? QStringLiteral("qrc:/images/bulletUnread")
+                 : QStringLiteral("qrc:/images/bulletRead"));
+  const int targetWeight = (isNew || !isRead) ? QFont::Bold : QFont::Normal;
+
+  for (QTextBlock block = document()->findBlock(startPos);
+       block.isValid() && block.position() < endPos;
+       block = block.next()) {
+    int readIconPos = -1;
+    int readIconLen = 0;
+    QTextImageFormat readIconFormat;
+    QVector<ImageSpan> titleSpans;
+
+    for (auto it = block.begin(); !it.atEnd(); ++it) {
+      const QTextFragment fragment = it.fragment();
+      const QTextCharFormat format = fragment.charFormat();
+      if (format.isImageFormat()) {
+        if (format.anchorHref() == readHref) {
+          readIconPos = fragment.position();
+          readIconLen = fragment.length();
+          readIconFormat = format.toImageFormat();
+        }
+      } else if (format.isAnchor() &&
+                 !format.anchorHref().startsWith(QLatin1String("quiterss://"))) {
+        titleSpans.append({fragment.position(), fragment.length()});
+      }
+    }
+
+    if (readIconPos >= 0) {
+      const QUrl resourceUrl(iconUrl);
+      document()->addResource(QTextDocument::ImageResource, resourceUrl,
+                              loadResource(QTextDocument::ImageResource, resourceUrl));
+      QTextCursor edit(document());
+      edit.beginEditBlock();
+      if (readIconFormat.name() != iconUrl) {
+        readIconFormat.setName(iconUrl);
+        QTextCursor cursor(document());
+        cursor.setPosition(readIconPos);
+        cursor.setPosition(readIconPos + readIconLen, QTextCursor::KeepAnchor);
+        cursor.setCharFormat(readIconFormat);
+      }
+      for (const ImageSpan &span : std::as_const(titleSpans)) {
+        QTextCursor cursor(document());
+        cursor.setPosition(span.position);
+        cursor.setPosition(span.position + span.length, QTextCursor::KeepAnchor);
+        QTextCharFormat fmt = cursor.charFormat();
+        if (fmt.fontWeight() != targetWeight) {
+          fmt.setFontWeight(targetWeight);
+          cursor.setCharFormat(fmt);
+        }
+      }
+      edit.endEditBlock();
+      document()->markContentsDirty(block.position(), block.length());
+      viewport()->update();
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ArticleView::updateArticleStarState(int newsId, bool isStarred) {
+  const QString anchor = QStringLiteral("article-%1").arg(newsId);
+  const auto anchorIt = anchorPositions_.constFind(anchor);
+  if (anchorIt == anchorPositions_.cend())
+    return false;
+
+  const int startPos = anchorIt.value();
+  const auto nextIt = articleAnchors_.upperBound(startPos);
+  const int endPos = (nextIt != articleAnchors_.cend())
+      ? nextIt.key() : document()->characterCount();
+
+  const QString starHref = QStringLiteral("quiterss://star.action.ui?#%1").arg(newsId);
+  const QString iconUrl = isStarred
+      ? QStringLiteral("qrc:/images/starOn")
+      : QStringLiteral("qrc:/images/starOff");
+
+  for (QTextBlock block = document()->findBlock(startPos);
+       block.isValid() && block.position() < endPos;
+       block = block.next()) {
+    for (auto it = block.begin(); !it.atEnd(); ++it) {
+      const QTextFragment fragment = it.fragment();
+      const QTextCharFormat format = fragment.charFormat();
+      if (format.isImageFormat() && format.anchorHref() == starHref) {
+        QTextImageFormat starFormat = format.toImageFormat();
+        if (starFormat.name() != iconUrl) {
+          const QUrl resourceUrl(iconUrl);
+          document()->addResource(QTextDocument::ImageResource, resourceUrl,
+                                  loadResource(QTextDocument::ImageResource, resourceUrl));
+          starFormat.setName(iconUrl);
+          QTextCursor cursor(document());
+          cursor.setPosition(fragment.position());
+          cursor.setPosition(fragment.position() + fragment.length(), QTextCursor::KeepAnchor);
+          cursor.setCharFormat(starFormat);
+          document()->markContentsDirty(block.position(), block.length());
+          viewport()->update();
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 QVariant ArticleView::loadResource(int type, const QUrl &url) {
   if (type != QTextDocument::ImageResource) return QByteArray();
   const bool icon = url.scheme() == "qrc" && url.path().startsWith("/images/");
@@ -170,6 +293,13 @@ QVariant ArticleView::loadResource(int type, const QUrl &url) {
       (allowedImages_.contains(url) && ArticleContent::isRemoteImage(url));
   if (!allowed) return placeholder();
   if (imagesCache_.contains(url)) return imagesCache_.value(url);
+  if (icon) {
+    const QImage image(QLatin1Char(':') + url.path());
+    if (!image.isNull()) {
+      imagesCache_.insert(url, image);
+      return image;
+    }
+  }
   if (!pending_.contains(url) && !failed_.contains(url)) {
     pending_.insert(url);
     ++requested_;

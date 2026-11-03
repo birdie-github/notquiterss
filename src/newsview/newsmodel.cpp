@@ -307,6 +307,44 @@ QString NewsModel::articleBody(int row) const
   return content;
 }
 
+QHash<int, QString> NewsModel::articleBodies(const QVector<int> &newsIds) const
+{
+  QHash<int, QString> result;
+  if (newsIds.isEmpty())
+    return result;
+
+  result.reserve(newsIds.size());
+  constexpr int batchSize = 256;
+  QSqlQuery q(database());
+  q.setForwardOnly(true);
+
+  for (int offset = 0; offset < newsIds.size(); offset += batchSize) {
+    const int count = qMin(batchSize, newsIds.size() - offset);
+    QStringList idLiterals;
+    idLiterals.reserve(count);
+    for (int i = 0; i < count; ++i) {
+      const int id = newsIds.at(offset + i);
+      if (id > 0)
+        idLiterals.append(QString::number(id));
+    }
+    if (idLiterals.isEmpty())
+      continue;
+
+    if (!q.exec(QStringLiteral("SELECT id, description, content FROM news WHERE id IN (%1)")
+                .arg(idLiterals.join(QLatin1Char(',')))))
+      continue;
+
+    while (q.next()) {
+      const int id = q.value(0).toInt();
+      const QString description = q.value(1).toString();
+      const QString content = q.value(2).toString();
+      result.insert(id, (content.isEmpty() || (description.length() > content.length()))
+                        ? description : content);
+    }
+  }
+  return result;
+}
+
 QString NewsModel::selectStatement() const
 {
   const QSqlRecord rec = record();
