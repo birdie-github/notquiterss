@@ -141,16 +141,12 @@ void RequestFeed::requestTrackedUrl(int id, QString urlString, QDateTime date,
   if (!timeout_->isActive())
     timeout_->start();
 
-  idsQueue_.enqueue(id);
-  feedsQueue_.enqueue(urlString);
-  dateQueue_.enqueue(date);
-  userInfo_.enqueue(userInfo);
-  identitiesQueue_.enqueue(identity);
+  requestQueue_.enqueue({id, urlString, date, userInfo, identity});
 
   if (!getUrlTimer_->isActive())
     getUrlTimer_->start();
 
-  qDebug() << "requestUrl() <<" << LogFile::urlForLog(QUrl(urlString)) << "countQueue=" << feedsQueue_.count();
+  qDebug() << "requestUrl() <<" << LogFile::urlForLog(QUrl(urlString)) << "countQueue=" << requestQueue_.count();
 }
 
 void RequestFeed::stopRequest()
@@ -159,22 +155,26 @@ void RequestFeed::stopRequest()
   getUrlTimer_->stop();
   timeout_->stop();
 
-  // Cancel requests which have not started yet.  Keep the parallel queues in
-  // sync so the object remains in a valid state if it is reused afterwards.
-  while (!feedsQueue_.isEmpty()) {
-    int feedId = idsQueue_.dequeue();
-    QString feedUrl = feedsQueue_.dequeue();
-    dateQueue_.dequeue();
-    userInfo_.dequeue();
-    identitiesQueue_.dequeue();
+  // Cancel requests which have not started yet.
+  while (!requestQueue_.isEmpty()) {
+    const QueuedRequest queued = requestQueue_.dequeue();
+    emit getUrlDone(-7, queued.id, queued.feedUrl);
+  }
 
-    emit getUrlDone(-7, feedId, feedUrl);
+  // Cancel delayed retries before their single-shot timer fires.
+  while (!pendingRetries_.isEmpty()) {
+    const PendingRetry retry = pendingRetries_.takeFirst();
+    emit getUrlDone(-7, retry.id, retry.feedUrl);
   }
 
   // abort() may synchronously cause finished() to run in this thread, which
-  // removes entries from networkReply_.  Iterate over a snapshot accordingly.
-  const QList<QNetworkReply*> replies = networkReply_;
-  for (QNetworkReply *reply : replies) {
+  // removes entries from activeRequests_. Iterate over a snapshot of replies.
+  QList<QNetworkReply*> replies;
+  replies.reserve(activeRequests_.size());
+  for (const ActiveRequest &req : std::as_const(activeRequests_)) {
+    replies.append(req.reply);
+  }
+  for (QNetworkReply *reply : std::as_const(replies)) {
     if (reply)
       reply->abort();
   }
@@ -186,44 +186,46 @@ void RequestFeed::getQueuedUrl()
 {
   if (shuttingDown_) return;
 
-  if ((currentFeeds_.count() >= numberRequests_) ||
-      (currentFeeds_.count() >= REPLY_MAX_COUNT)) {
+  const int inFlightCount = activeRequests_.count() + pendingRetries_.count();
+  if ((inFlightCount >= numberRequests_) ||
+      (inFlightCount >= REPLY_MAX_COUNT)) {
     getUrlTimer_->start();
     return;
   }
 
-  if (!feedsQueue_.isEmpty()) {
+  if (!requestQueue_.isEmpty()) {
     getUrlTimer_->start();
-    QString feedUrl = feedsQueue_.head();
+    const QString candidateHost = QUrl(requestQueue_.head().feedUrl).host();
 
-    if (hostList_.contains(QUrl(feedUrl).host())) {
-      for (const QString &url : std::as_const(currentFeeds_)) {
-        if (QUrl(url).host() == QUrl(feedUrl).host()) {
+    if (hostList_.contains(candidateHost)) {
+      for (const ActiveRequest &req : std::as_const(activeRequests_)) {
+        if (QUrl(req.feedUrl).host() == candidateHost) {
+          return;
+        }
+      }
+      for (const PendingRetry &retry : std::as_const(pendingRetries_)) {
+        if (QUrl(retry.feedUrl).host() == candidateHost) {
           return;
         }
       }
     }
-    int feedId = idsQueue_.dequeue();
-    feedUrl = feedsQueue_.dequeue();
+    const QueuedRequest queued = requestQueue_.dequeue();
 
-    emit setStatusFeed(feedId, "1 Update");
+    emit setStatusFeed(queued.id, "1 Update");
 
-    QUrl getUrl = QUrl::fromEncoded(feedUrl.toUtf8());
-    QString userInfo = userInfo_.dequeue();
-    if (!userInfo.isEmpty()) {
-      getUrl.setUserInfo(userInfo);
+    QUrl getUrl = QUrl::fromEncoded(queued.feedUrl.toUtf8());
+    if (!queued.userInfo.isEmpty()) {
+      getUrl.setUserInfo(queued.userInfo);
 //      getUrl.addQueryItem("auth", getUrl.scheme());
     }
 
-    qDebug() << "getQueuedUrl() >>" << LogFile::urlForLog(QUrl(feedUrl)) << "countQueue=" << feedsQueue_.count();
-    QDateTime currentDate = dateQueue_.dequeue();
-    const QString identity = identitiesQueue_.dequeue();
-    if (!identity.isEmpty())
-      emit requestStarted(feedId, identity, QDateTime::currentDateTimeUtc());
-    if (currentDate.isValid())
-      emit signalHead(getUrl, feedId, feedUrl, currentDate);
+    qDebug() << "getQueuedUrl() >>" << LogFile::urlForLog(QUrl(queued.feedUrl)) << "countQueue=" << requestQueue_.count();
+    if (!queued.identity.isEmpty())
+      emit requestStarted(queued.id, queued.identity, QDateTime::currentDateTimeUtc());
+    if (queued.date.isValid())
+      emit signalHead(getUrl, queued.id, queued.feedUrl, queued.date);
     else
-      emit signalGet(getUrl, feedId, feedUrl, currentDate);
+      emit signalGet(getUrl, queued.id, queued.feedUrl, queued.date);
   }
 }
 
@@ -239,23 +241,37 @@ void RequestFeed::slotHead(const QUrl &getUrl, const int &id, const QString &fee
     emit getUrlDone(-1, id, feedUrl, overrideError);
     return;
   }
-  if (count)
-    Common::sleep(30);
+  if (count > 0) {
+    const quint64 token = ++nextRetryToken_;
+    pendingRetries_.append({token, getUrl, id, feedUrl, date, count, true});
+    QTimer::singleShot(30, this, [this, token] {
+      if (shuttingDown_) return;
+      for (int i = 0; i < pendingRetries_.size(); ++i) {
+        if (pendingRetries_.at(i).token == token) {
+          const PendingRetry retry = pendingRetries_.takeAt(i);
+          dispatchHead(retry.getUrl, retry.id, retry.feedUrl, retry.date, retry.count);
+          return;
+        }
+      }
+    });
+    return;
+  }
+
+  dispatchHead(getUrl, id, feedUrl, date, count);
+}
+
+void RequestFeed::dispatchHead(const QUrl &getUrl, int id, const QString &feedUrl,
+                               const QDateTime &date, int count)
+{
+  if (shuttingDown_) return;
 
   qDebug() << objectName() << "::head:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" << count;
   QNetworkRequest request(getUrl);
 
-  currentIds_.append(id);
-  currentFeeds_.append(feedUrl);
-  currentDates_.append(date);
-  currentCount_.append(count);
-  currentHead_.append(true);
-  currentTime_.append(timeoutRequest_);
-
   emit feedProgressStage(id, tr("Checking…"));
   QNetworkReply *reply = networkManager_->head(request);
   reply->setProperty("feedReply", QVariant(true));
-  networkReply_.append(reply);
+  activeRequests_.append({id, feedUrl, date, count, true, timeoutRequest_, reply});
 }
 
 /** @brief Prepare and send network request to get all data
@@ -270,10 +286,31 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
     emit getUrlDone(-1, id, feedUrl, overrideError);
     return;
   }
-  if (count)
-    Common::sleep(30);
+  if (count > 0) {
+    const quint64 token = ++nextRetryToken_;
+    pendingRetries_.append({token, getUrl, id, feedUrl, date, count, false});
+    QTimer::singleShot(30, this, [this, token] {
+      if (shuttingDown_) return;
+      for (int i = 0; i < pendingRetries_.size(); ++i) {
+        if (pendingRetries_.at(i).token == token) {
+          const PendingRetry retry = pendingRetries_.takeAt(i);
+          dispatchGet(retry.getUrl, retry.id, retry.feedUrl, retry.date, retry.count);
+          return;
+        }
+      }
+    });
+    return;
+  }
 
-  qDebug() << objectName() << "::get:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" <<count;
+  dispatchGet(getUrl, id, feedUrl, date, count);
+}
+
+void RequestFeed::dispatchGet(const QUrl &getUrl, int id, const QString &feedUrl,
+                              const QDateTime &date, int count)
+{
+  if (shuttingDown_) return;
+
+  qDebug() << objectName() << "::get:" << LogFile::urlForLog(getUrl) << "feed:" << LogFile::urlForLog(QUrl(feedUrl)) << "countRepeats:" << count;
   QNetworkRequest request(getUrl);
   if (id <= FirstProbe) {
     request.setAttribute(NetworkPolicy::DiscoveryProbe, true);
@@ -281,25 +318,27 @@ void RequestFeed::slotGet(const QUrl &getUrl, const int &id, const QString &feed
   }
   request.setRawHeader("Accept", "application/atom+xml,application/rss+xml;q=0.9,application/xml;q=0.8,text/xml;q=0.7,*/*;q=0.6");
 
-  currentIds_.append(id);
-  currentFeeds_.append(feedUrl);
-  currentDates_.append(date);
-  currentCount_.append(count);
-  currentHead_.append(false);
-  currentTime_.append(timeoutRequest_);
-
   emit feedProgressStage(id, count ? tr("Retrying…") : tr("Connecting…"));
   QNetworkReply *reply = networkManager_->get(request);
   // Report the stage once, not on every data chunk. Length may be unknown.
   connect(reply, &QIODevice::readyRead, this, [this, reply, id] {
-    if (!networkReply_.contains(reply) ||
+    if (indexOfReply(reply) < 0 ||
         reply->property("progressDownloading").toBool()) return;
     reply->setProperty("progressDownloading", true);
     emit feedProgressStage(id, tr("Downloading…"));
   });
   reply->setProperty("feedReply", QVariant(true));
-  networkReply_.append(reply);
+  activeRequests_.append({id, feedUrl, date, count, false, timeoutRequest_, reply});
   NetworkPolicy::limitReplySize(reply, FeedResponseLimit);
+}
+
+int RequestFeed::indexOfReply(QNetworkReply *reply) const
+{
+  for (int i = 0; i < activeRequests_.size(); ++i) {
+    if (activeRequests_.at(i).reply == reply)
+      return i;
+  }
+  return -1;
 }
 
 /** @brief Process network reply
@@ -315,17 +354,16 @@ void RequestFeed::finished(QNetworkReply *reply)
   qDebug() << reply->header(QNetworkRequest::LastModifiedHeader);
   // Cookie values are credentials; never write raw cookie headers to the log.
 
-  const int currentReplyIndex = networkReply_.indexOf(reply);
+  const int currentReplyIndex = indexOfReply(reply);
 
   if (currentReplyIndex >= 0) {
-    currentTime_.removeAt(currentReplyIndex);
     // Retire this exact reply before dispatching any completion or retry.
-    networkReply_.removeAt(currentReplyIndex);
-    int feedId    = currentIds_.takeAt(currentReplyIndex);
-    QString feedUrl    = currentFeeds_.takeAt(currentReplyIndex);
-    QDateTime feedDate = currentDates_.takeAt(currentReplyIndex);
-    int count = currentCount_.takeAt(currentReplyIndex) + 1;
-    bool headOk = currentHead_.takeAt(currentReplyIndex);
+    const ActiveRequest active = activeRequests_.takeAt(currentReplyIndex);
+    int feedId         = active.id;
+    QString feedUrl    = active.feedUrl;
+    QDateTime feedDate = active.date;
+    int count          = active.count + 1;
+    bool headOk        = active.isHead;
     const QString challengeProvider = browserChallengeProvider(reply);
 
     if (!headOk && NetworkPolicy::replyExceedsSizeLimit(reply, FeedResponseLimit)) {
@@ -438,7 +476,7 @@ void RequestFeed::finished(QNetworkReply *reply)
               reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 304)
             emit getUrlDone(-6, feedId, feedUrl, tr("The server returned an empty feed response."));
           else
-            emit getUrlDone(feedsQueue_.count(), feedId, feedUrl, "", data, replyLocalDate, codecName,
+            emit getUrlDone(requestQueue_.count(), feedId, feedUrl, "", data, replyLocalDate, codecName,
                             replyUrl.adjusted(QUrl::RemoveUserInfo | QUrl::RemoveFragment),
                             reply->header(QNetworkRequest::ContentTypeHeader).toString().section(';', 0, 0).trimmed().toLower());
         }
@@ -461,29 +499,25 @@ void RequestFeed::slotRequestTimeout()
 {
   if (shuttingDown_) return;
 
-  for (int i = currentTime_.count() - 1; i >= 0; i--) {
-    int time = currentTime_.at(i) - 1;
+  for (int i = activeRequests_.count() - 1; i >= 0; i--) {
+    int time = activeRequests_.at(i).timeLeft - 1;
     if (time <= 0) {
-      QNetworkReply *reply = networkReply_.takeAt(i);
-      const QUrl replyUrl = reply->url();
-      int feedId    = currentIds_.takeAt(i);
-      QString feedUrl = currentFeeds_.takeAt(i);
-      QDateTime feedDate = currentDates_.takeAt(i);
-      int count = currentCount_.takeAt(i) + 1;
-      currentTime_.removeAt(i);
-      currentHead_.removeAt(i);
+      const ActiveRequest active = activeRequests_.takeAt(i);
+      QNetworkReply *reply = active.reply;
+      const QUrl replyUrl  = reply->url();
+      const int count      = active.count + 1;
 
       // Remove all bookkeeping before abort(): finished() may run synchronously.
       reply->abort();
       reply->deleteLater();
 
-      if (feedId > FirstProbe && count < numberRepeats_) {
-        emit signalGet(replyUrl, feedId, feedUrl, feedDate, count);
+      if (active.id > FirstProbe && count < numberRepeats_) {
+        emit signalGet(replyUrl, active.id, active.feedUrl, active.date, count);
       } else {
-        emit getUrlDone(-3, feedId, feedUrl, tr("Request timed out"));
+        emit getUrlDone(-3, active.id, active.feedUrl, tr("Request timed out"));
       }
     } else {
-      currentTime_.replace(i, time);
+      activeRequests_[i].timeLeft = time;
     }
   }
 }

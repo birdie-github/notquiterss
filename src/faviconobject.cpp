@@ -111,6 +111,12 @@ FaviconObject::FaviconObject(QObject *parent)
 
 void FaviconObject::disconnectObjects()
 {
+  shuttingDown_ = true;
+  if (getUrlTimer_)
+    getUrlTimer_->stop();
+  if (timeout_)
+    timeout_->stop();
+  pendingRetries_.clear();
   disconnect(this);
   if (networkManager_)
     networkManager_->disconnect(networkManager_);
@@ -120,6 +126,8 @@ void FaviconObject::disconnectObjects()
  *----------------------------------------------------------------------------*/
 void FaviconObject::requestUrl(QString urlString, QString feedUrl)
 {
+  if (shuttingDown_) return;
+
   if (!networkManager_) {
     networkManager_ = new NetworkManager(true, this);
     connect(networkManager_, &QNetworkAccessManager::finished, this, &FaviconObject::finished);
@@ -128,8 +136,7 @@ void FaviconObject::requestUrl(QString urlString, QString feedUrl)
   if (!timeout_->isActive())
     timeout_->start();
 
-  urlsQueue_.enqueue(urlString);
-  feedsQueue_.enqueue(feedUrl);
+  requestQueue_.enqueue({urlString, feedUrl});
 
   if (!getUrlTimer_->isActive())
     getUrlTimer_->start();
@@ -139,34 +146,40 @@ void FaviconObject::requestUrl(QString urlString, QString feedUrl)
  *----------------------------------------------------------------------------*/
 void FaviconObject::getQueuedUrl()
 {
-  if (currentFeeds_.count() >= REPLY_MAX_COUNT) {
+  if (shuttingDown_) return;
+
+  if ((activeRequests_.count() + pendingRetries_.count()) >= REPLY_MAX_COUNT) {
     getUrlTimer_->start();
     return;
   }
 
-  if (!urlsQueue_.isEmpty()) {
+  if (!requestQueue_.isEmpty()) {
     getUrlTimer_->start();
 
-    QString feedUrl = feedsQueue_.head();
+    const QString candidateHost = QUrl(requestQueue_.head().feedUrl).host();
 
-    if (hostList_.contains(QUrl(feedUrl).host())) {
-      for (const QString &url : std::as_const(currentFeeds_)) {
-        if (QUrl(url).host() == QUrl(feedUrl).host()) {
+    if (hostList_.contains(candidateHost)) {
+      for (const ActiveRequest &req : std::as_const(activeRequests_)) {
+        if (QUrl(req.feedUrl).host() == candidateHost) {
+          return;
+        }
+      }
+      for (const PendingRetry &retry : std::as_const(pendingRetries_)) {
+        if (QUrl(retry.feedUrl).host() == candidateHost) {
           return;
         }
       }
     }
 
-    QString urlString = urlsQueue_.dequeue();
-    feedUrl = feedsQueue_.dequeue();
+    const QueuedRequest queued = requestQueue_.dequeue();
 
-    QUrl url = QUrl::fromEncoded(urlString.toUtf8());
+    QUrl url = QUrl::fromEncoded(queued.urlString.toUtf8());
     url.setUrl(QString("%1://%2").arg(url.scheme()).arg(url.host()));
     if (!url.isValid()) {
-      url = QUrl::fromEncoded(feedUrl.toUtf8());
+      url = QUrl::fromEncoded(queued.feedUrl.toUtf8());
       url.setUrl(QString("%1://%2").arg(url.scheme()).arg(url.host()));
     }
-    emit signalGet(url, feedUrl, 0);
+    emit signalGet(url, queued.feedUrl, 0);
   }
 }
 
@@ -182,34 +195,61 @@ void FaviconObject::slotGet(const QUrl &getUrl, const QString &feedUrl, const in
 void FaviconObject::requestResource(const QUrl &getUrl, const QString &feedUrl,
                                    int count, bool isIcon)
 {
-  if (count)
-    Common::sleep(30);
+  if (shuttingDown_) return;
+
+  if (count > 0) {
+    const quint64 token = ++nextRetryToken_;
+    pendingRetries_.append({token, getUrl, feedUrl, count, isIcon});
+    QTimer::singleShot(30, this, [this, token] {
+      if (shuttingDown_) return;
+      for (int i = 0; i < pendingRetries_.size(); ++i) {
+        if (pendingRetries_.at(i).token == token) {
+          const PendingRetry retry = pendingRetries_.takeAt(i);
+          dispatchResource(retry.getUrl, retry.feedUrl, retry.count, retry.isIcon);
+          return;
+        }
+      }
+    });
+    return;
+  }
+
+  dispatchResource(getUrl, feedUrl, count, isIcon);
+}
+
+void FaviconObject::dispatchResource(const QUrl &getUrl, const QString &feedUrl,
+                                     int count, bool isIcon)
+{
+  if (shuttingDown_) return;
 
   QNetworkRequest request(getUrl);
-
-  currentFeeds_.append(feedUrl);
-  currentCntRequests_.append(count);
-  currentTime_.append(REQUEST_TIMEOUT);
 
   QNetworkReply *reply = networkManager_->get(request);
   reply->setProperty("feedReply", QVariant(true));
   reply->setProperty("faviconImage", isIcon);
-  networkReply_.append(reply);
+  activeRequests_.append({feedUrl, count, REQUEST_TIMEOUT, reply});
   NetworkPolicy::limitReplySize(reply, isIcon ? FaviconImageLimit : FaviconPageLimit);
+}
+
+int FaviconObject::indexOfReply(QNetworkReply *reply) const
+{
+  for (int i = 0; i < activeRequests_.size(); ++i) {
+    if (activeRequests_.at(i).reply == reply)
+      return i;
+  }
+  return -1;
 }
 
 /** @brief Finish network request processing
  *----------------------------------------------------------------------------*/
 void FaviconObject::finished(QNetworkReply *reply)
 {
-  const int currentReplyIndex = networkReply_.indexOf(reply);
+  const int currentReplyIndex = indexOfReply(reply);
   if (currentReplyIndex >= 0) {
-    currentTime_.removeAt(currentReplyIndex);
     // Retries dispatch directly here, so retire the old reply first.
-    networkReply_.removeAt(currentReplyIndex);
+    const ActiveRequest active = activeRequests_.takeAt(currentReplyIndex);
     const QUrl url = reply->url();
-    QString feedUrl = currentFeeds_.takeAt(currentReplyIndex);
-    int cntRequests = currentCntRequests_.takeAt(currentReplyIndex);
+    QString feedUrl = active.feedUrl;
+    int cntRequests = active.count;
 
     const bool isIcon = reply->property("faviconImage").toBool();
     const qint64 limit = isIcon ? FaviconImageLimit : FaviconPageLimit;
@@ -286,24 +326,24 @@ void FaviconObject::finished(QNetworkReply *reply)
  *----------------------------------------------------------------------------*/
 void FaviconObject::slotRequestTimeout()
 {
-  for (int i = currentTime_.count() - 1; i >= 0; i--) {
-    int time = currentTime_.at(i) - 1;
+  if (shuttingDown_) return;
+
+  for (int i = activeRequests_.count() - 1; i >= 0; i--) {
+    int time = activeRequests_.at(i).timeLeft - 1;
     if (time <= 0) {
-      QNetworkReply *reply = networkReply_.takeAt(i);
+      const ActiveRequest active = activeRequests_.takeAt(i);
+      QNetworkReply *reply = active.reply;
       const QUrl url = reply->url();
-      QString feedUrl = currentFeeds_.takeAt(i);
-      int cntRequests = currentCntRequests_.takeAt(i);
-      currentTime_.removeAt(i);
 
       // abort() can invoke finished() before returning. The request is retired.
       reply->abort();
       reply->deleteLater();
 
-      if (cntRequests == 0) {
-        emit signalGet(url, feedUrl, 2);
+      if (active.count == 0) {
+        emit signalGet(url, active.feedUrl, 2);
       }
     } else {
-      currentTime_.replace(i, time);
+      activeRequests_[i].timeLeft = time;
     }
   }
 }

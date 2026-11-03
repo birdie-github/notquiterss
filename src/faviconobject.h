@@ -51,19 +51,40 @@ private slots:
   void slotRequestTimeout();
 
 private:
+  struct QueuedRequest {
+    QString urlString;
+    QString feedUrl;
+  };
+
+  struct ActiveRequest {
+    QString feedUrl;
+    int count;
+    int timeLeft;
+    QNetworkReply *reply;
+  };
+
+  struct PendingRetry {
+    quint64 token;
+    QUrl getUrl;
+    QString feedUrl;
+    int count;
+    bool isIcon;
+  };
+
   void requestResource(const QUrl &url, const QString &feedUrl, int count, bool isIcon);
+  void dispatchResource(const QUrl &url, const QString &feedUrl, int count, bool isIcon);
+  int indexOfReply(QNetworkReply *reply) const;
 
   NetworkManager *networkManager_;
+  bool shuttingDown_ = false;
+  quint64 nextRetryToken_ = 0;
 
-  QQueue<QString> urlsQueue_;
-  QQueue<QString> feedsQueue_;
+  QQueue<QueuedRequest> requestQueue_;
 
   QTimer *timeout_;
   QTimer *getUrlTimer_;
-  QList<QString> currentFeeds_;
-  QList<int> currentCntRequests_;
-  QList<int> currentTime_;
-  QList<QNetworkReply*> networkReply_;
+  QList<ActiveRequest> activeRequests_;
+  QList<PendingRetry> pendingRetries_;
   QList<QString> hostList_;
 
 };

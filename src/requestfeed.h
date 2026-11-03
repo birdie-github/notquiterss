@@ -68,8 +68,43 @@ private slots:
   void slotRequestTimeout();
 
 private:
+  struct QueuedRequest {
+    int id;
+    QString feedUrl;
+    QDateTime date;
+    QString userInfo;
+    QString identity;
+  };
+
+  struct ActiveRequest {
+    int id;
+    QString feedUrl;
+    QDateTime date;
+    int count;
+    bool isHead;
+    int timeLeft;
+    QNetworkReply *reply;
+  };
+
+  struct PendingRetry {
+    quint64 token;
+    QUrl getUrl;
+    int id;
+    QString feedUrl;
+    QDateTime date;
+    int count;
+    bool isHead;
+  };
+
+  void dispatchHead(const QUrl &getUrl, int id, const QString &feedUrl,
+                    const QDateTime &date, int count);
+  void dispatchGet(const QUrl &getUrl, int id, const QString &feedUrl,
+                   const QDateTime &date, int count);
+  int indexOfReply(QNetworkReply *reply) const;
+
   NetworkManager *networkManager_;
   bool shuttingDown_ = false;
+  quint64 nextRetryToken_ = 0;
 
   int timeoutRequest_;
   int numberRequests_;
@@ -77,19 +112,9 @@ private:
   QTimer *timeout_;
   QTimer *getUrlTimer_;
 
-  QQueue<int> idsQueue_;
-  QQueue<QString> feedsQueue_;
-  QQueue<QDateTime> dateQueue_;
-  QQueue<QString> userInfo_;
-  QQueue<QString> identitiesQueue_;
-
-  QList<int> currentIds_;
-  QList<QString> currentFeeds_;
-  QList<QDateTime> currentDates_;
-  QList<int> currentCount_;
-  QList<bool> currentHead_;
-  QList<int> currentTime_;
-  QList<QNetworkReply*> networkReply_;
+  QQueue<QueuedRequest> requestQueue_;
+  QList<ActiveRequest> activeRequests_;
+  QList<PendingRetry> pendingRetries_;
   QList<QString> hostList_;
 
 };
