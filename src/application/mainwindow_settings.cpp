@@ -22,6 +22,7 @@
 #include "mainapplication.h"
 #include "settings.h"
 #include "trayiconcontroller.h"
+#include "updatefeeds.h"
 #include <QScreen>
 #include <utility>
 
