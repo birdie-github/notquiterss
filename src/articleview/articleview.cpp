@@ -226,7 +226,7 @@ bool ArticleView::updateArticleReadState(int newsId, bool isNew, bool isRead) {
         }
       } else if (format.isAnchor() &&
                  !format.anchorHref().startsWith(QLatin1String("quiterss://"))) {
-        titleSpans.append({fragment.position(), fragment.length()});
+        titleSpans.append({fragment.position(), fragment.length(), QUrl()});
       }
     }
 
