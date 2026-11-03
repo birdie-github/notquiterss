@@ -25,14 +25,15 @@ class FeedReadState : public QObject
 {
   Q_OBJECT
 public:
-  explicit FeedReadState(MainWindow *window, QObject *parent = nullptr);
+  explicit FeedReadState(QObject *parent = nullptr);
   void setDatabase(const QSqlDatabase &database);
   static QList<int> getIdFeedsInList(QSqlDatabase &db, int idFolder);
 
 public slots:
   void slotRecountCategoryCounts();
   void slotRecountFeedCounts(int feedId, bool updateViewport = true);
-  void slotSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList);
+  void slotSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList,
+                       bool markAllRead = false, bool markCurrentNewsRead = false);
   void slotRefreshInfoTray();
 
 signals:
@@ -45,7 +46,6 @@ signals:
 
 protected:
   QString getIdFeedsString(int idFolder, int idException = -1);
-  MainWindow *mainWindow_;
   QSqlDatabase db_;
 };
 

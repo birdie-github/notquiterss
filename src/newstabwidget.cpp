@@ -471,6 +471,11 @@ void NewsTabWidget::setSettings(bool init, bool newTab)
   if (!newTab)
     newsModel_->setFilter("feedId=-1");
   newsHeader_->setColumns(feedIndex);
+  if (type_ == TabTypeFeed && feedIndex.isValid()) {
+    mainWindow_->slotCountsStatusBar(
+        feedsModel_->dataField(feedIndex, "unread").toInt(),
+        feedsModel_->dataField(feedIndex, "undeleteCount").toInt());
+  }
   mainWindow_->slotUpdateStatus(feedId_, false);
   mainWindow_->newsFilter_->setEnabled(type_ == TabTypeFeed);
   separatorRAct_->setVisible(type_ == TabTypeDel);

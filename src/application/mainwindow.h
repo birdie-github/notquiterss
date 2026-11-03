@@ -314,7 +314,8 @@ signals:
   void signalNextUpdate(bool finish);
   void signalRecountCategoryCounts();
   void signalRecountFeedCounts(int feedId, bool update = true);
-  void signalSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList);
+  void signalSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList,
+                         bool markAllRead = false, bool markCurrentNewsRead = false);
   void signalPlaySoundNewNews();
   void signalUpdateStatus(int feedId, bool changed);
   void signalMarkAllFeedsRead();
@@ -480,6 +481,7 @@ private:
   void deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry);
   void retryDatabaseUi();
   QTimer databaseUiTimer_;
+  QTimer updateNewsTimer_;
   std::map<DeferredDatabaseUi, std::function<void()>> deferredDatabaseUi_;
 
   void showBulkFeedSettings();
@@ -489,6 +491,7 @@ private:
   void refreshFeedSettings(const QList<int> &ids, bool columns, bool images, bool direction);
   bool bulkFeedSettingsConfirmed_ = false;
   void setStatusCounts(int unreadCount, int allCount);
+  void updateCurrentTabStatusCounts(int updatedFeedId = -1);
   void closeEvent(QCloseEvent *event);
   bool eventFilter(QObject *obj, QEvent *event);
   void changeEvent(QEvent *event);

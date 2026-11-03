@@ -48,6 +48,7 @@ public:
 
   QVariant dataField(const QModelIndex &index, const QString &fieldName) const;
   bool isFolder(const QModelIndex &index) const;
+  bool isFeedInFolder(int feedId, int folderId) const;
   // Total and disabled descendant feeds; no stored folder restriction.
   QPair<int, int> folderDisabledCounts(int folderId) const;
   QModelIndex indexSibling(const QModelIndex &index, const QString &fieldName) const;

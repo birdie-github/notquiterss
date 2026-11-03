@@ -124,7 +124,6 @@ signals:
   void feedUpdated(int feedId, bool changed, int newCount, bool finish);
   void signalUpdateModel(bool checkFilter = true);
   void signalUpdateNews(int refresh = NewsTabWidget::RefreshInsert);
-  void signalCountsStatusBar(int unreadCount, int allCount);
   void signalMarkAllFeedsRead(int nextUnread = -1);
   void signalIconUpdate(int feedId, QByteArray faviconData);
   void signalFinishCleanUp(int countDeleted, QString warning);
@@ -139,7 +138,6 @@ private:
   void queueAllFeeds(bool manual);
   void checkScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
   void announceFeedProgress(int feedId);
-  bool isFeedInFolder(int feedId, int folderId);
   bool cleanUpArticles(bool isShutdown, const QStringList &feedsIdList,
                       const QList<int> &foldersIdList, int &countDeleted, QString &error);
   bool rollbackCleanUp(QString &error);
@@ -156,7 +154,6 @@ private:
   QString shutdownCleanupWarning_;
   QSemaphore cleanupRollbackRetry_;
   QTimer *updateModelTimer_;
-  QTimer *timerUpdateNews_;
 
 };
 

@@ -200,15 +200,13 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     connect(feedWindow, &MainWindow::signalNextUpdate, updateObject_, &UpdateObject::slotNextUpdateFeed);
     connect(updateObject_, &UpdateObject::signalUpdateModel, feedWindow, &MainWindow::feedsModelReload);
     connect(updateObject_, &UpdateObject::signalUpdateNews, feedWindow, &MainWindow::slotUpdateNews);
-    connect(updateObject_, &UpdateObject::signalCountsStatusBar,
-            feedWindow, &MainWindow::slotCountsStatusBar);
 
     connect(feedWindow, &MainWindow::signalRecountCategoryCounts,
             updateObject_, &UpdateObject::slotRecountCategoryCounts);
     qRegisterMetaType<QList<int> >("QList<int>");
     qRegisterMetaType<CategoryCounts>("CategoryCounts");
     connectReadState(updateObject_, feedWindow);
-    auto *navigationState = new FeedReadState(mainApp->mainWindow(), this);
+    auto *navigationState = new FeedReadState(this);
     navigationState->setDatabase(QSqlDatabase::database());
     connectReadState(navigationState, feedWindow);
     connect(navigationState, &FeedReadState::requestCategoryCounts,
@@ -335,7 +333,7 @@ void UpdateFeeds::saveMemoryDatabase()
 
 //------------------------------------------------------------------------------
 UpdateObject::UpdateObject(QObject *parent)
-  : FeedReadState(mainApp->mainWindow(), parent)
+  : FeedReadState(parent)
   , isSaveMemoryDatabase(false)
   , updateFeedsCount_(0)
 {
@@ -344,49 +342,11 @@ UpdateObject::UpdateObject(QObject *parent)
   updateModelTimer_ = new QTimer(this);
   updateModelTimer_->setSingleShot(true);
   connect(updateModelTimer_, &QTimer::timeout, this, [this] { emit signalUpdateModel(); });
-
-  timerUpdateNews_ = new QTimer(this);
-  timerUpdateNews_->setSingleShot(true);
-  connect(timerUpdateNews_, &QTimer::timeout, this, [this] { emit signalUpdateNews(); });
-
 }
 
 UpdateObject::~UpdateObject()
 {
 
-}
-
-bool UpdateObject::isFeedInFolder(int feedId, int folderId)
-{
-  if (folderId < 0) return false;
-  QSqlQuery q(db_);
-  if (!q.prepare("SELECT parentId FROM feeds WHERE id=?")) {
-    qWarning() << "Could not prepare feed parent lookup:" << q.lastError().text();
-    return false;
-  }
-  QSet<int> visited;
-  while (feedId > 0) {
-    if (visited.contains(feedId)) {
-      qWarning() << "Cycle in feed parent hierarchy at ID:" << feedId;
-      return false;
-    }
-    visited.insert(feedId);
-    q.bindValue(0, feedId);
-    if (!q.exec()) {
-      qWarning() << "Feed parent lookup failed for ID:" << feedId << q.lastError().text();
-      return false;
-    }
-    if (!q.next()) {
-      if (q.lastError().isValid())
-        qWarning() << "Could not read feed parent for ID:" << feedId << q.lastError().text();
-      return false;
-    }
-    const int parentId = q.value(0).toInt();
-    q.finish();
-    if (parentId == folderId) return true;
-    feedId = parentId;
-  }
-  return false;
 }
 
 void UpdateObject::slotGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds)
@@ -842,32 +802,6 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
   q.addBindValue(feedId);
   q.exec();
 
-  if (changed) {
-    if (mainWindow_->currentNewsTab->type_ == NewsTabWidget::TabTypeFeed) {
-      const bool folderUpdate = isFeedInFolder(feedId, mainWindow_->currentNewsTab->feedId_);
-
-      // Click on feed if it is displayed to update view
-      if ((feedId == mainWindow_->currentNewsTab->feedId_) || folderUpdate) {
-        if (!timerUpdateNews_->isActive())
-          timerUpdateNews_->start(1000);
-
-        QSqlQuery q(db_);
-        int unreadCount = 0;
-        int allCount = 0;
-        q.exec(QString("SELECT unread, undeleteCount FROM feeds WHERE id=='%1'").
-               arg(mainWindow_->currentNewsTab->feedId_));
-        if (q.first()) {
-          unreadCount = q.value(0).toInt();
-          allCount    = q.value(1).toInt();
-        }
-        emit signalCountsStatusBar(unreadCount, allCount);
-      }
-    } else if (mainWindow_->currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads) {
-      if (!timerUpdateNews_->isActive())
-        timerUpdateNews_->start(1000);
-    }
-  }
-
   emit feedProgressFinished(feedId);
   emit feedUpdated(feedId, changed, newCount, finish);
   emit setStatusFeed(feedId, status);
@@ -927,24 +861,6 @@ void UpdateObject::slotUpdateStatus(int feedId, bool changed)
     slotRecountFeedCounts(feedId);
   }
   slotRefreshInfoTray();
-
-  if (feedId > 0) {
-    const bool folderUpdate = isFeedInFolder(feedId, mainWindow_->currentNewsTab->feedId_);
-
-    // Click on feed if it is displayed to update view
-    if ((feedId == mainWindow_->currentNewsTab->feedId_) || folderUpdate) {
-      QSqlQuery q(db_);
-      int unreadCount = 0;
-      int allCount = 0;
-      q.exec(QString("SELECT unread, undeleteCount FROM feeds WHERE id=='%1'").
-             arg(mainWindow_->currentNewsTab->feedId_));
-      if (q.next()) {
-        unreadCount = q.value(0).toInt();
-        allCount    = q.value(1).toInt();
-      }
-      emit signalCountsStatusBar(unreadCount, allCount);
-    }
-  }
 }
 
 void UpdateObject::slotMarkAllFeedsRead()
@@ -1049,9 +965,7 @@ void UpdateObject::slotMarkAllFeedsOld()
   }
   slotRecountCategoryCounts();
 
-  if ((mainWindow_->currentNewsTab != nullptr) && (mainWindow_->currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads)) {
-    emit signalUpdateNews(NewsTabWidget::RefreshWithPos);
-  }
+  emit signalUpdateNews(NewsTabWidget::RefreshWithPos);
 
   slotRefreshInfoTray();
 }

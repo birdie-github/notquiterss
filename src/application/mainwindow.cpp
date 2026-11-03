@@ -242,6 +242,11 @@ MainWindow::MainWindow(QWidget *parent)
   databaseUiTimer_.setInterval(25);
   connect(&databaseUiTimer_, &QTimer::timeout, this, &MainWindow::retryDatabaseUi);
 
+  updateNewsTimer_.setSingleShot(true);
+  updateNewsTimer_.setInterval(1000);
+  connect(&updateNewsTimer_, &QTimer::timeout, this,
+          [this] { slotUpdateNews(NewsTabWidget::RefreshInsert); });
+
   setObjectName("mainWindow");
   setWindowTitle(QGuiApplication::applicationDisplayName());
   setContextMenuPolicy(Qt::CustomContextMenu);
@@ -2654,6 +2659,12 @@ void MainWindow::slotFeedCountsUpdate(FeedCountStruct counts)
     }
   }
 
+  if (currentNewsTab &&
+      currentNewsTab->type_ == NewsTabWidget::TabTypeFeed &&
+      currentNewsTab->feedId_ == counts.feedId) {
+    setStatusCounts(counts.unreadCount, counts.undeleteCount);
+  }
+
   if (isStartImportFeed_ && !counts.xmlUrl.isEmpty()) {
     emit faviconRequestUrl(counts.htmlUrl, counts.xmlUrl);
   }
@@ -2814,6 +2825,20 @@ void MainWindow::slotUpdateFeed(int feedId, bool changed, int newCount, bool fin
   if (!changed) {
     emit signalNextUpdate(finish);
     return;
+  }
+
+  if (currentNewsTab) {
+    if (currentNewsTab->type_ == NewsTabWidget::TabTypeFeed) {
+      if ((feedId == currentNewsTab->feedId_) ||
+          feedsModel_->isFeedInFolder(feedId, currentNewsTab->feedId_)) {
+        if (!updateNewsTimer_.isActive())
+          updateNewsTimer_.start();
+        updateCurrentTabStatusCounts(feedId);
+      }
+    } else if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads) {
+      if (!updateNewsTimer_.isActive())
+        updateNewsTimer_.start();
+    }
   }
 
   // Action after new news has arrived: tray, sound
@@ -3849,6 +3874,24 @@ void MainWindow::setStatusCounts(int unreadCount, int allCount)
         QString(" " + tr("Unread: %1") + " ").arg(unreadCount),
         QString(" " + tr("All: %1") + " ").arg(allCount));
 }
+
+void MainWindow::updateCurrentTabStatusCounts(int updatedFeedId)
+{
+  if (!currentNewsTab || currentNewsTab->type_ != NewsTabWidget::TabTypeFeed ||
+      currentNewsTab->feedId_ <= 0) {
+    return;
+  }
+  const int tabFeedId = currentNewsTab->feedId_;
+  if (updatedFeedId > 0 && updatedFeedId != tabFeedId &&
+      !feedsModel_->isFeedInFolder(updatedFeedId, tabFeedId)) {
+    return;
+  }
+  const QModelIndex tabIndex = feedsModel_->indexById(tabFeedId);
+  if (tabIndex.isValid()) {
+    setStatusCounts(feedsModel_->dataField(tabIndex, "unread").toInt(),
+                    feedsModel_->dataField(tabIndex, "undeleteCount").toInt());
+  }
+}
 // ----------------------------------------------------------------------------
 void MainWindow::slotVisibledFeedsWidget()
 {
@@ -3872,6 +3915,9 @@ void MainWindow::updateIconToolBarNull(bool feedsWidgetVisible)
  *---------------------------------------------------------------------------*/
 void MainWindow::slotUpdateStatus(int feedId, bool changed)
 {
+  if (!changed && feedId > 0) {
+    updateCurrentTabStatusCounts(feedId);
+  }
   emit signalUpdateStatus(feedId, changed);
 }
 
@@ -4117,13 +4163,13 @@ void MainWindow::setFeedRead(int type, int feedId, FeedReedType feedReadType,
     if (feedId <= -1) return;
 
     QList<int> idNewsList;
-    if (((feedReadType == FeedReadSwitchingFeed) && markReadSwitchingFeed_) ||
+    const bool markAllRead =
+        ((feedReadType == FeedReadSwitchingFeed) && markReadSwitchingFeed_) ||
         ((feedReadType == FeedReadClosingTab) && markReadClosingTab_) ||
-        ((feedReadType == FeedReadPlaceToTray) && markReadMinimize_)) {
-      emit signalSetFeedRead(feedReadType, feedId, idException, idNewsList);
-    } else {
-      emit signalSetFeedRead(feedReadType, feedId, idException, idNewsList);
-    }
+        ((feedReadType == FeedReadPlaceToTray) && markReadMinimize_);
+    const bool markCurrentNewsRead = markNewsReadOn_ && markPrevNewsRead_;
+    emit signalSetFeedRead(feedReadType, feedId, idException, idNewsList,
+                           markAllRead, markCurrentNewsRead);
   } else if (widgetTab) {
     int cnt = widgetTab->newsModel_->rowCount();
     if (cnt == 0) return;
@@ -6128,6 +6174,7 @@ void MainWindow::feedsModelReload(bool checkFilter)
   feedsView_->selectIdEn_ = false;
   feedsView_->setCurrentIndex(feedIndex);
   feedsView_->verticalScrollBar()->setValue(topRow);
+  updateCurrentTabStatusCounts();
 }
 // ----------------------------------------------------------------------------
 void MainWindow::setCurrentTab(int index, bool updateCurrentTab)

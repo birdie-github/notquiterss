@@ -395,6 +395,21 @@ bool FeedsModel::isFolder(const QModelIndex &index) const
   return indexSibling(index, "xmlUrl").data(Qt::EditRole).toString().isEmpty();
 }
 
+bool FeedsModel::isFeedInFolder(int feedId, int folderId) const
+{
+  if (feedId <= 0 || folderId <= 0)
+    return false;
+  QSet<int> seen;
+  const UserData *node = userDataById(feedId);
+  while (node && node->parid != 0 && !seen.contains(node->parid)) {
+    if (node->parid == folderId)
+      return true;
+    seen.insert(node->parid);
+    node = userDataById(node->parid);
+  }
+  return false;
+}
+
 QModelIndex FeedsModel::indexSibling(const QModelIndex &index, const QString &fieldName) const
 {
   return this->index(index.row(), indexColumnOf(fieldName), index.parent());

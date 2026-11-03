@@ -23,8 +23,8 @@
 #include <QSqlDriver>
 #include <QThread>
 
-FeedReadState::FeedReadState(MainWindow *window, QObject *parent)
-  : QObject(parent), mainWindow_(window)
+FeedReadState::FeedReadState(QObject *parent)
+  : QObject(parent)
 {
 }
 
@@ -334,7 +334,8 @@ QList<int> FeedReadState::getIdFeedsInList(QSqlDatabase &db, int idFolder)
   return idList;
 }
 
-void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList)
+void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList,
+                                    bool markAllRead, bool markCurrentNewsRead)
 {
   QSqlDatabase db = db_;
   QSqlQuery q(db);
@@ -342,9 +343,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
   if (readType != FeedReadSwitchingTab) {
     db.transaction();
     QString idFeedsStr = getIdFeedsString(feedId, idException);
-    if (((readType == FeedReadSwitchingFeed) && mainWindow_->markReadSwitchingFeed_) ||
-        ((readType == FeedReadClosingTab) && mainWindow_->markReadClosingTab_) ||
-        ((readType == FeedReadPlaceToTray) && mainWindow_->markReadMinimize_)) {
+    if (markAllRead) {
       if (idFeedsStr == "feedId=-1") {
         q.exec(QString("UPDATE news SET read=2 WHERE feedId='%1' AND read!=2").arg(feedId));
       } else {
@@ -362,7 +361,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
     } else {
       q.exec(QString("UPDATE news SET new=0 WHERE (%1) AND new=1").arg(idFeedsStr));
     }
-    if (mainWindow_->markNewsReadOn_ && mainWindow_->markPrevNewsRead_)
+    if (markCurrentNewsRead)
       q.exec(QString("UPDATE news SET read=2 WHERE id IN (SELECT currentNews FROM feeds WHERE id='%1')").arg(feedId));
     db.commit();
 
