@@ -279,7 +279,81 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
 // ----------------------------------------------------------------------------
 QVariant NewsModel::dataField(int row, const QString &fieldName) const
 {
+  if (fieldName == QLatin1String("description") ||
+      fieldName == QLatin1String("content")) {
+    const int newsId = index(row, fieldIndex(QStringLiteral("id"))).data(Qt::EditRole).toInt();
+    if (newsId <= 0)
+      return QVariant();
+
+    QSqlQuery q(database());
+    q.setForwardOnly(true);
+    q.prepare(QStringLiteral("SELECT %1 FROM news WHERE id = ?").arg(fieldName));
+    q.addBindValue(newsId);
+    if (q.exec() && q.next())
+      return q.value(0);
+    return QVariant();
+  }
   return index(row, fieldIndex(fieldName)).data(Qt::EditRole);
+}
+
+QString NewsModel::articleBody(int row) const
+{
+  const int newsId = index(row, fieldIndex(QStringLiteral("id"))).data(Qt::EditRole).toInt();
+  if (newsId <= 0)
+    return QString();
+
+  QSqlQuery q(database());
+  q.setForwardOnly(true);
+  q.prepare(QStringLiteral("SELECT description, content FROM news WHERE id = ?"));
+  q.addBindValue(newsId);
+  if (!q.exec() || !q.next())
+    return QString();
+
+  const QString description = q.value(0).toString();
+  const QString content = q.value(1).toString();
+  if (content.isEmpty() || (description.length() > content.length()))
+    return description;
+  return content;
+}
+
+QString NewsModel::selectStatement() const
+{
+  const QSqlRecord rec = record();
+  if (tableName().isEmpty() || rec.isEmpty())
+    return QSqlTableModel::selectStatement();
+
+  QSqlDriver *drv = database().driver();
+  QStringList columns;
+  columns.reserve(rec.count());
+  for (int i = 0; i < rec.count(); ++i) {
+    if (!rec.isGenerated(i))
+      continue;
+    const QString fieldName = rec.fieldName(i);
+    const QString escapedField = drv
+        ? drv->escapeIdentifier(fieldName, QSqlDriver::FieldName)
+        : QStringLiteral("\"%1\"").arg(fieldName);
+    if (fieldName == QLatin1String("description") ||
+        fieldName == QLatin1String("content")) {
+      columns.append(QStringLiteral("'' AS ") + escapedField);
+    } else {
+      columns.append(escapedField);
+    }
+  }
+  if (columns.isEmpty())
+    return QSqlTableModel::selectStatement();
+
+  const QString escapedTable = drv
+      ? drv->escapeIdentifier(tableName(), QSqlDriver::TableName)
+      : QStringLiteral("\"%1\"").arg(tableName());
+
+  QString query = QStringLiteral("SELECT ") + columns.join(QLatin1String(", ")) +
+                  QStringLiteral(" FROM ") + escapedTable;
+  if (!filter().isEmpty())
+    query += QStringLiteral(" WHERE ") + filter();
+  const QString order = orderByClause();
+  if (!order.isEmpty())
+    query += QLatin1Char(' ') + order;
+  return query;
 }
 
 void NewsModel::setFilter(const QString &filter)

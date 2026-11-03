@@ -37,8 +37,12 @@ public:
       Qt::MatchFlags(Qt::MatchExactly|Qt::MatchWrap)
       ) const;
   QVariant dataField(int row, const QString &fieldName) const;
+  QString articleBody(int row) const;
   void setFilter(const QString &filter);
   bool select();
+
+protected:
+  virtual QString selectStatement() const;
 
   QString formatDate_;
   QString formatTime_;

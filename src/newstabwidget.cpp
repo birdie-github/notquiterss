@@ -1204,13 +1204,8 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
   const QModelIndex directionIndex = type_ == TabTypeFeed
       ? feedsModel_->indexById(feedId_) : feedIndex;
   QString htmlStr;
-    QString content = newsModel_->dataField(index.row(), "content").toString();
+    QString content = newsModel_->articleBody(index.row());
     {
-
-      QString description = newsModel_->dataField(index.row(), "description").toString();
-      if (content.isEmpty() || (description.length() > content.length())) {
-        content = description;
-      }
 
       QString titleString = newsModel_->dataField(index.row(), "title").toString().toHtmlEscaped().replace(QChar(39), "&#39;");
       if (!linkString.isEmpty()) {
@@ -1403,13 +1398,8 @@ void NewsTabWidget::loadNewspaper(int refresh)
     linkNewsString_ = articleUrl(index.row()).toString();
     QString linkString = ArticleContent::isExternalLink(QUrl(linkNewsString_)) ? linkNewsString_.toHtmlEscaped().replace(QChar(39), "&#39;") : QString();
 
-    QString content = newsModel_->dataField(index.row(), "content").toString();
+    QString content = newsModel_->articleBody(index.row());
     {
-
-      QString description = newsModel_->dataField(index.row(), "description").toString();
-      if (content.isEmpty() || (description.length() > content.length())) {
-        content = description;
-      }
 
       //      QTextDocumentFragment textDocument = QTextDocumentFragment::fromHtml(content);
       //      content = textDocument.toPlainText();
