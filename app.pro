@@ -191,6 +191,7 @@ SOURCES += \
     src/application/filemanager.cpp \
     src/application/logfile.cpp \
     src/application/mainwindow.cpp \
+    src/application/mainwindow_theme.cpp \
     src/application/opmlexporter.cpp \
     src/application/shortcutregistry.cpp \
     src/main/globals.cpp \
