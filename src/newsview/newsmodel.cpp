@@ -39,37 +39,24 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
 
   if (role == Qt::DecorationRole) {
     if (QSqlTableModel::fieldIndex("read") == index.column()) {
-      QPixmap icon;
+      static const QPixmap bulletNew(QStringLiteral(":/images/bulletNew"));
+      static const QPixmap bulletUnread(QStringLiteral(":/images/bulletUnread"));
+      static const QPixmap bulletRead(QStringLiteral(":/images/bulletRead"));
       if (1 == QSqlTableModel::index(index.row(), fieldIndex("new")).data(Qt::EditRole).toInt())
-        icon.load(":/images/bulletNew");
+        return bulletNew;
       else if (0 == index.data(Qt::EditRole).toInt())
-        icon.load(":/images/bulletUnread");
-      else icon.load(":/images/bulletRead");
-      return icon;
+        return bulletUnread;
+      else return bulletRead;
     } else if (QSqlTableModel::fieldIndex("starred") == index.column()) {
-      QPixmap icon;
+      static const QPixmap starOff(QStringLiteral(":/images/starOff"));
+      static const QPixmap starOn(QStringLiteral(":/images/starOn"));
       if (0 == index.data(Qt::EditRole).toInt())
-        icon.load(":/images/starOff");
-      else icon.load(":/images/starOn");
-      return icon;
+        return starOff;
+      else return starOn;
     } else if (QSqlTableModel::fieldIndex("feedId") == index.column()) {
-      QPixmap icon;
       int feedId = QSqlTableModel::index(index.row(), fieldIndex("feedId")).data(Qt::EditRole).toInt();
       QModelIndex feedIndex = mainWindow->feedsModel_->indexById(feedId);
-      bool isFeed = (feedIndex.isValid() && mainWindow->feedsModel_->isFolder(feedIndex)) ? false : true;
-
-      if (feedIndex.isValid()) {
-        QByteArray byteArray = mainWindow->feedsModel_->dataField(feedIndex, "image").toByteArray();
-        if (!byteArray.isNull()) {
-          icon.loadFromData(QByteArray::fromBase64(byteArray));
-        } else if (isFeed) {
-          icon.load(":/images/feed");
-        } else {
-          icon.load(":/images/folder");
-        }
-      }
-
-      return icon;
+      return mainWindow->feedsModel_->feedIcon(feedIndex);
     } else if (QSqlTableModel::fieldIndex("label") == index.column()) {
       QIcon icon;
       QString strIdLabels = index.data(Qt::EditRole).toString();

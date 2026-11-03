@@ -19,22 +19,31 @@
 #ifndef FEEDSMODEL_H
 #define FEEDSMODEL_H
 
+#include <QHash>
+#include <QImage>
+#include <QPixmap>
 #include <QSqlRecord>
 #include <QSqlQueryModel>
 #include <QTreeView>
+#include <QVector>
 
 struct UserData
 {
-  UserData(int id, int parid, const QSqlRecord &record)
+  UserData(int id, int parid, int rowInParent, const QSqlRecord &record)
     : id(id)
-    , parid(parid),
-      record(record) {
+    , parid(parid)
+    , rowInParent(rowInParent)
+    , record(record) {
   }
   ~UserData() {
   }
   int id;
   int parid;
+  int rowInParent;
   QSqlRecord record;
+  mutable bool iconDecoded = false;
+  mutable QImage customIconImage;
+  mutable QPixmap customIconPixmap;
 };
 
 class FeedsModel : public QAbstractItemModel
@@ -47,6 +56,7 @@ public:
   void setView(QTreeView *view);
 
   QVariant dataField(const QModelIndex &index, const QString &fieldName) const;
+  QPixmap feedIcon(const QModelIndex &index) const;
   bool isFolder(const QModelIndex &index) const;
   bool isFeedInFolder(int feedId, int folderId) const;
   // Total and disabled descendant feeds; no stored folder restriction.
@@ -86,11 +96,10 @@ public slots:
 
 private:
   bool updatesDisabled(const QModelIndex &index) const;
+  void ensureIconDecoded(const UserData *userData) const;
   mutable bool disabledCountsDirty_ = true;
   mutable QHash<int, QPair<int, int>> disabledCounts_;
   void clear();
-  int rowById(int id) const;
-  int rowByParid(int parid) const;
   UserData * userDataById(int id) const;
 
   QTreeView *view_;
@@ -98,11 +107,12 @@ private:
   int rootParentId_;
   int indexId_;
   int indexParid_;
+  int indexImage_;
 
-  QMap<int,int> id2RowList_;
-  QMap<int,int> parid2RowList_;
-  QMap<int,UserData*> userDataList_;
-  QHash<int,int> columnsList_;
+  QHash<int, QVector<UserData*>> childrenByParent_;
+  QHash<int, UserData*> userDataList_;
+  QHash<int, int> columnsList_;
+  QHash<QString, int> columnIndexByName_;
 
 
 };

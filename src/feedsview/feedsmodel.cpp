@@ -30,6 +30,9 @@ FeedsModel::FeedsModel(QObject *parent)
   , defaultIconFeeds_(false)
   , view_(0)
   , rootParentId_(0)
+  , indexId_(-1)
+  , indexParid_(-1)
+  , indexImage_(-1)
 {
   setObjectName("FeedsModel");
 
@@ -45,9 +48,9 @@ void FeedsModel::clear()
 {
   disabledCounts_.clear();
   disabledCountsDirty_ = true;
-  id2RowList_.clear();
-  parid2RowList_.clear();
+  childrenByParent_.clear();
   columnsList_.clear();
+  columnIndexByName_.clear();
 
   qDeleteAll(userDataList_);
   userDataList_.clear();
@@ -63,63 +66,61 @@ void FeedsModel::refresh()
   while (queryModel_.canFetchMore())
     queryModel_.fetchMore();
 
-  indexId_ = queryModel_.record().indexOf("id");
-  indexParid_ = queryModel_.record().indexOf("parentId");
-  for (int i = 0; i < queryModel_.record().count(); i++) {
+  const QSqlRecord baseRecord = queryModel_.record();
+  indexId_ = baseRecord.indexOf("id");
+  indexParid_ = baseRecord.indexOf("parentId");
+  indexImage_ = baseRecord.indexOf("image");
+  for (int i = 0; i < baseRecord.count(); i++) {
     columnsList_[i] = i;
   }
-  columnsList_[0] = queryModel_.record().indexOf("text");
-  columnsList_[queryModel_.record().indexOf("text")] = 0;
+  const int textIdx = baseRecord.indexOf("text");
+  columnsList_[0] = textIdx;
+  columnsList_[textIdx] = 0;
+  for (int i = 0; i < baseRecord.count(); i++) {
+    columnIndexByName_[baseRecord.fieldName(i)] = columnsList_.value(i, i);
+  }
 
-  for (int i = 0; i < queryModel_.rowCount(); i++) {
-    int id = queryModel_.record(i).value(indexId_).toInt();
-    id2RowList_[id] = i;
-    int parid = queryModel_.record(i).value(indexParid_).toInt();
-    parid2RowList_[i] = parid;
-    userDataList_[id] = new UserData(id, parid, queryModel_.record(i));
+  const int rowTotal = queryModel_.rowCount();
+  userDataList_.reserve(rowTotal);
+  for (int i = 0; i < rowTotal; i++) {
+    const QSqlRecord rowRecord = queryModel_.record(i);
+    int id = rowRecord.value(indexId_).toInt();
+    int parid = rowRecord.value(indexParid_).toInt();
+    QVector<UserData*> &siblings = childrenByParent_[parid];
+    UserData *userData = new UserData(id, parid, siblings.size(), rowRecord);
+    siblings.append(userData);
+    userDataList_[id] = userData;
   }
 }
 
 UserData * FeedsModel::userDataById(int id) const
 {
-  return userDataList_.value(id, 0);
-}
-
-int FeedsModel::rowById(int id) const
-{
-  return id2RowList_.value(id, -1);
-}
-
-int FeedsModel::rowByParid(int parid) const
-{
-  return parid2RowList_.key(parid, -1);
+  return userDataList_.value(id, nullptr);
 }
 
 int FeedsModel::rowCount(const QModelIndex &parent) const
 {
-  if (parent.isValid())
-    return parid2RowList_.keys(idByIndex(parent)).count();
-  else
-    return parid2RowList_.keys(rootParentId_).count();
+  const int parentId = parent.isValid() ? idByIndex(parent) : rootParentId_;
+  const auto it = childrenByParent_.constFind(parentId);
+  return it != childrenByParent_.constEnd() ? it.value().count() : 0;
 }
 
 int FeedsModel::columnCount(const QModelIndex&) const
 {
-  return queryModel_.record().count();
+  return columnsList_.count();
 }
 
 QModelIndex FeedsModel::index(int row, int column, const QModelIndex &parent) const
 {
-  if (row == -1)
+  if (row < 0 || column < 0)
     return QModelIndex();
 
-  int id = 0;
-  if (parent.isValid())
-    id = id2RowList_.key(row + rowByParid(idByIndex(parent)), 0);
-  else
-    id = id2RowList_.key(row, 0);
+  const int parentId = parent.isValid() ? idByIndex(parent) : rootParentId_;
+  const auto it = childrenByParent_.constFind(parentId);
+  if (it == childrenByParent_.constEnd() || row >= it.value().count())
+    return QModelIndex();
 
-  UserData *userData = userDataById(id);
+  UserData *userData = it.value().at(row);
   if (userData)
     return createIndex(row, column, userData);
   else
@@ -137,8 +138,7 @@ QModelIndex FeedsModel::parent(const QModelIndex &index) const
 
   UserData *userData = userDataById(parid);
   if (userData) {
-    int row = rowById(parid) - rowByParid(userData->parid);
-    return createIndex(row, 0, userData);
+    return createIndex(userData->rowInParent, 0, userData);
   } else {
     return QModelIndex();
   }
@@ -225,39 +225,43 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
   } else if (role == Qt::DecorationRole) {
     if (indexColumnOf("text") == index.column()) {
       if (isFolder(index)) {
-        return QPixmap(":/images/folder");
+        static const QPixmap folderPixmap(QStringLiteral(":/images/folder"));
+        return folderPixmap;
       } else {
+        const UserData *userData = static_cast<const UserData*>(index.internalPointer());
+        const QString strStatus = indexSibling(index, "status").data(Qt::EditRole).toString();
+        const int statusCode = strStatus.section(QLatin1Char(' '), 0, 0).toInt();
+
         if (!defaultIconFeeds_) {
-          QByteArray byteArray = indexSibling(index, "image").data(Qt::EditRole).toByteArray();
-          if (!byteArray.isNull()) {
-            QImage resultImage;
-            if (resultImage.loadFromData(QByteArray::fromBase64(byteArray))) {
-              QString strStatus = indexSibling(index, "status").data(Qt::EditRole).toString();
-              if (strStatus.section(" ", 0, 0).toInt() != 0) {
-                QImage image;
-                if (strStatus.section(" ", 0, 0).toInt() == 1)
-                  image.load(":/images/bulletUpdate");
-                QPainter resultPainter(&resultImage);
-                resultPainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-                resultPainter.drawImage(0, 0, image);
-                resultPainter.end();
-              }
-              return resultImage;
-            }
+          ensureIconDecoded(userData);
+          if (!userData->customIconPixmap.isNull()) {
+            if (statusCode == 0)
+              return userData->customIconPixmap;
+
+            QImage resultImage = userData->customIconImage;
+            QImage image;
+            if (statusCode == 1)
+              image.load(":/images/bulletUpdate");
+            QPainter resultPainter(&resultImage);
+            resultPainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+            resultPainter.drawImage(0, 0, image);
+            resultPainter.end();
+            return resultImage;
           }
         }
-        QImage resultImage(":/images/feed");
-        QString strStatus = indexSibling(index, "status").data(Qt::EditRole).toString();
-        if (strStatus.section(" ", 0, 0).toInt() != 0) {
-          QImage image;
-          if (strStatus.section(" ", 0, 0).toInt() == 1)
-            image.load(":/images/bulletUpdate");
-
-          QPainter resultPainter(&resultImage);
-          resultPainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-          resultPainter.drawImage(0, 0, image);
-          resultPainter.end();
+        if (statusCode == 0) {
+          static const QPixmap feedPixmap(QStringLiteral(":/images/feed"));
+          return feedPixmap;
         }
+        QImage resultImage(":/images/feed");
+        QImage image;
+        if (statusCode == 1)
+          image.load(":/images/bulletUpdate");
+
+        QPainter resultPainter(&resultImage);
+        resultPainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        resultPainter.drawImage(0, 0, image);
+        resultPainter.end();
         return resultImage;
       }
     }
@@ -302,7 +306,7 @@ QVariant FeedsModel::data(const QModelIndex &index, int role) const
   if (!((role == Qt::EditRole) || (role == Qt::DisplayRole)))
     return QVariant();
 
-  QSqlRecord record = static_cast<UserData*>(index.internalPointer())->record;
+  const QSqlRecord &record = static_cast<const UserData*>(index.internalPointer())->record;
   return record.value(indexColumnOf(index.column()));
 }
 
@@ -311,11 +315,17 @@ bool FeedsModel::setData(const QModelIndex &index, const QVariant &value, int)
   if (!index.isValid())
     return false;
 
-  QSqlRecord *record = &static_cast<UserData*>(index.internalPointer())->record;
+  UserData *userData = static_cast<UserData*>(index.internalPointer());
+  QSqlRecord *record = &userData->record;
   const int field = indexColumnOf(index.column());
   const QString name = record->fieldName(field);
   if (name == "disableUpdate" || name == "xmlUrl" || name == "parentId")
     disabledCountsDirty_ = true;
+  if (name == "image" || name == "xmlUrl") {
+    userData->iconDecoded = false;
+    userData->customIconImage = QImage();
+    userData->customIconPixmap = QPixmap();
+  }
   record->setValue(field, value);
   return true;
 }
@@ -337,15 +347,14 @@ Qt::DropActions FeedsModel::supportedDropActions() const
 
 QModelIndex FeedsModel::indexById(int id) const
 {
-  QModelIndex parentIndex = QModelIndex();
+  if (id <= 0)
+    return QModelIndex();
   UserData *userData = userDataById(id);
-  if (userData)
-    parentIndex = indexById(userData->parid);
-  for (int i = 0; i < rowCount(parentIndex); i++) {
-    if (idByIndex(index(i, 0, parentIndex)) == id)
-      return index(i,0,parentIndex);
-  }
-  return QModelIndex();
+  if (!userData)
+    return QModelIndex();
+  if (userData->parid != rootParentId_ && !userDataById(userData->parid))
+    return QModelIndex();
+  return createIndex(userData->rowInParent, 0, userData);
 }
 
 int FeedsModel::idByIndex(const QModelIndex &index) const
@@ -369,6 +378,9 @@ int FeedsModel::indexColumnOf(int column) const
 
 int FeedsModel::indexColumnOf(const QString &name) const
 {
+  const auto it = columnIndexByName_.constFind(name);
+  if (it != columnIndexByName_.constEnd())
+    return it.value();
   return indexColumnOf(queryModel_.record().indexOf(name));
 }
 
@@ -380,6 +392,37 @@ void FeedsModel::setView(QTreeView *view)
 QVariant FeedsModel::dataField(const QModelIndex &index, const QString &fieldName) const
 {
   return indexSibling(index, fieldName).data(Qt::EditRole);
+}
+
+void FeedsModel::ensureIconDecoded(const UserData *userData) const
+{
+  if (!userData || userData->iconDecoded)
+    return;
+  userData->iconDecoded = true;
+  if (indexImage_ < 0)
+    return;
+  const QByteArray byteArray = userData->record.value(indexImage_).toByteArray();
+  if (!byteArray.isNull()) {
+    if (userData->customIconImage.loadFromData(QByteArray::fromBase64(byteArray))) {
+      userData->customIconPixmap = QPixmap::fromImage(userData->customIconImage);
+    }
+  }
+}
+
+QPixmap FeedsModel::feedIcon(const QModelIndex &index) const
+{
+  if (!index.isValid())
+    return QPixmap();
+  if (isFolder(index)) {
+    static const QPixmap folderPixmap(QStringLiteral(":/images/folder"));
+    return folderPixmap;
+  }
+  const UserData *userData = static_cast<const UserData*>(index.internalPointer());
+  ensureIconDecoded(userData);
+  if (!userData->customIconPixmap.isNull())
+    return userData->customIconPixmap;
+  static const QPixmap feedPixmap(QStringLiteral(":/images/feed"));
+  return feedPixmap;
 }
 
 /** @brief Check if item is folder
