@@ -39,6 +39,8 @@ private:
   QTreeWidget *list_;
   QDialogButtonBox *buttons_;
   class QLabel *status_;
+  int probed_ = 0;
+  int total_ = 0;
   bool incomplete_ = false;
   bool finished_ = false;
 };

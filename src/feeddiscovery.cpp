@@ -147,8 +147,37 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
   };
   for (const QString &href : std::as_const(links.hrefs))
     enqueue(base.resolved(QUrl(href)), links.advertised.contains(href), links.names.value(href));
-  for (const char *path : {"/feed/", "/rss.xml", "/atom.xml", "/feed.xml"})
-    enqueue(page.resolved(QUrl(QString::fromLatin1(path))));
+
+  static const QStringList fallbackPaths = {
+      // Standard Root Slugs & Extensions
+      "/feed", "/rss", "/atom", "/feed/", "/rss/", "/atom/",
+      "/feed.xml", "/rss.xml", "/atom.xml", "/index.xml",
+      "/index.rss", "/index.atom", "/feed.json", "/index.json",
+      "/rdf", "/feed.rdf", "/index.rdf", "/rss.rdf", "/rss.rss",
+
+      // Sub-directory & Content Paths
+      "/blog/feed", "/blog/rss.xml", "/blog/atom.xml",
+      "/news/feed", "/news/rss.xml", "/posts/feed.xml", "/posts/index.xml",
+
+      // Legacy Query Parameters & Platform Endpoints
+      "/?feed=rss2", "/?feed=atom", "/?feed=rss", "/?feed=rdf",
+      "/index.php?format=feed&type=rss", "/index.php?format=feed&type=atom",
+      "/rss.php", "/backend.php", "/atom.aspx", "/rss.ashx",
+
+      // Taxonomy / Comments Fallbacks
+      "/category/feed", "/tag/feed", "/comments/feed"
+  };
+
+  for (const QString &path : fallbackPaths) {
+    if (path.startsWith("/?")) {
+      QUrl queryUrl = page;
+      queryUrl.setQuery(path.mid(2));
+      enqueue(queryUrl);
+    } else {
+      enqueue(page.resolved(QUrl(path)));
+    }
+  }
+
   // Automatic probes contact only the page origin. Ask before contacting
   // additional origins advertised in untrusted HTML.
   // The user entered one origin and the initial request already visited the final page.
@@ -174,7 +203,8 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
       }
     }
     if (!isVisible()) return;
-    QTimer::singleShot(60000, this, [this] {
+    total_ = pending_.size();
+    QTimer::singleShot(qMax(60000, total_ * 10000), this, [this] {
       if (!finished_) { emit stopRequests(); incomplete_ = true; finishScan(); }
     });
     next();
@@ -193,8 +223,14 @@ QStringList FeedDiscovery::selection() const
 
 void FeedDiscovery::next()
 {
+  if (finished_) return;
   if (pending_.isEmpty()) { finishScan(); return; }
-  emit requestUrl(scanId_, pending_.takeFirst().toString(), {}, {});
+  const QString url = pending_.takeFirst().toString();
+  status_->setText(tr("Probing (%1 of %2): %3 ...")
+                       .arg(++probed_)
+                       .arg(total_)
+                       .arg(url));
+  emit requestUrl(scanId_, url, {}, {});
 }
 
 void FeedDiscovery::received(int result, int id, QString requested, QString diagnostic, QByteArray data,
@@ -218,7 +254,12 @@ void FeedDiscovery::received(int result, int id, QString requested, QString diag
     if (diagnostic.isEmpty()) diagnostic = result < 0 ? tr("Request failed") : tr("Response was not a supported feed");
     addResult(url, names_.value(url), diagnostic);
   }
-  next();
+  if (pending_.isEmpty()) {
+    finishScan();
+    return;
+  }
+  status_->setText(tr("Pausing ..."));
+  QTimer::singleShot(2000, this, &FeedDiscovery::next);
 }
 
 void FeedDiscovery::addResult(const QUrl &url, QString title, const QString &detail)
