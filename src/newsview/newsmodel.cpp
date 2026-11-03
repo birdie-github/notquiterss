@@ -26,6 +26,8 @@ NewsModel::NewsModel(QObject *parent, QTreeView *view)
   : QSqlTableModel(parent)
   , simplifiedDateTime_(true)
   , view_(view)
+  , sortColumn_(-1)
+  , sortOrder_(Qt::AscendingOrder)
 {
   setEditStrategy(QSqlTableModel::OnManualSubmit);
 }
@@ -232,15 +234,17 @@ QVariant NewsModel::data(const QModelIndex &index, int role) const
   return QSqlTableModel::setData(index, value, role);
 }
 
+/*virtual*/ void NewsModel::setSort(int column, Qt::SortOrder order)
+{
+  sortColumn_ = column;
+  sortOrder_ = order;
+  QSqlTableModel::setSort(column, order);
+}
+
 /*virtual*/ void NewsModel::sort(int column, Qt::SortOrder order)
 {
   int newsId = index(view_->currentIndex().row(), fieldIndex("id")).data().toInt();
 
-  if ((column == fieldIndex("read")) || (column == fieldIndex("starred")) ||
-      (column == fieldIndex("rights"))) {
-    emit signalSort(column, order);
-    column = fieldIndex("rights");
-  }
   QSqlTableModel::sort(column, order);
 
   while (canFetchMore())
@@ -341,6 +345,28 @@ QString NewsModel::selectStatement() const
   if (!order.isEmpty())
     query += QLatin1Char(' ') + order;
   return query;
+}
+
+QString NewsModel::orderByClause() const
+{
+  if (sortColumn_ < 0)
+    return QSqlTableModel::orderByClause();
+
+  const QString dir = (sortOrder_ == Qt::AscendingOrder)
+      ? QStringLiteral("ASC")
+      : QStringLiteral("DESC");
+
+  if (sortColumn_ == fieldIndex(QStringLiteral("read"))) {
+    return QStringLiteral("ORDER BY CASE WHEN news.read = 0 THEN 0 ELSE 1 END %1, news.published DESC, news.id DESC").arg(dir);
+  }
+  if (sortColumn_ == fieldIndex(QStringLiteral("starred"))) {
+    return QStringLiteral("ORDER BY news.starred %1, news.published DESC, news.id DESC").arg(dir);
+  }
+  if (sortColumn_ == fieldIndex(QStringLiteral("rights"))) {
+    return QStringLiteral("ORDER BY (SELECT text FROM feeds WHERE id = news.feedId) COLLATE NOCASE %1, news.published DESC, news.id DESC").arg(dir);
+  }
+
+  return QSqlTableModel::orderByClause();
 }
 
 void NewsModel::setFilter(const QString &filter)

@@ -4121,12 +4121,6 @@ void MainWindow::setNewsFilter(QAction* pAct, bool clicked)
   while (newsModel_->canFetchMore())
     newsModel_->fetchMore();
 
-  if ((currentNewsTab->newsHeader_->sortIndicatorSection() == newsModel_->fieldIndex("read")) ||
-      currentNewsTab->newsHeader_->sortIndicatorSection() == newsModel_->fieldIndex("starred")) {
-    currentNewsTab->slotSort(currentNewsTab->newsHeader_->sortIndicatorSection(),
-                             currentNewsTab->newsHeader_->sortIndicatorOrder());
-  }
-
   currentNewsTab->loadNewspaper();
 
   // Set icon right before user click
@@ -6901,12 +6895,6 @@ void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTa
     if (type == NewsTabWidget::TabTypeDel){
       currentNewsTab->newsHeader_->setSortIndicator(newsModel_->fieldIndex("deleteDate"),
                                                     Qt::DescendingOrder);
-    } else {
-      if ((currentNewsTab->newsHeader_->sortIndicatorSection() == newsModel_->fieldIndex("read")) ||
-          currentNewsTab->newsHeader_->sortIndicatorSection() == newsModel_->fieldIndex("starred")) {
-        currentNewsTab->slotSort(currentNewsTab->newsHeader_->sortIndicatorSection(),
-                                 currentNewsTab->newsHeader_->sortIndicatorOrder());
-      }
     }
 
     currentNewsTab->loadNewspaper();

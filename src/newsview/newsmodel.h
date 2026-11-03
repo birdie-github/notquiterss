@@ -30,6 +30,7 @@ public:
   virtual QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
   virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
   virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
+  virtual void setSort(int column, Qt::SortOrder order);
   virtual void sort(int column, Qt::SortOrder order);
   virtual QModelIndexList match(
       const QModelIndex &start, int role, const QVariant &value, int hits = 1,
@@ -50,14 +51,14 @@ public:
   QString focusedNewsTextColor_;
   QString focusedNewsBGColor_;
 
-signals:
-  void signalSort(int column, int order);
-
 protected:
   virtual QString selectStatement() const;
+  virtual QString orderByClause() const;
 
 private:
   QTreeView *view_;
+  int sortColumn_;
+  Qt::SortOrder sortOrder_;
 
 };
 

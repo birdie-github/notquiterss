@@ -286,8 +286,6 @@ void NewsTabWidget::createNewsList()
   connect(markNewsReadTimer_, &QTimer::timeout, this, &NewsTabWidget::slotMarkReadTimeout);
   connect(newsView_, &QWidget::customContextMenuRequested, this, &NewsTabWidget::showContextMenuNews);
 
-  connect(newsModel_, &NewsModel::signalSort, this, &NewsTabWidget::slotSort);
-
   connect(findText_, &QLineEdit::textChanged, this, &NewsTabWidget::slotFindText);
   connect(findText_, &FindTextContent::signalSelectFind, this, &NewsTabWidget::slotSelectFind);
   connect(findText_, &QLineEdit::returnPressed, this, &NewsTabWidget::slotSelectFind);
@@ -1162,32 +1160,6 @@ void NewsTabWidget::slotCopyLinkNews()
 
   QClipboard *clipboard = QApplication::clipboard();
   clipboard->setText(copyStr);
-}
-
-/** @brief Sort news by Star or Read column
- *----------------------------------------------------------------------------*/
-void NewsTabWidget::slotSort(int column, int/* order*/)
-{
-  QString strId;
-  if (feedsModel_->isFolder(feedsModel_->indexById(feedId_))) {
-    strId = QString("(%1)").arg(mainWindow_->getIdFeedsString(feedId_));
-  } else {
-    strId = QString("feedId='%1'").arg(feedId_);
-  }
-
-  QString qStr;
-  if (column == newsModel_->fieldIndex("read")) {
-    qStr = QString("UPDATE news SET rights=read WHERE %1").arg(strId);
-  }
-  else if (column == newsModel_->fieldIndex("starred")) {
-    qStr = QString("UPDATE news SET rights=starred WHERE %1").arg(strId);
-  }
-  else if (column == newsModel_->fieldIndex("rights")) {
-    qStr = QString("UPDATE news SET rights = (SELECT text from feeds where id = news.feedId) WHERE %1").arg(strId);
-  }
-
-  QSqlQuery q;
-  q.exec(qStr);
 }
 
 /** @brief Load/Update browser contents

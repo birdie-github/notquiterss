@@ -145,7 +145,6 @@ public slots:
   void slotNewsEndPressed(QModelIndex index=QModelIndex());
   void slotNewsPageUpPressed(QModelIndex index=QModelIndex());
   void slotNewsPageDownPressed(QModelIndex index=QModelIndex());
-  void slotSort(int column, int order);
 
 signals:
   void signalSetTextTab(const QString &text, NewsTabWidget *widget);
