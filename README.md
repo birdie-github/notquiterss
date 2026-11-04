@@ -1,7 +1,7 @@
 ![Build Status](https://github.com/birdie-github/notquiterss/actions/workflows/ci.yml/badge.svg?branch=master)
 
 © 2011-2020 QuiteRSS Project  
-© 2026 Artem S. Tashkinov and ChatGPT
+© 2026 Artem S. Tashkinov and LLMs
 
 NotQuiteRSS is a fork of QuiteRSS, an open-source, cross-platform RSS/Atom news feed reader written in C++/Qt.
 
