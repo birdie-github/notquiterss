@@ -296,240 +296,278 @@ void MainWindow::createCentralWidget()
   setCentralWidget(centralWidget_);
 }
 
+struct MainWindow::UiBindings {
+  enum ActionFlags {
+    NoFlags     = 0,
+    AddToWindow = 1 << 0,
+    Checkable   = 1 << 1,
+    Checked     = 1 << 2,
+  };
+
+  struct ActionSpec {
+    QAction *MainWindow::*member;
+    const char *objectName;
+    const char *iconPath;
+    int flags;
+    const char *text;
+    const char *toolTip;
+  };
+
+  struct ShortcutSpec {
+    QAction *MainWindow::*member;
+    int defaultKey;
+  };
+
+  struct MenuTitleSpec {
+    QMenu *MainWindow::*menu;
+    const char *title;
+  };
+
+  static const ActionSpec kActions[];
+  static const ShortcutSpec kShortcuts[];
+  static const MenuTitleSpec kMenuTitles[];
+};
+
+const MainWindow::UiBindings::ActionSpec MainWindow::UiBindings::kActions[] = {
+  { &MainWindow::addAct_,                     "newAct",                   ":/images/add",                       AddToWindow,                       QT_TR_NOOP("&Add"),                                                QT_TR_NOOP("Add New Feed") },
+  { &MainWindow::addFeedAct_,                 "addFeedAct",               ":/images/feed",                      AddToWindow,                       QT_TR_NOOP("&Feed..."),                                            QT_TR_NOOP("Add New Feed") },
+  { &MainWindow::addFeedTrayAct_,             nullptr,                    ":/images/feed",                      NoFlags,                           QT_TR_NOOP("Add Feed..."),                                         nullptr },
+  { &MainWindow::addFolderAct_,               "addFolderAct",             ":/images/folder",                    AddToWindow,                       QT_TR_NOOP("F&older..."),                                          QT_TR_NOOP("Add New Folder") },
+  { &MainWindow::openFeedNewTabAct_,          "openNewTabAct",            nullptr,                              AddToWindow,                       QT_TR_NOOP("Open in New Tab"),                                     nullptr },
+  { &MainWindow::deleteFeedAct_,              "deleteFeedAct",            ":/images/delete",                    AddToWindow,                       QT_TR_NOOP("&Delete..."),                                          QT_TR_NOOP("Delete Selected Feed") },
+  { &MainWindow::importFeedsAct_,             "importFeedsAct",           ":/images/importFeeds",               AddToWindow,                       QT_TR_NOOP("&Import Feeds..."),                                    QT_TR_NOOP("Import Feeds from OPML File") },
+  { &MainWindow::exportFeedsAct_,             "exportFeedsAct",           ":/images/exportFeeds",               AddToWindow,                       QT_TR_NOOP("&Export Feeds..."),                                    QT_TR_NOOP("Export Feeds to OPML File") },
+  { &MainWindow::createBackupAct_,            "createBackupAct",          ":/images/backup",                    AddToWindow,                       QT_TR_NOOP("&Create Backup..."),                                   nullptr },
+  { &MainWindow::showMenuBarAct_,             nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("S&how Menu Bar"),                                      nullptr },
+  { &MainWindow::exitAct_,                    "exitAct",                  nullptr,                              AddToWindow,                       QT_TR_NOOP("E&xit"),                                               nullptr },
+  { &MainWindow::mainToolbarToggle_,          nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Main Toolbar"),                                        nullptr },
+  { &MainWindow::feedsToolbarToggle_,         nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Feeds Toolbar"),                                       nullptr },
+  { &MainWindow::newsToolbarToggle_,          nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("News Toolbar"),                                        nullptr },
+  { &MainWindow::categoriesPanelToggle_,      nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Panel Categories"),                                    nullptr },
+  { &MainWindow::statusBarToggle_,            nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Status Bar"),                                          nullptr },
+  { &MainWindow::customizeMainToolbarAct_,    "customizeMainToolbarAct",  nullptr,                              NoFlags,                           QT_TR_NOOP("Main Toolbar..."),                                     nullptr },
+  { &MainWindow::customizeMainToolbarAct2_,   nullptr,                    nullptr,                              NoFlags,                           QT_TR_NOOP("Customize Toolbar..."),                                nullptr },
+  { &MainWindow::toolBarLockAct_,             nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Lock Toolbar"),                                        nullptr },
+  { &MainWindow::toolBarHideAct_,             nullptr,                    nullptr,                              NoFlags,                           QT_TR_NOOP("Hide Toolbar"),                                        nullptr },
+  { &MainWindow::customizeFeedsToolbarAct_,   "customizeFeedsToolbarAct", nullptr,                              NoFlags,                           QT_TR_NOOP("Feeds Toolbar..."),                                    nullptr },
+  { &MainWindow::customizeNewsToolbarAct_,    "customizeNewsToolbarAct",  nullptr,                              NoFlags,                           QT_TR_NOOP("News Toolbar..."),                                     nullptr },
+  { &MainWindow::classicLayoutAct_,           "classicLayoutAct_",        ":/images/layout_classic",            Checkable,                         QT_TR_NOOP("Classic"),                                             nullptr },
+  { &MainWindow::newspaperLayoutAct_,         "newspaperLayoutAct_",      ":/images/layout_newspaper",          Checkable,                         QT_TR_NOOP("Newspaper"),                                           nullptr },
+  { &MainWindow::layoutToggle_,               "layoutToggle",             ":/images/layout_classic",            AddToWindow,                       QT_TR_NOOP("Layout"),                                              nullptr },
+  { &MainWindow::topBrowserPositionAct_,      nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Top"),                                                 nullptr },
+  { &MainWindow::bottomBrowserPositionAct_,   nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Bottom"),                                              nullptr },
+  { &MainWindow::rightBrowserPositionAct_,    nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Right"),                                               nullptr },
+  { &MainWindow::leftBrowserPositionAct_,     nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Left"),                                                nullptr },
+  { &MainWindow::autoLoadImagesToggle_,       "autoLoadImagesToggle",     ":/images/imagesOn",                  AddToWindow,                       nullptr,                                                           nullptr },
+  { &MainWindow::printAct_,                   "printAct",                 ":/images/printer",                   AddToWindow,                       QT_TR_NOOP("Print..."),                                            QT_TR_NOOP("Print Article") },
+  { &MainWindow::printPreviewAct_,            "printPreviewAct",          ":/images/printer",                   AddToWindow,                       QT_TR_NOOP("Print Preview..."),                                    QT_TR_NOOP("Preview Article") },
+  { &MainWindow::savePageAsAct_,              "savePageAsAct",            ":/images/save_as",                   AddToWindow,                       QT_TR_NOOP("Save As..."),                                          QT_TR_NOOP("Save Article As...") },
+  { &MainWindow::zoomInAct_,                  "zoomInAct",                ":/images/zoomIn",                    AddToWindow,                       QT_TR_NOOP("Zoom In"),                                             QT_TR_NOOP("Zoom in") },
+  { &MainWindow::zoomOutAct_,                 "zoomOutAct",               ":/images/zoomOut",                   AddToWindow,                       QT_TR_NOOP("Zoom Out"),                                            QT_TR_NOOP("Zoom out") },
+  { &MainWindow::zoomTo100Act_,               "zoomTo100Act",             nullptr,                              AddToWindow,                       QT_TR_NOOP("100%"),                                                QT_TR_NOOP("Reset zoom") },
+  { &MainWindow::updateFeedAct_,              "updateFeedAct",            ":/images/updateFeed",                AddToWindow,                       nullptr,                                                           nullptr },
+  { &MainWindow::updateAllFeedsAct_,          "updateAllFeedsAct",        ":/images/updateAllFeeds",            AddToWindow,                       QT_TR_NOOP("Update All"),                                          QT_TR_NOOP("Update All Feeds") },
+  { &MainWindow::stopUpdateAct_,              "stopUpdateAct",            ":/images/close",                     AddToWindow,                       QT_TR_NOOP("Stop Updating Feeds"),                                 QT_TR_NOOP("Stop Updating Feeds") },
+  { &MainWindow::markAllFeedsRead_,           "markAllFeedRead",          ":/images/markReadAll",               AddToWindow,                       QT_TR_NOOP("Mark All Feeds Read"),                                 nullptr },
+  { &MainWindow::indentationFeedsTreeAct_,    nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Enable Indentation"),                                  nullptr },
+  { &MainWindow::sortedByTitleFeedsTreeAct_,  nullptr,                    nullptr,                              NoFlags,                           QT_TR_NOOP("Sort by Name"),                                        nullptr },
+  { &MainWindow::collapseAllFoldersAct_,      "collapseAllFolderAct",     ":/images/bulletMinus",               AddToWindow,                       QT_TR_NOOP("Collapse All Folders"),                                nullptr },
+  { &MainWindow::expandAllFoldersAct_,        "expandAllFolderAct",       ":/images/bulletPlus",                AddToWindow,                       QT_TR_NOOP("Expand All Folders"),                                  nullptr },
+  { &MainWindow::markNewsRead_,               "markNewsRead",             ":/images/markRead",                  AddToWindow,                       QT_TR_NOOP("Mark Article Read/Unread"),                            QT_TR_NOOP("Mark Current Article Read/Unread") },
+  { &MainWindow::markAllNewsRead_,            "markAllNewsRead",          ":/images/markReadAll",               AddToWindow,                       QT_TR_NOOP("Mark All Articles Read"),                              QT_TR_NOOP("Mark All Articles Read") },
+  { &MainWindow::showDownloadManagerAct_,     "showDownloadManagerAct",   ":/images/download",                  AddToWindow,                       QT_TR_NOOP("Downloads"),                                           nullptr },
+  { &MainWindow::showCleanUpWizardAct_,       "showCleanUpWizardAct",     ":/images/cleanup",                   AddToWindow,                       QT_TR_NOOP("Clean Up..."),                                         nullptr },
+  { &MainWindow::setNewsFiltersAct_,          "setNewsFiltersAct",        ":/images/filterOff",                 AddToWindow,                       QT_TR_NOOP("Article Filters..."),                                  nullptr },
+  { &MainWindow::bulkFeedSettingsAct_,        "bulkFeedSettingsAct",      nullptr,                              AddToWindow,                       QT_TR_NOOP("Bulk configure feeds..."),                             nullptr },
+  { &MainWindow::websiteCookiesAct_,          "websiteCookiesAct",        nullptr,                              AddToWindow,                       QT_TR_NOOP("Website cookies…"),                                    nullptr },
+  { &MainWindow::setFilterNewsAct_,           "setFilterNewsAct",         ":/images/filterOff",                 AddToWindow,                       QT_TR_NOOP("Filter Articles..."),                                  nullptr },
+  { &MainWindow::optionsAct_,                 "optionsAct",               ":/images/options",                   AddToWindow,                       QT_TR_NOOP("Options..."),                                          QT_TR_NOOP("Open Options Dialog") },
+  { &MainWindow::feedsFilter_,                "feedsFilter",              ":/images/filterOff",                 AddToWindow,                       QT_TR_NOOP("Filter Feeds"),                                        nullptr },
+  { &MainWindow::filterFeedsAll_,             "filterFeedsAll_",          nullptr,                              Checkable | Checked,               QT_TR_NOOP("Show All"),                                            nullptr },
+  { &MainWindow::filterFeedsNew_,             "filterFeedsNew_",          nullptr,                              Checkable,                         QT_TR_NOOP("Show New"),                                            nullptr },
+  { &MainWindow::filterFeedsUnread_,          "filterFeedsUnread_",       nullptr,                              Checkable,                         QT_TR_NOOP("Show Unread"),                                         nullptr },
+  { &MainWindow::filterFeedsStarred_,         "filterFeedsStarred_",      nullptr,                              Checkable,                         QT_TR_NOOP("Show Starred Feeds"),                                  nullptr },
+  { &MainWindow::filterFeedsError_,           "filterFeedsError_",        nullptr,                              Checkable,                         QT_TR_NOOP("Show Not Working Feeds"),                              nullptr },
+  { &MainWindow::newsFilter_,                 "newsFilter",               ":/images/filterOff",                 AddToWindow,                       QT_TR_NOOP("Filter News"),                                         nullptr },
+  { &MainWindow::filterNewsAll_,              "filterNewsAll_",           nullptr,                              Checkable | Checked,               QT_TR_NOOP("Show All"),                                            nullptr },
+  { &MainWindow::filterNewsNew_,              "filterNewsNew_",           nullptr,                              Checkable,                         QT_TR_NOOP("Show New"),                                            nullptr },
+  { &MainWindow::filterNewsUnread_,           "filterNewsUnread_",        nullptr,                              Checkable,                         QT_TR_NOOP("Show Unread"),                                         nullptr },
+  { &MainWindow::filterNewsStar_,             "filterNewsStar_",          nullptr,                              Checkable,                         QT_TR_NOOP("Show Starred"),                                        nullptr },
+  { &MainWindow::filterNewsNotStarred_,       "filterNewsNotStarred_",    nullptr,                              Checkable,                         QT_TR_NOOP("Show Not Starred"),                                    nullptr },
+  { &MainWindow::filterNewsUnreadStar_,       "filterNewsUnreadStar_",    nullptr,                              Checkable,                         QT_TR_NOOP("Show Unread or Starred"),                              nullptr },
+  { &MainWindow::filterNewsLastDay_,          "filterNewsLastDay_",       nullptr,                              Checkable,                         QT_TR_NOOP("Show Last Day"),                                       nullptr },
+  { &MainWindow::filterNewsLastWeek_,         "filterNewsLastWeek_",      nullptr,                              Checkable,                         QT_TR_NOOP("Show Last 7 Days"),                                    nullptr },
+  { &MainWindow::aboutAct_,                   "AboutAct_",                nullptr,                              NoFlags,                           QT_TR_NOOP("About..."),                                            QT_TR_NOOP("Show 'About' Dialog") },
+  { &MainWindow::updateAppAct_,               "UpdateApp_",               nullptr,                              NoFlags,                           QT_TR_NOOP("Check for Updates..."),                                nullptr },
+  { &MainWindow::reportProblemAct_,           "reportProblemAct_",        nullptr,                              NoFlags,                           QT_TR_NOOP("Report a Problem..."),                                 nullptr },
+  { &MainWindow::openInExternalBrowserAct_,   "openInExternalBrowserAct", ":/images/openBrowser",               AddToWindow,                       QT_TR_NOOP("Open"),                                                QT_TR_NOOP("Open") },
+  { &MainWindow::markStarAct_,                "markStarAct",              ":/images/starOn",                    AddToWindow,                       QT_TR_NOOP("Star"),                                                QT_TR_NOOP("Star Article") },
+  { &MainWindow::deleteNewsAct_,              "deleteNewsAct",            ":/images/delete",                    AddToWindow,                       QT_TR_NOOP("Delete"),                                              QT_TR_NOOP("Delete Selected Articles") },
+  { &MainWindow::deleteAllNewsAct_,           "deleteAllNewsAct",         nullptr,                              AddToWindow,                       QT_TR_NOOP("Delete All Articles"),                                 QT_TR_NOOP("Delete All Articles from List") },
+  { &MainWindow::restoreNewsAct_,             "restoreNewsAct",           ":/images/images/arrow_turn_left.png",NoFlags,                           QT_TR_NOOP("Restore"),                                             QT_TR_NOOP("Restore Article") },
+  { &MainWindow::restoreLastNewsAct_,         "restoreLastNewsAct",       ":/images/images/arrow_turn_left.png",AddToWindow,                       QT_TR_NOOP("Restore Last Deleted Article"),                        nullptr },
+  { &MainWindow::markFeedRead_,               "markFeedRead",             ":/images/markRead",                  AddToWindow,                       QT_TR_NOOP("Mark Read"),                                           QT_TR_NOOP("Mark Feed Read") },
+  { &MainWindow::feedProperties_,             "feedProperties",           ":/images/preferencesFeed",           AddToWindow,                       QT_TR_NOOP("Properties"),                                          QT_TR_NOOP("Properties") },
+  { &MainWindow::feedKeyUpAct_,               "feedKeyUp",                nullptr,                              AddToWindow,                       QT_TR_NOOP("Previous Feed"),                                       nullptr },
+  { &MainWindow::feedKeyDownAct_,             "feedKeyDownAct",           nullptr,                              AddToWindow,                       QT_TR_NOOP("Next Feed"),                                           nullptr },
+  { &MainWindow::newsKeyUpAct_,               "newsKeyUpAct",             nullptr,                              AddToWindow,                       QT_TR_NOOP("Previous Article"),                                    nullptr },
+  { &MainWindow::newsKeyDownAct_,             "newsKeyDownAct",           nullptr,                              AddToWindow,                       QT_TR_NOOP("Next Article"),                                        nullptr },
+  { &MainWindow::newsKeyPageUpAct_,           "newsKeyPageUpAct",         nullptr,                              AddToWindow,                       QT_TR_NOOP("Article Page Up"),                                     nullptr },
+  { &MainWindow::newsKeyPageDownAct_,         "newsKeyPageDownAct",       nullptr,                              AddToWindow,                       QT_TR_NOOP("Article Page Down"),                                   nullptr },
+  { &MainWindow::switchFocusAct_,             "switchFocusAct",           nullptr,                              AddToWindow,                       QT_TR_NOOP("Switch Focus to Next Panel"),                          QT_TR_NOOP("Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)") },
+  { &MainWindow::switchFocusPrevAct_,         "switchFocusPrevAct",       nullptr,                              AddToWindow,                       QT_TR_NOOP("Switch Focus to Previous Panel"),                      QT_TR_NOOP("Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)") },
+  { &MainWindow::feedsWidgetVisibleAct_,      "visibleFeedsWidgetAct",    nullptr,                              AddToWindow | Checkable,           QT_TR_NOOP("Feeds Pane"),                                          nullptr },
+  { &MainWindow::showUnreadCount_,            nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Number of unread articles"),                           nullptr },
+  { &MainWindow::showUndeleteCount_,          nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Total number of articles"),                            nullptr },
+  { &MainWindow::showLastUpdated_,            nullptr,                    nullptr,                              Checkable,                         QT_TR_NOOP("Last update"),                                         nullptr },
+  { &MainWindow::openDescriptionNewsAct_,     "openDescriptionNewsAct",   nullptr,                              AddToWindow,                       QT_TR_NOOP("Open Article"),                                        QT_TR_NOOP("Open Article Description") },
+  { &MainWindow::findTextAct_,                "findTextAct",              nullptr,                              AddToWindow,                       QT_TR_NOOP("Find"),                                                nullptr },
+  { &MainWindow::placeToTrayAct_,             "placeToTrayAct",           nullptr,                              AddToWindow,                       QT_TR_NOOP("Minimize to Tray"),                                    QT_TR_NOOP("Minimize Application to Tray") },
+  { &MainWindow::findFeedAct_,                "findFeedAct",              ":/images/images/findFeed.png",       AddToWindow | Checkable,           QT_TR_NOOP("Search Feed"),                                         QT_TR_NOOP("Search Feed") },
+  { &MainWindow::fullScreenAct_,              "fullScreenAct",            ":/images/images/fullScreen.png",     AddToWindow,                       QT_TR_NOOP("Full Screen"),                                         QT_TR_NOOP("Full Screen") },
+  { &MainWindow::stayOnTopAct_,               "stayOnTopAct",             nullptr,                              AddToWindow | Checkable,           QT_TR_NOOP("Stay On Top"),                                         QT_TR_NOOP("Stay On Top") },
+  { &MainWindow::newsLabelAction_,            "newsLabelAction",          nullptr,                              AddToWindow,                       QT_TR_NOOP("Label"),                                               nullptr },
+  { &MainWindow::showLabelsMenuAct_,          "showLabelsMenuAct",        nullptr,                              AddToWindow,                       QT_TR_NOOP("Show labels menu"),                                    nullptr },
+  { &MainWindow::closeTabAct_,                "closeTabAct",              nullptr,                              AddToWindow,                       QT_TR_NOOP("Close Tab"),                                           nullptr },
+  { &MainWindow::closeOtherTabsAct_,          "closeOtherTabsAct",        nullptr,                              AddToWindow,                       QT_TR_NOOP("Close Other Tabs"),                                    nullptr },
+  { &MainWindow::closeAllTabsAct_,            "closeAllTabsAct",          nullptr,                              AddToWindow,                       QT_TR_NOOP("Close All Tabs"),                                      nullptr },
+  { &MainWindow::nextTabAct_,                 "nextTabAct",               nullptr,                              AddToWindow,                       QT_TR_NOOP("Switch to next tab"),                                  nullptr },
+  { &MainWindow::prevTabAct_,                 "prevTabAct",               nullptr,                              AddToWindow,                       QT_TR_NOOP("Switch to previous tab"),                              nullptr },
+  { &MainWindow::reduceNewsListAct_,          "reduceNewsListAct",        nullptr,                              AddToWindow,                       QT_TR_NOOP("Decrease article list / increase article pane"),       nullptr },
+  { &MainWindow::increaseNewsListAct_,        "increaseNewsListAct",      nullptr,                              AddToWindow,                       QT_TR_NOOP("Increase article list / decrease article pane"),       nullptr },
+  { &MainWindow::nextUnreadNewsAct_,          "nextUnreadNewsAct",        ":/images/moveDown",                  AddToWindow,                       QT_TR_NOOP("Next Unread Article"),                                 nullptr },
+  { &MainWindow::prevUnreadNewsAct_,          "prevUnreadNewsAct",        ":/images/moveUp",                    AddToWindow,                       QT_TR_NOOP("Previous Unread Article"),                             nullptr },
+  { &MainWindow::openHomeFeedAct_,            "openHomeFeedsAct",         ":/images/homePage",                  AddToWindow,                       QT_TR_NOOP("Open Feed Homepage"),                                  nullptr },
+  { &MainWindow::copyLinkAct_,                "copyLinkAct",              ":/images/copy",                      AddToWindow,                       QT_TR_NOOP("Copy Link"),                                           QT_TR_NOOP("Copy Article Link") },
+  { &MainWindow::pageUpWebViewAct_,           "pageUpWebViewAct",         nullptr,                              AddToWindow,                       QT_TR_NOOP("Page up (Article)"),                                   nullptr },
+  { &MainWindow::pageDownWebViewAct_,         "pageDownWebViewAct",       nullptr,                              AddToWindow,                       QT_TR_NOOP("Page down (Article)"),                                 nullptr },
+  { &MainWindow::nextFolderAct_,              "nextFolderAct",            nullptr,                              AddToWindow,                       QT_TR_NOOP("Next Folder"),                                         nullptr },
+  { &MainWindow::prevFolderAct_,              "prevFolderAct",            nullptr,                              AddToWindow,                       QT_TR_NOOP("Previous Folder"),                                     nullptr },
+  { &MainWindow::expandFolderAct_,            "expandFolderAct",          nullptr,                              AddToWindow,                       QT_TR_NOOP("Expand Folder"),                                       nullptr },
+  { &MainWindow::settingPageLabelsAct_,       "settingPageLabelsAct",     nullptr,                              AddToWindow,                       QT_TR_NOOP("Settings Page: Labels"),                               nullptr },
+};
+
+const MainWindow::UiBindings::ShortcutSpec MainWindow::UiBindings::kShortcuts[] = {
+  { &MainWindow::addFeedAct_,               -1 }, // QKeySequence::New
+  { &MainWindow::addFolderAct_,             int(Qt::CTRL | Qt::SHIFT | Qt::Key_N) },
+  { &MainWindow::deleteFeedAct_,            0 },
+  { &MainWindow::createBackupAct_,          0 },
+  { &MainWindow::exitAct_,                  int(Qt::CTRL | Qt::Key_Q) }, // standart on other OS
+  { &MainWindow::updateFeedAct_,            int(Qt::Key_F5) },
+  { &MainWindow::updateAllFeedsAct_,        int(Qt::CTRL | Qt::Key_F5) },
+  { &MainWindow::stopUpdateAct_,            0 },
+  { &MainWindow::openHomeFeedAct_,          0 },
+  { &MainWindow::showDownloadManagerAct_,   0 },
+  { &MainWindow::showCleanUpWizardAct_,     0 },
+  { &MainWindow::setNewsFiltersAct_,        0 },
+  { &MainWindow::bulkFeedSettingsAct_,      0 },
+  { &MainWindow::websiteCookiesAct_,        0 },
+  { &MainWindow::setFilterNewsAct_,         0 },
+  { &MainWindow::optionsAct_,               int(Qt::Key_F8) },
+  { &MainWindow::deleteNewsAct_,            int(Qt::Key_Delete) },
+  { &MainWindow::deleteAllNewsAct_,         int(Qt::CTRL | Qt::Key_Delete) },
+  { &MainWindow::feedProperties_,           int(Qt::CTRL | Qt::Key_E) },
+  { &MainWindow::feedKeyUpAct_,             int(Qt::CTRL | Qt::Key_Up) },
+  { &MainWindow::feedKeyDownAct_,           int(Qt::CTRL | Qt::Key_Down) },
+  { &MainWindow::newsKeyUpAct_,             int(Qt::Key_Left) },
+  { &MainWindow::newsKeyDownAct_,           int(Qt::Key_Right) },
+  { &MainWindow::newsKeyPageUpAct_,         0 },
+  { &MainWindow::newsKeyPageDownAct_,       0 },
+  { &MainWindow::nextUnreadNewsAct_,        0 },
+  { &MainWindow::prevUnreadNewsAct_,        0 },
+  { &MainWindow::nextFolderAct_,            0 },
+  { &MainWindow::prevFolderAct_,            0 },
+  { &MainWindow::importFeedsAct_,           0 },
+  { &MainWindow::exportFeedsAct_,           0 },
+  { &MainWindow::createBackupAct_,          0 },
+  { &MainWindow::autoLoadImagesToggle_,     0 },
+  { &MainWindow::markAllFeedsRead_,         0 },
+  { &MainWindow::markFeedRead_,             0 },
+  { &MainWindow::markNewsRead_,             0 },
+  { &MainWindow::markAllNewsRead_,          0 },
+  { &MainWindow::markStarAct_,              0 },
+  { &MainWindow::collapseAllFoldersAct_,    0 },
+  { &MainWindow::expandAllFoldersAct_,      0 },
+  { &MainWindow::expandFolderAct_,          0 },
+  { &MainWindow::openDescriptionNewsAct_,   int(Qt::Key_Return) },
+  { &MainWindow::openInExternalBrowserAct_, int(Qt::CTRL | Qt::Key_O) },
+  { &MainWindow::switchFocusAct_,           int(Qt::CTRL | Qt::Key_Tab) },
+  { &MainWindow::switchFocusPrevAct_,       int(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab) },
+  { &MainWindow::feedsWidgetVisibleAct_,    int(Qt::CTRL | Qt::Key_D) },
+  { &MainWindow::placeToTrayAct_,           0 },
+  { &MainWindow::zoomInAct_,                int(Qt::CTRL | Qt::Key_Plus) },
+  { &MainWindow::zoomOutAct_,               int(Qt::CTRL | Qt::Key_Minus) },
+  { &MainWindow::zoomTo100Act_,             int(Qt::CTRL | Qt::Key_0) },
+  { &MainWindow::printAct_,                 int(Qt::CTRL | Qt::Key_P) },
+  { &MainWindow::printPreviewAct_,          int(Qt::CTRL | Qt::SHIFT | Qt::Key_P) },
+  { &MainWindow::savePageAsAct_,            int(Qt::CTRL | Qt::Key_S) },
+  { &MainWindow::fullScreenAct_,            int(Qt::Key_F11) },
+  { &MainWindow::stayOnTopAct_,             int(Qt::Key_F10) },
+  { &MainWindow::layoutToggle_,             0 },
+  { &MainWindow::closeTabAct_,              int(Qt::CTRL | Qt::Key_W) },
+  { &MainWindow::closeOtherTabsAct_,        0 },
+  { &MainWindow::closeAllTabsAct_,          0 },
+  { &MainWindow::nextTabAct_,               0 },
+  { &MainWindow::prevTabAct_,               0 },
+  { &MainWindow::reduceNewsListAct_,        int(Qt::ALT | Qt::Key_Up) },
+  { &MainWindow::increaseNewsListAct_,      int(Qt::ALT | Qt::Key_Down) },
+  { &MainWindow::restoreLastNewsAct_,       int(Qt::CTRL | Qt::Key_Z) },
+  { &MainWindow::findTextAct_,              int(Qt::CTRL | Qt::Key_F) },
+  { &MainWindow::findFeedAct_,              0 },
+  { &MainWindow::copyLinkAct_,              0 },
+  { &MainWindow::pageUpWebViewAct_,         0 },
+  { &MainWindow::pageDownWebViewAct_,       0 },
+};
+
+const MainWindow::UiBindings::MenuTitleSpec MainWindow::UiBindings::kMenuTitles[] = {
+  { &MainWindow::fileMenu_,             QT_TR_NOOP("&File") },
+  { &MainWindow::viewMenu_,             QT_TR_NOOP("&View") },
+  { &MainWindow::feedMenu_,             QT_TR_NOOP("Fee&ds") },
+  { &MainWindow::newsMenu_,             QT_TR_NOOP("&News") },
+  { &MainWindow::browserMenu_,          QT_TR_NOOP("&Article") },
+  { &MainWindow::toolsMenu_,            QT_TR_NOOP("&Tools") },
+  { &MainWindow::helpMenu_,             QT_TR_NOOP("&Help") },
+  { &MainWindow::customizeToolbarMenu_, QT_TR_NOOP("Customize Toolbar") },
+  { &MainWindow::layoutMenu_,           QT_TR_NOOP("Layout") },
+  { &MainWindow::styleMenu_,            QT_TR_NOOP("Application Theme") },
+  { &MainWindow::browserPositionMenu_,  QT_TR_NOOP("Article Pane Position") },
+  { &MainWindow::feedsColumnsMenu_,     QT_TR_NOOP("Columns") },
+  { &MainWindow::browserZoomMenu_,      QT_TR_NOOP("Zoom") },
+  { &MainWindow::toolbarsMenu_,         QT_TR_NOOP("Show/Hide") },
+  { &MainWindow::newsSortByMenu_,       QT_TR_NOOP("Sort By") },
+};
+
 /** @brief Create actions for main menu and toolbar
  *---------------------------------------------------------------------------*/
 void MainWindow::createActions()
 {
-  addAct_ = new QAction(this);
-  addAct_->setObjectName("newAct");
-  addAct_->setIcon(QIcon(":/images/add"));
-  this->addAction(addAct_);
-  connect(addAct_, &QAction::triggered, this, &MainWindow::addFeed);
+  for (const auto &spec : UiBindings::kActions) {
+    QAction *action = new QAction(this);
+    if (spec.objectName)
+      action->setObjectName(QString::fromLatin1(spec.objectName));
+    if (spec.iconPath)
+      action->setIcon(QIcon(QString::fromLatin1(spec.iconPath)));
+    if (spec.flags & UiBindings::Checkable)
+      action->setCheckable(true);
+    if (spec.flags & UiBindings::Checked)
+      action->setChecked(true);
+    if (spec.flags & UiBindings::AddToWindow)
+      this->addAction(action);
+    this->*(spec.member) = action;
+  }
 
-  addFeedAct_ = new QAction(this);
-  addFeedAct_->setObjectName("addFeedAct");
-  addFeedAct_->setIcon(QIcon(":/images/feed"));
-  this->addAction(addFeedAct_);
-  connect(addFeedAct_, &QAction::triggered, this, &MainWindow::addFeed);
-
-  addFeedTrayAct_ = new QAction(this);
-  addFeedTrayAct_->setIcon(QIcon(":/images/feed"));
-  connect(addFeedTrayAct_, &QAction::triggered, this, &MainWindow::addFeed);
-
-  addFolderAct_ = new QAction(this);
-  addFolderAct_->setObjectName("addFolderAct");
-  addFolderAct_->setIcon(QIcon(":/images/folder"));
-  this->addAction(addFolderAct_);
-  connect(addFolderAct_, &QAction::triggered, this, &MainWindow::addFolder);
-
-  openFeedNewTabAct_ = new QAction(this);
-  openFeedNewTabAct_->setObjectName("openNewTabAct");
-  this->addAction(openFeedNewTabAct_);
-  connect(openFeedNewTabAct_, &QAction::triggered, this, &MainWindow::slotOpenFeedNewTab);
-
-  deleteFeedAct_ = new QAction(this);
-  deleteFeedAct_->setObjectName("deleteFeedAct");
-  deleteFeedAct_->setIcon(QIcon(":/images/delete"));
-  this->addAction(deleteFeedAct_);
-  connect(deleteFeedAct_, &QAction::triggered, this, &MainWindow::deleteItemFeedsTree);
-
-  importFeedsAct_ = new QAction(this);
-  importFeedsAct_->setObjectName("importFeedsAct");
-  importFeedsAct_->setIcon(QIcon(":/images/importFeeds"));
-  this->addAction(importFeedsAct_);
-  connect(importFeedsAct_, &QAction::triggered, this, &MainWindow::slotImportFeeds);
-
-  exportFeedsAct_ = new QAction(this);
-  exportFeedsAct_->setObjectName("exportFeedsAct");
-  exportFeedsAct_->setIcon(QIcon(":/images/exportFeeds"));
-  this->addAction(exportFeedsAct_);
-  connect(exportFeedsAct_, &QAction::triggered, this, &MainWindow::slotExportFeeds);
-
-  createBackupAct_ = new QAction(this);
-  createBackupAct_->setObjectName("createBackupAct");
-  createBackupAct_->setIcon(QIcon(":/images/backup"));
-  this->addAction(createBackupAct_);
-  connect(createBackupAct_, &QAction::triggered, this, &MainWindow::createBackup);
-
-  showMenuBarAct_ = new QAction(this);
-  showMenuBarAct_->setCheckable(true);
-  connect(showMenuBarAct_, &QAction::triggered, this, &MainWindow::showMenuBar);
-
-  exitAct_ = new QAction(this);
-  exitAct_->setObjectName("exitAct");
-  this->addAction(exitAct_);
-  connect(exitAct_, &QAction::triggered, this, &MainWindow::quitApp);
-
-  mainToolbarToggle_ = new QAction(this);
-  mainToolbarToggle_->setCheckable(true);
-  feedsToolbarToggle_ = new QAction(this);
-  feedsToolbarToggle_->setCheckable(true);
-  newsToolbarToggle_ = new QAction(this);
-  newsToolbarToggle_->setCheckable(true);
-  categoriesPanelToggle_ = new QAction(this);
-  categoriesPanelToggle_->setCheckable(true);
-  statusBarToggle_ = new QAction(this);
-  statusBarToggle_->setCheckable(true);
-
-  connect(feedsToolbarToggle_, &QAction::toggled, feedsPanel_, &QWidget::setVisible);
-  connect(categoriesPanelToggle_, &QAction::toggled, categoriesWidget_, &QWidget::setVisible);
-  connect(statusBarToggle_, &QAction::toggled, statusBar(), &QWidget::setVisible);
-
-  customizeMainToolbarAct_ = new QAction(this);
-  customizeMainToolbarAct_->setObjectName("customizeMainToolbarAct");
-  customizeMainToolbarAct2_ = new QAction(this);
-  connect(customizeMainToolbarAct2_, &QAction::triggered, this, &MainWindow::customizeMainToolbar);
-
-  toolBarLockAct_ = new QAction(this);
-  toolBarLockAct_->setCheckable(true);
-  toolBarHideAct_ = new QAction(this);
-
-  customizeFeedsToolbarAct_ = new QAction(this);
-  customizeFeedsToolbarAct_->setObjectName("customizeFeedsToolbarAct");
-
-  customizeNewsToolbarAct_ = new QAction(this);
-  customizeNewsToolbarAct_->setObjectName("customizeNewsToolbarAct");
-
-  classicLayoutAct_ = new QAction(this);
-  classicLayoutAct_->setObjectName("classicLayoutAct_");
-  classicLayoutAct_->setIcon(QIcon(":/images/layout_classic"));
-  classicLayoutAct_->setCheckable(true);
   classicLayoutAct_->setData(0);
-  newspaperLayoutAct_ = new QAction(this);
-  newspaperLayoutAct_->setObjectName("newspaperLayoutAct_");
-  newspaperLayoutAct_->setIcon(QIcon(":/images/layout_newspaper"));
-  newspaperLayoutAct_->setCheckable(true);
   newspaperLayoutAct_->setData(1);
-  layoutToggle_ = new QAction(this);
-  layoutToggle_->setObjectName("layoutToggle");
-  layoutToggle_->setIcon(QIcon(":/images/layout_classic"));
-  this->addAction(layoutToggle_);
-  connect(layoutToggle_, &QAction::triggered, this, QOverload<>::of(&MainWindow::setNewsLayout));
 
-  topBrowserPositionAct_ = new QAction(this);
-  topBrowserPositionAct_->setCheckable(true);
   topBrowserPositionAct_->setData(TOP_POSITION);
-  bottomBrowserPositionAct_ = new QAction(this);
-  bottomBrowserPositionAct_->setCheckable(true);
   bottomBrowserPositionAct_->setData(BOTTOM_POSITION);
-  rightBrowserPositionAct_ = new QAction(this);
-  rightBrowserPositionAct_->setCheckable(true);
   rightBrowserPositionAct_->setData(RIGHT_POSITION);
-  leftBrowserPositionAct_ = new QAction(this);
-  leftBrowserPositionAct_->setCheckable(true);
   leftBrowserPositionAct_->setData(LEFT_POSITION);
 
-  autoLoadImagesToggle_ = new QAction(this);
-  autoLoadImagesToggle_->setObjectName("autoLoadImagesToggle");
-  autoLoadImagesToggle_->setIcon(QIcon(":/images/imagesOn"));
-  this->addAction(autoLoadImagesToggle_);
+  showUnreadCount_->setData(feedsView_->columnIndex("unread"));
+  showUndeleteCount_->setData(feedsView_->columnIndex("undeleteCount"));
+  showLastUpdated_->setData(feedsView_->columnIndex("updated"));
 
-  printAct_ = new QAction(this);
-  printAct_->setObjectName("printAct");
-  printAct_->setIcon(QIcon(":/images/printer"));
-  this->addAction(printAct_);
-  connect(printAct_, &QAction::triggered, this, &MainWindow::slotPrint);
-  printPreviewAct_ = new QAction(this);
-  printPreviewAct_->setObjectName("printPreviewAct");
-  printPreviewAct_->setIcon(QIcon(":/images/printer"));
-  this->addAction(printPreviewAct_);
-  connect(printPreviewAct_, &QAction::triggered, this, &MainWindow::slotPrintPreview);
-
-  savePageAsAct_ = new QAction(this);
-  savePageAsAct_->setObjectName("savePageAsAct");
-  savePageAsAct_->setIcon(QIcon(":/images/save_as"));
-  this->addAction(savePageAsAct_);
-  connect(savePageAsAct_, &QAction::triggered, this, &MainWindow::slotSavePageAs);
-
-  zoomInAct_ = new QAction(this);
-  zoomInAct_->setObjectName("zoomInAct");
-  zoomInAct_->setIcon(QIcon(":/images/zoomIn"));
-  this->addAction(zoomInAct_);
-  zoomOutAct_ = new QAction(this);
-  zoomOutAct_->setObjectName("zoomOutAct");
-  zoomOutAct_->setIcon(QIcon(":/images/zoomOut"));
-  this->addAction(zoomOutAct_);
-  zoomTo100Act_ = new QAction(this);
-  zoomTo100Act_->setObjectName("zoomTo100Act");
-  this->addAction(zoomTo100Act_);
-
-  updateFeedAct_ = new QAction(this);
-  updateFeedAct_->setObjectName("updateFeedAct");
-  updateFeedAct_->setIcon(QIcon(":/images/updateFeed"));
-  this->addAction(updateFeedAct_);
-  connect(updateFeedAct_, &QAction::triggered, this, &MainWindow::slotGetFeed);
-
-  updateAllFeedsAct_ = new QAction(this);
-  updateAllFeedsAct_->setObjectName("updateAllFeedsAct");
-  updateAllFeedsAct_->setIcon(QIcon(":/images/updateAllFeeds"));
-  this->addAction(updateAllFeedsAct_);
-  connect(updateAllFeedsAct_, &QAction::triggered, this, &MainWindow::slotGetAllFeeds);
-
-  stopUpdateAct_ = new QAction(this);
-  stopUpdateAct_->setObjectName("stopUpdateAct");
-  stopUpdateAct_->setIcon(QIcon(":/images/close"));
-  this->addAction(stopUpdateAct_);
-  connect(stopUpdateAct_, &QAction::triggered, this, &MainWindow::slotStopUpdate);
-
-  markAllFeedsRead_ = new QAction(this);
-  markAllFeedsRead_->setObjectName("markAllFeedRead");
-  markAllFeedsRead_->setIcon(QIcon(":/images/markReadAll"));
-  this->addAction(markAllFeedsRead_);
-  connect(markAllFeedsRead_, &QAction::triggered, this, &MainWindow::signalMarkAllFeedsRead);
-
-  indentationFeedsTreeAct_ = new QAction(this);
-  indentationFeedsTreeAct_->setCheckable(true);
-  connect(indentationFeedsTreeAct_, &QAction::triggered, this, &MainWindow::slotIndentationFeedsTree);
-
-  sortedByTitleFeedsTreeAct_ = new QAction(this);
-  connect(sortedByTitleFeedsTreeAct_, &QAction::triggered, this, &MainWindow::sortedByTitleFeedsTree);
-
-  collapseAllFoldersAct_ = new QAction(this);
-  collapseAllFoldersAct_->setObjectName("collapseAllFolderAct");
-  collapseAllFoldersAct_->setIcon(QIcon(":/images/bulletMinus"));
-  this->addAction(collapseAllFoldersAct_);
-  connect(collapseAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::collapseAll);
-
-  expandAllFoldersAct_ = new QAction(this);
-  expandAllFoldersAct_->setObjectName("expandAllFolderAct");
-  expandAllFoldersAct_->setIcon(QIcon(":/images/bulletPlus"));
-  this->addAction(expandAllFoldersAct_);
-  connect(expandAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::expandAll);
-
-  markNewsRead_ = new QAction(this);
-  markNewsRead_->setObjectName("markNewsRead");
-  markNewsRead_->setIcon(QIcon(":/images/markRead"));
-  this->addAction(markNewsRead_);
-
-  markAllNewsRead_ = new QAction(this);
-  markAllNewsRead_->setObjectName("markAllNewsRead");
-  markAllNewsRead_->setIcon(QIcon(":/images/markReadAll"));
-  this->addAction(markAllNewsRead_);
-
-  showDownloadManagerAct_ = new QAction(this);
-  showDownloadManagerAct_->setObjectName("showDownloadManagerAct");
-  showDownloadManagerAct_->setIcon(QIcon(":/images/download"));
-  this->addAction(showDownloadManagerAct_);
-  connect(showDownloadManagerAct_, &QAction::triggered, this, [this] { showDownloadManager(); });
-
-  showCleanUpWizardAct_ = new QAction(this);
-  showCleanUpWizardAct_->setObjectName("showCleanUpWizardAct");
-  showCleanUpWizardAct_->setIcon(QIcon(":/images/cleanup"));
-  this->addAction(showCleanUpWizardAct_);
-  connect(showCleanUpWizardAct_, &QAction::triggered, this, &MainWindow::cleanUp);
-
-  setNewsFiltersAct_ = new QAction(this);
-  setNewsFiltersAct_->setObjectName("setNewsFiltersAct");
-  setNewsFiltersAct_->setIcon(QIcon(":/images/filterOff"));
-  this->addAction(setNewsFiltersAct_);
-  connect(setNewsFiltersAct_, &QAction::triggered, this, [this] { showNewsFiltersDlg(); });
-  bulkFeedSettingsAct_ = new QAction(this);
-  bulkFeedSettingsAct_->setObjectName("bulkFeedSettingsAct");
-  this->addAction(bulkFeedSettingsAct_);
-  connect(bulkFeedSettingsAct_, &QAction::triggered, this, &MainWindow::showBulkFeedSettings);
-
-  websiteCookiesAct_ = new QAction(this);
-  websiteCookiesAct_->setObjectName("websiteCookiesAct");
   QIcon cookieIcon;
   // Supply multiple resolutions for menus and high-DPI screens.
   for (int size : {16, 24, 32, 48, 64}) {
@@ -544,160 +582,7 @@ void MainWindow::createActions()
     cookieIcon.addPixmap(pixmap);
   }
   websiteCookiesAct_->setIcon(cookieIcon);
-  this->addAction(websiteCookiesAct_);
-  connect(websiteCookiesAct_, &QAction::triggered, this, [this]() {
-    CookiesDialog dialog(this);
-    dialog.exec();
-  });
 
-  setFilterNewsAct_ = new QAction(this);
-  setFilterNewsAct_->setObjectName("setFilterNewsAct");
-  setFilterNewsAct_->setIcon(QIcon(":/images/filterOff"));
-  this->addAction(setFilterNewsAct_);
-  connect(setFilterNewsAct_, &QAction::triggered, this, &MainWindow::showFilterRulesDlg);
-
-  optionsAct_ = new QAction(this);
-  optionsAct_->setObjectName("optionsAct");
-  optionsAct_->setIcon(QIcon(":/images/options"));
-  this->addAction(optionsAct_);
-  connect(optionsAct_, &QAction::triggered, this, [this] { showOptionDlg(); });
-
-  feedsFilter_ = new QAction(this);
-  feedsFilter_->setObjectName("feedsFilter");
-  feedsFilter_->setIcon(QIcon(":/images/filterOff"));
-  this->addAction(feedsFilter_);
-  filterFeedsAll_ = new QAction(this);
-  filterFeedsAll_->setObjectName("filterFeedsAll_");
-  filterFeedsAll_->setCheckable(true);
-  filterFeedsAll_->setChecked(true);
-  filterFeedsNew_ = new QAction(this);
-  filterFeedsNew_->setObjectName("filterFeedsNew_");
-  filterFeedsNew_->setCheckable(true);
-  filterFeedsUnread_ = new QAction(this);
-  filterFeedsUnread_->setObjectName("filterFeedsUnread_");
-  filterFeedsUnread_->setCheckable(true);
-  filterFeedsStarred_ = new QAction(this);
-  filterFeedsStarred_->setObjectName("filterFeedsStarred_");
-  filterFeedsStarred_->setCheckable(true);
-  filterFeedsError_ = new QAction(this);
-  filterFeedsError_->setObjectName("filterFeedsError_");
-  filterFeedsError_->setCheckable(true);
-
-  newsFilter_ = new QAction(this);
-  newsFilter_->setObjectName("newsFilter");
-  newsFilter_->setIcon(QIcon(":/images/filterOff"));
-  this->addAction(newsFilter_);
-  filterNewsAll_ = new QAction(this);
-  filterNewsAll_->setObjectName("filterNewsAll_");
-  filterNewsAll_->setCheckable(true);
-  filterNewsAll_->setChecked(true);
-  filterNewsNew_ = new QAction(this);
-  filterNewsNew_->setObjectName("filterNewsNew_");
-  filterNewsNew_->setCheckable(true);
-  filterNewsUnread_ = new QAction(this);
-  filterNewsUnread_->setObjectName("filterNewsUnread_");
-  filterNewsUnread_->setCheckable(true);
-  filterNewsStar_ = new QAction(this);
-  filterNewsStar_->setObjectName("filterNewsStar_");
-  filterNewsStar_->setCheckable(true);
-  filterNewsNotStarred_ = new QAction(this);
-  filterNewsNotStarred_->setObjectName("filterNewsNotStarred_");
-  filterNewsNotStarred_->setCheckable(true);
-  filterNewsUnreadStar_ = new QAction(this);
-  filterNewsUnreadStar_->setObjectName("filterNewsUnreadStar_");
-  filterNewsUnreadStar_->setCheckable(true);
-  filterNewsLastDay_ = new QAction(this);
-  filterNewsLastDay_->setObjectName("filterNewsLastDay_");
-  filterNewsLastDay_->setCheckable(true);
-  filterNewsLastWeek_ = new QAction(this);
-  filterNewsLastWeek_->setObjectName("filterNewsLastWeek_");
-  filterNewsLastWeek_->setCheckable(true);
-
-  newsSortByColumnGroup_ = new QActionGroup(this);
-  newsSortByColumnGroup_->setExclusive(true);
-  connect(newsSortByColumnGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
-
-  newsSortOrderGroup_ = new QActionGroup(this);
-  newsSortOrderGroup_->setExclusive(true);
-  QStringList listAct;
-  listAct << "sortOrderAsc" << "sortOrderDesc";
-  for (const QString &actionStr : std::as_const(listAct)) {
-    QAction *newsSortOrderAct = new QAction(this);
-    newsSortOrderAct->setObjectName(actionStr);
-    newsSortOrderAct->setCheckable(true);
-    newsSortOrderGroup_->addAction(newsSortOrderAct);
-  }
-  connect(newsSortOrderGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
-
-  aboutAct_ = new QAction(this);
-  aboutAct_->setObjectName("AboutAct_");
-  connect(aboutAct_, &QAction::triggered, this, &MainWindow::slotShowAboutDlg);
-
-  updateAppAct_ = new QAction(this);
-  updateAppAct_->setObjectName("UpdateApp_");
-  connect(updateAppAct_, &QAction::triggered, this, &MainWindow::slotShowUpdateAppDlg);
-
-  reportProblemAct_ = new QAction(this);
-  reportProblemAct_->setObjectName("reportProblemAct_");
-  connect(reportProblemAct_, &QAction::triggered, this, &MainWindow::slotReportProblem);
-
-  openInExternalBrowserAct_ = new QAction(this);
-  openInExternalBrowserAct_->setObjectName("openInExternalBrowserAct");
-  openInExternalBrowserAct_->setIcon(QIcon(":/images/openBrowser"));
-  this->addAction(openInExternalBrowserAct_);
-
-  markStarAct_ = new QAction(this);
-  markStarAct_->setObjectName("markStarAct");
-  markStarAct_->setIcon(QIcon(":/images/starOn"));
-  this->addAction(markStarAct_);
-
-  deleteNewsAct_ = new QAction(this);
-  deleteNewsAct_->setObjectName("deleteNewsAct");
-  deleteNewsAct_->setIcon(QIcon(":/images/delete"));
-  this->addAction(deleteNewsAct_);
-  deleteAllNewsAct_ = new QAction(this);
-  deleteAllNewsAct_->setObjectName("deleteAllNewsAct");
-  this->addAction(deleteAllNewsAct_);
-
-  restoreNewsAct_ = new QAction(this);
-  restoreNewsAct_->setObjectName("restoreNewsAct");
-  restoreNewsAct_->setIcon(QIcon(":/images/images/arrow_turn_left.png"));
-
-  restoreLastNewsAct_ = new QAction(this);
-  restoreLastNewsAct_->setObjectName("restoreLastNewsAct");
-  restoreLastNewsAct_->setIcon(QIcon(":/images/images/arrow_turn_left.png"));
-  this->addAction(restoreLastNewsAct_);
-  connect(restoreLastNewsAct_, &QAction::triggered, this, &MainWindow::restoreLastNews);
-
-  markFeedRead_ = new QAction(this);
-  markFeedRead_->setObjectName("markFeedRead");
-  markFeedRead_->setIcon(QIcon(":/images/markRead"));
-  this->addAction(markFeedRead_);
-  connect(markFeedRead_, &QAction::triggered, this, &MainWindow::markFeedRead);
-
-  feedProperties_ = new QAction(this);
-  feedProperties_->setObjectName("feedProperties");
-  feedProperties_->setIcon(QIcon(":/images/preferencesFeed"));
-  this->addAction(feedProperties_);
-  connect(feedProperties_, &QAction::triggered, this, &MainWindow::showFeedPropertiesDlg);
-
-  feedKeyUpAct_ = new QAction(this);
-  feedKeyUpAct_->setObjectName("feedKeyUp");
-  connect(feedKeyUpAct_, &QAction::triggered, this, &MainWindow::slotFeedPrevious);
-  this->addAction(feedKeyUpAct_);
-
-  feedKeyDownAct_ = new QAction(this);
-  feedKeyDownAct_->setObjectName("feedKeyDownAct");
-  connect(feedKeyDownAct_, &QAction::triggered, this, &MainWindow::slotFeedNext);
-  this->addAction(feedKeyDownAct_);
-
-  newsKeyUpAct_ = new QAction(this);
-  newsKeyUpAct_->setObjectName("newsKeyUpAct");
-  this->addAction(newsKeyUpAct_);
-  newsKeyDownAct_ = new QAction(this);
-  newsKeyDownAct_->setObjectName("newsKeyDownAct");
-  this->addAction(newsKeyDownAct_);
-  newsKeyPageUpAct_ = new QAction(this);
 #ifdef HAVE_X11
   allWorkspacesAct_ = nullptr;
   if (QGuiApplication::platformName() == QLatin1String("xcb")) {
@@ -707,72 +592,20 @@ void MainWindow::createActions()
     connect(allWorkspacesAct_, &QAction::triggered, this, &MainWindow::setAllWorkspaces);
   }
 #endif
-  newsKeyPageUpAct_->setObjectName("newsKeyPageUpAct");
-  this->addAction(newsKeyPageUpAct_);
-  newsKeyPageDownAct_ = new QAction(this);
-  newsKeyPageDownAct_->setObjectName("newsKeyPageDownAct");
-  this->addAction(newsKeyPageDownAct_);
 
-  switchFocusAct_ = new QAction(this);
-  switchFocusAct_->setObjectName("switchFocusAct");
-  connect(switchFocusAct_, &QAction::triggered, this, &MainWindow::slotSwitchFocus);
-  this->addAction(switchFocusAct_);
-  switchFocusPrevAct_ = new QAction(this);
-  switchFocusPrevAct_->setObjectName("switchFocusPrevAct");
-  connect(switchFocusPrevAct_, &QAction::triggered, this, &MainWindow::slotSwitchPrevFocus);
-  this->addAction(switchFocusPrevAct_);
+  newsSortByColumnGroup_ = new QActionGroup(this);
+  newsSortByColumnGroup_->setExclusive(true);
+  connect(newsSortByColumnGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
 
-  feedsWidgetVisibleAct_ = new QAction(this);
-  feedsWidgetVisibleAct_->setObjectName("visibleFeedsWidgetAct");
-  feedsWidgetVisibleAct_->setCheckable(true);
-  connect(feedsWidgetVisibleAct_, &QAction::triggered, this, &MainWindow::slotVisibledFeedsWidget);
-  connect(pushButtonNull_, &QAbstractButton::clicked, feedsWidgetVisibleAct_, &QAction::trigger);
-  this->addAction(feedsWidgetVisibleAct_);
-
-  showUnreadCount_ = new QAction(this);
-  showUnreadCount_->setData(feedsView_->columnIndex("unread"));
-  showUnreadCount_->setCheckable(true);
-  showUndeleteCount_ = new QAction(this);
-  showUndeleteCount_->setData(feedsView_->columnIndex("undeleteCount"));
-  showUndeleteCount_->setCheckable(true);
-  showLastUpdated_ = new QAction(this);
-  showLastUpdated_->setData(feedsView_->columnIndex("updated"));
-  showLastUpdated_->setCheckable(true);
-
-  openDescriptionNewsAct_ = new QAction(this);
-  openDescriptionNewsAct_->setObjectName("openDescriptionNewsAct");
-  connect(openDescriptionNewsAct_, &QAction::triggered, this, &MainWindow::slotOpenNewsWebView);
-  this->addAction(openDescriptionNewsAct_);
-
-  findTextAct_ = new QAction(this);
-  findTextAct_->setObjectName("findTextAct");
-  connect(findTextAct_, &QAction::triggered, this, &MainWindow::findText);
-  this->addAction(findTextAct_);
-
-  placeToTrayAct_ = new QAction(this);
-  placeToTrayAct_->setObjectName("placeToTrayAct");
-  connect(placeToTrayAct_, &QAction::triggered, this, &MainWindow::slotPlaceToTray);
-  this->addAction(placeToTrayAct_);
-
-  findFeedAct_ = new QAction(this);
-  findFeedAct_->setObjectName("findFeedAct");
-  findFeedAct_->setCheckable(true);
-  findFeedAct_->setChecked(false);
-  findFeedAct_->setIcon(QIcon(":/images/images/findFeed.png"));
-  this->addAction(findFeedAct_);
-  connect(findFeedAct_, &QAction::triggered, this, &MainWindow::findFeedVisible);
-
-  fullScreenAct_ = new QAction(this);
-  fullScreenAct_->setObjectName("fullScreenAct");
-  fullScreenAct_->setIcon(QIcon(":/images/images/fullScreen.png"));
-  this->addAction(fullScreenAct_);
-  connect(fullScreenAct_, &QAction::triggered, this, &MainWindow::setFullScreen);
-
-  stayOnTopAct_ = new QAction(this);
-  stayOnTopAct_->setObjectName("stayOnTopAct");
-  stayOnTopAct_->setCheckable(true);
-  this->addAction(stayOnTopAct_);
-  connect(stayOnTopAct_, &QAction::triggered, this, &MainWindow::setStayOnTop);
+  newsSortOrderGroup_ = new QActionGroup(this);
+  newsSortOrderGroup_->setExclusive(true);
+  for (const char *actionStr : { "sortOrderAsc", "sortOrderDesc" }) {
+    QAction *newsSortOrderAct = new QAction(this);
+    newsSortOrderAct->setObjectName(QString::fromLatin1(actionStr));
+    newsSortOrderAct->setCheckable(true);
+    newsSortOrderGroup_->addAction(newsSortOrderAct);
+  }
+  connect(newsSortOrderGroup_, &QActionGroup::triggered, this, &MainWindow::setNewsSortByColumn);
 
   newsLabelGroup_ = new QActionGroup(this);
   newsLabelGroup_->setExclusive(false);
@@ -793,100 +626,11 @@ void MainWindow::createActions()
   }
   this->addActions(newsLabelGroup_->actions());
 
-  newsLabelAction_ = new QAction(this);
-  newsLabelAction_->setObjectName("newsLabelAction");
-  this->addAction(newsLabelAction_);
   if (newsLabelGroup_->actions().count()) {
     newsLabelAction_->setIcon(newsLabelGroup_->actions().at(0)->icon());
     newsLabelAction_->setToolTip(newsLabelGroup_->actions().at(0)->text());
     newsLabelAction_->setData(newsLabelGroup_->actions().at(0)->data());
   }
-  connect(newsLabelAction_, &QAction::triggered, this, &MainWindow::setDefaultLabelNews);
-  connect(newsLabelGroup_, &QActionGroup::triggered, this, &MainWindow::setLabelNews);
-
-  showLabelsMenuAct_ = new QAction(this);
-  showLabelsMenuAct_->setObjectName("showLabelsMenuAct");
-  this->addAction(showLabelsMenuAct_);
-  connect(showLabelsMenuAct_, &QAction::triggered, this, &MainWindow::slotShowLabelsMenu);
-
-  closeTabAct_ = new QAction(this);
-  closeTabAct_->setObjectName("closeTabAct");
-  this->addAction(closeTabAct_);
-
-  closeOtherTabsAct_ = new QAction(this);
-  closeOtherTabsAct_->setObjectName("closeOtherTabsAct");
-  this->addAction(closeOtherTabsAct_);
-
-  closeAllTabsAct_ = new QAction(this);
-  closeAllTabsAct_->setObjectName("closeAllTabsAct");
-  this->addAction(closeAllTabsAct_);
-
-  nextTabAct_ = new QAction(this);
-  nextTabAct_->setObjectName("nextTabAct");
-  this->addAction(nextTabAct_);
-
-  prevTabAct_ = new QAction(this);
-  prevTabAct_->setObjectName("prevTabAct");
-  this->addAction(prevTabAct_);
-
-  reduceNewsListAct_ = new QAction(this);
-  reduceNewsListAct_->setObjectName("reduceNewsListAct");
-  this->addAction(reduceNewsListAct_);
-  connect(reduceNewsListAct_, &QAction::triggered, this, &MainWindow::reduceNewsList);
-  increaseNewsListAct_ = new QAction(this);
-  increaseNewsListAct_->setObjectName("increaseNewsListAct");
-  this->addAction(increaseNewsListAct_);
-  connect(increaseNewsListAct_, &QAction::triggered, this, &MainWindow::increaseNewsList);
-
-  nextUnreadNewsAct_ = new QAction(this);
-  nextUnreadNewsAct_->setObjectName("nextUnreadNewsAct");
-  nextUnreadNewsAct_->setIcon(QIcon(":/images/moveDown"));
-  this->addAction(nextUnreadNewsAct_);
-  connect(nextUnreadNewsAct_, &QAction::triggered, this, &MainWindow::nextUnreadNews);
-  prevUnreadNewsAct_ = new QAction(this);
-  prevUnreadNewsAct_->setObjectName("prevUnreadNewsAct");
-  prevUnreadNewsAct_->setIcon(QIcon(":/images/moveUp"));
-  this->addAction(prevUnreadNewsAct_);
-  connect(prevUnreadNewsAct_, &QAction::triggered, this, &MainWindow::prevUnreadNews);
-
-  openHomeFeedAct_ = new QAction(this);
-  openHomeFeedAct_->setObjectName("openHomeFeedsAct");
-  openHomeFeedAct_->setIcon(QIcon(":/images/homePage"));
-  this->addAction(openHomeFeedAct_);
-  connect(openHomeFeedAct_, &QAction::triggered, this, &MainWindow::slotOpenHomeFeed);
-
-  copyLinkAct_ = new QAction(this);
-  copyLinkAct_->setObjectName("copyLinkAct");
-  copyLinkAct_->setIcon(QIcon(":/images/copy"));
-  this->addAction(copyLinkAct_);
-  connect(copyLinkAct_, &QAction::triggered, this, &MainWindow::slotCopyLinkNews);
-
-  pageUpWebViewAct_ = new QAction(this);
-  pageUpWebViewAct_->setObjectName("pageUpWebViewAct");
-  this->addAction(pageUpWebViewAct_);
-  connect(pageUpWebViewAct_, &QAction::triggered, this, &MainWindow::slotPageUpWebView);
-  pageDownWebViewAct_ = new QAction(this);
-  pageDownWebViewAct_->setObjectName("pageDownWebViewAct");
-  this->addAction(pageDownWebViewAct_);
-  connect(pageDownWebViewAct_, &QAction::triggered, this, &MainWindow::slotPageDownWebView);
-
-  nextFolderAct_ = new QAction(this);
-  nextFolderAct_->setObjectName("nextFolderAct");
-  this->addAction(nextFolderAct_);
-  connect(nextFolderAct_, &QAction::triggered, this, &MainWindow::slotNextFolder);
-  prevFolderAct_ = new QAction(this);
-  prevFolderAct_->setObjectName("prevFolderAct");
-  this->addAction(prevFolderAct_);
-  connect(prevFolderAct_, &QAction::triggered, this, &MainWindow::slotPrevFolder);
-  expandFolderAct_ = new QAction(this);
-  expandFolderAct_->setObjectName("expandFolderAct");
-  this->addAction(expandFolderAct_);
-  connect(expandFolderAct_, &QAction::triggered, this, &MainWindow::slotExpandFolder);
-
-  settingPageLabelsAct_ = new QAction(this);
-  settingPageLabelsAct_->setObjectName("settingPageLabelsAct");
-  this->addAction(settingPageLabelsAct_);
-  connect(settingPageLabelsAct_, &QAction::triggered, this, &MainWindow::showSettingPageLabels);
 
   shareGroup_ = new QActionGroup(this);
   shareGroup_->setExclusive(false);
@@ -924,146 +668,110 @@ void MainWindow::createActions()
   }
 
   this->addActions(shareGroup_->actions());
-  connect(shareGroup_, &QActionGroup::triggered,
-          this, &MainWindow::slotShareNews);
 
-  connect(markNewsRead_, &QAction::triggered, this, &MainWindow::markNewsRead);
-  connect(markAllNewsRead_, &QAction::triggered, this, &MainWindow::markAllNewsRead);
-  connect(markStarAct_, &QAction::triggered, this, &MainWindow::markNewsStar);
-  connect(deleteNewsAct_, &QAction::triggered, this, &MainWindow::deleteNews);
-  connect(deleteAllNewsAct_, &QAction::triggered, this, &MainWindow::deleteAllNewsList);
-  connect(restoreNewsAct_, &QAction::triggered, this, &MainWindow::restoreNews);
+  struct SlotBinding {
+    QAction *MainWindow::*action;
+    void (MainWindow::*slot)();
+  };
+  static const SlotBinding kSlotBindings[] = {
+    { &MainWindow::addAct_,                   &MainWindow::addFeed },
+    { &MainWindow::addFeedAct_,               &MainWindow::addFeed },
+    { &MainWindow::addFeedTrayAct_,           &MainWindow::addFeed },
+    { &MainWindow::addFolderAct_,             &MainWindow::addFolder },
+    { &MainWindow::openFeedNewTabAct_,        &MainWindow::slotOpenFeedNewTab },
+    { &MainWindow::deleteFeedAct_,            &MainWindow::deleteItemFeedsTree },
+    { &MainWindow::importFeedsAct_,           &MainWindow::slotImportFeeds },
+    { &MainWindow::exportFeedsAct_,           &MainWindow::slotExportFeeds },
+    { &MainWindow::createBackupAct_,          &MainWindow::createBackup },
+    { &MainWindow::showMenuBarAct_,           &MainWindow::showMenuBar },
+    { &MainWindow::exitAct_,                  &MainWindow::quitApp },
+    { &MainWindow::customizeMainToolbarAct2_, &MainWindow::customizeMainToolbar },
+    { &MainWindow::layoutToggle_,             QOverload<>::of(&MainWindow::setNewsLayout) },
+    { &MainWindow::printAct_,                 &MainWindow::slotPrint },
+    { &MainWindow::printPreviewAct_,          &MainWindow::slotPrintPreview },
+    { &MainWindow::savePageAsAct_,            &MainWindow::slotSavePageAs },
+    { &MainWindow::updateFeedAct_,            &MainWindow::slotGetFeed },
+    { &MainWindow::updateAllFeedsAct_,        &MainWindow::slotGetAllFeeds },
+    { &MainWindow::stopUpdateAct_,            &MainWindow::slotStopUpdate },
+    { &MainWindow::markAllFeedsRead_,         &MainWindow::signalMarkAllFeedsRead },
+    { &MainWindow::indentationFeedsTreeAct_,  &MainWindow::slotIndentationFeedsTree },
+    { &MainWindow::sortedByTitleFeedsTreeAct_,&MainWindow::sortedByTitleFeedsTree },
+    { &MainWindow::showCleanUpWizardAct_,     &MainWindow::cleanUp },
+    { &MainWindow::bulkFeedSettingsAct_,      &MainWindow::showBulkFeedSettings },
+    { &MainWindow::setFilterNewsAct_,         &MainWindow::showFilterRulesDlg },
+    { &MainWindow::aboutAct_,                 &MainWindow::slotShowAboutDlg },
+    { &MainWindow::updateAppAct_,             &MainWindow::slotShowUpdateAppDlg },
+    { &MainWindow::reportProblemAct_,         &MainWindow::slotReportProblem },
+    { &MainWindow::restoreLastNewsAct_,       &MainWindow::restoreLastNews },
+    { &MainWindow::markFeedRead_,             &MainWindow::markFeedRead },
+    { &MainWindow::feedProperties_,           &MainWindow::showFeedPropertiesDlg },
+    { &MainWindow::feedKeyUpAct_,             &MainWindow::slotFeedPrevious },
+    { &MainWindow::feedKeyDownAct_,           &MainWindow::slotFeedNext },
+    { &MainWindow::switchFocusAct_,           &MainWindow::slotSwitchFocus },
+    { &MainWindow::switchFocusPrevAct_,       &MainWindow::slotSwitchPrevFocus },
+    { &MainWindow::feedsWidgetVisibleAct_,    &MainWindow::slotVisibledFeedsWidget },
+    { &MainWindow::openDescriptionNewsAct_,   &MainWindow::slotOpenNewsWebView },
+    { &MainWindow::findTextAct_,              &MainWindow::findText },
+    { &MainWindow::placeToTrayAct_,           &MainWindow::slotPlaceToTray },
+    { &MainWindow::findFeedAct_,              &MainWindow::findFeedVisible },
+    { &MainWindow::fullScreenAct_,            &MainWindow::setFullScreen },
+    { &MainWindow::stayOnTopAct_,             &MainWindow::setStayOnTop },
+    { &MainWindow::newsLabelAction_,          &MainWindow::setDefaultLabelNews },
+    { &MainWindow::showLabelsMenuAct_,        &MainWindow::slotShowLabelsMenu },
+    { &MainWindow::reduceNewsListAct_,        &MainWindow::reduceNewsList },
+    { &MainWindow::increaseNewsListAct_,      &MainWindow::increaseNewsList },
+    { &MainWindow::nextUnreadNewsAct_,        &MainWindow::nextUnreadNews },
+    { &MainWindow::prevUnreadNewsAct_,        &MainWindow::prevUnreadNews },
+    { &MainWindow::openHomeFeedAct_,          &MainWindow::slotOpenHomeFeed },
+    { &MainWindow::copyLinkAct_,              &MainWindow::slotCopyLinkNews },
+    { &MainWindow::pageUpWebViewAct_,         &MainWindow::slotPageUpWebView },
+    { &MainWindow::pageDownWebViewAct_,       &MainWindow::slotPageDownWebView },
+    { &MainWindow::nextFolderAct_,            &MainWindow::slotNextFolder },
+    { &MainWindow::prevFolderAct_,            &MainWindow::slotPrevFolder },
+    { &MainWindow::expandFolderAct_,          &MainWindow::slotExpandFolder },
+    { &MainWindow::settingPageLabelsAct_,     &MainWindow::showSettingPageLabels },
+    { &MainWindow::markNewsRead_,             &MainWindow::markNewsRead },
+    { &MainWindow::markAllNewsRead_,          &MainWindow::markAllNewsRead },
+    { &MainWindow::markStarAct_,              &MainWindow::markNewsStar },
+    { &MainWindow::deleteNewsAct_,            &MainWindow::deleteNews },
+    { &MainWindow::deleteAllNewsAct_,         &MainWindow::deleteAllNewsList },
+    { &MainWindow::restoreNewsAct_,           &MainWindow::restoreNews },
+    { &MainWindow::newsKeyUpAct_,             &MainWindow::slotNewsUpPressed },
+    { &MainWindow::newsKeyDownAct_,           &MainWindow::slotNewsDownPressed },
+    { &MainWindow::newsKeyPageUpAct_,         &MainWindow::slotNewsPageUpPressed },
+    { &MainWindow::newsKeyPageDownAct_,       &MainWindow::slotNewsPageDownPressed },
+    { &MainWindow::openInExternalBrowserAct_, &MainWindow::openInExternalBrowserNews },
+  };
+  for (const auto &b : kSlotBindings)
+    connect(this->*(b.action), &QAction::triggered, this, b.slot);
 
-  connect(newsKeyUpAct_, &QAction::triggered, this, &MainWindow::slotNewsUpPressed);
-  connect(newsKeyDownAct_, &QAction::triggered, this, &MainWindow::slotNewsDownPressed);
-  connect(newsKeyPageUpAct_, &QAction::triggered, this, &MainWindow::slotNewsPageUpPressed);
-  connect(newsKeyPageDownAct_, &QAction::triggered, this, &MainWindow::slotNewsPageDownPressed);
-
-  connect(openInExternalBrowserAct_, &QAction::triggered, this, &MainWindow::openInExternalBrowserNews);
+  connect(feedsToolbarToggle_, &QAction::toggled, feedsPanel_, &QWidget::setVisible);
+  connect(categoriesPanelToggle_, &QAction::toggled, categoriesWidget_, &QWidget::setVisible);
+  connect(statusBarToggle_, &QAction::toggled, statusBar(), &QWidget::setVisible);
+  connect(collapseAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::collapseAll);
+  connect(expandAllFoldersAct_, &QAction::triggered, feedsView_, &FeedsView::expandAll);
+  connect(showDownloadManagerAct_, &QAction::triggered, this, [this] { showDownloadManager(); });
+  connect(setNewsFiltersAct_, &QAction::triggered, this, [this] { showNewsFiltersDlg(); });
+  connect(websiteCookiesAct_, &QAction::triggered, this, [this]() {
+    CookiesDialog dialog(this);
+    dialog.exec();
+  });
+  connect(optionsAct_, &QAction::triggered, this, [this] { showOptionDlg(); });
+  connect(pushButtonNull_, &QAbstractButton::clicked, feedsWidgetVisibleAct_, &QAction::trigger);
+  connect(newsLabelGroup_, &QActionGroup::triggered, this, &MainWindow::setLabelNews);
+  connect(shareGroup_, &QActionGroup::triggered, this, &MainWindow::slotShareNews);
 }
 // ---------------------------------------------------------------------------
 void MainWindow::createShortcut()
 {
-  addFeedAct_->setShortcut(QKeySequence(QKeySequence::New));
-  shortcutRegistry_.append(addFeedAct_);
-  addFolderAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
-  shortcutRegistry_.append(addFolderAct_);
-  shortcutRegistry_.append(deleteFeedAct_);
-  shortcutRegistry_.append(createBackupAct_);
-  exitAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));  // standart on other OS
-  shortcutRegistry_.append(exitAct_);
-  updateFeedAct_->setShortcut(QKeySequence(Qt::Key_F5));
-  shortcutRegistry_.append(updateFeedAct_);
-  updateAllFeedsAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F5));
-  shortcutRegistry_.append(updateAllFeedsAct_);
-  shortcutRegistry_.append(stopUpdateAct_);
-  shortcutRegistry_.append(openHomeFeedAct_);
-  shortcutRegistry_.append(showDownloadManagerAct_);
-  shortcutRegistry_.append(showCleanUpWizardAct_);
-  shortcutRegistry_.append(setNewsFiltersAct_);
-  shortcutRegistry_.append(bulkFeedSettingsAct_);
-  shortcutRegistry_.append(websiteCookiesAct_);
-  shortcutRegistry_.append(setFilterNewsAct_);
-  optionsAct_->setShortcut(QKeySequence(Qt::Key_F8));
-  shortcutRegistry_.append(optionsAct_);
-  deleteNewsAct_->setShortcut(QKeySequence(Qt::Key_Delete));
-  shortcutRegistry_.append(deleteNewsAct_);
-  deleteAllNewsAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Delete));
-  shortcutRegistry_.append(deleteAllNewsAct_);
-  feedProperties_->setShortcut(QKeySequence(Qt::CTRL|Qt::Key_E));
-  shortcutRegistry_.append(feedProperties_);
-  feedKeyUpAct_->setShortcut(QKeySequence(Qt::CTRL|Qt::Key_Up));
-  shortcutRegistry_.append(feedKeyUpAct_);
-  feedKeyDownAct_->setShortcut(QKeySequence(Qt::CTRL|Qt::Key_Down));
-  shortcutRegistry_.append(feedKeyDownAct_);
-  newsKeyUpAct_->setShortcut(QKeySequence(Qt::Key_Left));
-  shortcutRegistry_.append(newsKeyUpAct_);
-  newsKeyDownAct_->setShortcut(QKeySequence(Qt::Key_Right));
-  shortcutRegistry_.append(newsKeyDownAct_);
-  shortcutRegistry_.append(newsKeyPageUpAct_);
-  shortcutRegistry_.append(newsKeyPageDownAct_);
-
-  shortcutRegistry_.append(nextUnreadNewsAct_);
-  shortcutRegistry_.append(prevUnreadNewsAct_);
-
-  shortcutRegistry_.append(nextFolderAct_);
-  shortcutRegistry_.append(prevFolderAct_);
-
-  shortcutRegistry_.append(importFeedsAct_);
-  shortcutRegistry_.append(exportFeedsAct_);
-  shortcutRegistry_.append(createBackupAct_);
-  shortcutRegistry_.append(autoLoadImagesToggle_);
-  shortcutRegistry_.append(markAllFeedsRead_);
-  shortcutRegistry_.append(markFeedRead_);
-  shortcutRegistry_.append(markNewsRead_);
-  shortcutRegistry_.append(markAllNewsRead_);
-  shortcutRegistry_.append(markStarAct_);
-  shortcutRegistry_.append(collapseAllFoldersAct_);
-  shortcutRegistry_.append(expandAllFoldersAct_);
-  shortcutRegistry_.append(expandFolderAct_);
-
-  shortcutRegistry_.append(openDescriptionNewsAct_);
-  openDescriptionNewsAct_->setShortcut(QKeySequence(Qt::Key_Return));
-  shortcutRegistry_.append(openInExternalBrowserAct_);
-  openInExternalBrowserAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
-
-  switchFocusAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab));
-  shortcutRegistry_.append(switchFocusAct_);
-  switchFocusPrevAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab));
-  shortcutRegistry_.append(switchFocusPrevAct_);
-
-  feedsWidgetVisibleAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
-  shortcutRegistry_.append(feedsWidgetVisibleAct_);
-
-  shortcutRegistry_.append(placeToTrayAct_);
-
-  zoomInAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Plus));
-  shortcutRegistry_.append(zoomInAct_);
-  zoomOutAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Minus));
-  shortcutRegistry_.append(zoomOutAct_);
-  zoomTo100Act_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_0));
-  shortcutRegistry_.append(zoomTo100Act_);
-
-  printAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
-  shortcutRegistry_.append(printAct_);
-  printPreviewAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P));
-  shortcutRegistry_.append(printPreviewAct_);
-
-  savePageAsAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
-  shortcutRegistry_.append(savePageAsAct_);
-
-  fullScreenAct_->setShortcut(QKeySequence(Qt::Key_F11));
-  shortcutRegistry_.append(fullScreenAct_);
-
-  stayOnTopAct_->setShortcut(QKeySequence(Qt::Key_F10));
-  shortcutRegistry_.append(stayOnTopAct_);
-
-  shortcutRegistry_.append(layoutToggle_);
-
-  closeTabAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
-  shortcutRegistry_.append(closeTabAct_);
-  shortcutRegistry_.append(closeOtherTabsAct_);
-  shortcutRegistry_.append(closeAllTabsAct_);
-  shortcutRegistry_.append(nextTabAct_);
-  shortcutRegistry_.append(prevTabAct_);
-
-  reduceNewsListAct_->setShortcut(QKeySequence(Qt::ALT| Qt::Key_Up));
-  shortcutRegistry_.append(reduceNewsListAct_);
-  increaseNewsListAct_->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Down));
-  shortcutRegistry_.append(increaseNewsListAct_);
-
-  restoreLastNewsAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Z));
-  shortcutRegistry_.append(restoreLastNewsAct_);
-
-  findTextAct_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
-  shortcutRegistry_.append(findTextAct_);
-
-  shortcutRegistry_.append(findFeedAct_);
-
-  shortcutRegistry_.append(copyLinkAct_);
-
-  shortcutRegistry_.append(pageUpWebViewAct_);
-  shortcutRegistry_.append(pageDownWebViewAct_);
+  for (const auto &spec : UiBindings::kShortcuts) {
+    QAction *action = this->*(spec.member);
+    if (spec.defaultKey == -1)
+      action->setShortcut(QKeySequence(QKeySequence::New));
+    else if (spec.defaultKey != 0)
+      action->setShortcut(QKeySequence(spec.defaultKey));
+    shortcutRegistry_.append(action);
+  }
 
   shortcutRegistry_.append(shareGroup_->actions());
 
@@ -1371,203 +1079,21 @@ void MainWindow::retranslateStrings()
     allWorkspacesAct_->setText(tr("All Workspaces"));
 #endif
 
-  addAct_->setText(tr("&Add"));
-  addAct_->setToolTip(tr("Add New Feed"));
+  for (const auto &spec : UiBindings::kActions) {
+    QAction *action = this->*(spec.member);
+    if (spec.text)
+      action->setText(tr(spec.text));
+    if (spec.toolTip)
+      action->setToolTip(tr(spec.toolTip));
+  }
 
-  addFeedAct_->setText(tr("&Feed..."));
-  addFeedAct_->setToolTip(tr("Add New Feed"));
-
-  addFeedTrayAct_->setText(tr("Add Feed..."));
-
-  addFolderAct_->setText(tr("F&older..."));
-  addFolderAct_->setToolTip(tr("Add New Folder"));
-
-  openFeedNewTabAct_->setText(tr("Open in New Tab"));
-
-  deleteFeedAct_->setText(tr("&Delete..."));
-  deleteFeedAct_->setToolTip(tr("Delete Selected Feed"));
-
-  importFeedsAct_->setText(tr("&Import Feeds..."));
-  importFeedsAct_->setToolTip(tr("Import Feeds from OPML File"));
-
-  exportFeedsAct_->setText(tr("&Export Feeds..."));
-  exportFeedsAct_->setToolTip(tr("Export Feeds to OPML File"));
-
-  createBackupAct_->setText(tr("&Create Backup..."));
-  showMenuBarAct_->setText(tr("S&how Menu Bar"));
-
-  exitAct_->setText(tr("E&xit"));
+  for (const auto &spec : UiBindings::kMenuTitles)
+    (this->*(spec.menu))->setTitle(tr(spec.title));
 
   updateFeedActionText();
-
-  updateAllFeedsAct_->setText(tr("Update All"));
-  updateAllFeedsAct_->setToolTip(tr("Update All Feeds"));
-
-  stopUpdateAct_->setText(tr("Stop Updating Feeds"));
-  stopUpdateAct_->setToolTip(tr("Stop Updating Feeds"));
-
-  markAllFeedsRead_->setText(tr("Mark All Feeds Read"));
-
-  markNewsRead_->setText(tr("Mark Article Read/Unread"));
-  markNewsRead_->setToolTip(tr("Mark Current Article Read/Unread"));
-
-  markAllNewsRead_->setText(tr("Mark All Articles Read"));
-  markAllNewsRead_->setToolTip(tr("Mark All Articles Read"));
-
-  showDownloadManagerAct_->setText(tr("Downloads"));
-
-  showCleanUpWizardAct_->setText(tr("Clean Up..."));
-
-  setNewsFiltersAct_->setText(tr("Article Filters..."));
-  bulkFeedSettingsAct_->setText(tr("Bulk configure feeds..."));
-  websiteCookiesAct_->setText(tr("Website cookies…"));
-  setFilterNewsAct_->setText(tr("Filter Articles..."));
-
-  optionsAct_->setText(tr("Options..."));
-  optionsAct_->setToolTip(tr("Open Options Dialog"));
-
-  feedsFilter_->setText(tr("Filter Feeds"));
-  filterFeedsAll_->setText(tr("Show All"));
-  filterFeedsNew_->setText(tr("Show New"));
-  filterFeedsUnread_->setText(tr("Show Unread"));
-  filterFeedsStarred_->setText(tr("Show Starred Feeds"));
-  filterFeedsError_->setText(tr("Show Not Working Feeds"));
-
-  newsFilter_->setText(tr("Filter News"));
-  filterNewsAll_->setText(tr("Show All"));
-  filterNewsNew_->setText(tr("Show New"));
-  filterNewsUnread_->setText(tr("Show Unread"));
-  filterNewsStar_->setText(tr("Show Starred"));
-  filterNewsNotStarred_->setText(tr("Show Not Starred"));
-  filterNewsUnreadStar_->setText(tr("Show Unread or Starred"));
-  filterNewsLastDay_->setText(tr("Show Last Day"));
-  filterNewsLastWeek_->setText(tr("Show Last 7 Days"));
-
-  aboutAct_ ->setText(tr("About..."));
-  aboutAct_->setToolTip(tr("Show 'About' Dialog"));
-
-  updateAppAct_->setText(tr("Check for Updates..."));
-  reportProblemAct_->setText(tr("Report a Problem..."));
-
-  openDescriptionNewsAct_->setText(tr("Open Article"));
-  openDescriptionNewsAct_->setToolTip(tr("Open Article Description"));
-  openInExternalBrowserAct_->setText(tr("Open"));
-  openInExternalBrowserAct_->setToolTip(tr("Open"));
-  markStarAct_->setText(tr("Star"));
-  markStarAct_->setToolTip(tr("Star Article"));
-  deleteNewsAct_->setText(tr("Delete"));
-  deleteNewsAct_->setToolTip(tr("Delete Selected Articles"));
-  deleteAllNewsAct_->setText(tr("Delete All Articles"));
-  deleteAllNewsAct_->setToolTip(tr("Delete All Articles from List"));
-  restoreNewsAct_->setText(tr("Restore"));
-  restoreNewsAct_->setToolTip(tr("Restore Article"));
-  copyLinkAct_->setText(tr("Copy Link"));
-  copyLinkAct_->setToolTip(tr("Copy Article Link"));
-
-  restoreLastNewsAct_->setText(tr("Restore Last Deleted Article"));
-
-  markFeedRead_->setText(tr("Mark Read"));
-  markFeedRead_->setToolTip(tr("Mark Feed Read"));
-  feedProperties_->setText(tr("Properties"));
-  feedProperties_->setToolTip(tr("Properties"));
-
-  fileMenu_->setTitle(tr("&File"));
-  viewMenu_->setTitle(tr("&View"));
-  feedMenu_->setTitle(tr("Fee&ds"));
-  newsMenu_->setTitle(tr("&News"));
-  browserMenu_->setTitle(tr("&Article"));
-  toolsMenu_->setTitle(tr("&Tools"));
-  helpMenu_->setTitle(tr("&Help"));
-
   mainToolbar_->setWindowTitle(tr("Main Toolbar"));
-  customizeToolbarMenu_->setTitle(tr("Customize Toolbar"));
-  customizeMainToolbarAct_->setText(tr("Main Toolbar..."));
-  customizeMainToolbarAct2_->setText(tr("Customize Toolbar..."));
-  customizeFeedsToolbarAct_->setText(tr("Feeds Toolbar..."));
-  customizeNewsToolbarAct_->setText(tr("News Toolbar..."));
-
-  toolBarLockAct_->setText(tr("Lock Toolbar"));
-  toolBarHideAct_->setText(tr("Hide Toolbar"));
-
-  layoutMenu_->setTitle(tr("Layout"));
-  classicLayoutAct_->setText(tr("Classic"));
-  newspaperLayoutAct_->setText(tr("Newspaper"));
-  layoutToggle_->setText(tr("Layout"));
-
-  styleMenu_->setTitle(tr("Application Theme"));
   rebuildStyleMenu();
-
-  browserPositionMenu_->setTitle(tr("Article Pane Position"));
-  topBrowserPositionAct_->setText(tr("Top"));
-  bottomBrowserPositionAct_->setText(tr("Bottom"));
-  rightBrowserPositionAct_->setText(tr("Right"));
-  leftBrowserPositionAct_->setText(tr("Left"));
-
   showWindowAct_->setText(tr("Show Window"));
-
-  feedKeyUpAct_->setText(tr("Previous Feed"));
-  feedKeyDownAct_->setText(tr("Next Feed"));
-  newsKeyUpAct_->setText(tr("Previous Article"));
-  newsKeyDownAct_->setText(tr("Next Article"));
-  newsKeyPageUpAct_->setText(tr("Article Page Up"));
-  newsKeyPageDownAct_->setText(tr("Article Page Down"));
-
-  nextUnreadNewsAct_->setText(tr("Next Unread Article"));
-  prevUnreadNewsAct_->setText(tr("Previous Unread Article"));
-
-  switchFocusAct_->setText(tr("Switch Focus to Next Panel"));
-  switchFocusAct_->setToolTip(
-        tr("Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)"));
-  switchFocusPrevAct_->setText(tr("Switch Focus to Previous Panel"));
-  switchFocusPrevAct_->setToolTip(
-        tr("Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)"));
-
-  feedsWidgetVisibleAct_->setText(tr("Feeds Pane"));
-
-  placeToTrayAct_->setText(tr("Minimize to Tray"));
-  placeToTrayAct_->setToolTip(tr("Minimize Application to Tray"));
-
-  feedsColumnsMenu_->setTitle(tr("Columns"));
-  showUnreadCount_->setText(tr("Number of unread articles"));
-  showUndeleteCount_->setText(tr("Total number of articles"));
-  showLastUpdated_->setText(tr("Last update"));
-
-  indentationFeedsTreeAct_->setText(tr("Enable Indentation"));
-
-  findFeedAct_->setText(tr("Search Feed"));
-  findFeedAct_->setToolTip(tr("Search Feed"));
-
-  browserZoomMenu_->setTitle(tr("Zoom"));
-  zoomInAct_->setText(tr("Zoom In"));
-  zoomInAct_->setToolTip(tr("Zoom in"));
-  zoomOutAct_->setText(tr("Zoom Out"));
-  zoomOutAct_->setToolTip(tr("Zoom out"));
-  zoomTo100Act_->setText(tr("100%"));
-  zoomTo100Act_->setToolTip(tr("Reset zoom"));
-
-  printAct_->setText(tr("Print..."));
-  printAct_->setToolTip(tr("Print Article"));
-  printPreviewAct_->setText(tr("Print Preview..."));
-  printPreviewAct_->setToolTip(tr("Preview Article"));
-
-  pageUpWebViewAct_->setText(tr("Page up (Article)"));
-  pageDownWebViewAct_->setText(tr("Page down (Article)"));
-
-  savePageAsAct_->setText(tr("Save As..."));
-  savePageAsAct_->setToolTip(tr("Save Article As..."));
-
-  toolbarsMenu_->setTitle(tr("Show/Hide"));
-  mainToolbarToggle_->setText(tr("Main Toolbar"));
-  feedsToolbarToggle_->setText(tr("Feeds Toolbar"));
-  newsToolbarToggle_->setText(tr("News Toolbar"));
-  categoriesPanelToggle_->setText(tr("Panel Categories"));
-  statusBarToggle_->setText(tr("Status Bar"));
-
-  fullScreenAct_->setText(tr("Full Screen"));
-  fullScreenAct_->setToolTip(tr("Full Screen"));
-
-  stayOnTopAct_->setText(tr("Stay On Top"));
-  stayOnTopAct_->setToolTip(tr("Stay On Top"));
 
   categoriesLabel_->setText(tr("Categories"));
   if (categoriesTree_->isHidden())
@@ -1576,38 +1102,14 @@ void MainWindow::retranslateStrings()
     showCategoriesButton_->setToolTip(tr("Hide Categories"));
 
   newsLabelMenuAction_->setText(tr("Label"));
-  newsLabelAction_->setText(tr("Label"));
-  showLabelsMenuAct_->setText(tr("Show labels menu"));
-
-  closeTabAct_->setText(tr("Close Tab"));
-  closeOtherTabsAct_->setText(tr("Close Other Tabs"));
-  closeAllTabsAct_->setText(tr("Close All Tabs"));
-  nextTabAct_->setText(tr("Switch to next tab"));
-  prevTabAct_->setText(tr("Switch to previous tab"));
 
   categoriesTree_->topLevelItem(CategoriesTreeWidget::UnreadItem)->setText(0, tr("Unread"));
   categoriesTree_->topLevelItem(CategoriesTreeWidget::StarredItem)->setText(0, tr("Starred"));
   categoriesTree_->topLevelItem(CategoriesTreeWidget::DeletedItem)->setText(0, tr("Deleted"));
   categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem)->setText(0, tr("Labels"));
 
-  reduceNewsListAct_->setText(tr("Decrease article list / increase article pane"));
-  increaseNewsListAct_->setText(tr("Increase article list / decrease article pane"));
-
-  findTextAct_->setText(tr("Find"));
-
-  openHomeFeedAct_->setText(tr("Open Feed Homepage"));
-  sortedByTitleFeedsTreeAct_->setText(tr("Sort by Name"));
-  collapseAllFoldersAct_->setText(tr("Collapse All Folders"));
-  expandAllFoldersAct_->setText(tr("Expand All Folders"));
-  nextFolderAct_->setText(tr("Next Folder"));
-  prevFolderAct_->setText(tr("Previous Folder"));
-  expandFolderAct_->setText(tr("Expand Folder"));
-
-  settingPageLabelsAct_->setText(tr("Settings Page: Labels"));
-
   shareMenuAct_->setText(tr("Share"));
 
-  newsSortByMenu_->setTitle(tr("Sort By"));
   newsSortOrderGroup_->actions().at(0)->setText(tr("Ascending"));
   newsSortOrderGroup_->actions().at(1)->setText(tr("Descending"));
 

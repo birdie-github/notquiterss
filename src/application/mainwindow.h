@@ -756,6 +756,7 @@ private:
   OptionsDialog *optionsDialog_;
 
   struct SettingBindings;
+  struct UiBindings;
 
 };
 
