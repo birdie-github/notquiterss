@@ -23,6 +23,7 @@
 #include <QtSql>
 #include <QNetworkProxy>
 
+#include "cleanuppreviewdialog.h"
 #include "dialog.h"
 #include "lineedit.h"
 #include "notificationswidget.h"
@@ -133,6 +134,8 @@ public:
   QCheckBox *neverLabelCleanUp_;
   QCheckBox *cleanUpDeleted_;
   QCheckBox *optimizeDB_;
+  QLabel *cleanUpPreviewLabel_;
+  QPushButton *cleanUpPreviewButton_;
 
   QGroupBox *avoidedOldNewsDateOn_;
   QCalendarWidget *avoidedOldNewsDate_;
@@ -224,6 +227,8 @@ private slots:
   void slotDeleteAllPass();
   void slotShowPass();
   void selectionDownloadLocation();
+  void updateCleanUpPreview();
+  void showCleanUpPreview();
 
 private:
   void showEvent(QShowEvent *) override;
@@ -280,6 +285,9 @@ private:
 
   // feeds
   void createFeedsWidget();
+  ShutdownCleanUpConfig currentCleanUpConfig() const;
+  ShutdownCleanUpPlan cleanUpPlan_;
+  bool cleanUpPlanValid_ = false;
 
   // notifier
   void createNotifierWidget();

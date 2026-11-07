@@ -109,6 +109,7 @@ HEADERS += \
     src/downloads/downloaditem.h \
     src/tabbar.h \
     src/categoriestreewidget.h \
+    src/cleanuppreviewdialog.h \
     src/cleanupwizard.h \
     src/updatefeeds.h \
     src/requestfeed.h \
@@ -178,6 +179,7 @@ SOURCES += \
     src/downloads/downloaditem.cpp \
     src/tabbar.cpp \
     src/categoriestreewidget.cpp \
+    src/cleanuppreviewdialog.cpp \
     src/cleanupwizard.cpp \
     src/updatefeeds.cpp \
     src/requestfeed.cpp \

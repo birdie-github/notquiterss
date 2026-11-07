@@ -969,10 +969,23 @@ void OptionsDialog::createFeedsWidget()
   cleanUpFeedsLayout2->addWidget(cleanUpDeleted_);
   cleanUpFeedsLayout2->addWidget(optimizeDB_);
 
+  cleanUpPreviewLabel_ = new QLabel();
+  cleanUpPreviewButton_ = new QPushButton(tr("Preview"));
+  cleanUpPreviewButton_->setEnabled(false);
+  connect(cleanUpPreviewButton_, &QAbstractButton::clicked,
+          this, &OptionsDialog::showCleanUpPreview);
+
+  QHBoxLayout *cleanUpPreviewLayout = new QHBoxLayout();
+  cleanUpPreviewLayout->addWidget(cleanUpPreviewLabel_);
+  cleanUpPreviewLayout->addWidget(cleanUpPreviewButton_);
+  cleanUpPreviewLayout->addStretch();
+
   QVBoxLayout *cleanUpFeedsLayout3 = new QVBoxLayout(cleanupOnShutdownBox_);
   cleanUpFeedsLayout3->addLayout(cleanUpFeedsLayout);
   cleanUpFeedsLayout3->addSpacing(10);
   cleanUpFeedsLayout3->addLayout(cleanUpFeedsLayout2);
+  cleanUpFeedsLayout3->addSpacing(10);
+  cleanUpFeedsLayout3->addLayout(cleanUpPreviewLayout);
   cleanUpFeedsLayout3->addStretch();
 
   QVBoxLayout *boxCleanUpFeedsLayout = new QVBoxLayout(cleanUpFeedsWidget);
@@ -983,6 +996,22 @@ void OptionsDialog::createFeedsWidget()
   feedsWidget_->addTab(displayFeedsWidget, tr("Display"));
   feedsWidget_->addTab(readingFeedsWidget, tr("Reading"));
   feedsWidget_->addTab(cleanUpFeedsWidget, tr("Clean Up"));
+
+  connect(cleanupOnShutdownBox_, &QGroupBox::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(dayCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(maxDayCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, &OptionsDialog::updateCleanUpPreview);
+  connect(newsCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(maxNewsCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, &OptionsDialog::updateCleanUpPreview);
+  connect(readCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(neverUnreadCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(neverStarCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(neverLabelCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(cleanUpDeleted_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(feedsWidget_, &QTabWidget::currentChanged, this, [this](int index) {
+    if (index == 3) updateCleanUpPreview();
+  });
 }
 
 /** @brief Create widget "Labels"
@@ -1550,6 +1579,8 @@ void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
     loadLabels();
   } else if (item->data(1, Qt::DisplayRole).toString() == tr("Notifications")) {
     loadNotifier();
+  } else if (item->data(0, Qt::DisplayRole).toInt() == 4) {
+    updateCleanUpPreview();
   }
 }
 //----------------------------------------------------------------------------
@@ -2418,4 +2449,45 @@ void OptionsDialog::selectionDownloadLocation()
                                                      | QFileDialog::DontResolveSymlinks);
   if (!dirStr.isEmpty())
     downloadLocationEdit_->setText(dirStr);
+}
+
+ShutdownCleanUpConfig OptionsDialog::currentCleanUpConfig() const
+{
+  ShutdownCleanUpConfig config;
+  config.cleanupOn = cleanupOnShutdownBox_->isChecked();
+  config.dayCleanUpOn = dayCleanUpOn_->isChecked();
+  config.maxDayCleanUp = maxDayCleanUp_->value();
+  config.newsCleanUpOn = newsCleanUpOn_->isChecked();
+  config.maxNewsCleanUp = maxNewsCleanUp_->value();
+  config.readCleanUp = readCleanUp_->isChecked();
+  config.neverUnreadCleanUp = neverUnreadCleanUp_->isChecked();
+  config.neverStarCleanUp = neverStarCleanUp_->isChecked();
+  config.neverLabelCleanUp = neverLabelCleanUp_->isChecked();
+  config.cleanUpDeleted = cleanUpDeleted_->isChecked();
+  return config;
+}
+
+void OptionsDialog::updateCleanUpPreview()
+{
+  QString error;
+  cleanUpPlanValid_ = ShutdownCleanUp::evaluate(db_, currentCleanUpConfig(), cleanUpPlan_, error);
+  if (!cleanUpPlanValid_) {
+    cleanUpPreviewLabel_->setText(tr("Cannot calculate shutdown cleanup preview: %1").arg(error));
+    cleanUpPreviewButton_->setEnabled(false);
+    return;
+  }
+
+  const int total = cleanUpPlan_.totalArticles();
+  cleanUpPreviewLabel_->setText(
+      tr("On shutdown %n article(s) will be deleted.", "", total));
+  cleanUpPreviewButton_->setEnabled(cleanupOnShutdownBox_->isChecked() && total > 0);
+}
+
+void OptionsDialog::showCleanUpPreview()
+{
+  updateCleanUpPreview();
+  if (!cleanUpPlanValid_ || cleanUpPlan_.totalArticles() <= 0) return;
+
+  CleanUpPreviewDialog dialog(cleanUpPlan_, this);
+  dialog.exec();
 }
