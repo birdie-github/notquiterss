@@ -60,7 +60,6 @@ void FeedsModel::refresh()
 {
   beginResetModel();
   clear();
-  endResetModel();
 
   queryModel_.setQuery("SELECT * FROM feeds ORDER BY parentId, rowToParent");
   while (queryModel_.canFetchMore())
@@ -91,6 +90,7 @@ void FeedsModel::refresh()
     siblings.append(userData);
     userDataList_[id] = userData;
   }
+  endResetModel();
 }
 
 UserData * FeedsModel::userDataById(int id) const
