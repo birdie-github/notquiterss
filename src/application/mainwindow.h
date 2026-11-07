@@ -755,6 +755,8 @@ private:
 
   OptionsDialog *optionsDialog_;
 
+  struct SettingBindings;
+
 };
 
 #endif // MAINWINDOW_H
