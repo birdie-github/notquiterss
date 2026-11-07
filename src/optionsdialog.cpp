@@ -1357,21 +1357,17 @@ void OptionsDialog::createFontsColorsWidget()
   treeItem << "Id" << tr("Type") << tr("Font");
   fontsTree_->setHeaderLabels(treeItem);
 
-  treeItem.clear();
-  treeItem << "0" << tr("Feed list font");
-  fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "1" << tr("Article list font");
-  fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "2" << tr("Article title font");
-  fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "3" << tr("Article text font");
-  fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "4" << tr("Notification font");
-  fontsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
+  static const char *const kFontLabels[] = {
+    QT_TR_NOOP("Feed list font"),
+    QT_TR_NOOP("Article list font"),
+    QT_TR_NOOP("Article title font"),
+    QT_TR_NOOP("Article text font"),
+    QT_TR_NOOP("Notification font"),
+  };
+  for (int i = 0; i < int(sizeof(kFontLabels) / sizeof(kFontLabels[0])); ++i) {
+    fontsTree_->addTopLevelItem(
+          new QTreeWidgetItem(QStringList() << QString::number(i) << tr(kFontLabels[i])));
+  }
 
   fontsTree_->setCurrentItem(fontsTree_->topLevelItem(0));
   connect(fontsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::slotFontChange);
@@ -1402,75 +1398,33 @@ void OptionsDialog::createFontsColorsWidget()
   colorsTree_->setColumnHidden(1, true);
   colorsTree_->setHeaderHidden(true);
 
-  treeItem.clear();
-  treeItem << tr("Feed list text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Feeds list background");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Article list text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Article list background");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Focused article text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Focused article background");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Link color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Title color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Date color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Author color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Article text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Article title background");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Article background");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Feed with new articles");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Unread article count in feed tree");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("New article text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Unread article text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Focused feed color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Focused feed background color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Disabled feed");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Alternating row colors");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Notification text color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << tr("Notification background color");
-  colorsTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
+  static const char *const kColorLabels[] = {
+    QT_TR_NOOP("Feed list text color"),
+    QT_TR_NOOP("Feeds list background"),
+    QT_TR_NOOP("Article list text color"),
+    QT_TR_NOOP("Article list background"),
+    QT_TR_NOOP("Focused article text color"),
+    QT_TR_NOOP("Focused article background"),
+    QT_TR_NOOP("Link color"),
+    QT_TR_NOOP("Title color"),
+    QT_TR_NOOP("Date color"),
+    QT_TR_NOOP("Author color"),
+    QT_TR_NOOP("Article text color"),
+    QT_TR_NOOP("Article title background"),
+    QT_TR_NOOP("Article background"),
+    QT_TR_NOOP("Feed with new articles"),
+    QT_TR_NOOP("Unread article count in feed tree"),
+    QT_TR_NOOP("New article text color"),
+    QT_TR_NOOP("Unread article text color"),
+    QT_TR_NOOP("Focused feed color"),
+    QT_TR_NOOP("Focused feed background color"),
+    QT_TR_NOOP("Disabled feed"),
+    QT_TR_NOOP("Alternating row colors"),
+    QT_TR_NOOP("Notification text color"),
+    QT_TR_NOOP("Notification background color"),
+  };
+  for (const char *label : kColorLabels)
+    colorsTree_->addTopLevelItem(new QTreeWidgetItem(QStringList() << tr(label)));
 
   colorsTree_->setCurrentItem(colorsTree_->topLevelItem(0));
 
@@ -1689,13 +1643,9 @@ void OptionsDialog::slotFontChange()
 //----------------------------------------------------------------------------
 void OptionsDialog::slotFontReset()
 {
-  switch (fontsTree_->currentItem()->text(0).toInt()) {
-  case 2: case 3: fontsTree_->currentItem()->setText(
-          2, QString("%1, %2").arg(qApp->font().family()).arg(qApp->font().pointSize()+2));
-    break;
-  default: fontsTree_->currentItem()->setText(
-          2, QString("%1, %2").arg(qApp->font().family()).arg(qApp->font().pointSize()));
-  }
+  const QFont def = MainWindow::defaultFontForOption(fontsTree_->currentItem()->text(0).toInt());
+  fontsTree_->currentItem()->setText(
+        2, QString("%1, %2").arg(def.family()).arg(def.pointSize()));
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::slotColorChange()

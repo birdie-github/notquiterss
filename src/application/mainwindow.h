@@ -80,7 +80,15 @@ public:
   void loadSettings();
   void saveSettings();
   void updateNewsActionStates(bool hasSelection, bool hasNews, bool hasArticle);
+  static const int kColorOptionCount = 23;
+  static const int kFontOptionCount = 5;
+  static const char *colorSettingKey(int row);
+  static const char *fontFamilySettingKey(int row);
+  static const char *fontSizeSettingKey(int row);
   QString defaultColorForOption(int row) const;
+  QFont fontForOption(int row) const;
+  void setFontForOption(int row, const QFont &font);
+  static QFont defaultFontForOption(int row);
 
   bool showSplashScreen_;
   bool showTrayIcon_;
@@ -757,6 +765,7 @@ private:
 
   struct SettingBindings;
   struct UiBindings;
+  struct ThemeBindings;
 
 };
 

@@ -33,20 +33,6 @@ QSize virtualDesktopSize()
   return screen ? screen->virtualGeometry().size() : QSize();
 }
 
-const char *colorSettingKey(int row)
-{
-  static const char *keys[] = {
-    "feedsListTextColor", "feedsListBackgroundColor", "newsListTextColor",
-    "newsListBackgroundColor", "focusedNewsTextColor", "focusedNewsBGColor",
-    "linkColor", "titleColor", "dateColor", "authorColor", "newsTextColor",
-    "newsTitleBackgroundColor", "newsBackgroundColor", "feedWithNewNewsColor",
-    "countNewsUnreadColor", "newNewsTextColor", "unreadNewsTextColor",
-    "focusedFeedTextColor", "focusedFeedBGColor", "feedDisabledUpdateColor",
-    "alternatingRowColors", "notifierTextColor", "notifierBackgroundColor"
-  };
-  return row >= 0 && row < int(sizeof(keys) / sizeof(keys[0])) ? keys[row] : "";
-}
-
 void selectComboData(QComboBox *combo, const QString &value)
 {
   for (int i = 0; i < combo->count(); ++i) {
@@ -288,20 +274,12 @@ void MainWindow::loadSettings()
     this->*(s.member) = false;
 #endif
 
-  QString fontFamily = settings.value("feedsFontFamily", qApp->font().family()).toString();
-  int fontSize = settings.value("feedsFontSize", qApp->font().pointSize()).toInt();
-  feedsView_->setFont(QFont(fontFamily, fontSize));
-  feedsModel_->font_ = feedsView_->font();
-  categoriesTree_->setFont(QFont(fontFamily, fontSize));
-
-  newsListFontFamily_ = settings.value("newsFontFamily", qApp->font().family()).toString();
-  newsListFontSize_ = settings.value("newsFontSize", qApp->font().pointSize()).toInt();
-  newsTitleFontFamily_ = settings.value("newsTitleFontFamily", qApp->font().family()).toString();
-  newsTitleFontSize_ = settings.value("newsTitleFontSize", qApp->font().pointSize()+2).toInt();
-  newsTextFontFamily_ = settings.value("newsTextFontFamily", qApp->font().family()).toString();
-  newsTextFontSize_ = settings.value("newsTextFontSize", qApp->font().pointSize()+2).toInt();
-  notificationFontFamily_ = settings.value("notificationFontFamily", qApp->font().family()).toString();
-  notificationFontSize_ = settings.value("notificationFontSize", qApp->font().pointSize()).toInt();
+  for (int row = 0; row < kFontOptionCount; ++row) {
+    const QFont def = defaultFontForOption(row);
+    const QString family = settings.value(fontFamilySettingKey(row), def.family()).toString();
+    const int size = settings.value(fontSizeSettingKey(row), def.pointSize()).toInt();
+    setFontForOption(row, QFont(family, size));
+  }
 
   feedsModel_->formatDate_ = formatDate_;
   feedsModel_->formatTime_ = formatTime_;
@@ -386,7 +364,7 @@ void MainWindow::loadSettings()
   // overrides until the user changes theme (which clears the group).
   setThemeColorDefaults();
   Settings colorSettings("Color");
-  for (int row = 0; row < 23; ++row) {
+  for (int row = 0; row < kColorOptionCount; ++row) {
     const QString key = QString::fromLatin1(colorSettingKey(row));
     if (!colorSettings.contains(key)) continue;
     customColorRows_.insert(row);
@@ -465,16 +443,11 @@ void MainWindow::saveSettings()
   settings.setValue("behaviorIconTray", behaviorIconTray_);
   settings.setValue("langFileName", mainApp->language());
 
-  settings.setValue("feedsFontFamily", feedsView_->font().family());
-  settings.setValue("feedsFontSize", feedsView_->font().pointSize());
-  settings.setValue("newsFontFamily", newsListFontFamily_);
-  settings.setValue("newsFontSize", newsListFontSize_);
-  settings.setValue("newsTitleFontFamily", newsTitleFontFamily_);
-  settings.setValue("newsTitleFontSize", newsTitleFontSize_);
-  settings.setValue("newsTextFontFamily", newsTextFontFamily_);
-  settings.setValue("newsTextFontSize", newsTextFontSize_);
-  settings.setValue("notificationFontFamily", notificationFontFamily_);
-  settings.setValue("notificationFontSize", notificationFontSize_);
+  for (int row = 0; row < kFontOptionCount; ++row) {
+    const QFont f = fontForOption(row);
+    settings.setValue(fontFamilySettingKey(row), f.family());
+    settings.setValue(fontSizeSettingKey(row), f.pointSize());
+  }
 
   settings.setValue("avoidedOldNewsDate", avoidedOldNewsDate_);
   settings.setValue("downloadLocation", downloadLocation_);
@@ -629,106 +602,22 @@ void MainWindow::showOptionDlg(int index)
   optionsDialog_->editSoundNotifer_->setText(soundNotifyPath_);
   optionsDialog_->setLanguage(mainApp->language());
 
-  QString strFont = QString("%1, %2").
-      arg(feedsView_->font().family()).
-      arg(feedsView_->font().pointSize());
-  optionsDialog_->fontsTree_->topLevelItem(0)->setText(2, strFont);
-  strFont = QString("%1, %2").arg(newsListFontFamily_).arg(newsListFontSize_);
-  optionsDialog_->fontsTree_->topLevelItem(1)->setText(2, strFont);
-  strFont = QString("%1, %2").arg(newsTitleFontFamily_).arg(newsTitleFontSize_);
-  optionsDialog_->fontsTree_->topLevelItem(2)->setText(2, strFont);
-  strFont = QString("%1, %2").arg(newsTextFontFamily_).arg(newsTextFontSize_);
-  optionsDialog_->fontsTree_->topLevelItem(3)->setText(2, strFont);
-  strFont = QString("%1, %2").arg(notificationFontFamily_).arg(notificationFontSize_);
-  optionsDialog_->fontsTree_->topLevelItem(4)->setText(2, strFont);
+  for (int row = 0; row < kFontOptionCount; ++row) {
+    const QFont f = fontForOption(row);
+    optionsDialog_->fontsTree_->topLevelItem(row)->setText(
+          2, QString("%1, %2").arg(f.family()).arg(f.pointSize()));
+  }
 
-  QPixmap pixmapColor(14, 14);
-  pixmapColor.fill(feedsModel_->textColor_);
-  optionsDialog_->colorsTree_->topLevelItem(0)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(0)->setText(1, feedsModel_->textColor_);
-  if (feedsModel_->backgroundColor_.isEmpty())
-    pixmapColor.fill(QColor(0, 0, 0, 0));
-  else
-    pixmapColor.fill(feedsModel_->backgroundColor_);
-  optionsDialog_->colorsTree_->topLevelItem(1)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(1)->setText(1, feedsModel_->backgroundColor_);
-  pixmapColor.fill(newsListTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(2)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(2)->setText(1, newsListTextColor_);
-
-  if (newsListBackgroundColor_.isEmpty())
-    pixmapColor.fill(QColor(0, 0, 0, 0));
-  else
-    pixmapColor.fill(newsListBackgroundColor_);
-  optionsDialog_->colorsTree_->topLevelItem(3)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(3)->setText(1, newsListBackgroundColor_);
-  pixmapColor.fill(focusedNewsTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(4)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(4)->setText(1, focusedNewsTextColor_);
-  if (focusedNewsBGColor_.isEmpty())
-    pixmapColor.fill(QColor(0, 0, 0, 0));
-  else
-    pixmapColor.fill(focusedNewsBGColor_);
-  optionsDialog_->colorsTree_->topLevelItem(5)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(5)->setText(1, focusedNewsBGColor_);
-  pixmapColor.fill(linkColor_);
-  optionsDialog_->colorsTree_->topLevelItem(6)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(6)->setText(1, linkColor_);
-  pixmapColor.fill(titleColor_);
-  optionsDialog_->colorsTree_->topLevelItem(7)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(7)->setText(1, titleColor_);
-  pixmapColor.fill(dateColor_);
-  optionsDialog_->colorsTree_->topLevelItem(8)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(8)->setText(1, dateColor_);
-  pixmapColor.fill(authorColor_);
-  optionsDialog_->colorsTree_->topLevelItem(9)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(9)->setText(1, authorColor_);
-  pixmapColor.fill(newsTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(10)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(10)->setText(1, newsTextColor_);
-  pixmapColor.fill(newsTitleBackgroundColor_);
-  optionsDialog_->colorsTree_->topLevelItem(11)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(11)->setText(1, newsTitleBackgroundColor_);
-  pixmapColor.fill(newsBackgroundColor_);
-  optionsDialog_->colorsTree_->topLevelItem(12)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(12)->setText(1, newsBackgroundColor_);
-  pixmapColor.fill(feedsModel_->feedWithNewNewsColor_);
-  optionsDialog_->colorsTree_->topLevelItem(13)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(13)->setText(1, feedsModel_->feedWithNewNewsColor_);
-  pixmapColor.fill(feedsModel_->countNewsUnreadColor_);
-  optionsDialog_->colorsTree_->topLevelItem(14)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(14)->setText(1, feedsModel_->countNewsUnreadColor_);
-
-  pixmapColor.fill(newNewsTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(15)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(15)->setText(1, newNewsTextColor_);
-  pixmapColor.fill(unreadNewsTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(16)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(16)->setText(1, unreadNewsTextColor_);
-
-  pixmapColor.fill(feedsModel_->focusedFeedTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(17)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(17)->setText(1, feedsModel_->focusedFeedTextColor_);
-  if (feedsModel_->focusedFeedBGColor_.isEmpty())
-    pixmapColor.fill(QColor(0, 0, 0, 0));
-  else
-    pixmapColor.fill(feedsModel_->focusedFeedBGColor_);
-  optionsDialog_->colorsTree_->topLevelItem(18)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(18)->setText(1, feedsModel_->focusedFeedBGColor_);
-  pixmapColor.fill(feedsModel_->feedDisabledUpdateColor_);
-  optionsDialog_->colorsTree_->topLevelItem(19)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(19)->setText(1, feedsModel_->feedDisabledUpdateColor_);
-
-  pixmapColor.fill(alternatingRowColors_);
-  optionsDialog_->colorsTree_->topLevelItem(20)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(20)->setText(1, alternatingRowColors_);
-
-  pixmapColor.fill(notifierTextColor_);
-  optionsDialog_->colorsTree_->topLevelItem(21)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(21)->setText(1, notifierTextColor_);
-  pixmapColor.fill(notifierBackgroundColor_);
-  optionsDialog_->colorsTree_->topLevelItem(22)->setIcon(0, pixmapColor);
-  optionsDialog_->colorsTree_->topLevelItem(22)->setText(1, notifierBackgroundColor_);
+  for (int row = 0; row < kColorOptionCount; ++row) {
+    const QString colorName = colorValueForOption(row);
+    QPixmap pixmapColor(14, 14);
+    if (colorName.isEmpty())
+      pixmapColor.fill(QColor(0, 0, 0, 0));
+    else
+      pixmapColor.fill(colorName);
+    optionsDialog_->colorsTree_->topLevelItem(row)->setIcon(0, pixmapColor);
+    optionsDialog_->colorsTree_->topLevelItem(row)->setText(1, colorName);
+  }
 
   optionsDialog_->loadActionShortcut(shortcutRegistry_.actions(), &shortcutRegistry_.defaults());
 
@@ -900,55 +789,23 @@ void MainWindow::showOptionDlg(int index)
   mainApp->setLanguage(optionsDialog_->language());
   mainApp->setTranslateApplication();
 
-  QFont font = feedsView_->font();
-  font.setFamily(
-        optionsDialog_->fontsTree_->topLevelItem(0)->text(2).section(", ", 0, 0));
-  font.setPointSize(
-        optionsDialog_->fontsTree_->topLevelItem(0)->text(2).section(", ", 1).toInt());
-  feedsView_->setFont(font);
-  feedsModel_->font_ = font;
-  categoriesTree_->setFont(font);
+  for (int row = 0; row < kFontOptionCount; ++row) {
+    const QString text = optionsDialog_->fontsTree_->topLevelItem(row)->text(2);
+    QFont font = fontForOption(row);
+    font.setFamily(text.section(", ", 0, 0));
+    font.setPointSize(text.section(", ", 1).toInt());
+    setFontForOption(row, font);
+  }
 
-  newsListFontFamily_ = optionsDialog_->fontsTree_->topLevelItem(1)->text(2).section(", ", 0, 0);
-  newsListFontSize_ = optionsDialog_->fontsTree_->topLevelItem(1)->text(2).section(", ", 1).toInt();
-  newsTitleFontFamily_ = optionsDialog_->fontsTree_->topLevelItem(2)->text(2).section(", ", 0, 0);
-  newsTitleFontSize_ = optionsDialog_->fontsTree_->topLevelItem(2)->text(2).section(", ", 1).toInt();
-  newsTextFontFamily_ = optionsDialog_->fontsTree_->topLevelItem(3)->text(2).section(", ", 0, 0);
-  newsTextFontSize_ = optionsDialog_->fontsTree_->topLevelItem(3)->text(2).section(", ", 1).toInt();
-  notificationFontFamily_ = optionsDialog_->fontsTree_->topLevelItem(4)->text(2).section(", ", 0, 0);
-  notificationFontSize_ = optionsDialog_->fontsTree_->topLevelItem(4)->text(2).section(", ", 1).toInt();
-
-  feedsModel_->textColor_ = optionsDialog_->colorsTree_->topLevelItem(0)->text(1);
-  feedsModel_->backgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(1)->text(1);
-  feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
-      ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
-  newsListTextColor_ = optionsDialog_->colorsTree_->topLevelItem(2)->text(1);
-  newsListBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(3)->text(1);
-  focusedNewsTextColor_ = optionsDialog_->colorsTree_->topLevelItem(4)->text(1);
-  focusedNewsBGColor_ = optionsDialog_->colorsTree_->topLevelItem(5)->text(1);
-  linkColor_ = optionsDialog_->colorsTree_->topLevelItem(6)->text(1);
-  titleColor_ = optionsDialog_->colorsTree_->topLevelItem(7)->text(1);
-  dateColor_ = optionsDialog_->colorsTree_->topLevelItem(8)->text(1);
-  authorColor_ = optionsDialog_->colorsTree_->topLevelItem(9)->text(1);
-  newsTextColor_ = optionsDialog_->colorsTree_->topLevelItem(10)->text(1);
-  newsTitleBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(11)->text(1);
-  newsBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(12)->text(1);
-  feedsModel_->feedWithNewNewsColor_ = optionsDialog_->colorsTree_->topLevelItem(13)->text(1);
-  feedsModel_->countNewsUnreadColor_ = optionsDialog_->colorsTree_->topLevelItem(14)->text(1);
-  newNewsTextColor_ = optionsDialog_->colorsTree_->topLevelItem(15)->text(1);
-  unreadNewsTextColor_ = optionsDialog_->colorsTree_->topLevelItem(16)->text(1);
-  feedsModel_->focusedFeedTextColor_ = optionsDialog_->colorsTree_->topLevelItem(17)->text(1);
-  feedsModel_->focusedFeedBGColor_ = optionsDialog_->colorsTree_->topLevelItem(18)->text(1);
-  feedsModel_->feedDisabledUpdateColor_ = optionsDialog_->colorsTree_->topLevelItem(19)->text(1);
-  alternatingRowColors_ = optionsDialog_->colorsTree_->topLevelItem(20)->text(1);
-  notifierTextColor_ = optionsDialog_->colorsTree_->topLevelItem(21)->text(1);
-  notifierBackgroundColor_ = optionsDialog_->colorsTree_->topLevelItem(22)->text(1);
   for (int row = 0; row < optionsDialog_->colorsTree_->topLevelItemCount(); ++row) {
+    setColorValueForOption(row, optionsDialog_->colorsTree_->topLevelItem(row)->text(1));
     if (colorValueForOption(row) == defaultColorForOption(row))
       customColorRows_.remove(row);
     else
       customColorRows_.insert(row);
   }
+  feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
+      ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
 
   delete optionsDialog_;
   optionsDialog_ = nullptr;

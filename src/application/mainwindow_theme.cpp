@@ -101,33 +101,118 @@ void MainWindow::setStyleApp(QAction *action)
     candidate->setChecked(candidate->data().toString() == mainApp->applicationStyle().id);
 }
 
+struct MainWindow::ThemeBindings {
+  enum DefaultColorKind {
+    PaletteText,
+    EmptyBackground,
+    PaletteHighlightedText,
+    PaletteHighlight,
+    PaletteLink,
+    MutedText,
+    PaletteBase,
+    PaletteAlternateBase,
+    PaletteWindowText,
+    PaletteWindow,
+  };
+
+  struct ColorSpec {
+    const char *key;
+    QString MainWindow::*mwMember;
+    QString FeedsModel::*fmMember;
+    DefaultColorKind defaultKind;
+  };
+
+  struct FontSpec {
+    const char *familyKey;
+    const char *sizeKey;
+    QString MainWindow::*familyMember;
+    int MainWindow::*sizeMember;
+    int defaultSizeDelta;
+  };
+
+  static const ColorSpec kColors[MainWindow::kColorOptionCount];
+  static const FontSpec kFonts[MainWindow::kFontOptionCount];
+};
+
+const MainWindow::ThemeBindings::ColorSpec MainWindow::ThemeBindings::kColors[MainWindow::kColorOptionCount] = {
+  { "feedsListTextColor",       nullptr,                                 &FeedsModel::textColor_,                PaletteText },
+  { "feedsListBackgroundColor", nullptr,                                 &FeedsModel::backgroundColor_,          EmptyBackground },
+  { "newsListTextColor",        &MainWindow::newsListTextColor_,         nullptr,                                PaletteText },
+  { "newsListBackgroundColor",  &MainWindow::newsListBackgroundColor_,   nullptr,                                EmptyBackground },
+  { "focusedNewsTextColor",     &MainWindow::focusedNewsTextColor_,      nullptr,                                PaletteHighlightedText },
+  { "focusedNewsBGColor",       &MainWindow::focusedNewsBGColor_,        nullptr,                                PaletteHighlight },
+  { "linkColor",                &MainWindow::linkColor_,                 nullptr,                                PaletteLink },
+  { "titleColor",               &MainWindow::titleColor_,                nullptr,                                PaletteLink },
+  { "dateColor",                &MainWindow::dateColor_,                 nullptr,                                MutedText },
+  { "authorColor",              &MainWindow::authorColor_,               nullptr,                                MutedText },
+  { "newsTextColor",            &MainWindow::newsTextColor_,             nullptr,                                PaletteText },
+  { "newsTitleBackgroundColor", &MainWindow::newsTitleBackgroundColor_,  nullptr,                                PaletteBase },
+  { "newsBackgroundColor",      &MainWindow::newsBackgroundColor_,       nullptr,                                PaletteBase },
+  { "feedWithNewNewsColor",     nullptr,                                 &FeedsModel::feedWithNewNewsColor_,     PaletteLink },
+  { "countNewsUnreadColor",     nullptr,                                 &FeedsModel::countNewsUnreadColor_,     PaletteLink },
+  { "newNewsTextColor",         &MainWindow::newNewsTextColor_,          nullptr,                                PaletteText },
+  { "unreadNewsTextColor",      &MainWindow::unreadNewsTextColor_,       nullptr,                                PaletteText },
+  { "focusedFeedTextColor",     nullptr,                                 &FeedsModel::focusedFeedTextColor_,     PaletteHighlightedText },
+  { "focusedFeedBGColor",       nullptr,                                 &FeedsModel::focusedFeedBGColor_,       PaletteHighlight },
+  { "feedDisabledUpdateColor",  nullptr,                                 &FeedsModel::feedDisabledUpdateColor_,  MutedText },
+  { "alternatingRowColors",     &MainWindow::alternatingRowColors_,      nullptr,                                PaletteAlternateBase },
+  { "notifierTextColor",        &MainWindow::notifierTextColor_,         nullptr,                                PaletteWindowText },
+  { "notifierBackgroundColor",  &MainWindow::notifierBackgroundColor_,   nullptr,                                PaletteWindow },
+};
+
+const MainWindow::ThemeBindings::FontSpec MainWindow::ThemeBindings::kFonts[MainWindow::kFontOptionCount] = {
+  { "feedsFontFamily",        "feedsFontSize",        nullptr,                               nullptr,                              0 },
+  { "newsFontFamily",         "newsFontSize",         &MainWindow::newsListFontFamily_,      &MainWindow::newsListFontSize_,       0 },
+  { "newsTitleFontFamily",    "newsTitleFontSize",    &MainWindow::newsTitleFontFamily_,     &MainWindow::newsTitleFontSize_,      2 },
+  { "newsTextFontFamily",     "newsTextFontSize",     &MainWindow::newsTextFontFamily_,      &MainWindow::newsTextFontSize_,       2 },
+  { "notificationFontFamily", "notificationFontSize", &MainWindow::notificationFontFamily_,  &MainWindow::notificationFontSize_,   0 },
+};
+
+const char *MainWindow::colorSettingKey(int row)
+{
+  return (row >= 0 && row < kColorOptionCount) ? ThemeBindings::kColors[row].key : "";
+}
+
+const char *MainWindow::fontFamilySettingKey(int row)
+{
+  return (row >= 0 && row < kFontOptionCount) ? ThemeBindings::kFonts[row].familyKey : "";
+}
+
+const char *MainWindow::fontSizeSettingKey(int row)
+{
+  return (row >= 0 && row < kFontOptionCount) ? ThemeBindings::kFonts[row].sizeKey : "";
+}
+
 QString MainWindow::defaultColorForOption(int row) const
 {
+  if (row < 0 || row >= kColorOptionCount)
+    return qApp->palette().color(QPalette::Text).name();
+
   const QPalette palette = qApp->palette();
   const QColor text = palette.color(QPalette::Text);
   const QColor base = palette.color(QPalette::Base);
-  const QString muted = mixColor(text, base, 62).name();
 
-  switch (row) {
-  case 1: case 3:
+  switch (ThemeBindings::kColors[row].defaultKind) {
+  case ThemeBindings::EmptyBackground:
     // Empty means "let the active theme/QSS paint the view background".
     return QString();
-  case 4: case 17:
+  case ThemeBindings::PaletteHighlightedText:
     return palette.color(QPalette::HighlightedText).name();
-  case 5: case 18:
+  case ThemeBindings::PaletteHighlight:
     return palette.color(QPalette::Highlight).name();
-  case 6: case 7: case 13: case 14:
+  case ThemeBindings::PaletteLink:
     return palette.color(QPalette::Link).name();
-  case 8: case 9: case 19:
-    return muted;
-  case 11: case 12:
-    return palette.color(QPalette::Base).name();
-  case 20:
+  case ThemeBindings::MutedText:
+    return mixColor(text, base, 62).name();
+  case ThemeBindings::PaletteBase:
+    return base.name();
+  case ThemeBindings::PaletteAlternateBase:
     return palette.color(QPalette::AlternateBase).name();
-  case 21:
+  case ThemeBindings::PaletteWindowText:
     return palette.color(QPalette::WindowText).name();
-  case 22:
+  case ThemeBindings::PaletteWindow:
     return palette.color(QPalette::Window).name();
+  case ThemeBindings::PaletteText:
   default:
     return text.name();
   }
@@ -135,67 +220,53 @@ QString MainWindow::defaultColorForOption(int row) const
 
 QString MainWindow::colorValueForOption(int row) const
 {
-  switch (row) {
-  case 0: return feedsModel_->textColor_;
-  case 1: return feedsModel_->backgroundColor_;
-  case 2: return newsListTextColor_;
-  case 3: return newsListBackgroundColor_;
-  case 4: return focusedNewsTextColor_;
-  case 5: return focusedNewsBGColor_;
-  case 6: return linkColor_;
-  case 7: return titleColor_;
-  case 8: return dateColor_;
-  case 9: return authorColor_;
-  case 10: return newsTextColor_;
-  case 11: return newsTitleBackgroundColor_;
-  case 12: return newsBackgroundColor_;
-  case 13: return feedsModel_->feedWithNewNewsColor_;
-  case 14: return feedsModel_->countNewsUnreadColor_;
-  case 15: return newNewsTextColor_;
-  case 16: return unreadNewsTextColor_;
-  case 17: return feedsModel_->focusedFeedTextColor_;
-  case 18: return feedsModel_->focusedFeedBGColor_;
-  case 19: return feedsModel_->feedDisabledUpdateColor_;
-  case 20: return alternatingRowColors_;
-  case 21: return notifierTextColor_;
-  case 22: return notifierBackgroundColor_;
-  default: return QString();
-  }
+  if (row < 0 || row >= kColorOptionCount) return QString();
+  const auto &spec = ThemeBindings::kColors[row];
+  return spec.mwMember ? this->*(spec.mwMember) : feedsModel_->*(spec.fmMember);
 }
 
 void MainWindow::setColorValueForOption(int row, const QString &value)
 {
-  switch (row) {
-  case 0: feedsModel_->textColor_ = value; break;
-  case 1: feedsModel_->backgroundColor_ = value; break;
-  case 2: newsListTextColor_ = value; break;
-  case 3: newsListBackgroundColor_ = value; break;
-  case 4: focusedNewsTextColor_ = value; break;
-  case 5: focusedNewsBGColor_ = value; break;
-  case 6: linkColor_ = value; break;
-  case 7: titleColor_ = value; break;
-  case 8: dateColor_ = value; break;
-  case 9: authorColor_ = value; break;
-  case 10: newsTextColor_ = value; break;
-  case 11: newsTitleBackgroundColor_ = value; break;
-  case 12: newsBackgroundColor_ = value; break;
-  case 13: feedsModel_->feedWithNewNewsColor_ = value; break;
-  case 14: feedsModel_->countNewsUnreadColor_ = value; break;
-  case 15: newNewsTextColor_ = value; break;
-  case 16: unreadNewsTextColor_ = value; break;
-  case 17: feedsModel_->focusedFeedTextColor_ = value; break;
-  case 18: feedsModel_->focusedFeedBGColor_ = value; break;
-  case 19: feedsModel_->feedDisabledUpdateColor_ = value; break;
-  case 20: alternatingRowColors_ = value; break;
-  case 21: notifierTextColor_ = value; break;
-  case 22: notifierBackgroundColor_ = value; break;
-  default: break;
+  if (row < 0 || row >= kColorOptionCount) return;
+  const auto &spec = ThemeBindings::kColors[row];
+  if (spec.mwMember)
+    this->*(spec.mwMember) = value;
+  else
+    feedsModel_->*(spec.fmMember) = value;
+}
+
+QFont MainWindow::defaultFontForOption(int row)
+{
+  const int delta = (row >= 0 && row < kFontOptionCount)
+      ? ThemeBindings::kFonts[row].defaultSizeDelta : 0;
+  return QFont(qApp->font().family(), qApp->font().pointSize() + delta);
+}
+
+QFont MainWindow::fontForOption(int row) const
+{
+  if (row == 0) return feedsView_->font();
+  if (row < 0 || row >= kFontOptionCount) return qApp->font();
+  const auto &spec = ThemeBindings::kFonts[row];
+  return QFont(this->*(spec.familyMember), this->*(spec.sizeMember));
+}
+
+void MainWindow::setFontForOption(int row, const QFont &font)
+{
+  if (row == 0) {
+    feedsView_->setFont(font);
+    feedsModel_->font_ = feedsView_->font();
+    categoriesTree_->setFont(font);
+    return;
   }
+  if (row < 0 || row >= kFontOptionCount) return;
+  const auto &spec = ThemeBindings::kFonts[row];
+  this->*(spec.familyMember) = font.family();
+  this->*(spec.sizeMember) = font.pointSize();
 }
 
 void MainWindow::setThemeColorDefaults()
 {
-  for (int row = 0; row < 23; ++row) {
+  for (int row = 0; row < kColorOptionCount; ++row) {
     if (!customColorRows_.contains(row))
       setColorValueForOption(row, defaultColorForOption(row));
   }
