@@ -315,7 +315,7 @@ struct MainWindow::UiBindings {
 
   struct ShortcutSpec {
     QAction *MainWindow::*member;
-    int defaultKey;
+    const char *defaultKey;
   };
 
   struct MenuTitleSpec {
@@ -448,75 +448,75 @@ const MainWindow::UiBindings::ActionSpec MainWindow::UiBindings::kActions[] = {
 };
 
 const MainWindow::UiBindings::ShortcutSpec MainWindow::UiBindings::kShortcuts[] = {
-  { &MainWindow::addFeedAct_,               -1 }, // QKeySequence::New
-  { &MainWindow::addFolderAct_,             int(Qt::CTRL | Qt::SHIFT | Qt::Key_N) },
-  { &MainWindow::deleteFeedAct_,            0 },
-  { &MainWindow::createBackupAct_,          0 },
-  { &MainWindow::exitAct_,                  int(Qt::CTRL | Qt::Key_Q) }, // standart on other OS
-  { &MainWindow::updateFeedAct_,            int(Qt::Key_F5) },
-  { &MainWindow::updateAllFeedsAct_,        int(Qt::CTRL | Qt::Key_F5) },
-  { &MainWindow::stopUpdateAct_,            0 },
-  { &MainWindow::openHomeFeedAct_,          0 },
-  { &MainWindow::showDownloadManagerAct_,   0 },
-  { &MainWindow::showCleanUpWizardAct_,     0 },
-  { &MainWindow::setNewsFiltersAct_,        0 },
-  { &MainWindow::bulkFeedSettingsAct_,      0 },
-  { &MainWindow::websiteCookiesAct_,        0 },
-  { &MainWindow::setFilterNewsAct_,         0 },
-  { &MainWindow::optionsAct_,               int(Qt::Key_F8) },
-  { &MainWindow::deleteNewsAct_,            int(Qt::Key_Delete) },
-  { &MainWindow::deleteAllNewsAct_,         int(Qt::CTRL | Qt::Key_Delete) },
-  { &MainWindow::feedProperties_,           int(Qt::CTRL | Qt::Key_E) },
-  { &MainWindow::feedKeyUpAct_,             int(Qt::CTRL | Qt::Key_Up) },
-  { &MainWindow::feedKeyDownAct_,           int(Qt::CTRL | Qt::Key_Down) },
-  { &MainWindow::newsKeyUpAct_,             int(Qt::Key_Left) },
-  { &MainWindow::newsKeyDownAct_,           int(Qt::Key_Right) },
-  { &MainWindow::newsKeyPageUpAct_,         0 },
-  { &MainWindow::newsKeyPageDownAct_,       0 },
-  { &MainWindow::nextUnreadNewsAct_,        0 },
-  { &MainWindow::prevUnreadNewsAct_,        0 },
-  { &MainWindow::nextFolderAct_,            0 },
-  { &MainWindow::prevFolderAct_,            0 },
-  { &MainWindow::importFeedsAct_,           0 },
-  { &MainWindow::exportFeedsAct_,           0 },
-  { &MainWindow::createBackupAct_,          0 },
-  { &MainWindow::autoLoadImagesToggle_,     0 },
-  { &MainWindow::markAllFeedsRead_,         0 },
-  { &MainWindow::markFeedRead_,             0 },
-  { &MainWindow::markNewsRead_,             0 },
-  { &MainWindow::markAllNewsRead_,          0 },
-  { &MainWindow::markStarAct_,              0 },
-  { &MainWindow::collapseAllFoldersAct_,    0 },
-  { &MainWindow::expandAllFoldersAct_,      0 },
-  { &MainWindow::expandFolderAct_,          0 },
-  { &MainWindow::openDescriptionNewsAct_,   int(Qt::Key_Return) },
-  { &MainWindow::openInExternalBrowserAct_, int(Qt::CTRL | Qt::Key_O) },
-  { &MainWindow::switchFocusAct_,           int(Qt::CTRL | Qt::Key_Tab) },
-  { &MainWindow::switchFocusPrevAct_,       int(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab) },
-  { &MainWindow::feedsWidgetVisibleAct_,    int(Qt::CTRL | Qt::Key_D) },
-  { &MainWindow::placeToTrayAct_,           0 },
-  { &MainWindow::zoomInAct_,                int(Qt::CTRL | Qt::Key_Plus) },
-  { &MainWindow::zoomOutAct_,               int(Qt::CTRL | Qt::Key_Minus) },
-  { &MainWindow::zoomTo100Act_,             int(Qt::CTRL | Qt::Key_0) },
-  { &MainWindow::printAct_,                 int(Qt::CTRL | Qt::Key_P) },
-  { &MainWindow::printPreviewAct_,          int(Qt::CTRL | Qt::SHIFT | Qt::Key_P) },
-  { &MainWindow::savePageAsAct_,            int(Qt::CTRL | Qt::Key_S) },
-  { &MainWindow::fullScreenAct_,            int(Qt::Key_F11) },
-  { &MainWindow::stayOnTopAct_,             int(Qt::Key_F10) },
-  { &MainWindow::layoutToggle_,             0 },
-  { &MainWindow::closeTabAct_,              int(Qt::CTRL | Qt::Key_W) },
-  { &MainWindow::closeOtherTabsAct_,        0 },
-  { &MainWindow::closeAllTabsAct_,          0 },
-  { &MainWindow::nextTabAct_,               0 },
-  { &MainWindow::prevTabAct_,               0 },
-  { &MainWindow::reduceNewsListAct_,        int(Qt::ALT | Qt::Key_Up) },
-  { &MainWindow::increaseNewsListAct_,      int(Qt::ALT | Qt::Key_Down) },
-  { &MainWindow::restoreLastNewsAct_,       int(Qt::CTRL | Qt::Key_Z) },
-  { &MainWindow::findTextAct_,              int(Qt::CTRL | Qt::Key_F) },
-  { &MainWindow::findFeedAct_,              0 },
-  { &MainWindow::copyLinkAct_,              0 },
-  { &MainWindow::pageUpWebViewAct_,         0 },
-  { &MainWindow::pageDownWebViewAct_,       0 },
+  { &MainWindow::addFeedAct_,               "" }, // QKeySequence::New
+  { &MainWindow::addFolderAct_,             "Ctrl+Shift+N" },
+  { &MainWindow::deleteFeedAct_,            nullptr },
+  { &MainWindow::createBackupAct_,          nullptr },
+  { &MainWindow::exitAct_,                  "Ctrl+Q" }, // standart on other OS
+  { &MainWindow::updateFeedAct_,            "F5" },
+  { &MainWindow::updateAllFeedsAct_,        "Ctrl+F5" },
+  { &MainWindow::stopUpdateAct_,            nullptr },
+  { &MainWindow::openHomeFeedAct_,          nullptr },
+  { &MainWindow::showDownloadManagerAct_,   nullptr },
+  { &MainWindow::showCleanUpWizardAct_,     nullptr },
+  { &MainWindow::setNewsFiltersAct_,        nullptr },
+  { &MainWindow::bulkFeedSettingsAct_,      nullptr },
+  { &MainWindow::websiteCookiesAct_,        nullptr },
+  { &MainWindow::setFilterNewsAct_,         nullptr },
+  { &MainWindow::optionsAct_,               "F8" },
+  { &MainWindow::deleteNewsAct_,            "Del" },
+  { &MainWindow::deleteAllNewsAct_,         "Ctrl+Del" },
+  { &MainWindow::feedProperties_,           "Ctrl+E" },
+  { &MainWindow::feedKeyUpAct_,             "Ctrl+Up" },
+  { &MainWindow::feedKeyDownAct_,           "Ctrl+Down" },
+  { &MainWindow::newsKeyUpAct_,             "Left" },
+  { &MainWindow::newsKeyDownAct_,           "Right" },
+  { &MainWindow::newsKeyPageUpAct_,         nullptr },
+  { &MainWindow::newsKeyPageDownAct_,       nullptr },
+  { &MainWindow::nextUnreadNewsAct_,        nullptr },
+  { &MainWindow::prevUnreadNewsAct_,        nullptr },
+  { &MainWindow::nextFolderAct_,            nullptr },
+  { &MainWindow::prevFolderAct_,            nullptr },
+  { &MainWindow::importFeedsAct_,           nullptr },
+  { &MainWindow::exportFeedsAct_,           nullptr },
+  { &MainWindow::createBackupAct_,          nullptr },
+  { &MainWindow::autoLoadImagesToggle_,     nullptr },
+  { &MainWindow::markAllFeedsRead_,         nullptr },
+  { &MainWindow::markFeedRead_,             nullptr },
+  { &MainWindow::markNewsRead_,             nullptr },
+  { &MainWindow::markAllNewsRead_,          nullptr },
+  { &MainWindow::markStarAct_,              nullptr },
+  { &MainWindow::collapseAllFoldersAct_,    nullptr },
+  { &MainWindow::expandAllFoldersAct_,      nullptr },
+  { &MainWindow::expandFolderAct_,          nullptr },
+  { &MainWindow::openDescriptionNewsAct_,   "Return" },
+  { &MainWindow::openInExternalBrowserAct_, "Ctrl+O" },
+  { &MainWindow::switchFocusAct_,           "Ctrl+Tab" },
+  { &MainWindow::switchFocusPrevAct_,       "Ctrl+Shift+Tab" },
+  { &MainWindow::feedsWidgetVisibleAct_,    "Ctrl+D" },
+  { &MainWindow::placeToTrayAct_,           nullptr },
+  { &MainWindow::zoomInAct_,                "Ctrl++" },
+  { &MainWindow::zoomOutAct_,               "Ctrl+-" },
+  { &MainWindow::zoomTo100Act_,             "Ctrl+0" },
+  { &MainWindow::printAct_,                 "Ctrl+P" },
+  { &MainWindow::printPreviewAct_,          "Ctrl+Shift+P" },
+  { &MainWindow::savePageAsAct_,            "Ctrl+S" },
+  { &MainWindow::fullScreenAct_,            "F11" },
+  { &MainWindow::stayOnTopAct_,             "F10" },
+  { &MainWindow::layoutToggle_,             nullptr },
+  { &MainWindow::closeTabAct_,              "Ctrl+W" },
+  { &MainWindow::closeOtherTabsAct_,        nullptr },
+  { &MainWindow::closeAllTabsAct_,          nullptr },
+  { &MainWindow::nextTabAct_,               nullptr },
+  { &MainWindow::prevTabAct_,               nullptr },
+  { &MainWindow::reduceNewsListAct_,        "Alt+Up" },
+  { &MainWindow::increaseNewsListAct_,      "Alt+Down" },
+  { &MainWindow::restoreLastNewsAct_,       "Ctrl+Z" },
+  { &MainWindow::findTextAct_,              "Ctrl+F" },
+  { &MainWindow::findFeedAct_,              nullptr },
+  { &MainWindow::copyLinkAct_,              nullptr },
+  { &MainWindow::pageUpWebViewAct_,         nullptr },
+  { &MainWindow::pageDownWebViewAct_,       nullptr },
 };
 
 const MainWindow::UiBindings::MenuTitleSpec MainWindow::UiBindings::kMenuTitles[] = {
@@ -713,7 +713,6 @@ void MainWindow::createActions()
     { &MainWindow::openDescriptionNewsAct_,   &MainWindow::slotOpenNewsWebView },
     { &MainWindow::findTextAct_,              &MainWindow::findText },
     { &MainWindow::placeToTrayAct_,           &MainWindow::slotPlaceToTray },
-    { &MainWindow::findFeedAct_,              &MainWindow::findFeedVisible },
     { &MainWindow::fullScreenAct_,            &MainWindow::setFullScreen },
     { &MainWindow::stayOnTopAct_,             &MainWindow::setStayOnTop },
     { &MainWindow::newsLabelAction_,          &MainWindow::setDefaultLabelNews },
@@ -745,6 +744,7 @@ void MainWindow::createActions()
   for (const auto &b : kSlotBindings)
     connect(this->*(b.action), &QAction::triggered, this, b.slot);
 
+  connect(findFeedAct_, &QAction::triggered, this, &MainWindow::findFeedVisible);
   connect(feedsToolbarToggle_, &QAction::toggled, feedsPanel_, &QWidget::setVisible);
   connect(categoriesPanelToggle_, &QAction::toggled, categoriesWidget_, &QWidget::setVisible);
   connect(statusBarToggle_, &QAction::toggled, statusBar(), &QWidget::setVisible);
@@ -766,10 +766,12 @@ void MainWindow::createShortcut()
 {
   for (const auto &spec : UiBindings::kShortcuts) {
     QAction *action = this->*(spec.member);
-    if (spec.defaultKey == -1)
-      action->setShortcut(QKeySequence(QKeySequence::New));
-    else if (spec.defaultKey != 0)
-      action->setShortcut(QKeySequence(spec.defaultKey));
+    if (spec.defaultKey) {
+      if (spec.defaultKey[0] == '\0')
+        action->setShortcut(QKeySequence(QKeySequence::New));
+      else
+        action->setShortcut(QKeySequence(QLatin1String(spec.defaultKey)));
+    }
     shortcutRegistry_.append(action);
   }
 
