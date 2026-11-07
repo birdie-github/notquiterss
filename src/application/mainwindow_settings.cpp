@@ -46,6 +46,191 @@ const char *colorSettingKey(int row)
   };
   return row >= 0 && row < int(sizeof(keys) / sizeof(keys[0])) ? keys[row] : "";
 }
+
+struct BoolCheckSetting {
+  const char *key;
+  bool MainWindow::*member;
+  bool defaultValue;
+  QCheckBox *OptionsDialog::*widget;
+};
+
+const BoolCheckSetting kBoolCheckSettings[] = {
+  { "reopenFeedStartup",        &MainWindow::reopenFeedStartup_,        true,  &OptionsDialog::reopenFeedStartup_ },
+  { "openNewTabNextToActive",   &MainWindow::openNewTabNextToActive_,   false, &OptionsDialog::openNewTabNextToActive_ },
+  { "hideFeedsOpenTab",         &MainWindow::hideFeedsOpenTab_,         false, &OptionsDialog::hideFeedsOpenTab_ },
+  { "showToggleFeedsTree",      &MainWindow::showToggleFeedsTree_,      true,  &OptionsDialog::showToggleFeedsTree_ },
+  { "defaultIconFeeds",         &MainWindow::defaultIconFeeds_,         false, &OptionsDialog::defaultIconFeeds_ },
+  { "singleClickTray",          &MainWindow::singleClickTray_,          false, &OptionsDialog::singleClickTray_ },
+  { "clearStatusNew",           &MainWindow::clearStatusNew_,           true,  &OptionsDialog::clearStatusNew_ },
+  { "emptyWorking",             &MainWindow::emptyWorking_,             true,  &OptionsDialog::emptyWorking_ },
+  { "autoLoadImages",           &MainWindow::autoLoadImages_,           true,  &OptionsDialog::autoLoadImages_ },
+  { "askDownloadLocation",      &MainWindow::askDownloadLocation_,      true,  &OptionsDialog::askDownloadLocation_ },
+  { "autoUpdatefeeds",          &MainWindow::updateFeedsEnable_,        false, &OptionsDialog::updateFeedsEnable_ },
+  { "markPrevNewsRead",         &MainWindow::markPrevNewsRead_,         false, &OptionsDialog::markPrevNewsRead_ },
+  { "markReadSwitchingFeed",    &MainWindow::markReadSwitchingFeed_,    false, &OptionsDialog::markReadSwitchingFeed_ },
+  { "markReadClosingTab",       &MainWindow::markReadClosingTab_,       false, &OptionsDialog::markReadClosingTab_ },
+  { "markReadMinimize",         &MainWindow::markReadMinimize_,         false, &OptionsDialog::markReadMinimize_ },
+  { "alternatingColorsNews",    &MainWindow::alternatingRowColorsNews_, false, &OptionsDialog::alternatingRowColorsNews_ },
+  { "changeBehaviorActionNUN",  &MainWindow::changeBehaviorActionNUN_,  false, &OptionsDialog::changeBehaviorActionNUN_ },
+  { "simplifiedDateTime",       &MainWindow::simplifiedDateTime_,       true,  &OptionsDialog::simplifiedDateTime_ },
+  { "notDeleteStarred",         &MainWindow::notDeleteStarred_,         false, &OptionsDialog::notDeleteStarred_ },
+  { "notDeleteLabeled",         &MainWindow::notDeleteLabeled_,         false, &OptionsDialog::notDeleteLabeled_ },
+  { "markIdenticalNewsRead",    &MainWindow::markIdenticalNewsRead_,    true,  &OptionsDialog::markIdenticalNewsRead_ },
+  { "avoidOldNews",             &MainWindow::avoidOldNews_,             false, &OptionsDialog::avoidedOldNewsDateOn_ },
+  { "dayClearUpOn",             &MainWindow::dayCleanUpOn_,             true,  &OptionsDialog::dayCleanUpOn_ },
+  { "newsClearUpOn",            &MainWindow::newsCleanUpOn_,            true,  &OptionsDialog::newsCleanUpOn_ },
+  { "readClearUp",              &MainWindow::readCleanUp_,              false, &OptionsDialog::readCleanUp_ },
+  { "neverUnreadClearUp",       &MainWindow::neverUnreadCleanUp_,       true,  &OptionsDialog::neverUnreadCleanUp_ },
+  { "neverStarClearUp",         &MainWindow::neverStarCleanUp_,         true,  &OptionsDialog::neverStarCleanUp_ },
+  { "neverLabelClearUp",        &MainWindow::neverLabelCleanUp_,        true,  &OptionsDialog::neverLabelCleanUp_ },
+  { "cleanUpDeleted",           &MainWindow::cleanUpDeleted_,           false, &OptionsDialog::cleanUpDeleted_ },
+  { "optimizeDB",               &MainWindow::optimizeDB_,               false, &OptionsDialog::optimizeDB_ },
+  { "fullscreenModeNotify",     &MainWindow::fullscreenModeNotify_,     true,  &OptionsDialog::fullscreenModeNotify_ },
+  { "showNotifyInactiveApp",    &MainWindow::showNotifyInactiveApp_,    true,  &OptionsDialog::showNotifyInactiveApp_ },
+  { "onlySelectedFeeds",        &MainWindow::onlySelectedFeeds_,        false, &OptionsDialog::onlySelectedFeeds_ },
+  { "showTitlesFeedsNotify",    &MainWindow::showTitlesFeedsNotify_,    true,  &OptionsDialog::showTitlesFeedsNotify_ },
+  { "showIconFeedNotify",       &MainWindow::showIconFeedNotify_,       false, &OptionsDialog::showIconFeedNotify_ },
+  { "showButtonMarkAllNotify",  &MainWindow::showButtonMarkAllNotify_,  true,  &OptionsDialog::showButtonMarkAllNotify_ },
+  { "showButtonMarkReadNotify", &MainWindow::showButtonMarkReadNotify_, true,  &OptionsDialog::showButtonMarkReadNotify_ },
+  { "showButtonExBrowserNotify",&MainWindow::showButtonExBrowserNotify_,true,  &OptionsDialog::showButtonExBrowserNotify_ },
+  { "showButtonDeleteNotify",   &MainWindow::showButtonDeleteNotify_,   true,  &OptionsDialog::showButtonDeleteNotify_ },
+  { "closeNotify",              &MainWindow::closeNotify_,              true,  &OptionsDialog::closeNotify_ },
+};
+
+const BoolCheckSetting kTrayHoldSettings[] = {
+  { "startingTray",   &MainWindow::startingTray_,   false, &OptionsDialog::startingTray_ },
+  { "minimizingTray", &MainWindow::minimizingTray_, true,  &OptionsDialog::minimizingTray_ },
+  { "closingTray",    &MainWindow::closingTray_,    false, &OptionsDialog::closingTray_ },
+};
+
+struct BoolGroupSetting {
+  const char *key;
+  bool MainWindow::*member;
+  bool defaultValue;
+  QGroupBox *OptionsDialog::*widget;
+};
+
+const BoolGroupSetting kBoolGroupSettings[] = {
+  { "showTrayIcon",      &MainWindow::showTrayIcon_,      true, &OptionsDialog::showTrayIconBox_ },
+  { "markNewsReadOn",    &MainWindow::markNewsReadOn_,    true, &OptionsDialog::markNewsReadOn_ },
+  { "cleanupOnShutdown", &MainWindow::cleanupOnShutdown_, true, &OptionsDialog::cleanupOnShutdownBox_ },
+  { "soundNewNews",      &MainWindow::soundNewNews_,      true, &OptionsDialog::soundNotifyBox_ },
+  { "showNotifyOn",      &MainWindow::showNotifyOn_,      true, &OptionsDialog::showNotifyOn_ },
+};
+
+struct IntSpinSetting {
+  const char *key;
+  int MainWindow::*member;
+  int defaultValue;
+  QSpinBox *OptionsDialog::*widget;
+};
+
+const IntSpinSetting kIntSpinSettings[] = {
+  { "defaultZoomPages",     &MainWindow::defaultZoomPages_,     100, &OptionsDialog::defaultZoomPages_ },
+  { "autoUpdatefeedsTime",  &MainWindow::updateFeedsInterval_,  10,  &OptionsDialog::updateFeedsInterval_ },
+  { "markNewsReadTime",     &MainWindow::markNewsReadTime_,     0,   &OptionsDialog::markNewsReadTime_ },
+  { "maxDayClearUp",        &MainWindow::maxDayCleanUp_,        30,  &OptionsDialog::maxDayCleanUp_ },
+  { "maxNewsClearUp",       &MainWindow::maxNewsCleanUp_,       200, &OptionsDialog::maxNewsCleanUp_ },
+  { "transparencyNotify",   &MainWindow::transparencyNotify_,   60,  &OptionsDialog::transparencyNotify_ },
+  { "countShowNewsNotify",  &MainWindow::countShowNewsNotify_,  10,  &OptionsDialog::countShowNewsNotify_ },
+  { "widthTitleNewsNotify", &MainWindow::widthTitleNewsNotify_, 300, &OptionsDialog::widthTitleNewsNotify_ },
+  { "timeShowNewsNotify",   &MainWindow::timeShowNewsNotify_,   10,  &OptionsDialog::timeShowNewsNotify_ },
+};
+
+struct IntComboSetting {
+  const char *key;
+  int MainWindow::*member;
+  int defaultValue;
+  QComboBox *OptionsDialog::*widget;
+  int indexOffset;
+};
+
+const IntComboSetting kIntComboSettings[] = {
+  { "autoUpdatefeedsInterval", &MainWindow::updateFeedsIntervalType_, 0, &OptionsDialog::updateIntervalType_, 1 },
+  { "screenNotify",            &MainWindow::screenNotify_,            0, &OptionsDialog::screenNotify_,       1 },
+  { "positionNotify",          &MainWindow::positionNotify_,          3, &OptionsDialog::positionNotify_,     0 },
+};
+
+struct ComboDataSetting {
+  const char *key;
+  QString MainWindow::*member;
+  const char *defaultValue;
+  QComboBox *OptionsDialog::*widget;
+};
+
+const ComboDataSetting kComboDataSettings[] = {
+  { "formatData",     &MainWindow::formatDate_,     "dd.MM.yy",       &OptionsDialog::formatDate_ },
+  { "formatTime",     &MainWindow::formatTime_,     "hh:mm",          &OptionsDialog::formatTime_ },
+  { "mainNewsFilter", &MainWindow::mainNewsFilter_, "filterNewsAll_", &OptionsDialog::mainNewsFilter_ },
+};
+
+struct ActionBoolSetting {
+  const char *key;
+  QAction *MainWindow::*action;
+  bool defaultValue;
+};
+
+const ActionBoolSetting kActionBoolSettings[] = {
+  { "mainToolbarLock",      &MainWindow::toolBarLockAct_,          true },
+  { "mainToolbarShow2",     &MainWindow::mainToolbarToggle_,       false },
+  { "feedsToolbarShow2",    &MainWindow::feedsToolbarToggle_,      true },
+  { "newsToolbarShow",      &MainWindow::newsToolbarToggle_,       true },
+  { "categoriesPanelShow",  &MainWindow::categoriesPanelToggle_,   true },
+  { "statusBarShow",        &MainWindow::statusBarToggle_,         true },
+  { "showUnreadCount",      &MainWindow::showUnreadCount_,         true },
+  { "showUndeleteCount",    &MainWindow::showUndeleteCount_,       false },
+  { "showLastUpdated",      &MainWindow::showLastUpdated_,         false },
+  { "indentationFeedsTree", &MainWindow::indentationFeedsTreeAct_, true },
+  { "stayOnTop",            &MainWindow::stayOnTopAct_,            false },
+};
+
+struct AppBoolCheckSetting {
+  const AppSettings::Setting<bool> *setting;
+  QCheckBox *OptionsDialog::*widget;
+};
+
+const AppBoolCheckSetting kAppBoolCheckSettings[] = {
+  { &AppSettings::showCloseButtonTab, &OptionsDialog::showCloseButtonTab_ },
+  { &AppSettings::updateCheckEnabled, &OptionsDialog::updateCheckEnabled_ },
+  { &AppSettings::storeDBMemory,      &OptionsDialog::storeDBMemory_ },
+};
+
+struct AppIntSpinSetting {
+  const AppSettings::Setting<int> *setting;
+  QSpinBox *OptionsDialog::*widget;
+};
+
+const AppIntSpinSetting kAppIntSpinSettings[] = {
+  { &AppSettings::timeoutRequest, &OptionsDialog::timeoutRequest_ },
+  { &AppSettings::numberRequest,  &OptionsDialog::numberRequests_ },
+  { &AppSettings::numberRepeats,  &OptionsDialog::numberRepeats_ },
+};
+
+void selectComboData(QComboBox *combo, const QString &value)
+{
+  for (int i = 0; i < combo->count(); ++i) {
+    if (combo->itemData(i).toString() == value) {
+      combo->setCurrentIndex(i);
+      break;
+    }
+  }
+}
+
+void populateToolbarActions(QToolBar *toolbar, const QList<QAction *> &actions, const QString &spec)
+{
+  for (const QString &actionStr : spec.split(",", Qt::SkipEmptyParts)) {
+    if (actionStr == "Separator") {
+      toolbar->addSeparator();
+    } else {
+      for (QAction *pAction : actions) {
+        if (!pAction->icon().isNull() && pAction->objectName() == actionStr) {
+          toolbar->addAction(pAction);
+          break;
+        }
+      }
+    }
+  }
+}
 }
 
 /** @brief Load settings from ini-file
@@ -55,22 +240,27 @@ void MainWindow::loadSettings()
   Settings settings("Settings");
 
   showSplashScreen_ = AppSettings::showSplashScreen.get();
-  reopenFeedStartup_ = settings.value("reopenFeedStartup", true).toBool();
-  openNewTabNextToActive_ = settings.value("openNewTabNextToActive", false).toBool();
+  openingFeedAction_ = AppSettings::openingFeedAction.get();
+  openNewsWebViewOn_ = AppSettings::openNewsWebViewOn.get();
 
-  showTrayIcon_ = settings.value("showTrayIcon", true).toBool();
+  for (const auto &s : kBoolCheckSettings)
+    this->*(s.member) = settings.value(s.key, s.defaultValue).toBool();
+  for (const auto &s : kBoolGroupSettings)
+    this->*(s.member) = settings.value(s.key, s.defaultValue).toBool();
+  for (const auto &s : kIntSpinSettings)
+    this->*(s.member) = settings.value(s.key, s.defaultValue).toInt();
+  for (const auto &s : kIntComboSettings)
+    this->*(s.member) = settings.value(s.key, s.defaultValue).toInt();
+  for (const auto &s : kComboDataSettings)
+    this->*(s.member) = settings.value(s.key, QString::fromLatin1(s.defaultValue)).toString();
+
 #ifndef Q_OS_MAC
-  startingTray_ = settings.value("startingTray", false).toBool();
-  minimizingTray_ = settings.value("minimizingTray", true).toBool();
-  closingTray_ = settings.value("closingTray", false).toBool();
+  for (const auto &s : kTrayHoldSettings)
+    this->*(s.member) = settings.value(s.key, s.defaultValue).toBool();
 #else
-  startingTray_ = false;
-  minimizingTray_ = false;
-  closingTray_ = false;
+  for (const auto &s : kTrayHoldSettings)
+    this->*(s.member) = false;
 #endif
-  singleClickTray_ = settings.value("singleClickTray", false).toBool();
-  clearStatusNew_ = settings.value("clearStatusNew", true).toBool();
-  emptyWorking_ = settings.value("emptyWorking", true).toBool();
 
   QString fontFamily = settings.value("feedsFontFamily", qApp->font().family()).toString();
   int fontSize = settings.value("feedsFontSize", qApp->font().pointSize()).toInt();
@@ -87,141 +277,38 @@ void MainWindow::loadSettings()
   notificationFontFamily_ = settings.value("notificationFontFamily", qApp->font().family()).toString();
   notificationFontSize_ = settings.value("notificationFontSize", qApp->font().pointSize()).toInt();
 
-  updateFeedsEnable_ = settings.value("autoUpdatefeeds", false).toBool();
-  updateFeedsInterval_ = settings.value("autoUpdatefeedsTime", 10).toInt();
-  updateFeedsIntervalType_ = settings.value("autoUpdatefeedsInterval", 0).toInt();
-
-  openingFeedAction_ = AppSettings::openingFeedAction.get();
-  openNewsWebViewOn_ = AppSettings::openNewsWebViewOn.get();
-
-  markNewsReadOn_ = settings.value("markNewsReadOn", true).toBool();
   markCurNewsRead_ = settings.value("markCurNewsRead", true).toBool();
-  markNewsReadTime_ = settings.value("markNewsReadTime", 0).toInt();
-  markPrevNewsRead_= settings.value("markPrevNewsRead", false).toBool();
-  markReadSwitchingFeed_ = settings.value("markReadSwitchingFeed", false).toBool();
-  markReadClosingTab_ = settings.value("markReadClosingTab", false).toBool();
-  markReadMinimize_ = settings.value("markReadMinimize", false).toBool();
-
-  formatDate_ = settings.value("formatData", "dd.MM.yy").toString();
-  formatTime_ = settings.value("formatTime", "hh:mm").toString();
   feedsModel_->formatDate_ = formatDate_;
   feedsModel_->formatTime_ = formatTime_;
-
-  alternatingRowColorsNews_ = settings.value("alternatingColorsNews", false).toBool();
-  changeBehaviorActionNUN_ = settings.value("changeBehaviorActionNUN", false).toBool();
-  simplifiedDateTime_ = settings.value("simplifiedDateTime", true).toBool();
-  notDeleteStarred_ = settings.value("notDeleteStarred", false).toBool();
-  notDeleteLabeled_ = settings.value("notDeleteLabeled", false).toBool();
-  markIdenticalNewsRead_ = settings.value("markIdenticalNewsRead", true).toBool();
-  avoidOldNews_ = settings.value("avoidOldNews", false).toBool();
   avoidedOldNewsDate_ = settings.value("avoidedOldNewsDate").toDate();
 
-  mainNewsFilter_ = settings.value("mainNewsFilter", "filterNewsAll_").toString();
-
-  cleanupOnShutdown_ = settings.value("cleanupOnShutdown", true).toBool();
-  maxDayCleanUp_ = settings.value("maxDayClearUp", 30).toInt();
-  maxNewsCleanUp_ = settings.value("maxNewsClearUp", 200).toInt();
-  dayCleanUpOn_ = settings.value("dayClearUpOn", true).toBool();
-  newsCleanUpOn_ = settings.value("newsClearUpOn", true).toBool();
-  readCleanUp_ = settings.value("readClearUp", false).toBool();
-  neverUnreadCleanUp_ = settings.value("neverUnreadClearUp", true).toBool();
-  neverStarCleanUp_ = settings.value("neverStarClearUp", true).toBool();
-  neverLabelCleanUp_ = settings.value("neverLabelClearUp", true).toBool();
-  cleanUpDeleted_ = settings.value("cleanUpDeleted", false).toBool();
-  optimizeDB_ = settings.value("optimizeDB", false).toBool();
-
   downloadLocation_ = settings.value("downloadLocation", "").toString();
-  askDownloadLocation_ = settings.value("askDownloadLocation", true).toBool();
-  defaultZoomPages_ = settings.value("defaultZoomPages", 100).toInt();
-  autoLoadImages_ = settings.value("autoLoadImages", true).toBool();
   preloadNewspaperPages_ = qBound(0, settings.value("preloadNewspaperPages", 2).toInt(), 10);
-
-  soundNewNews_ = settings.value("soundNewNews", true).toBool();
   soundNotifyPath_ = settings.value("soundNotifyPath", mainApp->soundNotifyDefaultFile()).toString();
-  showNotifyOn_ = settings.value("showNotifyOn", true).toBool();
-  screenNotify_ = settings.value("screenNotify", 0).toInt();
-  positionNotify_ = settings.value("positionNotify", 3).toInt();
-  transparencyNotify_ = settings.value("transparencyNotify", 60).toInt();
-  countShowNewsNotify_ = settings.value("countShowNewsNotify", 10).toInt();
-  widthTitleNewsNotify_ = settings.value("widthTitleNewsNotify", 300).toInt();
-  timeShowNewsNotify_ = settings.value("timeShowNewsNotify", 10).toInt();
-  fullscreenModeNotify_ = settings.value("fullscreenModeNotify", true).toBool();
-  showNotifyInactiveApp_ = settings.value("showNotifyInactiveApp", true).toBool();
-  onlySelectedFeeds_ = settings.value("onlySelectedFeeds", false).toBool();
-  showTitlesFeedsNotify_ = settings.value("showTitlesFeedsNotify", true).toBool();
-  showIconFeedNotify_ = settings.value("showIconFeedNotify", false).toBool();
-  showButtonMarkAllNotify_ = settings.value("showButtonMarkAllNotify", true).toBool();
-  showButtonMarkReadNotify_ = settings.value("showButtonMarkReadNotify", true).toBool();
-  showButtonExBrowserNotify_ = settings.value("showButtonExBrowserNotify", true).toBool();
-  showButtonDeleteNotify_ = settings.value("showButtonDeleteNotify", true).toBool();
-  closeNotify_ = settings.value("closeNotify", true).toBool();
 
-  toolBarLockAct_->setChecked(settings.value("mainToolbarLock", true).toBool());
+  for (const auto &s : kActionBoolSettings)
+    (this->*(s.action))->setChecked(settings.value(s.key, s.defaultValue).toBool());
+
   lockMainToolbar(toolBarLockAct_->isChecked());
-
-  mainToolbarToggle_->setChecked(settings.value("mainToolbarShow2", false).toBool());
-  feedsToolbarToggle_->setChecked(settings.value("feedsToolbarShow2", true).toBool());
-  newsToolbarToggle_->setChecked(settings.value("newsToolbarShow", true).toBool());
-  categoriesPanelToggle_->setChecked(settings.value("categoriesPanelShow", true).toBool());
   categoriesWidget_->setVisible(categoriesPanelToggle_->isChecked());
-  statusBarToggle_->setChecked(settings.value("statusBarShow", true).toBool());
 
-  QString str = settings.value("mainToolBar",
-                               "newAct,Separator,updateFeedAct,updateAllFeedsAct,"
-                               "Separator,markFeedRead,Separator,autoLoadImagesToggle").toString();
-
-  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
-    if (actionStr == "Separator") {
-      mainToolbar_->addSeparator();
-    } else {
-      QListIterator<QAction *> iter(actions());
-      while (iter.hasNext()) {
-        QAction *pAction = iter.next();
-        if (!pAction->icon().isNull()) {
-          if (pAction->objectName() == actionStr) {
-            mainToolbar_->addAction(pAction);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  str = settings.value("feedsToolBar2",
-                               "newAct,Separator,updateAllFeedsAct,markFeedRead,"
-                               "Separator,feedsFilter,findFeedAct").toString();
-
-  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
-    if (actionStr == "Separator") {
-      feedsToolBar_->addSeparator();
-    } else {
-      QListIterator<QAction *> iter(actions());
-      while (iter.hasNext()) {
-        QAction *pAction = iter.next();
-        if (!pAction->icon().isNull()) {
-          if (pAction->objectName() == actionStr) {
-            feedsToolBar_->addAction(pAction);
-            break;
-          }
-        }
-      }
-    }
-  }
+  populateToolbarActions(mainToolbar_, actions(),
+                         settings.value("mainToolBar",
+                                        "newAct,Separator,updateFeedAct,updateAllFeedsAct,"
+                                        "Separator,markFeedRead,Separator,autoLoadImagesToggle").toString());
+  populateToolbarActions(feedsToolBar_, actions(),
+                         settings.value("feedsToolBar2",
+                                        "newAct,Separator,updateAllFeedsAct,markFeedRead,"
+                                        "Separator,feedsFilter,findFeedAct").toString());
 
   setToolBarStyle(AppSettings::toolBarStyle.get());
-  QString iconStr = AppSettings::toolBarIconSize.get();
-  setToolBarIconSize(mainToolbar_, iconStr);
-  iconStr = AppSettings::feedsToolBarIconSize.get();
-  setToolBarIconSize(feedsToolBar_, iconStr);
+  setToolBarIconSize(mainToolbar_, AppSettings::toolBarIconSize.get());
+  setToolBarIconSize(feedsToolBar_, AppSettings::feedsToolBarIconSize.get());
 
-  showUnreadCount_->setChecked(settings.value("showUnreadCount", true).toBool());
-  showUndeleteCount_->setChecked(settings.value("showUndeleteCount", false).toBool());
-  showLastUpdated_->setChecked(settings.value("showLastUpdated", false).toBool());
   feedsColumnVisible(showUnreadCount_);
   feedsColumnVisible(showUndeleteCount_);
   feedsColumnVisible(showLastUpdated_);
 
-  indentationFeedsTreeAct_->setChecked(settings.value("indentationFeedsTree", true).toBool());
   slotIndentationFeedsTree();
 
   newsLayout_ = settings.value("newsLayout", 0).toInt();
@@ -244,7 +331,6 @@ void MainWindow::loadSettings()
   default: bottomBrowserPositionAct_->setChecked(true);
   }
 
-  stayOnTopAct_->setChecked(settings.value("stayOnTop", false).toBool());
   if (stayOnTopAct_->isChecked())
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
   else
@@ -259,11 +345,7 @@ void MainWindow::loadSettings()
   }
 #endif
 
-  hideFeedsOpenTab_ = settings.value("hideFeedsOpenTab", false).toBool();
-  showToggleFeedsTree_ = settings.value("showToggleFeedsTree", true).toBool();
   pushButtonNull_->setVisible(showToggleFeedsTree_);
-
-  defaultIconFeeds_ = settings.value("defaultIconFeeds", false).toBool();
   feedsModel_->defaultIconFeeds_ = defaultIconFeeds_;
   feedsView_->autocollapseFolder_ =
       settings.value("autocollapseFolder", false).toBool();
@@ -334,27 +416,30 @@ void MainWindow::saveSettings()
   Settings settings("Settings");
 
   AppSettings::showSplashScreen.set(showSplashScreen_);
-  settings.setValue("reopenFeedStartup", reopenFeedStartup_);
-  settings.setValue("openNewTabNextToActive", openNewTabNextToActive_);
+  AppSettings::openingFeedAction.set(openingFeedAction_);
+  AppSettings::openNewsWebViewOn.set(openNewsWebViewOn_);
+
+  for (const auto &s : kBoolCheckSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kTrayHoldSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kBoolGroupSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kIntSpinSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kIntComboSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kComboDataSettings)
+    settings.setValue(s.key, this->*(s.member));
+  for (const auto &s : kActionBoolSettings)
+    settings.setValue(s.key, (this->*(s.action))->isChecked());
 
   settings.setValue("createLastFeed", mainApp->isSaveDataLastFeed());
-
-  settings.setValue("showTrayIcon", showTrayIcon_);
-  settings.setValue("startingTray", startingTray_);
-  settings.setValue("minimizingTray", minimizingTray_);
-  settings.setValue("closingTray", closingTray_);
   settings.setValue("behaviorIconTray", behaviorIconTray_);
-  settings.setValue("singleClickTray", singleClickTray_);
-  settings.setValue("clearStatusNew", clearStatusNew_);
-  settings.setValue("emptyWorking", emptyWorking_);
-
   settings.setValue("langFileName", mainApp->language());
 
-  QString fontFamily = feedsView_->font().family();
-  settings.setValue("feedsFontFamily", fontFamily);
-  int fontSize = feedsView_->font().pointSize();
-  settings.setValue("feedsFontSize", fontSize);
-
+  settings.setValue("feedsFontFamily", feedsView_->font().family());
+  settings.setValue("feedsFontSize", feedsView_->font().pointSize());
   settings.setValue("newsFontFamily", newsListFontFamily_);
   settings.setValue("newsFontSize", newsListFontSize_);
   settings.setValue("newsTitleFontFamily", newsTitleFontFamily_);
@@ -364,104 +449,21 @@ void MainWindow::saveSettings()
   settings.setValue("notificationFontFamily", notificationFontFamily_);
   settings.setValue("notificationFontSize", notificationFontSize_);
 
-  settings.setValue("autoUpdatefeeds", updateFeedsEnable_);
-  settings.setValue("autoUpdatefeedsTime", updateFeedsInterval_);
-  settings.setValue("autoUpdatefeedsInterval", updateFeedsIntervalType_);
-
-  AppSettings::openingFeedAction.set(openingFeedAction_);
-  AppSettings::openNewsWebViewOn.set(openNewsWebViewOn_);
-
-  settings.setValue("markNewsReadOn", markNewsReadOn_);
   settings.setValue("markCurNewsRead", markCurNewsRead_);
-  settings.setValue("markNewsReadTime", markNewsReadTime_);
-  settings.setValue("markPrevNewsRead", markPrevNewsRead_);
-  settings.setValue("markReadSwitchingFeed", markReadSwitchingFeed_);
-  settings.setValue("markReadClosingTab", markReadClosingTab_);
-  settings.setValue("markReadMinimize", markReadMinimize_);
-
-  settings.setValue("formatData", formatDate_);
-  settings.setValue("formatTime", formatTime_);
-
-  settings.setValue("alternatingColorsNews", alternatingRowColorsNews_);
-  settings.setValue("changeBehaviorActionNUN", changeBehaviorActionNUN_);
-  settings.setValue("simplifiedDateTime", simplifiedDateTime_);
-  settings.setValue("notDeleteStarred", notDeleteStarred_);
-  settings.setValue("notDeleteLabeled", notDeleteLabeled_);
-  settings.setValue("markIdenticalNewsRead", markIdenticalNewsRead_);
-  settings.setValue("avoidOldNews", avoidOldNews_);
   settings.setValue("avoidedOldNewsDate", avoidedOldNewsDate_);
-
-  settings.setValue("mainNewsFilter", mainNewsFilter_);
-
-  settings.setValue("cleanupOnShutdown", cleanupOnShutdown_);
-  settings.setValue("maxDayClearUp", maxDayCleanUp_);
-  settings.setValue("maxNewsClearUp", maxNewsCleanUp_);
-  settings.setValue("dayClearUpOn", dayCleanUpOn_);
-  settings.setValue("newsClearUpOn", newsCleanUpOn_);
-  settings.setValue("readClearUp", readCleanUp_);
-  settings.setValue("neverUnreadClearUp", neverUnreadCleanUp_);
-  settings.setValue("neverStarClearUp", neverStarCleanUp_);
-  settings.setValue("neverLabelClearUp", neverLabelCleanUp_);
-  settings.setValue("cleanUpDeleted", cleanUpDeleted_);
-  settings.setValue("optimizeDB", optimizeDB_);
-
   settings.setValue("downloadLocation", downloadLocation_);
-  settings.setValue("askDownloadLocation", askDownloadLocation_);
-  settings.setValue("defaultZoomPages", defaultZoomPages_);
-  settings.setValue("autoLoadImages", autoLoadImages_);
   settings.setValue("preloadNewspaperPages", preloadNewspaperPages_);
-
-  settings.setValue("soundNewNews", soundNewNews_);
   settings.setValue("soundNotifyPath", soundNotifyPath_);
-  settings.setValue("showNotifyOn", showNotifyOn_);
-  settings.setValue("screenNotify", screenNotify_);
-  settings.setValue("positionNotify", positionNotify_);
-  settings.setValue("transparencyNotify", transparencyNotify_);
-  settings.setValue("countShowNewsNotify", countShowNewsNotify_);
-  settings.setValue("widthTitleNewsNotify", widthTitleNewsNotify_);
-  settings.setValue("timeShowNewsNotify", timeShowNewsNotify_);
-  settings.setValue("fullscreenModeNotify", fullscreenModeNotify_);
-  settings.setValue("showNotifyInactiveApp", showNotifyInactiveApp_);
-  settings.setValue("onlySelectedFeeds", onlySelectedFeeds_);
-  settings.setValue("showTitlesFeedsNotify", showTitlesFeedsNotify_);
-  settings.setValue("showIconFeedNotify", showIconFeedNotify_);
-  settings.setValue("showButtonMarkAllNotify", showButtonMarkAllNotify_);
-  settings.setValue("showButtonMarkReadNotify", showButtonMarkReadNotify_);
-  settings.setValue("showButtonExBrowserNotify", showButtonExBrowserNotify_);
-  settings.setValue("showButtonDeleteNotify", showButtonDeleteNotify_);
-  settings.setValue("closeNotify", closeNotify_);
 
-  settings.setValue("mainToolbarLock", toolBarLockAct_->isChecked());
 #ifdef HAVE_X11
   if (allWorkspacesAct_)
     settings.setValue("allWorkspaces", allWorkspacesAct_->isChecked());
 #endif
 
-  settings.setValue("mainToolbarShow2", mainToolbarToggle_->isChecked());
-  settings.setValue("feedsToolbarShow2", feedsToolbarToggle_->isChecked());
-  settings.setValue("newsToolbarShow", newsToolbarToggle_->isChecked());
-  settings.setValue("categoriesPanelShow", categoriesPanelToggle_->isChecked());
-  settings.setValue("statusBarShow", statusBarToggle_->isChecked());
-
   settings.setValue("theme", mainApp->applicationStyle().id);
-
-  settings.setValue("showUnreadCount", showUnreadCount_->isChecked());
-  settings.setValue("showUndeleteCount", showUndeleteCount_->isChecked());
-  settings.setValue("showLastUpdated", showLastUpdated_->isChecked());
-
-  settings.setValue("indentationFeedsTree", indentationFeedsTreeAct_->isChecked());
-
   settings.setValue("newsLayout", newsLayout_);
   settings.setValue("browserPosition", browserPosition_);
-
-  settings.setValue("stayOnTop", stayOnTopAct_->isChecked());
-
-  settings.setValue("hideFeedsOpenTab", hideFeedsOpenTab_);
-  settings.setValue("showToggleFeedsTree", showToggleFeedsTree_);
-
-  settings.setValue("defaultIconFeeds", defaultIconFeeds_);
   settings.setValue("autocollapseFolder", feedsView_->autocollapseFolder_);
-
   settings.setValue("showMenuBar", showMenuBarAct_->isChecked());
 
   Settings().remove("Color");
@@ -550,91 +552,43 @@ void MainWindow::showOptionDlg(int index)
   optionsDialog_ = new OptionsDialog(this);
 
   bool updateFeedsStartUp = AppSettings::autoUpdatefeedsStartUp.get();
+  int saveDBMemFileInterval = AppSettings::saveDBMemFileInterval.get();
+
+  for (const auto &s : kBoolCheckSettings)
+    (optionsDialog_->*(s.widget))->setChecked(this->*(s.member));
+  for (const auto &s : kTrayHoldSettings)
+    (optionsDialog_->*(s.widget))->setChecked(this->*(s.member));
+  for (const auto &s : kBoolGroupSettings)
+    (optionsDialog_->*(s.widget))->setChecked(this->*(s.member));
+  for (const auto &s : kIntSpinSettings)
+    (optionsDialog_->*(s.widget))->setValue(this->*(s.member));
+  for (const auto &s : kIntComboSettings)
+    (optionsDialog_->*(s.widget))->setCurrentIndex(this->*(s.member) + s.indexOffset);
+  for (const auto &s : kComboDataSettings)
+    selectComboData(optionsDialog_->*(s.widget), this->*(s.member));
+  for (const auto &s : kAppBoolCheckSettings)
+    (optionsDialog_->*(s.widget))->setChecked(s.setting->get());
+  for (const auto &s : kAppIntSpinSettings)
+    (optionsDialog_->*(s.widget))->setValue(s.setting->get());
 
   optionsDialog_->showSplashScreen_->setChecked(showSplashScreen_);
-  optionsDialog_->reopenFeedStartup_->setChecked(reopenFeedStartup_);
-  optionsDialog_->openNewTabNextToActive_->setChecked(openNewTabNextToActive_);
-  optionsDialog_->hideFeedsOpenTab_->setChecked(hideFeedsOpenTab_);
-  optionsDialog_->showToggleFeedsTree_->setChecked(showToggleFeedsTree_);
-  optionsDialog_->defaultIconFeeds_->setChecked(defaultIconFeeds_);
   optionsDialog_->autocollapseFolder_->setChecked(feedsView_->autocollapseFolder_);
-  bool showCloseButtonTab = AppSettings::showCloseButtonTab.get();
-  optionsDialog_->showCloseButtonTab_->setChecked(showCloseButtonTab);
-
-  bool updateCheckEnabled = AppSettings::updateCheckEnabled.get();
-  optionsDialog_->updateCheckEnabled_->setChecked(updateCheckEnabled);
-
-  bool storeDBMemory_ = AppSettings::storeDBMemory.get();
-  optionsDialog_->storeDBMemory_->setChecked(storeDBMemory_);
-  int saveDBMemFileInterval = AppSettings::saveDBMemFileInterval.get();
   optionsDialog_->saveDBMemFileInterval_->setValue(saveDBMemFileInterval);
-
-  optionsDialog_->showTrayIconBox_->setChecked(showTrayIcon_);
-  optionsDialog_->startingTray_->setChecked(startingTray_);
-  optionsDialog_->minimizingTray_->setChecked(minimizingTray_);
-  optionsDialog_->closingTray_->setChecked(closingTray_);
   optionsDialog_->setBehaviorIconTray(behaviorIconTray_);
-  optionsDialog_->singleClickTray_->setChecked(singleClickTray_);
-  optionsDialog_->clearStatusNew_->setChecked(clearStatusNew_);
-  optionsDialog_->emptyWorking_->setChecked(emptyWorking_);
-
   optionsDialog_->setProxy(mainApp->networkProxy());
 
-  int timeoutRequest = AppSettings::timeoutRequest.get();
-  int numberRequests = AppSettings::numberRequest.get();
-  int numberRepeats = AppSettings::numberRepeats.get();
-  optionsDialog_->timeoutRequest_->setValue(timeoutRequest);
-  optionsDialog_->numberRequests_->setValue(numberRequests);
-  optionsDialog_->numberRepeats_->setValue(numberRepeats);
-
-  optionsDialog_->autoLoadImages_->setChecked(autoLoadImages_);
   optionsDialog_->preloadNewspaperPages_->setValue(preloadNewspaperPages_);
   optionsDialog_->preloadNewspaperPages_->setEnabled(autoLoadImages_);
-  optionsDialog_->defaultZoomPages_->setValue(defaultZoomPages_);
   const int browserMode = AppSettings::externalBrowserOn.get();
   optionsDialog_->customExternalBrowser_->setChecked(browserMode == 2 || browserMode == -1);
   optionsDialog_->externalBrowser_->setText(AppSettings::externalBrowser.get());
   optionsDialog_->returnFocusAfterLink_->setChecked(AppSettings::returnFocusAfterLink.get());
 
   optionsDialog_->downloadLocationEdit_->setText(downloadLocation_);
-  optionsDialog_->askDownloadLocation_->setChecked(askDownloadLocation_);
-
   optionsDialog_->updateFeedsStartUp_->setChecked(updateFeedsStartUp);
-  optionsDialog_->updateFeedsEnable_->setChecked(updateFeedsEnable_);
-  optionsDialog_->updateIntervalType_->setCurrentIndex(updateFeedsIntervalType_+1);
-  optionsDialog_->updateFeedsInterval_->setValue(updateFeedsInterval_);
-
   optionsDialog_->setOpeningFeed(openingFeedAction_);
   optionsDialog_->openNewsWebViewOn_->setChecked(openNewsWebViewOn_);
-
-  optionsDialog_->markNewsReadOn_->setChecked(markNewsReadOn_);
   optionsDialog_->markCurNewsRead_->setChecked(markCurNewsRead_);
-  optionsDialog_->markNewsReadTime_->setValue(markNewsReadTime_);
-  optionsDialog_->markPrevNewsRead_->setChecked(markPrevNewsRead_);
-  optionsDialog_->markReadSwitchingFeed_->setChecked(markReadSwitchingFeed_);
-  optionsDialog_->markReadClosingTab_->setChecked(markReadClosingTab_);
-  optionsDialog_->markReadMinimize_->setChecked(markReadMinimize_);
-
-  for (int i = 0; i < optionsDialog_->formatDate_->count(); i++) {
-    if (optionsDialog_->formatDate_->itemData(i).toString() == formatDate_) {
-      optionsDialog_->formatDate_->setCurrentIndex(i);
-      break;
-    }
-  }
-  for (int i = 0; i < optionsDialog_->formatTime_->count(); i++) {
-    if (optionsDialog_->formatTime_->itemData(i).toString() == formatTime_) {
-      optionsDialog_->formatTime_->setCurrentIndex(i);
-      break;
-    }
-  }
-
-  optionsDialog_->alternatingRowColorsNews_->setChecked(alternatingRowColorsNews_);
-  optionsDialog_->changeBehaviorActionNUN_->setChecked(changeBehaviorActionNUN_);
-  optionsDialog_->simplifiedDateTime_->setChecked(simplifiedDateTime_);
-  optionsDialog_->notDeleteStarred_->setChecked(notDeleteStarred_);
-  optionsDialog_->notDeleteLabeled_->setChecked(notDeleteLabeled_);
-  optionsDialog_->markIdenticalNewsRead_->setChecked(markIdenticalNewsRead_);
-  optionsDialog_->avoidedOldNewsDateOn_->setChecked(avoidOldNews_);
 
   if (!avoidedOldNewsDate_.isNull() && avoidedOldNewsDate_.isValid()) {
     optionsDialog_->avoidedOldNewsDate_->setSelectedDate(avoidedOldNewsDate_);
@@ -642,49 +596,10 @@ void MainWindow::showOptionDlg(int index)
     optionsDialog_->avoidedOldNewsDate_->setSelectedDate(QDate::currentDate());
   }
 
-  for (int i = 0; i < optionsDialog_->mainNewsFilter_->count(); i++) {
-    if (optionsDialog_->mainNewsFilter_->itemData(i).toString() == mainNewsFilter_) {
-      optionsDialog_->mainNewsFilter_->setCurrentIndex(i);
-      break;
-    }
-  }
-
   QString styleSheetNews = settings.value("Settings/styleSheetNews",
                                           mainApp->styleSheetNewsDefaultFile()).toString();
   optionsDialog_->styleSheetNewsEdit_->setText(styleSheetNews);
-
-  optionsDialog_->cleanupOnShutdownBox_->setChecked(cleanupOnShutdown_);
-  optionsDialog_->dayCleanUpOn_->setChecked(dayCleanUpOn_);
-  optionsDialog_->maxDayCleanUp_->setValue(maxDayCleanUp_);
-  optionsDialog_->newsCleanUpOn_->setChecked(newsCleanUpOn_);
-  optionsDialog_->maxNewsCleanUp_->setValue(maxNewsCleanUp_);
-  optionsDialog_->readCleanUp_->setChecked(readCleanUp_);
-  optionsDialog_->neverUnreadCleanUp_->setChecked(neverUnreadCleanUp_);
-  optionsDialog_->neverStarCleanUp_->setChecked(neverStarCleanUp_);
-  optionsDialog_->neverLabelCleanUp_->setChecked(neverLabelCleanUp_);
-  optionsDialog_->cleanUpDeleted_->setChecked(cleanUpDeleted_);
-  optionsDialog_->optimizeDB_->setChecked(optimizeDB_);
-
-  optionsDialog_->soundNotifyBox_->setChecked(soundNewNews_);
   optionsDialog_->editSoundNotifer_->setText(soundNotifyPath_);
-  optionsDialog_->showNotifyOn_->setChecked(showNotifyOn_);
-  optionsDialog_->screenNotify_->setCurrentIndex(screenNotify_+1);
-  optionsDialog_->positionNotify_->setCurrentIndex(positionNotify_);
-  optionsDialog_->transparencyNotify_->setValue(transparencyNotify_);
-  optionsDialog_->countShowNewsNotify_->setValue(countShowNewsNotify_);
-  optionsDialog_->widthTitleNewsNotify_->setValue(widthTitleNewsNotify_);
-  optionsDialog_->timeShowNewsNotify_->setValue(timeShowNewsNotify_);
-  optionsDialog_->fullscreenModeNotify_->setChecked(fullscreenModeNotify_);
-  optionsDialog_->showNotifyInactiveApp_->setChecked(showNotifyInactiveApp_);
-  optionsDialog_->onlySelectedFeeds_->setChecked(onlySelectedFeeds_);
-  optionsDialog_->showTitlesFeedsNotify_->setChecked(showTitlesFeedsNotify_);
-  optionsDialog_->showIconFeedNotify_->setChecked(showIconFeedNotify_);
-  optionsDialog_->showButtonMarkAllNotify_->setChecked(showButtonMarkAllNotify_);
-  optionsDialog_->showButtonMarkReadNotify_->setChecked(showButtonMarkReadNotify_);
-  optionsDialog_->showButtonExBrowserNotify_->setChecked(showButtonExBrowserNotify_);
-  optionsDialog_->showButtonDeleteNotify_->setChecked(showButtonDeleteNotify_);
-  optionsDialog_->closeNotify_->setChecked(closeNotify_);
-
   optionsDialog_->setLanguage(mainApp->language());
 
   QString strFont = QString("%1, %2").
@@ -879,45 +794,44 @@ void MainWindow::showOptionDlg(int index)
     }
   }
 
+  const bool wasTrayIconEnabled = showTrayIcon_;
+
+  for (const auto &s : kBoolCheckSettings)
+    this->*(s.member) = (optionsDialog_->*(s.widget))->isChecked();
+  for (const auto &s : kTrayHoldSettings)
+    this->*(s.member) = (optionsDialog_->*(s.widget))->isChecked();
+  for (const auto &s : kBoolGroupSettings)
+    this->*(s.member) = (optionsDialog_->*(s.widget))->isChecked();
+  for (const auto &s : kIntSpinSettings)
+    this->*(s.member) = (optionsDialog_->*(s.widget))->value();
+  for (const auto &s : kIntComboSettings)
+    this->*(s.member) = (optionsDialog_->*(s.widget))->currentIndex() - s.indexOffset;
+  for (const auto &s : kComboDataSettings) {
+    QComboBox *combo = optionsDialog_->*(s.widget);
+    this->*(s.member) = combo->itemData(combo->currentIndex()).toString();
+  }
+  for (const auto &s : kAppBoolCheckSettings)
+    s.setting->set((optionsDialog_->*(s.widget))->isChecked());
+  for (const auto &s : kAppIntSpinSettings)
+    s.setting->set((optionsDialog_->*(s.widget))->value());
+
   showSplashScreen_ = optionsDialog_->showSplashScreen_->isChecked();
-  reopenFeedStartup_ = optionsDialog_->reopenFeedStartup_->isChecked();
-  openNewTabNextToActive_ = optionsDialog_->openNewTabNextToActive_->isChecked();
-  hideFeedsOpenTab_ = optionsDialog_->hideFeedsOpenTab_->isChecked();
-  showToggleFeedsTree_ = optionsDialog_->showToggleFeedsTree_->isChecked();
-  defaultIconFeeds_ = optionsDialog_->defaultIconFeeds_->isChecked();
   feedsModel_->defaultIconFeeds_ = defaultIconFeeds_;
   feedsView_->autocollapseFolder_ = optionsDialog_->autocollapseFolder_->isChecked();
-
-  showCloseButtonTab = optionsDialog_->showCloseButtonTab_->isChecked();
-  AppSettings::showCloseButtonTab.set(showCloseButtonTab);
-
   pushButtonNull_->setVisible(showToggleFeedsTree_);
 
-  updateCheckEnabled = optionsDialog_->updateCheckEnabled_->isChecked();
-  AppSettings::updateCheckEnabled.set(updateCheckEnabled);
-
-  storeDBMemory_ = optionsDialog_->storeDBMemory_->isChecked();
-  AppSettings::storeDBMemory.set(storeDBMemory_);
   if (saveDBMemFileInterval != optionsDialog_->saveDBMemFileInterval_->value()) {
     saveDBMemFileInterval = optionsDialog_->saveDBMemFileInterval_->value();
     AppSettings::saveDBMemFileInterval.set(saveDBMemFileInterval);
     mainApp->updateFeeds()->startSaveTimer();
   }
 
-  const bool wasTrayIconEnabled = showTrayIcon_;
-  showTrayIcon_ = optionsDialog_->showTrayIconBox_->isChecked();
-  startingTray_ = optionsDialog_->startingTray_->isChecked();
-  minimizingTray_ = optionsDialog_->minimizingTray_->isChecked();
-  closingTray_ = optionsDialog_->closingTray_->isChecked();
   behaviorIconTray_ = optionsDialog_->behaviorIconTray();
   if (behaviorIconTray_ > CHANGE_ICON_TRAY) {
     emit signalRefreshInfoTray();
   } else {
     trayIconController_->showDefaultIcon();
   }
-  singleClickTray_ = optionsDialog_->singleClickTray_->isChecked();
-  clearStatusNew_ = optionsDialog_->clearStatusNew_->isChecked();
-  emptyWorking_ = optionsDialog_->emptyWorking_->isChecked();
   if (showTrayIcon_) {
     trayIconController_->show();
   } else {
@@ -928,55 +842,20 @@ void MainWindow::showOptionDlg(int index)
 
   mainApp->proxySaveSettings(optionsDialog_->proxy());
 
-  timeoutRequest = optionsDialog_->timeoutRequest_->value();
-  numberRequests = optionsDialog_->numberRequests_->value();
-  numberRepeats = optionsDialog_->numberRepeats_->value();
-  AppSettings::timeoutRequest.set(timeoutRequest);
-  AppSettings::numberRequest.set(numberRequests);
-  AppSettings::numberRepeats.set(numberRepeats);
-
-  autoLoadImages_ = optionsDialog_->autoLoadImages_->isChecked();
   preloadNewspaperPages_ = optionsDialog_->preloadNewspaperPages_->value();
   AppSettings::externalBrowserOn.set(optionsDialog_->customExternalBrowser_->isChecked() ? 2 : 1);
   AppSettings::externalBrowser.set(optionsDialog_->externalBrowser_->text());
   AppSettings::returnFocusAfterLink.set(optionsDialog_->returnFocusAfterLink_->isChecked());
   if (!optionsDialog_->returnFocusAfterLink_->isChecked()) returnFocusAfterLinkTimer_.stop();
-  defaultZoomPages_ = optionsDialog_->defaultZoomPages_->value();
 
   downloadLocation_ = optionsDialog_->downloadLocationEdit_->text();
-  askDownloadLocation_ = optionsDialog_->askDownloadLocation_->isChecked();
-
   updateFeedsStartUp = optionsDialog_->updateFeedsStartUp_->isChecked();
-  updateFeedsEnable_ = optionsDialog_->updateFeedsEnable_->isChecked();
-  updateFeedsInterval_ = optionsDialog_->updateFeedsInterval_->value();
-  updateFeedsIntervalType_ = optionsDialog_->updateIntervalType_->currentIndex()-1;
-
-
   openingFeedAction_ = optionsDialog_->getOpeningFeed();
   openNewsWebViewOn_ = optionsDialog_->openNewsWebViewOn_->isChecked();
-
-  markNewsReadOn_ = optionsDialog_->markNewsReadOn_->isChecked();
   markCurNewsRead_ = optionsDialog_->markCurNewsRead_->isChecked();
-  markNewsReadTime_ = optionsDialog_->markNewsReadTime_->value();
-  markPrevNewsRead_ = optionsDialog_->markPrevNewsRead_->isChecked();
-  markReadSwitchingFeed_ = optionsDialog_->markReadSwitchingFeed_->isChecked();
-  markReadClosingTab_ = optionsDialog_->markReadClosingTab_->isChecked();
-  markReadMinimize_ = optionsDialog_->markReadMinimize_->isChecked();
 
-  formatDate_ = optionsDialog_->formatDate_->itemData(
-        optionsDialog_->formatDate_->currentIndex()).toString();
   feedsModel_->formatDate_ = formatDate_;
-  formatTime_ = optionsDialog_->formatTime_->itemData(
-        optionsDialog_->formatTime_->currentIndex()).toString();
   feedsModel_->formatTime_ = formatTime_;
-
-  alternatingRowColorsNews_ = optionsDialog_->alternatingRowColorsNews_->isChecked();
-  changeBehaviorActionNUN_ = optionsDialog_->changeBehaviorActionNUN_->isChecked();
-  simplifiedDateTime_ = optionsDialog_->simplifiedDateTime_->isChecked();
-  notDeleteStarred_ = optionsDialog_->notDeleteStarred_->isChecked();
-  notDeleteLabeled_ = optionsDialog_->notDeleteLabeled_->isChecked();
-  markIdenticalNewsRead_ = optionsDialog_->markIdenticalNewsRead_->isChecked();
-  avoidOldNews_ = optionsDialog_->avoidedOldNewsDateOn_->isChecked();
 
   if (!optionsDialog_->avoidedOldNewsDate_->selectedDate().isNull() && optionsDialog_->avoidedOldNewsDate_->selectedDate().isValid()) {
     avoidedOldNewsDate_ = optionsDialog_->avoidedOldNewsDate_->selectedDate();
@@ -984,44 +863,11 @@ void MainWindow::showOptionDlg(int index)
     avoidedOldNewsDate_ = QDate::currentDate();
   }
 
-  mainNewsFilter_ = optionsDialog_->mainNewsFilter_->itemData(
-        optionsDialog_->mainNewsFilter_->currentIndex()).toString();
-
   styleSheetNews = optionsDialog_->styleSheetNewsEdit_->text();
   if (styleSheetNews.isEmpty()) styleSheetNews = mainApp->styleSheetNewsDefaultFile();
   settings.setValue("Settings/styleSheetNews", styleSheetNews);
 
-  cleanupOnShutdown_ = optionsDialog_->cleanupOnShutdownBox_->isChecked();
-  dayCleanUpOn_ = optionsDialog_->dayCleanUpOn_->isChecked();
-  maxDayCleanUp_ = optionsDialog_->maxDayCleanUp_->value();
-  newsCleanUpOn_ = optionsDialog_->newsCleanUpOn_->isChecked();
-  maxNewsCleanUp_ = optionsDialog_->maxNewsCleanUp_->value();
-  readCleanUp_ = optionsDialog_->readCleanUp_->isChecked();
-  neverUnreadCleanUp_ = optionsDialog_->neverUnreadCleanUp_->isChecked();
-  neverStarCleanUp_ = optionsDialog_->neverStarCleanUp_->isChecked();
-  neverLabelCleanUp_ = optionsDialog_->neverLabelCleanUp_->isChecked();
-  cleanUpDeleted_ = optionsDialog_->cleanUpDeleted_->isChecked();
-  optimizeDB_ = optionsDialog_->optimizeDB_->isChecked();
-
-  soundNewNews_ = optionsDialog_->soundNotifyBox_->isChecked();
   soundNotifyPath_ = optionsDialog_->editSoundNotifer_->text();
-  showNotifyOn_ = optionsDialog_->showNotifyOn_->isChecked();
-  screenNotify_ = optionsDialog_->screenNotify_->currentIndex()-1;
-  positionNotify_ = optionsDialog_->positionNotify_->currentIndex();
-  transparencyNotify_ = optionsDialog_->transparencyNotify_->value();
-  countShowNewsNotify_ = optionsDialog_->countShowNewsNotify_->value();
-  widthTitleNewsNotify_ = optionsDialog_->widthTitleNewsNotify_->value();
-  timeShowNewsNotify_ = optionsDialog_->timeShowNewsNotify_->value();
-  fullscreenModeNotify_ = optionsDialog_->fullscreenModeNotify_->isChecked();
-  showNotifyInactiveApp_ = optionsDialog_->showNotifyInactiveApp_->isChecked();
-  onlySelectedFeeds_ = optionsDialog_->onlySelectedFeeds_->isChecked();
-  showTitlesFeedsNotify_ = optionsDialog_->showTitlesFeedsNotify_->isChecked();
-  showIconFeedNotify_ = optionsDialog_->showIconFeedNotify_->isChecked();
-  showButtonMarkAllNotify_ = optionsDialog_->showButtonMarkAllNotify_->isChecked();
-  showButtonMarkReadNotify_ = optionsDialog_->showButtonMarkReadNotify_->isChecked();
-  showButtonExBrowserNotify_ = optionsDialog_->showButtonExBrowserNotify_->isChecked();
-  showButtonDeleteNotify_ = optionsDialog_->showButtonDeleteNotify_->isChecked();
-  closeNotify_ = optionsDialog_->closeNotify_->isChecked();
 
   mainApp->setLanguage(optionsDialog_->language());
   mainApp->setTranslateApplication();
