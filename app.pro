@@ -191,6 +191,7 @@ SOURCES += \
     src/application/filemanager.cpp \
     src/application/logfile.cpp \
     src/application/mainwindow.cpp \
+    src/application/mainwindow_news.cpp \
     src/application/mainwindow_notifications.cpp \
     src/application/mainwindow_settings.cpp \
     src/application/mainwindow_theme.cpp \
