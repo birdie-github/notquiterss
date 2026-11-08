@@ -615,7 +615,7 @@ void MainWindow::initOptionPage(int page)
     break;
   }
   case OptionsDialog::PageNotifications:
-    optionsDialog_->editSoundNotifer_->setText(soundNotifyPath_);
+    optionsDialog_->editSoundNotifier_->setText(soundNotifyPath_);
     break;
   case OptionsDialog::PageLanguage:
     optionsDialog_->setLanguage(mainApp->language());
@@ -873,7 +873,7 @@ void MainWindow::showOptionDlg(int index)
   }
 
   if (optionsDialog_->isPageCreated(OptionsDialog::PageNotifications)) {
-    soundNotifyPath_ = optionsDialog_->editSoundNotifer_->text();
+    soundNotifyPath_ = optionsDialog_->editSoundNotifier_->text();
   }
 
   if (optionsDialog_->isPageCreated(OptionsDialog::PageLanguage) && mainApp->language() != optionsDialog_->language()) {

@@ -1096,8 +1096,8 @@ QWidget *OptionsDialog::createNotifierWidget()
   timeShowNewsNotify_ = new QSpinBox();
   timeShowNewsNotify_->setRange(0, 99999);
 
-  QPushButton *showNotifer = new QPushButton(tr("Review"));
-  connect(showNotifer, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
+  QPushButton *showNotifier = new QPushButton(tr("Review"));
+  connect(showNotifier, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
 
   QHBoxLayout *notifierLayout1 = new QHBoxLayout();
   notifierLayout1->addWidget(new QLabel(tr("Screen")));
@@ -1106,7 +1106,7 @@ QWidget *OptionsDialog::createNotifierWidget()
   notifierLayout1->addWidget(new QLabel(tr("Position")));
   notifierLayout1->addWidget(positionNotify_);
   notifierLayout1->addStretch(1);
-  notifierLayout1->addWidget(showNotifer);
+  notifierLayout1->addWidget(showNotifier);
 
   QGridLayout *notifierLayout2 = new QGridLayout();
   notifierLayout2->setColumnStretch(2, 1);
@@ -1139,20 +1139,20 @@ QWidget *OptionsDialog::createNotifierWidget()
   notifierLayout3->addWidget(showButtonDeleteNotify_);
 
   onlySelectedFeeds_ = new QCheckBox(tr("Only show selected feeds:"));
-  QPushButton *feedsNotiferButton = new QPushButton(tr("Feeds"));
-  feedsNotiferButton->setEnabled(false);
+  QPushButton *feedsNotifierButton = new QPushButton(tr("Feeds"));
+  feedsNotifierButton->setEnabled(false);
 
   QHBoxLayout *onlySelectedFeedsLayout = new QHBoxLayout();
   onlySelectedFeedsLayout->addWidget(onlySelectedFeeds_);
-  onlySelectedFeedsLayout->addWidget(feedsNotiferButton);
+  onlySelectedFeedsLayout->addWidget(feedsNotifierButton);
   onlySelectedFeedsLayout->addStretch(1);
 
   feedsNotifierDlg_ = nullptr;
   feedsTreeNotify_ = nullptr;
   itemNotChecked_ = false;
 
-  connect(onlySelectedFeeds_, &QAbstractButton::toggled, feedsNotiferButton, &QWidget::setEnabled);
-  connect(feedsNotiferButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
+  connect(onlySelectedFeeds_, &QAbstractButton::toggled, feedsNotifierButton, &QWidget::setEnabled);
+  connect(feedsNotifierButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
 
   QVBoxLayout *notificationLayoutV = new QVBoxLayout();
   notificationLayoutV->setContentsMargins(10, 10, 10, 10);
@@ -1178,19 +1178,19 @@ QWidget *OptionsDialog::createNotifierWidget()
   soundNotifyBox_->setCheckable(true);
   soundNotifyBox_->setChecked(false);
 
-  editSoundNotifer_ = new LineEdit();
-  selectionSoundNotifer_ = new QPushButton(tr("Browse..."));
-  playSoundNotifer_ = new QPushButton(tr("Play"));
+  editSoundNotifier_ = new LineEdit();
+  selectionSoundNotifier_ = new QPushButton(tr("Browse..."));
+  playSoundNotifier_ = new QPushButton(tr("Play"));
 
-  connect(selectionSoundNotifer_, &QAbstractButton::clicked, this, &OptionsDialog::selectionSoundNotifer);
-  connect(playSoundNotifer_, &QAbstractButton::clicked, this, &OptionsDialog::slotPlaySoundNotifer);
+  connect(selectionSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::selectionSoundNotifier);
+  connect(playSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::slotPlaySoundNotifier);
   connect(this, &OptionsDialog::signalPlaySound,
           qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
 
   QHBoxLayout *soundNotifyLayoutH = new QHBoxLayout();
-  soundNotifyLayoutH->addWidget(editSoundNotifer_, 1);
-  soundNotifyLayoutH->addWidget(selectionSoundNotifer_);
-  soundNotifyLayoutH->addWidget(playSoundNotifer_);
+  soundNotifyLayoutH->addWidget(editSoundNotifier_, 1);
+  soundNotifyLayoutH->addWidget(selectionSoundNotifier_);
+  soundNotifyLayoutH->addWidget(playSoundNotifier_);
 
   QVBoxLayout *soundNotifyLayout = new QVBoxLayout(soundNotifyBox_);
   soundNotifyLayout->setContentsMargins(10, 10, 10, 10);
@@ -1930,12 +1930,12 @@ void OptionsDialog::selectionUserStyleNews()
     styleSheetNewsEdit_->setText(fileName);
 }
 //----------------------------------------------------------------------------
-void OptionsDialog::selectionSoundNotifer()
+void OptionsDialog::selectionSoundNotifier()
 {
   QString path;
 
-  QFileInfo file(editSoundNotifer_->text());
-  if (file.isFile()) path = editSoundNotifer_->text();
+  QFileInfo file(editSoundNotifier_->text());
+  if (file.isFile()) path = editSoundNotifier_->text();
   else path = file.path();
 
   QString fileName = QFileDialog::getOpenFileName(this,
@@ -1944,13 +1944,13 @@ void OptionsDialog::selectionSoundNotifer()
                                                   tr("Audio Files (*.wav *.flac *.mp3);;All Files (*)")
                                                  );
   if (!fileName.isEmpty())
-    editSoundNotifer_->setText(fileName);
+    editSoundNotifier_->setText(fileName);
 }
 
-void OptionsDialog::slotPlaySoundNotifer()
+void OptionsDialog::slotPlaySoundNotifier()
 {
-  if (!editSoundNotifer_->text().isEmpty())
-    emit signalPlaySound(editSoundNotifer_->text());
+  if (!editSoundNotifier_->text().isEmpty())
+    emit signalPlaySound(editSoundNotifier_->text());
 }
 
 //----------------------------------------------------------------------------

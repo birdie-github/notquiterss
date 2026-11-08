@@ -166,9 +166,9 @@ public:
 
   // notifier
   QGroupBox *soundNotifyBox_;
-  QLineEdit *editSoundNotifer_;
-  QPushButton *selectionSoundNotifer_;
-  QPushButton *playSoundNotifer_;
+  QLineEdit *editSoundNotifier_;
+  QPushButton *selectionSoundNotifier_;
+  QPushButton *playSoundNotifier_;
 
   QGroupBox *showNotifyOn_;
   QComboBox *screenNotify_;
@@ -232,8 +232,8 @@ private slots:
   void slotResetShortcut();
   void filterShortcutChanged(const QString &text);
   void selectionUserStyleNews();
-  void selectionSoundNotifer();
-  void slotPlaySoundNotifer();
+  void selectionSoundNotifier();
+  void slotPlaySoundNotifier();
   void feedsTreeNotifyItemChanged(QTreeWidgetItem* item,int column);
   void setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state);
   void showNotification();
