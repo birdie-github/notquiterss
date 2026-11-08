@@ -275,6 +275,7 @@ public slots:
   void slotPlaySound(const QString &path);
   void slotAddColorList(int id, const QString &color);
   void showOptionDlg(int index = -1);
+  void initOptionPage(int page);
   void slotPlaceToTray();
   void slotActivationTray(QSystemTrayIcon::ActivationReason reason);
   void slotTrayOpenNotifyTimer();

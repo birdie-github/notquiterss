@@ -40,6 +40,10 @@ public:
   explicit OptionsDialog(QWidget *parent);
   int currentIndex();
   void setCurrentItem(int index);
+  void ensurePageCreated(int pageIndex);
+  bool isPageCreated(int pageIndex) const {
+    return pageIndex >= 0 && pageIndex < pageWidgets_.size() && pageWidgets_.at(pageIndex) != nullptr;
+  }
 
   // general
   QCheckBox *showSplashScreen_;
@@ -298,20 +302,20 @@ private:
   void openFeedsNotifierDlg();
   void loadNotifier();
   void applyNotifier();
-  bool loadNotifierOk_;
-  NotificationWidget *notificationWidget_;
+  bool loadNotifierOk_ = false;
+  NotificationWidget *notificationWidget_ = nullptr;
 
   // labels
   void createLabelsWidget();
   void loadLabels();
   void applyLabels();
   void addIdLabelList(const QString &idLabel);
-  QPushButton *newLabelButton_;
-  QPushButton *editLabelButton_;
-  QPushButton *deleteLabelButton_;
-  QPushButton *moveUpLabelButton_;
-  QPushButton *moveDownLabelButton_;
-  bool loadLabelsOk_;
+  QPushButton *newLabelButton_ = nullptr;
+  QPushButton *editLabelButton_ = nullptr;
+  QPushButton *deleteLabelButton_ = nullptr;
+  QPushButton *moveUpLabelButton_ = nullptr;
+  QPushButton *moveDownLabelButton_ = nullptr;
+  bool loadLabelsOk_ = false;
 
   // passwords
   void createPasswordsWidget();
@@ -336,13 +340,15 @@ private:
   QList<QAction *> shortcutActions_;
   const QStringList *listDefaultShortcut_ = nullptr;
   bool loadShortcutsOk_ = false;
-  LineEdit *filterShortcut_;
-  QTreeView *shortcutTree_;
-  QStandardItemModel *shortcutModel_;
-  QSortFilterProxyModel *shortcutProxyModel_;
-  LineEdit *editShortcut_;
-  QGroupBox *editShortcutBox;
-  QLabel *warningShortcut_;
+  LineEdit *filterShortcut_ = nullptr;
+  QTreeView *shortcutTree_ = nullptr;
+  QStandardItemModel *shortcutModel_ = nullptr;
+  QSortFilterProxyModel *shortcutProxyModel_ = nullptr;
+  LineEdit *editShortcut_ = nullptr;
+  QGroupBox *editShortcutBox = nullptr;
+  QLabel *warningShortcut_ = nullptr;
+  QElapsedTimer openTimer_;
+  bool showLogged_ = false;
 
 };
 

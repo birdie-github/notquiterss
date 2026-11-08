@@ -39,6 +39,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   , userAgentWarningAccepted_(false)
   , notificationWidget_(nullptr)
 {
+  openTimer_.start();
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
   setSizeGripEnabled(true);
@@ -109,72 +110,20 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   treeItem << "11" << tr("Database Backup");
   categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
 
-  QElapsedTimer stepTimer;
-  stepTimer.start();
-
-  createGeneralWidget();
-  const qint64 generalMs = stepTimer.restart();
-
-  createTraySystemWidget();
-  const qint64 trayMs = stepTimer.restart();
-
-  createNetworkConnectionsWidget();
-  const qint64 networkMs = stepTimer.restart();
-
-  createBrowserWidget();
-  const qint64 browserMs = stepTimer.restart();
-
-  createFeedsWidget();
-  const qint64 feedsMs = stepTimer.restart();
-
-  createLabelsWidget();
-  const qint64 labelsMs = stepTimer.restart();
-
-  createNotifierWidget();
-  const qint64 notifierMs = stepTimer.restart();
-
-  createPasswordsWidget();
-  const qint64 passwordsMs = stepTimer.restart();
-
-  createLanguageWidget();
-  const qint64 languageMs = stepTimer.restart();
-
-  createFontsColorsWidget();
-  const qint64 fontsColorsMs = stepTimer.restart();
-
-  createShortcutWidget();
-  const qint64 shortcutMs = stepTimer.restart();
-
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
   // Scroll only the current page, not a stack sized for its tallest hidden page.
-  // Defer mounting each page into its QScrollArea until the page is selected so
-  // Qt does not polish and compute layouts for all 12 pages on dialog open.
-  const auto addPage = [this](QWidget *page) {
+  // Pages themselves are created and initialized on demand in ensurePageCreated().
+  constexpr int kPageCount = 12;
+  pageWidgets_.fill(nullptr, kPageCount);
+  pageScrollAreas_.reserve(kPageCount);
+  for (int i = 0; i < kPageCount; ++i) {
     auto *scrollArea = new QScrollArea();
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameStyle(QFrame::NoFrame);
-    page->setParent(this);
-    page->hide();
-    pageWidgets_.append(page);
     pageScrollAreas_.append(scrollArea);
     contentStack_->addWidget(scrollArea);
-  };
-  addPage(generalWidget_);
-  addPage(traySystemWidget_);
-  addPage(networkConnectionsWidget_);
-  addPage(browserWidget_);
-  addPage(feedsWidget_);
-  addPage(labelsWidget_);
-  addPage(notifierWidget_);
-  addPage(passwordsWidget_);
-  addPage(languageWidget_);
-  addPage(fontsColorsWidget_);
-  addPage(shortcutWidget_);
-  auto *backupPage = new BackupSettingsPage(this);
-  addPage(backupPage);
-  connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
-  const qint64 stackBackupMs = stepTimer.restart();
+  }
 
   QSplitter *splitter = new QSplitter();
   splitter->setChildrenCollapsible(false);
@@ -206,29 +155,84 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   if (!savedGeometry.isEmpty()) {
     restoreGeometry(savedGeometry);
   } else {
-    // Use native font/style metrics; a tall page can still scroll independently.
-    ensurePolished();
-    const QSize pageSize = generalWidget_->sizeHint().expandedTo(generalWidget_->minimumSizeHint());
-    const QSize surroundingSize = sizeHint() - contentStack_->sizeHint();
-    resize(QSize(700, 580).expandedTo(pageSize + surroundingSize));
+    resize(700, 580);
   }
-  const qint64 polishLayoutMs = stepTimer.restart();
 
-  qInfo().noquote() << QStringLiteral(
-      "[perf] OptionsDialog::ctor pages: general=%1, tray=%2, net=%3, browser=%4, feeds=%5, labels=%6, notifier=%7, pass=%8, lang=%9, fontsColors=%10, shortcuts=%11, stack+backup=%12, polish+layout=%13 ms")
-      .arg(generalMs)
-      .arg(trayMs)
-      .arg(networkMs)
-      .arg(browserMs)
-      .arg(feedsMs)
-      .arg(labelsMs)
-      .arg(notifierMs)
-      .arg(passwordsMs)
-      .arg(languageMs)
-      .arg(fontsColorsMs)
-      .arg(shortcutMs)
-      .arg(stackBackupMs)
-      .arg(polishLayoutMs);
+  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::ctor: %1 ms")
+      .arg(openTimer_.elapsed());
+}
+
+void OptionsDialog::ensurePageCreated(int pageIndex)
+{
+  if (pageIndex < 0 || pageIndex >= pageWidgets_.size() || pageWidgets_.at(pageIndex) != nullptr)
+    return;
+
+  QElapsedTimer timer;
+  timer.start();
+  QWidget *page = nullptr;
+  switch (pageIndex) {
+  case 0:
+    createGeneralWidget();
+    page = generalWidget_;
+    break;
+  case 1:
+    createTraySystemWidget();
+    page = traySystemWidget_;
+    break;
+  case 2:
+    createNetworkConnectionsWidget();
+    page = networkConnectionsWidget_;
+    break;
+  case 3:
+    createBrowserWidget();
+    page = browserWidget_;
+    break;
+  case 4:
+    createFeedsWidget();
+    page = feedsWidget_;
+    break;
+  case 5:
+    createLabelsWidget();
+    page = labelsWidget_;
+    break;
+  case 6:
+    createNotifierWidget();
+    page = notifierWidget_;
+    break;
+  case 7:
+    createPasswordsWidget();
+    page = passwordsWidget_;
+    break;
+  case 8:
+    createLanguageWidget();
+    page = languageWidget_;
+    break;
+  case 9:
+    createFontsColorsWidget();
+    page = fontsColorsWidget_;
+    break;
+  case 10:
+    createShortcutWidget();
+    page = shortcutWidget_;
+    break;
+  case 11: {
+    auto *backupPage = new BackupSettingsPage(this);
+    connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
+    page = backupPage;
+    break;
+  }
+  default:
+    return;
+  }
+
+  pageWidgets_[pageIndex] = page;
+  if (MainWindow *mw = qobject_cast<MainWindow *>(parent())) {
+    mw->initOptionPage(pageIndex);
+  }
+  pageScrollAreas_.at(pageIndex)->setWidget(page);
+  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::ensurePageCreated(%1): %2 ms")
+      .arg(pageIndex)
+      .arg(timer.elapsed());
 }
 
 void OptionsDialog::showEvent(QShowEvent *event)
@@ -251,46 +255,56 @@ void OptionsDialog::showEvent(QShowEvent *event)
   const int y = qBound(available.top(), frame.top(),
                        qMax(available.top(), available.bottom() - frame.height() + 1));
   move(pos() + QPoint(x, y) - frame.topLeft());
+
+  if (!showLogged_) {
+    showLogged_ = true;
+    qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::showEvent complete: %1 ms since ctor start")
+        .arg(openTimer_.elapsed());
+  }
 }
 
 void OptionsDialog::acceptDialog()
 {
-  if (customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
+  if (isPageCreated(2) && customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
     QMessageBox::warning(this, tr("Custom User-Agent"),
                          tr("Enter a custom User-Agent or disable the custom User-Agent option."));
     return;
   }
 
-  if (customExternalBrowser_->isChecked() && externalBrowser_->text().trimmed().isEmpty()) {
+  if (isPageCreated(3) && customExternalBrowser_->isChecked() && externalBrowser_->text().trimmed().isEmpty()) {
     QMessageBox::warning(this, tr("External Browser"), tr("Enter a custom browser or select the system default browser."));
     return;
   }
 
 #if defined(Q_OS_WIN)
-  if (mainApp->isPortableAppsCom()) {
-    if (autoRunEnabled_->isChecked()) {
-      QFileInfo file(QCoreApplication::applicationDirPath() % "/../../" % QCoreApplication::applicationName() % "Portable.exe");
-      autoRunSettings_->setValue((QCoreApplication::applicationName() + "Portable"), QDir::toNativeSeparators(file.absoluteFilePath()));
+  if (isPageCreated(0)) {
+    if (mainApp->isPortableAppsCom()) {
+      if (autoRunEnabled_->isChecked()) {
+        QFileInfo file(QCoreApplication::applicationDirPath() % "/../../" % QCoreApplication::applicationName() % "Portable.exe");
+        autoRunSettings_->setValue((QCoreApplication::applicationName() + "Portable"), QDir::toNativeSeparators(file.absoluteFilePath()));
+      } else {
+        autoRunSettings_->remove((QCoreApplication::applicationName() + "Portable"));
+      }
     } else {
-      autoRunSettings_->remove((QCoreApplication::applicationName() + "Portable"));
+      if (autoRunEnabled_->isChecked())
+        autoRunSettings_->setValue(QCoreApplication::applicationName(), QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
+      else
+        autoRunSettings_->remove(QCoreApplication::applicationName());
     }
-  } else {
-    if (autoRunEnabled_->isChecked())
-      autoRunSettings_->setValue(QCoreApplication::applicationName(), QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
-    else
-      autoRunSettings_->remove(QCoreApplication::applicationName());
   }
 #endif
 
-  Settings userAgentSettings("Settings");
-  const bool useCustomUserAgent = customUserAgent_->isChecked();
-  const QString customUserAgent = userAgentEdit_->text().trimmed();
-  userAgentSettings.setValue("useCustomUserAgent", useCustomUserAgent);
-  if (useCustomUserAgent || hadStoredCustomUserAgent_ || userAgentWarningAccepted_)
-    userAgentSettings.setValue("userAgent", customUserAgent);
-  globals.setUserAgent(useCustomUserAgent, customUserAgent);
+  if (isPageCreated(2)) {
+    Settings userAgentSettings("Settings");
+    const bool useCustomUserAgent = customUserAgent_->isChecked();
+    const QString customUserAgent = userAgentEdit_->text().trimmed();
+    userAgentSettings.setValue("useCustomUserAgent", useCustomUserAgent);
+    if (useCustomUserAgent || hadStoredCustomUserAgent_ || userAgentWarningAccepted_)
+      userAgentSettings.setValue("userAgent", customUserAgent);
+    globals.setUserAgent(useCustomUserAgent, customUserAgent);
 
-  applyProxy();
+    applyProxy();
+  }
   applyLabels();
   applyNotifier();
   applyPass();
@@ -1591,11 +1605,7 @@ void OptionsDialog::slotCategoriesTreeKeyUpDownPressed()
 void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
 {
   const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
-  if (pageIndex >= 0 && pageIndex < pageScrollAreas_.size() &&
-      pageScrollAreas_.at(pageIndex)->widget() == nullptr) {
-    pageWidgets_.at(pageIndex)->show();
-    pageScrollAreas_.at(pageIndex)->setWidget(pageWidgets_.at(pageIndex));
-  }
+  ensurePageCreated(pageIndex);
 
   contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
   contentStack_->setCurrentIndex(pageIndex);
@@ -1785,6 +1795,7 @@ void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringLi
 void OptionsDialog::loadShortcuts()
 {
   if (loadShortcutsOk_) return;
+  ensurePageCreated(10);
   loadShortcutsOk_ = true;
 
   QListIterator<QAction *> iter(shortcutActions_);
@@ -2423,6 +2434,7 @@ void OptionsDialog::loadNotifier()
 //----------------------------------------------------------------------------
 void OptionsDialog::applyNotifier()
 {
+  if (!isPageCreated(6)) return;
   if (!loadNotifierOk_) {
     if (!onlySelectedFeeds_->isChecked())
       mainApp->mainWindow()->idFeedsNotifyList_.clear();
