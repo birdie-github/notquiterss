@@ -33,6 +33,21 @@
 #include "settings.h"
 #include "globals.h"
 
+const OptionsDialog::PageDescriptor OptionsDialog::kPages[OptionsDialog::PageCount] = {
+  { QT_TR_NOOP("General"),            &OptionsDialog::createGeneralWidget,            nullptr },
+  { QT_TR_NOOP("System Tray"),        &OptionsDialog::createTraySystemWidget,         nullptr },
+  { QT_TR_NOOP("Network"),            &OptionsDialog::createNetworkConnectionsWidget, nullptr },
+  { QT_TR_NOOP("Article View"),       &OptionsDialog::createBrowserWidget,            nullptr },
+  { QT_TR_NOOP("Feeds"),              &OptionsDialog::createFeedsWidget,              &OptionsDialog::onFeedsPageEntered },
+  { QT_TR_NOOP("Labels"),             &OptionsDialog::createLabelsWidget,             &OptionsDialog::loadLabels },
+  { QT_TR_NOOP("Notifications"),      &OptionsDialog::createNotifierWidget,           nullptr },
+  { QT_TR_NOOP("Passwords"),          &OptionsDialog::createPasswordsWidget,          &OptionsDialog::loadPasswords },
+  { QT_TR_NOOP("Language"),           &OptionsDialog::createLanguageWidget,           &OptionsDialog::loadLanguages },
+  { QT_TR_NOOP("Fonts & Colors"),     &OptionsDialog::createFontsColorsWidget,        nullptr },
+  { QT_TR_NOOP("Keyboard Shortcuts"), &OptionsDialog::createShortcutWidget,           &OptionsDialog::loadShortcuts },
+  { QT_TR_NOOP("Database Backup"),    &OptionsDialog::createBackupWidget,             nullptr },
+};
+
 OptionsDialog::OptionsDialog(QWidget *parent)
   : Dialog(parent)
   , hadStoredCustomUserAgent_(false)
@@ -72,52 +87,16 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->header()->resizeSection(2, 5);
   categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
   categoriesTree_->setMinimumWidth(150);
-  QStringList treeItem;
-  treeItem << "0" << tr("General");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "1" << tr("System Tray");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "2" << tr("Network");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "3" << tr("Article View");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "4" << tr("Feeds");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "5" << tr("Labels");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "6" << tr("Notifications");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "7" << tr("Passwords");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "8" << tr("Language");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "9" << tr("Fonts & Colors");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-  treeItem.clear();
-  treeItem << "10" << tr("Keyboard Shortcuts");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
-
-  treeItem.clear();
-  treeItem << "11" << tr("Database Backup");
-  categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
 
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
   // Scroll only the current page, not a stack sized for its tallest hidden page.
   // Pages themselves are created and initialized on demand in ensurePageCreated().
-  constexpr int kPageCount = 12;
-  pageWidgets_.fill(nullptr, kPageCount);
-  pageScrollAreas_.reserve(kPageCount);
-  for (int i = 0; i < kPageCount; ++i) {
+  pageWidgets_.fill(nullptr, PageCount);
+  pageScrollAreas_.reserve(PageCount);
+  for (int i = 0; i < PageCount; ++i) {
+    categoriesTree_->addTopLevelItem(
+        new QTreeWidgetItem(QStringList{QString::number(i), tr(kPages[i].title)}));
     auto *scrollArea = new QScrollArea();
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameStyle(QFrame::NoFrame);
@@ -164,67 +143,12 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
 void OptionsDialog::ensurePageCreated(int pageIndex)
 {
-  if (pageIndex < 0 || pageIndex >= pageWidgets_.size() || pageWidgets_.at(pageIndex) != nullptr)
+  if (pageIndex < 0 || pageIndex >= PageCount || pageWidgets_.at(pageIndex) != nullptr)
     return;
 
   QElapsedTimer timer;
   timer.start();
-  QWidget *page = nullptr;
-  switch (pageIndex) {
-  case 0:
-    createGeneralWidget();
-    page = generalWidget_;
-    break;
-  case 1:
-    createTraySystemWidget();
-    page = traySystemWidget_;
-    break;
-  case 2:
-    createNetworkConnectionsWidget();
-    page = networkConnectionsWidget_;
-    break;
-  case 3:
-    createBrowserWidget();
-    page = browserWidget_;
-    break;
-  case 4:
-    createFeedsWidget();
-    page = feedsWidget_;
-    break;
-  case 5:
-    createLabelsWidget();
-    page = labelsWidget_;
-    break;
-  case 6:
-    createNotifierWidget();
-    page = notifierWidget_;
-    break;
-  case 7:
-    createPasswordsWidget();
-    page = passwordsWidget_;
-    break;
-  case 8:
-    createLanguageWidget();
-    page = languageWidget_;
-    break;
-  case 9:
-    createFontsColorsWidget();
-    page = fontsColorsWidget_;
-    break;
-  case 10:
-    createShortcutWidget();
-    page = shortcutWidget_;
-    break;
-  case 11: {
-    auto *backupPage = new BackupSettingsPage(this);
-    connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
-    page = backupPage;
-    break;
-  }
-  default:
-    return;
-  }
-
+  QWidget *page = (this->*(kPages[pageIndex].create))();
   pageWidgets_[pageIndex] = page;
   if (MainWindow *mw = qobject_cast<MainWindow *>(parent())) {
     mw->initOptionPage(pageIndex);
@@ -265,19 +189,19 @@ void OptionsDialog::showEvent(QShowEvent *event)
 
 void OptionsDialog::acceptDialog()
 {
-  if (isPageCreated(2) && customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
+  if (isPageCreated(PageNetwork) && customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
     QMessageBox::warning(this, tr("Custom User-Agent"),
                          tr("Enter a custom User-Agent or disable the custom User-Agent option."));
     return;
   }
 
-  if (isPageCreated(3) && customExternalBrowser_->isChecked() && externalBrowser_->text().trimmed().isEmpty()) {
+  if (isPageCreated(PageBrowser) && customExternalBrowser_->isChecked() && externalBrowser_->text().trimmed().isEmpty()) {
     QMessageBox::warning(this, tr("External Browser"), tr("Enter a custom browser or select the system default browser."));
     return;
   }
 
 #if defined(Q_OS_WIN)
-  if (isPageCreated(0)) {
+  if (isPageCreated(PageGeneral)) {
     if (mainApp->isPortableAppsCom()) {
       if (autoRunEnabled_->isChecked()) {
         QFileInfo file(QCoreApplication::applicationDirPath() % "/../../" % QCoreApplication::applicationName() % "Portable.exe");
@@ -294,7 +218,7 @@ void OptionsDialog::acceptDialog()
   }
 #endif
 
-  if (isPageCreated(2)) {
+  if (isPageCreated(PageNetwork)) {
     Settings userAgentSettings("Settings");
     const bool useCustomUserAgent = customUserAgent_->isChecked();
     const QString customUserAgent = userAgentEdit_->text().trimmed();
@@ -387,7 +311,7 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 
 /** @brief Create windget "General"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createGeneralWidget()
+QWidget *OptionsDialog::createGeneralWidget()
 {
   showSplashScreen_ = new QCheckBox(tr("Show splash screen on startup"));
   reopenFeedStartup_ = new QCheckBox(tr("Reopen last opened feeds on startup"));
@@ -465,11 +389,12 @@ void OptionsDialog::createGeneralWidget()
   generalWidget_ = new QFrame();
   generalWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
   generalWidget_->setLayout(generalLayout);
+  return generalWidget_;
 }
 
 /** @brief Create widget "System tray"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createTraySystemWidget()
+QWidget *OptionsDialog::createTraySystemWidget()
 {
   showTrayIconBox_ = new QGroupBox(tr("Show system tray icon"));
   showTrayIconBox_->setCheckable(true);
@@ -521,11 +446,12 @@ void OptionsDialog::createTraySystemWidget()
   traySystemWidget_ = new QFrame();
   traySystemWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
   traySystemWidget_->setLayout(boxTrayLayout);
+  return traySystemWidget_;
 }
 
 /** @brief Create widget "Network connections"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createNetworkConnectionsWidget()
+QWidget *OptionsDialog::createNetworkConnectionsWidget()
 {
   directConnectionButton_ = new QRadioButton(
         tr("Direct connection to the Internet"));
@@ -653,11 +579,12 @@ void OptionsDialog::createNetworkConnectionsWidget()
   networkConnectionsWidget_->setLayout(networkConnectionsLayout);
 
   connect(manualProxyButton_, &QAbstractButton::toggled, this, &OptionsDialog::manualProxyToggle);
+  return networkConnectionsWidget_;
 }
 
 /** @brief Create widget "Browser"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createBrowserWidget()
+QWidget *OptionsDialog::createBrowserWidget()
 {
   QRadioButton *systemBrowser = new QRadioButton(tr("System default web browser"));
   customExternalBrowser_ = new QRadioButton(tr("Custom web browser"));
@@ -751,11 +678,12 @@ void OptionsDialog::createBrowserWidget()
   browserWidget_ = new QTabWidget();
   browserWidget_->addTab(articleWidget, tr("Articles"));
   browserWidget_->addTab(downloads, tr("Downloads"));
+  return browserWidget_;
 }
 
 /** @brief Create windet "Feeds"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createFeedsWidget()
+QWidget *OptionsDialog::createFeedsWidget()
 {
 //! tab "General"
   updateFeedsStartUp_ = new QCheckBox(
@@ -1067,11 +995,19 @@ void OptionsDialog::createFeedsWidget()
   connect(feedsWidget_, &QTabWidget::currentChanged, this, [this](int index) {
     if (index == 3) updateCleanUpPreview();
   });
+  return feedsWidget_;
+}
+
+void OptionsDialog::onFeedsPageEntered()
+{
+  if (feedsWidget_ && feedsWidget_->currentIndex() == 3) {
+    updateCleanUpPreview();
+  }
 }
 
 /** @brief Create widget "Labels"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createLabelsWidget()
+QWidget *OptionsDialog::createLabelsWidget()
 {
   labelsTree_ = new QTreeWidget(this);
   labelsTree_->setObjectName("labelsTree_");
@@ -1120,11 +1056,12 @@ void OptionsDialog::createLabelsWidget()
   connect(labelsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::editLabel);
 
   loadLabelsOk_ = false;
+  return labelsWidget_;
 }
 
 /** @brief Create widget "Notifier"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createNotifierWidget()
+QWidget *OptionsDialog::createNotifierWidget()
 {
   showNotifyOn_ = new QGroupBox(tr("Show notifications for incoming articles"));
   showNotifyOn_->setCheckable(true);
@@ -1269,6 +1206,7 @@ void OptionsDialog::createNotifierWidget()
   notifierWidget_->addTab(soundNotifyWidget, tr("Sound"));
 
   loadNotifierOk_ = false;
+  return notifierWidget_;
 }
 
 /** @brief Create dialog "Feeds" for Notifier
@@ -1312,7 +1250,7 @@ void OptionsDialog::openFeedsNotifierDlg()
 
 /** @brief Create widget "Passwords"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createPasswordsWidget()
+QWidget *OptionsDialog::createPasswordsWidget()
 {
   passTree_ = new QTreeWidget(this);
   passTree_->setObjectName("labelsTree_");
@@ -1349,6 +1287,7 @@ void OptionsDialog::createPasswordsWidget()
   passwordsWidget_ = new QWidget();
   passwordsWidget_->setLayout(passLayout);
   loadPasswordsOk_ = false;
+  return passwordsWidget_;
 }
 
 void OptionsDialog::loadPasswords()
@@ -1372,7 +1311,7 @@ void OptionsDialog::loadPasswords()
 
 /** @brief Create widget "Language"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createLanguageWidget()
+QWidget *OptionsDialog::createLanguageWidget()
 {
   languageFileList_ = new QTreeWidget();
   languageFileList_->setObjectName("languageFileList_");
@@ -1402,6 +1341,7 @@ void OptionsDialog::createLanguageWidget()
 
   languageWidget_ = new QWidget();
   languageWidget_->setLayout(languageLayout);
+  return languageWidget_;
 }
 
 void OptionsDialog::loadLanguages()
@@ -1421,7 +1361,7 @@ void OptionsDialog::loadLanguages()
 
 /** @brief Create widget "Fonts and Colors"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createFontsColorsWidget()
+QWidget *OptionsDialog::createFontsColorsWidget()
 {
   //! tab "Fonts"
 
@@ -1527,11 +1467,12 @@ void OptionsDialog::createFontsColorsWidget()
   fontsColorsWidget_ = new QTabWidget();
   fontsColorsWidget_->addTab(fontsWidget, tr("Fonts"));
   fontsColorsWidget_->addTab(colorsWidget_, tr("Colors"));
+  return fontsColorsWidget_;
 }
 
 /** @brief Create widget "Shortcuts"
  *----------------------------------------------------------------------------*/
-void OptionsDialog::createShortcutWidget()
+QWidget *OptionsDialog::createShortcutWidget()
 {
   filterShortcut_ = new LineEdit(this, tr("Filter"));
 
@@ -1595,6 +1536,15 @@ void OptionsDialog::createShortcutWidget()
   connect(filterShortcut_, &QLineEdit::textChanged, this, &OptionsDialog::filterShortcutChanged);
 
   editShortcut_->installEventFilter(this);
+  return shortcutWidget_;
+}
+
+QWidget *OptionsDialog::createBackupWidget()
+{
+  auto *backupPage = new BackupSettingsPage(this);
+  connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
+  backupWidget_ = backupPage;
+  return backupWidget_;
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::slotCategoriesTreeKeyUpDownPressed()
@@ -1605,21 +1555,14 @@ void OptionsDialog::slotCategoriesTreeKeyUpDownPressed()
 void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
 {
   const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
+  if (pageIndex < 0 || pageIndex >= PageCount) return;
   ensurePageCreated(pageIndex);
 
   contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
   contentStack_->setCurrentIndex(pageIndex);
 
-  if (pageIndex == 5) {
-    loadLabels();
-  } else if (pageIndex == 7) {
-    loadPasswords();
-  } else if (pageIndex == 8) {
-    loadLanguages();
-  } else if (pageIndex == 10) {
-    loadShortcuts();
-  } else if (pageIndex == 4 && feedsWidget_->currentIndex() == 3) {
-    updateCleanUpPreview();
+  if (kPages[pageIndex].onEnter) {
+    (this->*(kPages[pageIndex].onEnter))();
   }
 }
 //----------------------------------------------------------------------------
@@ -1795,7 +1738,7 @@ void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringLi
 void OptionsDialog::loadShortcuts()
 {
   if (loadShortcutsOk_) return;
-  ensurePageCreated(10);
+  ensurePageCreated(PageShortcuts);
   loadShortcutsOk_ = true;
 
   QListIterator<QAction *> iter(shortcutActions_);
@@ -2434,7 +2377,7 @@ void OptionsDialog::loadNotifier()
 //----------------------------------------------------------------------------
 void OptionsDialog::applyNotifier()
 {
-  if (!isPageCreated(6)) return;
+  if (!isPageCreated(PageNotifications)) return;
   if (!loadNotifierOk_) {
     if (!onlySelectedFeeds_->isChecked())
       mainApp->mainWindow()->idFeedsNotifyList_.clear();
@@ -2557,7 +2500,7 @@ ShutdownCleanUpConfig OptionsDialog::currentCleanUpConfig() const
 void OptionsDialog::updateCleanUpPreview()
 {
   if (!categoriesTree_->currentItem() ||
-      categoriesTree_->currentItem()->data(0, Qt::DisplayRole).toInt() != 4 ||
+      categoriesTree_->currentItem()->data(0, Qt::DisplayRole).toInt() != PageFeeds ||
       feedsWidget_->currentIndex() != 3) {
     return;
   }

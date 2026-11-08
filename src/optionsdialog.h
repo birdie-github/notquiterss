@@ -37,6 +37,22 @@ class OptionsDialog : public Dialog
 {
   Q_OBJECT
 public:
+  enum Page {
+    PageGeneral = 0,
+    PageSystemTray,
+    PageNetwork,
+    PageBrowser,
+    PageFeeds,
+    PageLabels,
+    PageNotifications,
+    PagePasswords,
+    PageLanguage,
+    PageFontsColors,
+    PageShortcuts,
+    PageBackup,
+    PageCount
+  };
+
   explicit OptionsDialog(QWidget *parent);
   int currentIndex();
   void setCurrentItem(int index);
@@ -236,6 +252,13 @@ private slots:
   void showCleanUpPreview();
 
 private:
+  struct PageDescriptor {
+    const char *title;
+    QWidget *(OptionsDialog::*create)();
+    void (OptionsDialog::*onEnter)();
+  };
+  static const PageDescriptor kPages[PageCount];
+
   void showEvent(QShowEvent *) override;
 
   QSqlDatabase db_;
@@ -247,33 +270,34 @@ private:
   QVector<QScrollArea *> pageScrollAreas_;
 
   //stack widgets
-  QFrame *generalWidget_;
-  QFrame *traySystemWidget_;
-  QFrame *networkConnectionsWidget_;
-  QTabWidget *browserWidget_;
-  QTabWidget *feedsWidget_;
-  QWidget *labelsWidget_;
-  QTabWidget *notifierWidget_;
-  QWidget *passwordsWidget_;
-  QWidget *languageWidget_;
-  QTabWidget *fontsColorsWidget_;
-  QWidget *shortcutWidget_;
-  QWidget *avoidOldNewsWidget_;
+  QFrame *generalWidget_ = nullptr;
+  QFrame *traySystemWidget_ = nullptr;
+  QFrame *networkConnectionsWidget_ = nullptr;
+  QTabWidget *browserWidget_ = nullptr;
+  QTabWidget *feedsWidget_ = nullptr;
+  QWidget *labelsWidget_ = nullptr;
+  QTabWidget *notifierWidget_ = nullptr;
+  QWidget *passwordsWidget_ = nullptr;
+  QWidget *languageWidget_ = nullptr;
+  QTabWidget *fontsColorsWidget_ = nullptr;
+  QWidget *shortcutWidget_ = nullptr;
+  QWidget *backupWidget_ = nullptr;
+  QWidget *avoidOldNewsWidget_ = nullptr;
 
   // general
-  void createGeneralWidget();
+  QWidget *createGeneralWidget();
   QCheckBox *autoRunEnabled_;
   QSettings *autoRunSettings_;
 
   // systemTray
-  void createTraySystemWidget();
+  QWidget *createTraySystemWidget();
   QRadioButton *staticIconTray_;
   QRadioButton *changeIconTray_;
   QRadioButton *newCountTray_;
   QRadioButton *unreadCountTray_;
 
   // network connection
-  void createNetworkConnectionsWidget();
+  QWidget *createNetworkConnectionsWidget();
   QRadioButton *systemProxyButton_;
   QRadioButton *directConnectionButton_;
   QRadioButton *manualProxyButton_;
@@ -288,16 +312,17 @@ private:
   bool userAgentWarningAccepted_;
 
   // browser
-  void createBrowserWidget();
+  QWidget *createBrowserWidget();
 
   // feeds
-  void createFeedsWidget();
+  QWidget *createFeedsWidget();
+  void onFeedsPageEntered();
   ShutdownCleanUpConfig currentCleanUpConfig() const;
   ShutdownCleanUpPlan cleanUpPlan_;
   bool cleanUpPlanValid_ = false;
 
   // notifier
-  void createNotifierWidget();
+  QWidget *createNotifierWidget();
   void createFeedsNotifierDlg();
   void openFeedsNotifierDlg();
   void loadNotifier();
@@ -306,7 +331,7 @@ private:
   NotificationWidget *notificationWidget_ = nullptr;
 
   // labels
-  void createLabelsWidget();
+  QWidget *createLabelsWidget();
   void loadLabels();
   void applyLabels();
   void addIdLabelList(const QString &idLabel);
@@ -318,24 +343,25 @@ private:
   bool loadLabelsOk_ = false;
 
   // passwords
-  void createPasswordsWidget();
+  QWidget *createPasswordsWidget();
   void loadPasswords();
   void applyPass();
   QTreeWidget *passTree_;
   bool loadPasswordsOk_ = false;
 
   // language
-  void createLanguageWidget();
+  QWidget *createLanguageWidget();
   void loadLanguages();
   QTreeWidget *languageFileList_;
   QString selectedLanguage_;
   bool loadLanguagesOk_ = false;
 
   // fonts
-  void createFontsColorsWidget();
+  QWidget *createFontsColorsWidget();
 
   // shortcut
-  void createShortcutWidget();
+  QWidget *createShortcutWidget();
+  QWidget *createBackupWidget();
   void loadShortcuts();
   QList<QAction *> shortcutActions_;
   const QStringList *listDefaultShortcut_ = nullptr;

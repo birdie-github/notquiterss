@@ -67,7 +67,7 @@ struct MainWindow::SettingBindings {
     bool MainWindow::*member;
     bool defaultValue;
     QCheckBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct BoolRadioSetting {
@@ -75,7 +75,7 @@ struct MainWindow::SettingBindings {
     bool MainWindow::*member;
     bool defaultValue;
     QRadioButton *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct BoolGroupSetting {
@@ -83,7 +83,7 @@ struct MainWindow::SettingBindings {
     bool MainWindow::*member;
     bool defaultValue;
     QGroupBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct IntSpinSetting {
@@ -91,7 +91,7 @@ struct MainWindow::SettingBindings {
     int MainWindow::*member;
     int defaultValue;
     QSpinBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct IntComboSetting {
@@ -100,7 +100,7 @@ struct MainWindow::SettingBindings {
     int defaultValue;
     QComboBox *OptionsDialog::*widget;
     int indexOffset;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct ComboDataSetting {
@@ -108,7 +108,7 @@ struct MainWindow::SettingBindings {
     QString MainWindow::*member;
     const char *defaultValue;
     QComboBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct ActionBoolSetting {
@@ -120,13 +120,13 @@ struct MainWindow::SettingBindings {
   struct AppBoolCheckSetting {
     const AppSettings::Setting<bool> *setting;
     QCheckBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   struct AppIntSpinSetting {
     const AppSettings::Setting<int> *setting;
     QSpinBox *OptionsDialog::*widget;
-    int page;
+    OptionsDialog::Page page;
   };
 
   static const BoolCheckSetting kBoolCheck[];
@@ -142,88 +142,88 @@ struct MainWindow::SettingBindings {
 };
 
 const MainWindow::SettingBindings::BoolCheckSetting MainWindow::SettingBindings::kBoolCheck[] = {
-  { "reopenFeedStartup",        &MainWindow::reopenFeedStartup_,        true,  &OptionsDialog::reopenFeedStartup_,        0 },
-  { "openNewTabNextToActive",   &MainWindow::openNewTabNextToActive_,   false, &OptionsDialog::openNewTabNextToActive_,   0 },
-  { "hideFeedsOpenTab",         &MainWindow::hideFeedsOpenTab_,         false, &OptionsDialog::hideFeedsOpenTab_,         0 },
-  { "showToggleFeedsTree",      &MainWindow::showToggleFeedsTree_,      true,  &OptionsDialog::showToggleFeedsTree_,      0 },
-  { "defaultIconFeeds",         &MainWindow::defaultIconFeeds_,         false, &OptionsDialog::defaultIconFeeds_,         0 },
-  { "singleClickTray",          &MainWindow::singleClickTray_,          false, &OptionsDialog::singleClickTray_,          1 },
-  { "clearStatusNew",           &MainWindow::clearStatusNew_,           true,  &OptionsDialog::clearStatusNew_,           1 },
-  { "emptyWorking",             &MainWindow::emptyWorking_,             true,  &OptionsDialog::emptyWorking_,             1 },
-  { "autoLoadImages",           &MainWindow::autoLoadImages_,           true,  &OptionsDialog::autoLoadImages_,           3 },
-  { "askDownloadLocation",      &MainWindow::askDownloadLocation_,      true,  &OptionsDialog::askDownloadLocation_,      3 },
-  { "autoUpdatefeeds",          &MainWindow::updateFeedsEnable_,        false, &OptionsDialog::updateFeedsEnable_,        4 },
-  { "markReadSwitchingFeed",    &MainWindow::markReadSwitchingFeed_,    false, &OptionsDialog::markReadSwitchingFeed_,    4 },
-  { "markReadClosingTab",       &MainWindow::markReadClosingTab_,       false, &OptionsDialog::markReadClosingTab_,       4 },
-  { "markReadMinimize",         &MainWindow::markReadMinimize_,         false, &OptionsDialog::markReadMinimize_,         4 },
-  { "alternatingColorsNews",    &MainWindow::alternatingRowColorsNews_, false, &OptionsDialog::alternatingRowColorsNews_, 4 },
-  { "changeBehaviorActionNUN",  &MainWindow::changeBehaviorActionNUN_,  false, &OptionsDialog::changeBehaviorActionNUN_,  4 },
-  { "simplifiedDateTime",       &MainWindow::simplifiedDateTime_,       true,  &OptionsDialog::simplifiedDateTime_,       4 },
-  { "notDeleteStarred",         &MainWindow::notDeleteStarred_,         false, &OptionsDialog::notDeleteStarred_,         4 },
-  { "notDeleteLabeled",         &MainWindow::notDeleteLabeled_,         false, &OptionsDialog::notDeleteLabeled_,         4 },
-  { "markIdenticalNewsRead",    &MainWindow::markIdenticalNewsRead_,    true,  &OptionsDialog::markIdenticalNewsRead_,    4 },
-  { "dayClearUpOn",             &MainWindow::dayCleanUpOn_,             true,  &OptionsDialog::dayCleanUpOn_,             4 },
-  { "newsClearUpOn",            &MainWindow::newsCleanUpOn_,            true,  &OptionsDialog::newsCleanUpOn_,            4 },
-  { "readClearUp",              &MainWindow::readCleanUp_,              false, &OptionsDialog::readCleanUp_,              4 },
-  { "neverUnreadClearUp",       &MainWindow::neverUnreadCleanUp_,       true,  &OptionsDialog::neverUnreadCleanUp_,       4 },
-  { "neverStarClearUp",         &MainWindow::neverStarCleanUp_,         true,  &OptionsDialog::neverStarCleanUp_,         4 },
-  { "neverLabelClearUp",        &MainWindow::neverLabelCleanUp_,        true,  &OptionsDialog::neverLabelCleanUp_,        4 },
-  { "cleanUpDeleted",           &MainWindow::cleanUpDeleted_,           false, &OptionsDialog::cleanUpDeleted_,           4 },
-  { "optimizeDB",               &MainWindow::optimizeDB_,               false, &OptionsDialog::optimizeDB_,               4 },
-  { "fullscreenModeNotify",     &MainWindow::fullscreenModeNotify_,     true,  &OptionsDialog::fullscreenModeNotify_,     6 },
-  { "showNotifyInactiveApp",    &MainWindow::showNotifyInactiveApp_,    true,  &OptionsDialog::showNotifyInactiveApp_,    6 },
-  { "onlySelectedFeeds",        &MainWindow::onlySelectedFeeds_,        false, &OptionsDialog::onlySelectedFeeds_,        6 },
-  { "showTitlesFeedsNotify",    &MainWindow::showTitlesFeedsNotify_,    true,  &OptionsDialog::showTitlesFeedsNotify_,    6 },
-  { "showIconFeedNotify",       &MainWindow::showIconFeedNotify_,       false, &OptionsDialog::showIconFeedNotify_,       6 },
-  { "showButtonMarkAllNotify",  &MainWindow::showButtonMarkAllNotify_,  true,  &OptionsDialog::showButtonMarkAllNotify_,  6 },
-  { "showButtonMarkReadNotify", &MainWindow::showButtonMarkReadNotify_, true,  &OptionsDialog::showButtonMarkReadNotify_, 6 },
-  { "showButtonExBrowserNotify",&MainWindow::showButtonExBrowserNotify_,true,  &OptionsDialog::showButtonExBrowserNotify_,6 },
-  { "showButtonDeleteNotify",   &MainWindow::showButtonDeleteNotify_,   true,  &OptionsDialog::showButtonDeleteNotify_,   6 },
-  { "closeNotify",              &MainWindow::closeNotify_,              true,  &OptionsDialog::closeNotify_,              6 },
+  { "reopenFeedStartup",        &MainWindow::reopenFeedStartup_,        true,  &OptionsDialog::reopenFeedStartup_,        OptionsDialog::PageGeneral },
+  { "openNewTabNextToActive",   &MainWindow::openNewTabNextToActive_,   false, &OptionsDialog::openNewTabNextToActive_,   OptionsDialog::PageGeneral },
+  { "hideFeedsOpenTab",         &MainWindow::hideFeedsOpenTab_,         false, &OptionsDialog::hideFeedsOpenTab_,         OptionsDialog::PageGeneral },
+  { "showToggleFeedsTree",      &MainWindow::showToggleFeedsTree_,      true,  &OptionsDialog::showToggleFeedsTree_,      OptionsDialog::PageGeneral },
+  { "defaultIconFeeds",         &MainWindow::defaultIconFeeds_,         false, &OptionsDialog::defaultIconFeeds_,         OptionsDialog::PageGeneral },
+  { "singleClickTray",          &MainWindow::singleClickTray_,          false, &OptionsDialog::singleClickTray_,          OptionsDialog::PageSystemTray },
+  { "clearStatusNew",           &MainWindow::clearStatusNew_,           true,  &OptionsDialog::clearStatusNew_,           OptionsDialog::PageSystemTray },
+  { "emptyWorking",             &MainWindow::emptyWorking_,             true,  &OptionsDialog::emptyWorking_,             OptionsDialog::PageSystemTray },
+  { "autoLoadImages",           &MainWindow::autoLoadImages_,           true,  &OptionsDialog::autoLoadImages_,           OptionsDialog::PageBrowser },
+  { "askDownloadLocation",      &MainWindow::askDownloadLocation_,      true,  &OptionsDialog::askDownloadLocation_,      OptionsDialog::PageBrowser },
+  { "autoUpdatefeeds",          &MainWindow::updateFeedsEnable_,        false, &OptionsDialog::updateFeedsEnable_,        OptionsDialog::PageFeeds },
+  { "markReadSwitchingFeed",    &MainWindow::markReadSwitchingFeed_,    false, &OptionsDialog::markReadSwitchingFeed_,    OptionsDialog::PageFeeds },
+  { "markReadClosingTab",       &MainWindow::markReadClosingTab_,       false, &OptionsDialog::markReadClosingTab_,       OptionsDialog::PageFeeds },
+  { "markReadMinimize",         &MainWindow::markReadMinimize_,         false, &OptionsDialog::markReadMinimize_,         OptionsDialog::PageFeeds },
+  { "alternatingColorsNews",    &MainWindow::alternatingRowColorsNews_, false, &OptionsDialog::alternatingRowColorsNews_, OptionsDialog::PageFeeds },
+  { "changeBehaviorActionNUN",  &MainWindow::changeBehaviorActionNUN_,  false, &OptionsDialog::changeBehaviorActionNUN_,  OptionsDialog::PageFeeds },
+  { "simplifiedDateTime",       &MainWindow::simplifiedDateTime_,       true,  &OptionsDialog::simplifiedDateTime_,       OptionsDialog::PageFeeds },
+  { "notDeleteStarred",         &MainWindow::notDeleteStarred_,         false, &OptionsDialog::notDeleteStarred_,         OptionsDialog::PageFeeds },
+  { "notDeleteLabeled",         &MainWindow::notDeleteLabeled_,         false, &OptionsDialog::notDeleteLabeled_,         OptionsDialog::PageFeeds },
+  { "markIdenticalNewsRead",    &MainWindow::markIdenticalNewsRead_,    true,  &OptionsDialog::markIdenticalNewsRead_,    OptionsDialog::PageFeeds },
+  { "dayClearUpOn",             &MainWindow::dayCleanUpOn_,             true,  &OptionsDialog::dayCleanUpOn_,             OptionsDialog::PageFeeds },
+  { "newsClearUpOn",            &MainWindow::newsCleanUpOn_,            true,  &OptionsDialog::newsCleanUpOn_,            OptionsDialog::PageFeeds },
+  { "readClearUp",              &MainWindow::readCleanUp_,              false, &OptionsDialog::readCleanUp_,              OptionsDialog::PageFeeds },
+  { "neverUnreadClearUp",       &MainWindow::neverUnreadCleanUp_,       true,  &OptionsDialog::neverUnreadCleanUp_,       OptionsDialog::PageFeeds },
+  { "neverStarClearUp",         &MainWindow::neverStarCleanUp_,         true,  &OptionsDialog::neverStarCleanUp_,         OptionsDialog::PageFeeds },
+  { "neverLabelClearUp",        &MainWindow::neverLabelCleanUp_,        true,  &OptionsDialog::neverLabelCleanUp_,        OptionsDialog::PageFeeds },
+  { "cleanUpDeleted",           &MainWindow::cleanUpDeleted_,           false, &OptionsDialog::cleanUpDeleted_,           OptionsDialog::PageFeeds },
+  { "optimizeDB",               &MainWindow::optimizeDB_,               false, &OptionsDialog::optimizeDB_,               OptionsDialog::PageFeeds },
+  { "fullscreenModeNotify",     &MainWindow::fullscreenModeNotify_,     true,  &OptionsDialog::fullscreenModeNotify_,     OptionsDialog::PageNotifications },
+  { "showNotifyInactiveApp",    &MainWindow::showNotifyInactiveApp_,    true,  &OptionsDialog::showNotifyInactiveApp_,    OptionsDialog::PageNotifications },
+  { "onlySelectedFeeds",        &MainWindow::onlySelectedFeeds_,        false, &OptionsDialog::onlySelectedFeeds_,        OptionsDialog::PageNotifications },
+  { "showTitlesFeedsNotify",    &MainWindow::showTitlesFeedsNotify_,    true,  &OptionsDialog::showTitlesFeedsNotify_,    OptionsDialog::PageNotifications },
+  { "showIconFeedNotify",       &MainWindow::showIconFeedNotify_,       false, &OptionsDialog::showIconFeedNotify_,       OptionsDialog::PageNotifications },
+  { "showButtonMarkAllNotify",  &MainWindow::showButtonMarkAllNotify_,  true,  &OptionsDialog::showButtonMarkAllNotify_,  OptionsDialog::PageNotifications },
+  { "showButtonMarkReadNotify", &MainWindow::showButtonMarkReadNotify_, true,  &OptionsDialog::showButtonMarkReadNotify_, OptionsDialog::PageNotifications },
+  { "showButtonExBrowserNotify",&MainWindow::showButtonExBrowserNotify_,true,  &OptionsDialog::showButtonExBrowserNotify_,OptionsDialog::PageNotifications },
+  { "showButtonDeleteNotify",   &MainWindow::showButtonDeleteNotify_,   true,  &OptionsDialog::showButtonDeleteNotify_,   OptionsDialog::PageNotifications },
+  { "closeNotify",              &MainWindow::closeNotify_,              true,  &OptionsDialog::closeNotify_,              OptionsDialog::PageNotifications },
 };
 
 const MainWindow::SettingBindings::BoolCheckSetting MainWindow::SettingBindings::kTrayHold[] = {
-  { "startingTray",   &MainWindow::startingTray_,   false, &OptionsDialog::startingTray_,   1 },
-  { "minimizingTray", &MainWindow::minimizingTray_, true,  &OptionsDialog::minimizingTray_, 1 },
-  { "closingTray",    &MainWindow::closingTray_,    false, &OptionsDialog::closingTray_,    1 },
+  { "startingTray",   &MainWindow::startingTray_,   false, &OptionsDialog::startingTray_,   OptionsDialog::PageSystemTray },
+  { "minimizingTray", &MainWindow::minimizingTray_, true,  &OptionsDialog::minimizingTray_, OptionsDialog::PageSystemTray },
+  { "closingTray",    &MainWindow::closingTray_,    false, &OptionsDialog::closingTray_,    OptionsDialog::PageSystemTray },
 };
 
 const MainWindow::SettingBindings::BoolRadioSetting MainWindow::SettingBindings::kBoolRadio[] = {
-  { "markCurNewsRead",  &MainWindow::markCurNewsRead_,  true,  &OptionsDialog::markCurNewsRead_,  4 },
-  { "markPrevNewsRead", &MainWindow::markPrevNewsRead_, false, &OptionsDialog::markPrevNewsRead_, 4 },
+  { "markCurNewsRead",  &MainWindow::markCurNewsRead_,  true,  &OptionsDialog::markCurNewsRead_,  OptionsDialog::PageFeeds },
+  { "markPrevNewsRead", &MainWindow::markPrevNewsRead_, false, &OptionsDialog::markPrevNewsRead_, OptionsDialog::PageFeeds },
 };
 
 const MainWindow::SettingBindings::BoolGroupSetting MainWindow::SettingBindings::kBoolGroup[] = {
-  { "showTrayIcon",      &MainWindow::showTrayIcon_,      true,  &OptionsDialog::showTrayIconBox_,      1 },
-  { "markNewsReadOn",    &MainWindow::markNewsReadOn_,    true,  &OptionsDialog::markNewsReadOn_,       4 },
-  { "avoidOldNews",      &MainWindow::avoidOldNews_,      false, &OptionsDialog::avoidedOldNewsDateOn_, 4 },
-  { "cleanupOnShutdown", &MainWindow::cleanupOnShutdown_, true,  &OptionsDialog::cleanupOnShutdownBox_, 4 },
-  { "soundNewNews",      &MainWindow::soundNewNews_,      true,  &OptionsDialog::soundNotifyBox_,       6 },
-  { "showNotifyOn",      &MainWindow::showNotifyOn_,      true,  &OptionsDialog::showNotifyOn_,         6 },
+  { "showTrayIcon",      &MainWindow::showTrayIcon_,      true,  &OptionsDialog::showTrayIconBox_,      OptionsDialog::PageSystemTray },
+  { "markNewsReadOn",    &MainWindow::markNewsReadOn_,    true,  &OptionsDialog::markNewsReadOn_,       OptionsDialog::PageFeeds },
+  { "avoidOldNews",      &MainWindow::avoidOldNews_,      false, &OptionsDialog::avoidedOldNewsDateOn_, OptionsDialog::PageFeeds },
+  { "cleanupOnShutdown", &MainWindow::cleanupOnShutdown_, true,  &OptionsDialog::cleanupOnShutdownBox_, OptionsDialog::PageFeeds },
+  { "soundNewNews",      &MainWindow::soundNewNews_,      true,  &OptionsDialog::soundNotifyBox_,       OptionsDialog::PageNotifications },
+  { "showNotifyOn",      &MainWindow::showNotifyOn_,      true,  &OptionsDialog::showNotifyOn_,         OptionsDialog::PageNotifications },
 };
 
 const MainWindow::SettingBindings::IntSpinSetting MainWindow::SettingBindings::kIntSpin[] = {
-  { "defaultZoomPages",     &MainWindow::defaultZoomPages_,     100, &OptionsDialog::defaultZoomPages_,     3 },
-  { "autoUpdatefeedsTime",  &MainWindow::updateFeedsInterval_,  10,  &OptionsDialog::updateFeedsInterval_,  4 },
-  { "markNewsReadTime",     &MainWindow::markNewsReadTime_,     0,   &OptionsDialog::markNewsReadTime_,     4 },
-  { "maxDayClearUp",        &MainWindow::maxDayCleanUp_,        30,  &OptionsDialog::maxDayCleanUp_,        4 },
-  { "maxNewsClearUp",       &MainWindow::maxNewsCleanUp_,       200, &OptionsDialog::maxNewsCleanUp_,       4 },
-  { "transparencyNotify",   &MainWindow::transparencyNotify_,   60,  &OptionsDialog::transparencyNotify_,   6 },
-  { "countShowNewsNotify",  &MainWindow::countShowNewsNotify_,  10,  &OptionsDialog::countShowNewsNotify_,  6 },
-  { "widthTitleNewsNotify", &MainWindow::widthTitleNewsNotify_, 300, &OptionsDialog::widthTitleNewsNotify_, 6 },
-  { "timeShowNewsNotify",   &MainWindow::timeShowNewsNotify_,   10,  &OptionsDialog::timeShowNewsNotify_,   6 },
+  { "defaultZoomPages",     &MainWindow::defaultZoomPages_,     100, &OptionsDialog::defaultZoomPages_,     OptionsDialog::PageBrowser },
+  { "autoUpdatefeedsTime",  &MainWindow::updateFeedsInterval_,  10,  &OptionsDialog::updateFeedsInterval_,  OptionsDialog::PageFeeds },
+  { "markNewsReadTime",     &MainWindow::markNewsReadTime_,     0,   &OptionsDialog::markNewsReadTime_,     OptionsDialog::PageFeeds },
+  { "maxDayClearUp",        &MainWindow::maxDayCleanUp_,        30,  &OptionsDialog::maxDayCleanUp_,        OptionsDialog::PageFeeds },
+  { "maxNewsClearUp",       &MainWindow::maxNewsCleanUp_,       200, &OptionsDialog::maxNewsCleanUp_,       OptionsDialog::PageFeeds },
+  { "transparencyNotify",   &MainWindow::transparencyNotify_,   60,  &OptionsDialog::transparencyNotify_,   OptionsDialog::PageNotifications },
+  { "countShowNewsNotify",  &MainWindow::countShowNewsNotify_,  10,  &OptionsDialog::countShowNewsNotify_,  OptionsDialog::PageNotifications },
+  { "widthTitleNewsNotify", &MainWindow::widthTitleNewsNotify_, 300, &OptionsDialog::widthTitleNewsNotify_, OptionsDialog::PageNotifications },
+  { "timeShowNewsNotify",   &MainWindow::timeShowNewsNotify_,   10,  &OptionsDialog::timeShowNewsNotify_,   OptionsDialog::PageNotifications },
 };
 
 const MainWindow::SettingBindings::IntComboSetting MainWindow::SettingBindings::kIntCombo[] = {
-  { "autoUpdatefeedsInterval", &MainWindow::updateFeedsIntervalType_, 0, &OptionsDialog::updateIntervalType_, 1, 4 },
-  { "screenNotify",            &MainWindow::screenNotify_,            0, &OptionsDialog::screenNotify_,       1, 6 },
-  { "positionNotify",          &MainWindow::positionNotify_,          3, &OptionsDialog::positionNotify_,     0, 6 },
+  { "autoUpdatefeedsInterval", &MainWindow::updateFeedsIntervalType_, 0, &OptionsDialog::updateIntervalType_, 1, OptionsDialog::PageFeeds },
+  { "screenNotify",            &MainWindow::screenNotify_,            0, &OptionsDialog::screenNotify_,       1, OptionsDialog::PageNotifications },
+  { "positionNotify",          &MainWindow::positionNotify_,          3, &OptionsDialog::positionNotify_,     0, OptionsDialog::PageNotifications },
 };
 
 const MainWindow::SettingBindings::ComboDataSetting MainWindow::SettingBindings::kComboData[] = {
-  { "formatData",     &MainWindow::formatDate_,     "dd.MM.yy",       &OptionsDialog::formatDate_,     4 },
-  { "formatTime",     &MainWindow::formatTime_,     "hh:mm",          &OptionsDialog::formatTime_,     4 },
-  { "mainNewsFilter", &MainWindow::mainNewsFilter_, "filterNewsAll_", &OptionsDialog::mainNewsFilter_, 4 },
+  { "formatData",     &MainWindow::formatDate_,     "dd.MM.yy",       &OptionsDialog::formatDate_,     OptionsDialog::PageFeeds },
+  { "formatTime",     &MainWindow::formatTime_,     "hh:mm",          &OptionsDialog::formatTime_,     OptionsDialog::PageFeeds },
+  { "mainNewsFilter", &MainWindow::mainNewsFilter_, "filterNewsAll_", &OptionsDialog::mainNewsFilter_, OptionsDialog::PageFeeds },
 };
 
 const MainWindow::SettingBindings::ActionBoolSetting MainWindow::SettingBindings::kActionBool[] = {
@@ -241,15 +241,15 @@ const MainWindow::SettingBindings::ActionBoolSetting MainWindow::SettingBindings
 };
 
 const MainWindow::SettingBindings::AppBoolCheckSetting MainWindow::SettingBindings::kAppBoolCheck[] = {
-  { &AppSettings::showCloseButtonTab, &OptionsDialog::showCloseButtonTab_, 0 },
-  { &AppSettings::updateCheckEnabled, &OptionsDialog::updateCheckEnabled_, 0 },
-  { &AppSettings::storeDBMemory,      &OptionsDialog::storeDBMemory_,      0 },
+  { &AppSettings::showCloseButtonTab, &OptionsDialog::showCloseButtonTab_, OptionsDialog::PageGeneral },
+  { &AppSettings::updateCheckEnabled, &OptionsDialog::updateCheckEnabled_, OptionsDialog::PageGeneral },
+  { &AppSettings::storeDBMemory,      &OptionsDialog::storeDBMemory_,      OptionsDialog::PageGeneral },
 };
 
 const MainWindow::SettingBindings::AppIntSpinSetting MainWindow::SettingBindings::kAppIntSpin[] = {
-  { &AppSettings::timeoutRequest, &OptionsDialog::timeoutRequest_, 2 },
-  { &AppSettings::numberRequest,  &OptionsDialog::numberRequests_, 2 },
-  { &AppSettings::numberRepeats,  &OptionsDialog::numberRepeats_,  2 },
+  { &AppSettings::timeoutRequest, &OptionsDialog::timeoutRequest_, OptionsDialog::PageNetwork },
+  { &AppSettings::numberRequest,  &OptionsDialog::numberRequests_, OptionsDialog::PageNetwork },
+  { &AppSettings::numberRepeats,  &OptionsDialog::numberRepeats_,  OptionsDialog::PageNetwork },
 };
 
 /** @brief Load settings from ini-file
@@ -578,18 +578,18 @@ void MainWindow::initOptionPage(int page)
   }
 
   switch (page) {
-  case 0:
+  case OptionsDialog::PageGeneral:
     optionsDialog_->showSplashScreen_->setChecked(showSplashScreen_);
     optionsDialog_->autocollapseFolder_->setChecked(feedsView_->autocollapseFolder_);
     optionsDialog_->saveDBMemFileInterval_->setValue(AppSettings::saveDBMemFileInterval.get());
     break;
-  case 1:
+  case OptionsDialog::PageSystemTray:
     optionsDialog_->setBehaviorIconTray(behaviorIconTray_);
     break;
-  case 2:
+  case OptionsDialog::PageNetwork:
     optionsDialog_->setProxy(mainApp->networkProxy());
     break;
-  case 3: {
+  case OptionsDialog::PageBrowser: {
     optionsDialog_->preloadNewspaperPages_->setValue(preloadNewspaperPages_);
     optionsDialog_->preloadNewspaperPages_->setEnabled(autoLoadImages_);
     const int browserMode = AppSettings::externalBrowserOn.get();
@@ -599,7 +599,7 @@ void MainWindow::initOptionPage(int page)
     optionsDialog_->downloadLocationEdit_->setText(downloadLocation_);
     break;
   }
-  case 4: {
+  case OptionsDialog::PageFeeds: {
     Settings settings;
     optionsDialog_->updateFeedsStartUp_->setChecked(AppSettings::autoUpdatefeedsStartUp.get());
     optionsDialog_->setOpeningFeed(openingFeedAction_);
@@ -614,13 +614,13 @@ void MainWindow::initOptionPage(int page)
     optionsDialog_->styleSheetNewsEdit_->setText(styleSheetNews);
     break;
   }
-  case 6:
+  case OptionsDialog::PageNotifications:
     optionsDialog_->editSoundNotifer_->setText(soundNotifyPath_);
     break;
-  case 8:
+  case OptionsDialog::PageLanguage:
     optionsDialog_->setLanguage(mainApp->language());
     break;
-  case 9:
+  case OptionsDialog::PageFontsColors:
     for (int row = 0; row < kFontOptionCount; ++row) {
       const QFont f = fontForOption(row);
       optionsDialog_->fontsTree_->topLevelItem(row)->setText(
@@ -810,7 +810,7 @@ void MainWindow::showOptionDlg(int index)
       s.setting->set((optionsDialog_->*(s.widget))->value());
   }
 
-  if (optionsDialog_->isPageCreated(0)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageGeneral)) {
     showSplashScreen_ = optionsDialog_->showSplashScreen_->isChecked();
     feedsModel_->defaultIconFeeds_ = defaultIconFeeds_;
     feedsView_->autocollapseFolder_ = optionsDialog_->autocollapseFolder_->isChecked();
@@ -823,7 +823,7 @@ void MainWindow::showOptionDlg(int index)
     }
   }
 
-  if (optionsDialog_->isPageCreated(1)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageSystemTray)) {
     behaviorIconTray_ = optionsDialog_->behaviorIconTray();
   }
   if (behaviorIconTray_ > CHANGE_ICON_TRAY) {
@@ -839,11 +839,11 @@ void MainWindow::showOptionDlg(int index)
       showWindows();
   }
 
-  if (optionsDialog_->isPageCreated(2)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageNetwork)) {
     mainApp->proxySaveSettings(optionsDialog_->proxy());
   }
 
-  if (optionsDialog_->isPageCreated(3)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageBrowser)) {
     preloadNewspaperPages_ = optionsDialog_->preloadNewspaperPages_->value();
     AppSettings::externalBrowserOn.set(optionsDialog_->customExternalBrowser_->isChecked() ? 2 : 1);
     AppSettings::externalBrowser.set(optionsDialog_->externalBrowser_->text());
@@ -853,7 +853,7 @@ void MainWindow::showOptionDlg(int index)
     downloadLocation_ = optionsDialog_->downloadLocationEdit_->text();
   }
 
-  if (optionsDialog_->isPageCreated(4)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageFeeds)) {
     updateFeedsStartUp = optionsDialog_->updateFeedsStartUp_->isChecked();
     openingFeedAction_ = optionsDialog_->getOpeningFeed();
     openNewsWebViewOn_ = optionsDialog_->openNewsWebViewOn_->isChecked();
@@ -872,16 +872,16 @@ void MainWindow::showOptionDlg(int index)
     settings.setValue("Settings/styleSheetNews", styleSheetNews);
   }
 
-  if (optionsDialog_->isPageCreated(6)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageNotifications)) {
     soundNotifyPath_ = optionsDialog_->editSoundNotifer_->text();
   }
 
-  if (optionsDialog_->isPageCreated(8) && mainApp->language() != optionsDialog_->language()) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageLanguage) && mainApp->language() != optionsDialog_->language()) {
     mainApp->setLanguage(optionsDialog_->language());
     mainApp->setTranslateApplication();
   }
 
-  if (optionsDialog_->isPageCreated(9)) {
+  if (optionsDialog_->isPageCreated(OptionsDialog::PageFontsColors)) {
     for (int row = 0; row < kFontOptionCount; ++row) {
       const QString text = optionsDialog_->fontsTree_->topLevelItem(row)->text(2);
       QFont font = fontForOption(row);
@@ -922,5 +922,5 @@ void MainWindow::showOptionDlg(int index)
 
 void MainWindow::showSettingPageLabels()
 {
-  showOptionDlg(5);
+  showOptionDlg(OptionsDialog::PageLabels);
 }
