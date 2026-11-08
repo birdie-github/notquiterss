@@ -23,6 +23,7 @@
 #include "settings.h"
 #include "trayiconcontroller.h"
 #include "updatefeeds.h"
+#include <QElapsedTimer>
 #include <QScreen>
 #include <utility>
 
@@ -548,7 +549,13 @@ void MainWindow::showOptionDlg(int index)
     return;
   }
 
+  QElapsedTimer totalTimer;
+  totalTimer.start();
+  QElapsedTimer stepTimer;
+  stepTimer.start();
+
   optionsDialog_ = new OptionsDialog(this);
+  const qint64 ctorMs = stepTimer.restart();
 
   bool updateFeedsStartUp = AppSettings::autoUpdatefeedsStartUp.get();
   int saveDBMemFileInterval = AppSettings::saveDBMemFileInterval.get();
@@ -601,6 +608,7 @@ void MainWindow::showOptionDlg(int index)
   optionsDialog_->styleSheetNewsEdit_->setText(styleSheetNews);
   optionsDialog_->editSoundNotifer_->setText(soundNotifyPath_);
   optionsDialog_->setLanguage(mainApp->language());
+  const qint64 bindMs = stepTimer.restart();
 
   for (int row = 0; row < kFontOptionCount; ++row) {
     const QFont f = fontForOption(row);
@@ -618,12 +626,24 @@ void MainWindow::showOptionDlg(int index)
     optionsDialog_->colorsTree_->topLevelItem(row)->setIcon(0, pixmapColor);
     optionsDialog_->colorsTree_->topLevelItem(row)->setText(1, colorName);
   }
+  const qint64 themeMs = stepTimer.restart();
 
   optionsDialog_->loadActionShortcut(shortcutRegistry_.actions(), &shortcutRegistry_.defaults());
+  const qint64 shortcutsMs = stepTimer.restart();
 
   // Display setting dialog
 
   optionsDialog_->setCurrentItem(pageIndex);
+  const qint64 currentItemMs = stepTimer.restart();
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainWindow::showOptionDlg pre-exec: total=%1 ms (ctor=%2, bind=%3, theme=%4, shortcuts=%5, setCurrentItem=%6, page=%7)")
+      .arg(totalTimer.elapsed())
+      .arg(ctorMs)
+      .arg(bindMs)
+      .arg(themeMs)
+      .arg(shortcutsMs)
+      .arg(currentItemMs)
+      .arg(pageIndex);
   int result = optionsDialog_->exec();
   pageIndex = optionsDialog_->currentIndex();
 
@@ -634,6 +654,8 @@ void MainWindow::showOptionDlg(int index)
   }
 
   // Apply accepted settings
+  QElapsedTimer applyTimer;
+  applyTimer.start();
 
   // Removing actions changes the registry; iterate over its original contents.
   const auto shortcutActions = shortcutRegistry_.actions();
@@ -822,6 +844,8 @@ void MainWindow::showOptionDlg(int index)
     currentNewsTab->setSettings(false);
   }
   refreshApplicationAppearance();
+  qInfo().noquote() << QStringLiteral("[perf] MainWindow::showOptionDlg apply: %1 ms")
+      .arg(applyTimer.elapsed());
 }
 
 void MainWindow::showSettingPageLabels()

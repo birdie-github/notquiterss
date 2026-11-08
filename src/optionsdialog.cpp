@@ -21,6 +21,7 @@
 #include "logfile.h"
 #include "optionsdialog.h"
 #include "backupsettingspage.h"
+#include <QElapsedTimer>
 #include <QScreen>
 #include <QWindow>
 #include "articlecontent.h"
@@ -108,27 +109,41 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   treeItem << "11" << tr("Database Backup");
   categoriesTree_->addTopLevelItem(new QTreeWidgetItem(treeItem));
 
+  QElapsedTimer stepTimer;
+  stepTimer.start();
+
   createGeneralWidget();
+  const qint64 generalMs = stepTimer.restart();
 
   createTraySystemWidget();
+  const qint64 trayMs = stepTimer.restart();
 
   createNetworkConnectionsWidget();
+  const qint64 networkMs = stepTimer.restart();
 
   createBrowserWidget();
+  const qint64 browserMs = stepTimer.restart();
 
   createFeedsWidget();
+  const qint64 feedsMs = stepTimer.restart();
 
   createLabelsWidget();
+  const qint64 labelsMs = stepTimer.restart();
 
   createNotifierWidget();
+  const qint64 notifierMs = stepTimer.restart();
 
   createPasswordsWidget();
+  const qint64 passwordsMs = stepTimer.restart();
 
   createLanguageWidget();
+  const qint64 languageMs = stepTimer.restart();
 
   createFontsColorsWidget();
+  const qint64 fontsColorsMs = stepTimer.restart();
 
   createShortcutWidget();
+  const qint64 shortcutMs = stepTimer.restart();
 
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
@@ -154,6 +169,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   auto *backupPage = new BackupSettingsPage(this);
   addPage(backupPage);
   connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
+  const qint64 stackBackupMs = stepTimer.restart();
 
   QSplitter *splitter = new QSplitter();
   splitter->setChildrenCollapsible(false);
@@ -188,6 +204,23 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
   Settings settings;
   restoreGeometry(settings.value("options/geometry").toByteArray());
+  const qint64 polishLayoutMs = stepTimer.restart();
+
+  qInfo().noquote() << QStringLiteral(
+      "[perf] OptionsDialog::ctor pages: general=%1, tray=%2, net=%3, browser=%4, feeds=%5, labels=%6, notifier=%7, pass=%8, lang=%9, fontsColors=%10, shortcuts=%11, stack+backup=%12, polish+layout=%13 ms")
+      .arg(generalMs)
+      .arg(trayMs)
+      .arg(networkMs)
+      .arg(browserMs)
+      .arg(feedsMs)
+      .arg(labelsMs)
+      .arg(notifierMs)
+      .arg(passwordsMs)
+      .arg(languageMs)
+      .arg(fontsColorsMs)
+      .arg(shortcutMs)
+      .arg(stackBackupMs)
+      .arg(polishLayoutMs);
 }
 
 void OptionsDialog::showEvent(QShowEvent *event)
@@ -1944,6 +1977,8 @@ void OptionsDialog::setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState stat
 void OptionsDialog::loadLabels()
 {
   if (loadLabelsOk_) return;
+  QElapsedTimer timer;
+  timer.start();
   loadLabelsOk_ = true;
 
   idLabels_.clear();
@@ -1974,6 +2009,7 @@ void OptionsDialog::loadLabels()
       treeWidgetItem->setBackground(1, QColor(colorBg));
     labelsTree_->addTopLevelItem(treeWidgetItem);
   }
+  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::loadLabels: %1 ms").arg(timer.elapsed());
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::newLabel()
@@ -2239,6 +2275,8 @@ void OptionsDialog::addIdLabelList(const QString &idLabel)
 void OptionsDialog::loadNotifier()
 {
   if (loadNotifierOk_) return;
+  QElapsedTimer timer;
+  timer.start();
   loadNotifierOk_ = true;
 
   itemNotChecked_ = true;
@@ -2300,6 +2338,7 @@ void OptionsDialog::loadNotifier()
   }
   feedsTreeNotify_->expandAll();
   itemNotChecked_ = false;
+  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::loadNotifier: %1 ms").arg(timer.elapsed());
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::applyNotifier()
@@ -2419,8 +2458,15 @@ ShutdownCleanUpConfig OptionsDialog::currentCleanUpConfig() const
 
 void OptionsDialog::updateCleanUpPreview()
 {
+  QElapsedTimer timer;
+  timer.start();
   QString error;
   cleanUpPlanValid_ = ShutdownCleanUp::evaluate(db_, currentCleanUpConfig(), cleanUpPlan_, error);
+  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::updateCleanUpPreview: %1 ms (cleanupOn=%2, valid=%3, total=%4)")
+      .arg(timer.elapsed())
+      .arg(cleanupOnShutdownBox_->isChecked())
+      .arg(cleanUpPlanValid_)
+      .arg(cleanUpPlan_.totalArticles());
   if (!cleanUpPlanValid_) {
     cleanUpPreviewLabel_->setText(tr("Cannot calculate shutdown cleanup preview: %1").arg(error));
     cleanUpPreviewButton_->setEnabled(false);
