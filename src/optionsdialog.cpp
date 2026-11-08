@@ -148,11 +148,16 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
   // Scroll only the current page, not a stack sized for its tallest hidden page.
+  // Defer mounting each page into its QScrollArea until the page is selected so
+  // Qt does not polish and compute layouts for all 12 pages on dialog open.
   const auto addPage = [this](QWidget *page) {
     auto *scrollArea = new QScrollArea();
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameStyle(QFrame::NoFrame);
-    scrollArea->setWidget(page);
+    page->setParent(this);
+    page->hide();
+    pageWidgets_.append(page);
+    pageScrollAreas_.append(scrollArea);
     contentStack_->addWidget(scrollArea);
   };
   addPage(generalWidget_);
@@ -196,14 +201,17 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->installEventFilter(this);
 
   setMinimumSize(500, 400);
-  // Use native font/style metrics; a tall page can still scroll independently.
-  ensurePolished();
-  const QSize pageSize = generalWidget_->sizeHint().expandedTo(generalWidget_->minimumSizeHint());
-  const QSize surroundingSize = sizeHint() - contentStack_->sizeHint();
-  resize(QSize(700, 580).expandedTo(pageSize + surroundingSize));
-
   Settings settings;
-  restoreGeometry(settings.value("options/geometry").toByteArray());
+  const QByteArray savedGeometry = settings.value("options/geometry").toByteArray();
+  if (!savedGeometry.isEmpty()) {
+    restoreGeometry(savedGeometry);
+  } else {
+    // Use native font/style metrics; a tall page can still scroll independently.
+    ensurePolished();
+    const QSize pageSize = generalWidget_->sizeHint().expandedTo(generalWidget_->minimumSizeHint());
+    const QSize surroundingSize = sizeHint() - contentStack_->sizeHint();
+    resize(QSize(700, 580).expandedTo(pageSize + surroundingSize));
+  }
   const qint64 polishLayoutMs = stepTimer.restart();
 
   qInfo().noquote() << QStringLiteral(
@@ -1188,10 +1196,12 @@ void OptionsDialog::createNotifierWidget()
   onlySelectedFeedsLayout->addWidget(feedsNotiferButton);
   onlySelectedFeedsLayout->addStretch(1);
 
-  createFeedsNotifierDlg();
+  feedsNotifierDlg_ = nullptr;
+  feedsTreeNotify_ = nullptr;
+  itemNotChecked_ = false;
 
   connect(onlySelectedFeeds_, &QAbstractButton::toggled, feedsNotiferButton, &QWidget::setEnabled);
-  connect(feedsNotiferButton, &QAbstractButton::clicked, feedsNotifierDlg_, &QDialog::exec);
+  connect(feedsNotiferButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
 
   QVBoxLayout *notificationLayoutV = new QVBoxLayout();
   notificationLayoutV->setContentsMargins(10, 10, 10, 10);
@@ -1280,6 +1290,12 @@ void OptionsDialog::createFeedsNotifierDlg()
   connect(feedsTreeNotify_, &QTreeWidget::itemChanged, this, &OptionsDialog::feedsTreeNotifyItemChanged);
 }
 
+void OptionsDialog::openFeedsNotifierDlg()
+{
+  loadNotifier();
+  feedsNotifierDlg_->exec();
+}
+
 /** @brief Create widget "Passwords"
  *----------------------------------------------------------------------------*/
 void OptionsDialog::createPasswordsWidget()
@@ -1297,20 +1313,6 @@ void OptionsDialog::createPasswordsWidget()
   strTreeItem.clear();
   strTreeItem << "Id" << tr("Site") << tr("User") << tr("Password");
   passTree_->setHeaderLabels(strTreeItem);
-
-  QSqlQuery q;
-  q.exec("SELECT id, server, username, password FROM passwords");
-  while (q.next()) {
-    QString id = q.value(0).toString();
-    QString server = q.value(1).toString();
-    QString user = q.value(2).toString();
-    QString pass = QString::fromUtf8(QByteArray::fromBase64(q.value(3).toByteArray()));
-
-    strTreeItem.clear();
-    strTreeItem << id << server << user << pass;
-    QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(strTreeItem);
-    passTree_->addTopLevelItem(treeWidgetItem);
-  }
 
   QPushButton *deletePass = new QPushButton(tr("Delete"));
   connect(deletePass, &QAbstractButton::clicked, this, &OptionsDialog::slotDeletePass);
@@ -1332,6 +1334,26 @@ void OptionsDialog::createPasswordsWidget()
 
   passwordsWidget_ = new QWidget();
   passwordsWidget_->setLayout(passLayout);
+  loadPasswordsOk_ = false;
+}
+
+void OptionsDialog::loadPasswords()
+{
+  if (loadPasswordsOk_) return;
+  loadPasswordsOk_ = true;
+
+  QSqlQuery q;
+  q.exec("SELECT id, server, username, password FROM passwords");
+  while (q.next()) {
+    QString id = q.value(0).toString();
+    QString server = q.value(1).toString();
+    QString user = q.value(2).toString();
+    QString pass = QString::fromUtf8(QByteArray::fromBase64(q.value(3).toByteArray()));
+
+    QStringList strTreeItem{id, server, user, pass};
+    QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(strTreeItem);
+    passTree_->addTopLevelItem(treeWidgetItem);
+  }
 }
 
 /** @brief Create widget "Language"
@@ -1346,14 +1368,8 @@ void OptionsDialog::createLanguageWidget()
   languageFileList_->setColumnWidth(2, 160);
   languageFileList_->setHeaderLabels({QStringLiteral("Id"), tr("Language"), tr("Author"), tr("Contact")});
 
-  const LanguageCatalog catalog = mainApp->languageCatalog();
-  for (const LanguageCatalog::Entry &entry : catalog.entries()) {
-    QString label = entry.name + QStringLiteral(" [%1]").arg(entry.id);
-    if (!entry.emoji.isEmpty()) label.prepend(entry.emoji + QLatin1Char(' '));
-    auto *item = new QTreeWidgetItem(languageFileList_, {entry.id, label, entry.author, entry.contact});
-    if (!entry.fileName.isEmpty()) item->setToolTip(1, entry.fileName);
-  }
-  setLanguage(mainApp->language());
+  selectedLanguage_ = mainApp->language();
+  loadLanguagesOk_ = false;
 
   QString linkWikiStr =
       QString("<a href=\"%1\">%2</a>").arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), tr("Translation website"));
@@ -1372,6 +1388,21 @@ void OptionsDialog::createLanguageWidget()
 
   languageWidget_ = new QWidget();
   languageWidget_->setLayout(languageLayout);
+}
+
+void OptionsDialog::loadLanguages()
+{
+  if (loadLanguagesOk_) return;
+  loadLanguagesOk_ = true;
+
+  const LanguageCatalog catalog = mainApp->languageCatalog();
+  for (const LanguageCatalog::Entry &entry : catalog.entries()) {
+    QString label = entry.name + QStringLiteral(" [%1]").arg(entry.id);
+    if (!entry.emoji.isEmpty()) label.prepend(entry.emoji + QLatin1Char(' '));
+    auto *item = new QTreeWidgetItem(languageFileList_, {entry.id, label, entry.author, entry.contact});
+    if (!entry.fileName.isEmpty()) item->setToolTip(1, entry.fileName);
+  }
+  setLanguage(selectedLanguage_);
 }
 
 /** @brief Create widget "Fonts and Colors"
@@ -1559,14 +1590,25 @@ void OptionsDialog::slotCategoriesTreeKeyUpDownPressed()
 //----------------------------------------------------------------------------
 void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
 {
-  contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
-  contentStack_->setCurrentIndex(item->data(0, Qt::DisplayRole).toInt());
+  const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
+  if (pageIndex >= 0 && pageIndex < pageScrollAreas_.size() &&
+      pageScrollAreas_.at(pageIndex)->widget() == nullptr) {
+    pageWidgets_.at(pageIndex)->show();
+    pageScrollAreas_.at(pageIndex)->setWidget(pageWidgets_.at(pageIndex));
+  }
 
-  if (item->data(1, Qt::DisplayRole).toString() == tr("Labels")) {
+  contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
+  contentStack_->setCurrentIndex(pageIndex);
+
+  if (pageIndex == 5) {
     loadLabels();
-  } else if (item->data(1, Qt::DisplayRole).toString() == tr("Notifications")) {
-    loadNotifier();
-  } else if (item->data(0, Qt::DisplayRole).toInt() == 4) {
+  } else if (pageIndex == 7) {
+    loadPasswords();
+  } else if (pageIndex == 8) {
+    loadLanguages();
+  } else if (pageIndex == 10) {
+    loadShortcuts();
+  } else if (pageIndex == 4 && feedsWidget_->currentIndex() == 3) {
     updateCleanUpPreview();
   }
 }
@@ -1639,12 +1681,15 @@ void OptionsDialog::applyProxy()
 //----------------------------------------------------------------------------
 QString OptionsDialog::language()
 {
+  if (!loadLanguagesOk_) return selectedLanguage_;
   const QTreeWidgetItem *item = languageFileList_->currentItem();
   return item ? item->text(0) : QStringLiteral("en");
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setLanguage(const QString &langFileName)
 {
+  selectedLanguage_ = langFileName;
+  if (!loadLanguagesOk_) return;
   // Set focus on selected language-file
   QList<QTreeWidgetItem*> list =
       languageFileList_->findItems(langFileName, Qt::MatchFixedString, 0);
@@ -1732,7 +1777,17 @@ int OptionsDialog::behaviorIconTray()
 //----------------------------------------------------------------------------
 void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringList *list)
 {
-  QListIterator<QAction *> iter(actions);
+  shortcutActions_ = std::move(actions);
+  listDefaultShortcut_ = list;
+  loadShortcutsOk_ = false;
+}
+
+void OptionsDialog::loadShortcuts()
+{
+  if (loadShortcutsOk_) return;
+  loadShortcutsOk_ = true;
+
+  QListIterator<QAction *> iter(shortcutActions_);
   while (iter.hasNext()) {
     QAction *pAction = iter.next();
 
@@ -1773,12 +1828,11 @@ void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringLi
       }
     }
   }
-
-  listDefaultShortcut_ = list;
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::saveActionShortcut(QList<QAction *> actions, QActionGroup *labelGroup)
 {
+  if (!loadShortcutsOk_) return;
   for (int i = 0; i < shortcutModel_->rowCount(); i++) {
     QString objectName = shortcutModel_->item(i, 3)->text();
     if (objectName.contains("labelAction_")) {
@@ -2014,6 +2068,7 @@ void OptionsDialog::loadLabels()
 //----------------------------------------------------------------------------
 void OptionsDialog::newLabel()
 {
+  loadShortcuts();
   LabelDialog *labelDialog = new LabelDialog(this);
 
   if (labelDialog->exec() == QDialog::Rejected) {
@@ -2067,6 +2122,7 @@ void OptionsDialog::newLabel()
 //----------------------------------------------------------------------------
 void OptionsDialog::editLabel()
 {
+  loadShortcuts();
   QTreeWidgetItem *treeWidgetItem = labelsTree_->currentItem();
 
   QString idLabelStr = treeWidgetItem->text(0);
@@ -2113,6 +2169,7 @@ void OptionsDialog::editLabel()
 //----------------------------------------------------------------------------
 void OptionsDialog::deleteLabel()
 {
+  loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
   addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
 
@@ -2128,6 +2185,7 @@ void OptionsDialog::deleteLabel()
 //----------------------------------------------------------------------------
 void OptionsDialog::moveUpLabel()
 {
+  loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
 
   addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
@@ -2156,6 +2214,7 @@ void OptionsDialog::moveUpLabel()
 //----------------------------------------------------------------------------
 void OptionsDialog::moveDownLabel()
 {
+  loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
 
   addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
@@ -2206,6 +2265,7 @@ void OptionsDialog::slotCurrentLabelChanged(QTreeWidgetItem *current,
 //----------------------------------------------------------------------------
 void OptionsDialog::applyLabels()
 {
+  if (!loadLabelsOk_ || idLabels_.isEmpty()) return;
   db_.transaction();
   QSqlQuery q;
 
@@ -2279,8 +2339,22 @@ void OptionsDialog::loadNotifier()
   timer.start();
   loadNotifierOk_ = true;
 
+  if (!feedsNotifierDlg_) createFeedsNotifierDlg();
+
   itemNotChecked_ = true;
 
+  QHash<int, int> notifyByFeed;
+  {
+    QSqlQuery qNotify;
+    qNotify.setForwardOnly(true);
+    if (qNotify.exec("SELECT feedId, value FROM feeds_ex WHERE name='showNotification'")) {
+      while (qNotify.next()) {
+        notifyByFeed.insert(qNotify.value(0).toInt(), qNotify.value(1).toInt());
+      }
+    }
+  }
+
+  QVector<int> missingFeedIds;
   QSqlQuery q;
   QQueue<int> parentIds;
   parentIds.enqueue(0);
@@ -2292,6 +2366,7 @@ void OptionsDialog::loadNotifier()
     while (q.next()) {
       QString feedText = q.value(0).toString();
       QString feedId = q.value(1).toString();
+      const int feedIdInt = feedId.toInt();
       QByteArray byteArray = q.value(2).toByteArray();
       QString xmlUrl = q.value(3).toString();
 
@@ -2300,17 +2375,12 @@ void OptionsDialog::loadNotifier()
       QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
 
       treeWidgetItem->setCheckState(0, Qt::Unchecked);
-      QSqlQuery q1;
-      qStr = QString("SELECT value FROM feeds_ex WHERE feedId='%1' AND name='showNotification'").
-          arg(feedId);
-      q1.exec(qStr);
-      if (q1.next()) {
-        if (q1.value(0).toInt() == 1)
+      auto it = notifyByFeed.constFind(feedIdInt);
+      if (it != notifyByFeed.constEnd()) {
+        if (it.value() == 1)
           treeWidgetItem->setCheckState(0, Qt::Checked);
       } else {
-        qStr = QString("INSERT INTO feeds_ex(feedId, name, value) VALUES ('%1', 'showNotification', '0')").
-            arg(feedId);
-        q1.exec(qStr);
+        missingFeedIds.append(feedIdInt);
       }
       if (treeWidgetItem->checkState(0) == Qt::Unchecked)
         feedsTreeNotify_->topLevelItem(0)->setCheckState(0, Qt::Unchecked);
@@ -2333,8 +2403,18 @@ void OptionsDialog::loadNotifier()
                                                        1);
       treeItems.at(0)->addChild(treeWidgetItem);
       if (xmlUrl.isEmpty())
-        parentIds.enqueue(feedId.toInt());
+        parentIds.enqueue(feedIdInt);
     }
+  }
+  if (!missingFeedIds.isEmpty()) {
+    db_.transaction();
+    QSqlQuery qInsert;
+    qInsert.prepare("INSERT INTO feeds_ex(feedId, name, value) VALUES (?, 'showNotification', '0')");
+    for (int feedIdInt : std::as_const(missingFeedIds)) {
+      qInsert.addBindValue(feedIdInt);
+      qInsert.exec();
+    }
+    db_.commit();
   }
   feedsTreeNotify_->expandAll();
   itemNotChecked_ = false;
@@ -2343,6 +2423,11 @@ void OptionsDialog::loadNotifier()
 //----------------------------------------------------------------------------
 void OptionsDialog::applyNotifier()
 {
+  if (!loadNotifierOk_) {
+    if (!onlySelectedFeeds_->isChecked())
+      mainApp->mainWindow()->idFeedsNotifyList_.clear();
+    return;
+  }
   mainApp->mainWindow()->idFeedsNotifyList_.clear();
 
   feedsTreeNotify_->expandAll();
@@ -2415,6 +2500,7 @@ void OptionsDialog::slotShowPass()
 //----------------------------------------------------------------------------
 void OptionsDialog::applyPass()
 {
+  if (!loadPasswordsOk_) return;
   db_.transaction();
   QSqlQuery q;
   for (int i = 0; i < passTree_->topLevelItemCount(); i++) {
@@ -2458,6 +2544,11 @@ ShutdownCleanUpConfig OptionsDialog::currentCleanUpConfig() const
 
 void OptionsDialog::updateCleanUpPreview()
 {
+  if (!categoriesTree_->currentItem() ||
+      categoriesTree_->currentItem()->data(0, Qt::DisplayRole).toInt() != 4 ||
+      feedsWidget_->currentIndex() != 3) {
+    return;
+  }
   QElapsedTimer timer;
   timer.start();
   QString error;

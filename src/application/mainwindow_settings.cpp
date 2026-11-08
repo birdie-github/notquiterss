@@ -657,23 +657,25 @@ void MainWindow::showOptionDlg(int index)
   QElapsedTimer applyTimer;
   applyTimer.start();
 
-  // Removing actions changes the registry; iterate over its original contents.
-  const auto shortcutActions = shortcutRegistry_.actions();
-  for (QAction *action : shortcutActions) {
-    QString objectName = action->objectName();
-    if (objectName.contains("labelAction_")) {
-      shortcutRegistry_.removeOne(action);
-      delete action;
+  if (optionsDialog_->shortcutsLoaded()) {
+    // Removing actions changes the registry; iterate over its original contents.
+    const auto shortcutActions = shortcutRegistry_.actions();
+    for (QAction *action : shortcutActions) {
+      QString objectName = action->objectName();
+      if (objectName.contains("labelAction_")) {
+        shortcutRegistry_.removeOne(action);
+        delete action;
+      }
     }
-  }
-  optionsDialog_->saveActionShortcut(shortcutRegistry_.actions(), newsLabelGroup_);
-  shortcutRegistry_.append(newsLabelGroup_->actions());
-  newsLabelMenu_->addActions(newsLabelGroup_->actions());
-  this->addActions(newsLabelGroup_->actions());
-  if (newsLabelGroup_->actions().count()) {
-    newsLabelAction_->setIcon(newsLabelGroup_->actions().at(0)->icon());
-    newsLabelAction_->setToolTip(newsLabelGroup_->actions().at(0)->text());
-    newsLabelAction_->setData(newsLabelGroup_->actions().at(0)->data());
+    optionsDialog_->saveActionShortcut(shortcutRegistry_.actions(), newsLabelGroup_);
+    shortcutRegistry_.append(newsLabelGroup_->actions());
+    newsLabelMenu_->addActions(newsLabelGroup_->actions());
+    this->addActions(newsLabelGroup_->actions());
+    if (newsLabelGroup_->actions().count()) {
+      newsLabelAction_->setIcon(newsLabelGroup_->actions().at(0)->icon());
+      newsLabelAction_->setToolTip(newsLabelGroup_->actions().at(0)->text());
+      newsLabelAction_->setData(newsLabelGroup_->actions().at(0)->data());
+    }
   }
 
   if (optionsDialog_->idLabels_.count()) {
@@ -808,8 +810,10 @@ void MainWindow::showOptionDlg(int index)
 
   soundNotifyPath_ = optionsDialog_->editSoundNotifer_->text();
 
-  mainApp->setLanguage(optionsDialog_->language());
-  mainApp->setTranslateApplication();
+  if (mainApp->language() != optionsDialog_->language()) {
+    mainApp->setLanguage(optionsDialog_->language());
+    mainApp->setTranslateApplication();
+  }
 
   for (int row = 0; row < kFontOptionCount; ++row) {
     const QString text = optionsDialog_->fontsTree_->topLevelItem(row)->text(2);

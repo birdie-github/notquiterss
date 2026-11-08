@@ -184,6 +184,7 @@ public:
   // shortcut
   void loadActionShortcut(QList<QAction *> actions, const QStringList *list);
   void saveActionShortcut(QList<QAction *> actions, QActionGroup *labelGroup);
+  bool shortcutsLoaded() const { return loadShortcutsOk_; }
 
 signals:
   void signalCategoriesTreeKeyUpDownPressed();
@@ -238,6 +239,8 @@ private:
   QLabel *contentLabel_;
   QTreeWidget *categoriesTree_;
   QStackedWidget *contentStack_;
+  QVector<QWidget *> pageWidgets_;
+  QVector<QScrollArea *> pageScrollAreas_;
 
   //stack widgets
   QFrame *generalWidget_;
@@ -292,6 +295,7 @@ private:
   // notifier
   void createNotifierWidget();
   void createFeedsNotifierDlg();
+  void openFeedsNotifierDlg();
   void loadNotifier();
   void applyNotifier();
   bool loadNotifierOk_;
@@ -311,19 +315,27 @@ private:
 
   // passwords
   void createPasswordsWidget();
+  void loadPasswords();
   void applyPass();
   QTreeWidget *passTree_;
+  bool loadPasswordsOk_ = false;
 
   // language
   void createLanguageWidget();
+  void loadLanguages();
   QTreeWidget *languageFileList_;
+  QString selectedLanguage_;
+  bool loadLanguagesOk_ = false;
 
   // fonts
   void createFontsColorsWidget();
 
   // shortcut
   void createShortcutWidget();
-  const QStringList *listDefaultShortcut_;
+  void loadShortcuts();
+  QList<QAction *> shortcutActions_;
+  const QStringList *listDefaultShortcut_ = nullptr;
+  bool loadShortcutsOk_ = false;
   LineEdit *filterShortcut_;
   QTreeView *shortcutTree_;
   QStandardItemModel *shortcutModel_;
