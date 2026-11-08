@@ -493,7 +493,7 @@ void RequestFeed::finished(QNetworkReply *reply)
   reply->deleteLater();
 }
 
-/** @brief Timeout to delete network requests which has no answer
+/** @brief Timeout for deleting network requests with no answer
  *----------------------------------------------------------------------------*/
 void RequestFeed::slotRequestTimeout()
 {

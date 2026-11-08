@@ -102,7 +102,7 @@ void NetworkManager::loadCertificates()
 
 }
 
-/** @brief Request authentification
+/** @brief Request authentication
  *---------------------------------------------------------------------------*/
 void NetworkManager::slotAuthentication(QNetworkReply *reply, QAuthenticator *auth)
 {
@@ -115,7 +115,7 @@ void NetworkManager::slotAuthentication(QNetworkReply *reply, QAuthenticator *au
 
   delete authenticationDialog;
 }
-/** @brief Request proxy authentification
+/** @brief Request proxy authentication
  *---------------------------------------------------------------------------*/
 void NetworkManager::slotProxyAuthentication(const QNetworkProxy &proxy, QAuthenticator *auth)
 {

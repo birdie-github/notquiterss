@@ -688,9 +688,9 @@ void FeedsView::dragMoveEvent(QDragMoveEvent *event)
   else {
     if ((dragIndex.row() == currentIndex().row()) &&
         (dragIndex.parent() == currentIndex().parent()))
-      event->ignore();  // don't move feed to itseelf
+      event->ignore();  // don't move feed to itself
     else if (dragIndex.parent() == currentIndex())
-      event->ignore();  // don't move feed to same parent
+      event->ignore();  // don't move feed to the same parent
     else {
       bool ignore = false;
       QModelIndex child = dragIndex.parent();

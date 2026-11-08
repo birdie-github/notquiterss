@@ -1401,7 +1401,7 @@ void MainWindow::findFeedVisible(bool visible)
   } else {
     findFeedAct_->setChecked(false);
     findFeeds_->clear();
-    // Call filter explicitly, because invisible widget don't calls it
+    // Call filter explicitly, because invisible widget doesn't call it
     setFeedsFilter(false);
   }
 }

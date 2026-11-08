@@ -309,7 +309,7 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
   }
 }
 
-/** @brief Create windget "General"
+/** @brief Create widget "General"
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createGeneralWidget()
 {
@@ -501,7 +501,7 @@ QWidget *OptionsDialog::createNetworkConnectionsWidget()
   manualLayout->addStretch();
 
   manualWidget_ = new QWidget();
-  manualWidget_->setEnabled(false);  // cause proper radio-button isn't set on creation
+  manualWidget_->setEnabled(false);  // because proper radio-button isn't set on creation
   manualWidget_->setLayout(manualLayout);
 
   networkConnectionsLayout->addWidget(manualWidget_);
@@ -681,7 +681,7 @@ QWidget *OptionsDialog::createBrowserWidget()
   return browserWidget_;
 }
 
-/** @brief Create windet "Feeds"
+/** @brief Create widget "Feeds"
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createFeedsWidget()
 {
@@ -1649,7 +1649,7 @@ void OptionsDialog::setLanguage(const QString &langFileName)
   if (list.count()) {
     languageFileList_->setCurrentItem(list.at(0));
   } else {
-    // can't find file, choose english
+    // can't find file, choose English
     QList<QTreeWidgetItem*> list =
         languageFileList_->findItems("en", Qt::MatchFixedString, 0);
     languageFileList_->setCurrentItem(list.at(0));

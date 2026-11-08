@@ -132,7 +132,7 @@ const QString kCreateFeedsTableQuery(
     "lastDisplayed text, "           // last display timestamp
     "f_Expanded integer default 1, "  // expand folder flag
     "flags text, "                    // more flags (example "focused", "hidden")
-    "authentication integer default 0, "    // enable authentification, sets on feed creation
+    "authentication integer default 0, "    // enable authentication, set on feed creation
     "duplicateNewsMode integer default 0, " // news duplicates process mode
     "addSingleNewsAnyDateOn integer default 1, " // enable adding news with any date into the database
     "avoidedOldSingleNewsDateOn integer default 0, " // avoid adding news before this date into the database

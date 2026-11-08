@@ -807,7 +807,7 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
   emit setStatusFeed(feedId, status);
 }
 
-/** @brief Start timer if feed presents in queue
+/** @brief Start timer if feed is present in queue
  *---------------------------------------------------------------------------*/
 void UpdateObject::slotNextUpdateFeed(bool finish)
 {
