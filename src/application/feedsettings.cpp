@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "updatefeeds.h"
 #include <QBuffer>
+#include <QImage>
 #include <QTimeZone>
 #include <utility>
 
@@ -27,7 +28,26 @@ QByteArray prepareFaviconIcoData(const QByteArray &byteArray, const QString &for
   buffer.open(QIODevice::WriteOnly);
   if (!icon.save(&buffer, "ICO"))
     return QByteArray();
+  // Qt's ICO writer leaves the 2-byte row-alignment padding in each 16-pixel
+  // 1-bit AND-mask scanline (offset 1086 + y * 4 + 2..3) uninitialized.
+  if (faviconData.size() == 1150) {
+    for (int y = 0; y < 16; ++y) {
+      faviconData[1086 + y * 4 + 2] = 0;
+      faviconData[1086 + y * 4 + 3] = 0;
+    }
+  }
   return faviconData;
+}
+
+bool sameFaviconImage(const QByteArray &first, const QByteArray &second)
+{
+  if (first == second)
+    return true;
+  if (first.isEmpty() || second.isEmpty())
+    return false;
+  const QImage firstImage = QImage::fromData(first);
+  const QImage secondImage = QImage::fromData(second);
+  return !firstImage.isNull() && firstImage == secondImage;
 }
 
 QString faviconDisplayUrl(const QString &htmlUrl, const QString &xmlUrl)
@@ -388,7 +408,7 @@ void MainWindow::showBulkFeedSettings()
     if (faviconData.isEmpty()) {
       ++session.failed;
       dialog.appendFaviconLog(tr(" Invalid icon data. Favicon unchanged."), false);
-    } else if (faviconData == target.existingIco) {
+    } else if (sameFaviconImage(faviconData, target.existingIco)) {
       ++session.unchanged;
       dialog.appendFaviconLog(tr(" Favicon unchanged."), false);
     } else {
@@ -411,7 +431,8 @@ void MainWindow::showBulkFeedSettings()
 
   dialog.exec();
 
-  faviconWorker->disconnectObjects();
+  QMetaObject::invokeMethod(faviconWorker, &FaviconObject::disconnectObjects,
+                            Qt::BlockingQueuedConnection);
   faviconThread.quit();
   faviconThread.wait();
 }
