@@ -21,6 +21,7 @@
 #include "mainapplication.h"
 #include "settings.h"
 #include <algorithm>
+#include <QElapsedTimer>
 
 namespace {
 QColor mixColor(const QColor &a, const QColor &b, int aPercent)
@@ -95,8 +96,15 @@ void MainWindow::setStyleApp(QAction *action)
     }
   }
 
+  QElapsedTimer timer;
+  timer.start();
   mainApp->applyApplicationStyle(id);
+  const qint64 applyStyleMs = timer.restart();
   applyThemeColors(true);
+  const qint64 applyColorsMs = timer.elapsed();
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainWindow::setStyleApp(%1): total=%2 ms (applyStyle=%3, applyThemeColors=%4)")
+      .arg(id).arg(applyStyleMs + applyColorsMs).arg(applyStyleMs).arg(applyColorsMs);
   for (QAction *candidate : styleGroup_->actions())
     candidate->setChecked(candidate->data().toString() == mainApp->applicationStyle().id);
 }

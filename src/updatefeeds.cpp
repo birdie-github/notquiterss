@@ -32,6 +32,7 @@
 #include "settings.h"
 
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QRegularExpression>
 #include <QTimeZone>
 #include <QUuid>
@@ -1346,6 +1347,8 @@ void UpdateObject::retryQuitApp(const QString &fileName)
       mainApp->reportDatabaseSaveFailure(error);
     }, Qt::QueuedConnection);
   };
+  QElapsedTimer timer;
+  timer.start();
   if (shutdownCleanup_ == ShutdownCleanup::NotStarted) {
     cleanUpShutdown();
     if (shutdownCleanup_ == ShutdownCleanup::NotStarted) {
@@ -1362,6 +1365,9 @@ void UpdateObject::retryQuitApp(const QString &fileName)
     shutdownCleanup_ = ShutdownCleanup::Finished;
     qWarning().noquote() << shutdownCleanupWarning_;
   }
+  const qint64 cleanupMs = timer.restart();
+  qint64 memdbMs = 0;
+  qint64 vacuumMs = 0;
   if (mainApp->storeDBMemory()) {
     QString error;
     if (!Database::sqliteDBMemFile(db_, error, true, fileName)) {
@@ -1369,6 +1375,7 @@ void UpdateObject::retryQuitApp(const QString &fileName)
       reportFailure(error);
       return;
     }
+    memdbMs = timer.restart();
     Settings settings("Settings");
     if (fileName.isEmpty() && settings.value("cleanupOnShutdown", true).toBool() &&
         settings.value("optimizeDB", false).toBool()) {
@@ -1380,9 +1387,16 @@ void UpdateObject::retryQuitApp(const QString &fileName)
         if (!shutdownCleanupWarning_.isEmpty()) shutdownCleanupWarning_ += '\n';
         shutdownCleanupWarning_ += warning;
       }
+      vacuumMs = timer.restart();
     }
   }
+  timer.restart();
   const auto backup = DatabaseBackup::create(db_, DatabaseBackup::Trigger::Exit);
+  const qint64 exitBackupMs = timer.elapsed();
+  qInfo().noquote() << QStringLiteral(
+      "[perf] UpdateObject::retryQuitApp: total=%1 ms (cleanup=%2, memdbSave=%3, vacuum=%4, exitBackup=%5)")
+      .arg(cleanupMs + memdbMs + vacuumMs + exitBackupMs)
+      .arg(cleanupMs).arg(memdbMs).arg(vacuumMs).arg(exitBackupMs);
   const QString cleanupWarning = shutdownCleanupWarning_;
   QMetaObject::invokeMethod(mainApp, [backup, fileName, cleanupWarning] {
     if (!cleanupWarning.isEmpty())

@@ -33,6 +33,7 @@
 #include "commandline.h"
 #include "logfile.h"
 #include <cstdio>
+#include <QElapsedTimer>
 
 #include <QScreen>
 #include <QVersionNumber>
@@ -93,8 +94,12 @@ MainApplication::MainApplication(int &argc, char **argv)
   setWindowIcon(QIcon(":/images/application256"));
   setQuitOnLastWindowClosed(false);
 
+  QElapsedTimer stepTimer;
+  stepTimer.start();
+
   createSettings();
   setTranslateApplication();
+  const qint64 settingsMs = stepTimer.elapsed();
   // Run before applying the theme (which saves settings), replacing a pending
   // database, initializing SQL, or starting any feed workers.
   if (!confirmPrerelease()) {
@@ -102,7 +107,7 @@ MainApplication::MainApplication(int &argc, char **argv)
     return;
   }
 
-  qWarning() << "Run application!";
+  stepTimer.restart();
 
   // Keep the real platform style/palette as the source for System. Fixed themes
   // use Fusion so their palette is authoritative instead of being mixed with
@@ -111,6 +116,7 @@ MainApplication::MainApplication(int &argc, char **argv)
   systemPalette_ = palette();
   setStyleApplication();
   showSplashScreen();
+  const qint64 styleMs = stepTimer.restart();
 
   if (!connectDatabase()) {
     startupExitCode_ = 1;
@@ -119,12 +125,11 @@ MainApplication::MainApplication(int &argc, char **argv)
     return;
   }
   setProgressSplashScreen(30);
-  qWarning() << "Run application 2";
-  mainWindow_ = new MainWindow();
-  qWarning() << "Run application 3";
-  setProgressSplashScreen(60);
+  const qint64 dbMs = stepTimer.restart();
 
-  qWarning() << "Run application 4";
+  mainWindow_ = new MainWindow();
+  const qint64 mainWindowMs = stepTimer.restart();
+  setProgressSplashScreen(60);
 
   // Worker NetworkManagers forward authentication requests to the primary
   // manager with BlockingQueuedConnection.  Construct the shared network
@@ -136,7 +141,8 @@ MainApplication::MainApplication(int &argc, char **argv)
   // Favicon requests need the worker connections installed above.
   mainWindow_->requestDefaultFeedIcons();
   setProgressSplashScreen(90);
-  qWarning() << "Run application 5";
+  const qint64 netWorkersMs = stepTimer.restart();
+
   // Startup must create its first article tab synchronously. Starting the SQL
   // worker earlier can make slotFeedClicked defer that creation while startup
   // still expects currentNewsTab to exist. Signals emitted during restoration
@@ -144,13 +150,21 @@ MainApplication::MainApplication(int &argc, char **argv)
   mainWindow_->restoreFeedsOnStartUp();
   updateFeeds_->start();
   setProgressSplashScreen(100);
-  qWarning() << "Run application 6";
+  const qint64 restoreMs = stepTimer.restart();
+
   if (!mainWindow_->startingTray_ || !mainWindow_->showTrayIcon_) {
     mainWindow_->show();
   }
   mainWindow_->isMinimizeToTray_ = false;
 
   closeSplashScreen();
+  const qint64 showMs = stepTimer.elapsed();
+  const qint64 startupTotalMs =
+      settingsMs + styleMs + dbMs + mainWindowMs + netWorkersMs + restoreMs + showMs;
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainApplication::startup: total=%1 ms (settings=%2, style=%3, db=%4, mainWindow=%5, net+workers=%6, restore=%7, show=%8)")
+      .arg(startupTotalMs).arg(settingsMs).arg(styleMs).arg(dbMs).arg(mainWindowMs)
+      .arg(netWorkersMs).arg(restoreMs).arg(showMs);
 
   if (mainWindow_->showTrayIcon_) {
     QTimer::singleShot(0, mainWindow_->trayIcon(), &QSystemTrayIcon::show);
@@ -328,15 +342,21 @@ void MainApplication::quitApplication()
     QTimer::singleShot(25, this, &MainApplication::quitApplication);
     return;
   }
-  qWarning() << "quitApplication 1";
+  QElapsedTimer timer;
+  timer.start();
   delete mainWindow_;
-  qWarning() << "quitApplication 2";
+  const qint64 mainWindowMs = timer.restart();
   delete networkManager_;
+  const qint64 netMs = timer.restart();
   if (cookieJar_) cookieJar_->saveCookies();
   delete cookieJar_;
+  const qint64 cookiesMs = timer.restart();
   delete closingWidget_;
-
-  qWarning() << "Quit application";
+  const qint64 closingWidgetMs = timer.elapsed();
+  const qint64 totalMs = mainWindowMs + netMs + cookiesMs + closingWidgetMs;
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainApplication::quitApplication: total=%1 ms (mainWindow+workers=%2, network=%3, cookies=%4, closingWidget=%5)")
+      .arg(totalMs).arg(mainWindowMs).arg(netMs).arg(cookiesMs).arg(closingWidgetMs);
 
   quit();
 }
@@ -479,9 +499,12 @@ void MainApplication::applyApplicationStyle(const QString &id)
   if (wasSystem) systemPalette_ = palette();
 
   applicationStyle_ = selected;
+  QElapsedTimer timer;
+  timer.start();
   // Remove the previous QSS before changing styles/palettes so stale selectors
   // cannot participate while Qt repolishes widgets for the new theme.
   setStyleSheet(QString());
+  const qint64 clearQssMs = timer.restart();
 
   if (selected.followsSystem()) {
     if (!wasSystem) {
@@ -505,9 +528,15 @@ void MainApplication::applyApplicationStyle(const QString &id)
     }
     setPalette(ApplicationStyles::palette(selected, style()->standardPalette()));
   }
+  const qint64 stylePaletteMs = timer.restart();
 
   qInfo() << "Applying application QSS:" << selected.fileName;
   setStyleSheet(ApplicationStyles::styleSheet(selected, palette()));
+  const qint64 setStyleSheetMs = timer.elapsed();
+  const qint64 totalMs = clearQssMs + stylePaletteMs + setStyleSheetMs;
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainApplication::applyApplicationStyle(%1): total=%2 ms (clearQss=%3, style+palette=%4, setStyleSheet=%5)")
+      .arg(selected.id).arg(totalMs).arg(clearQssMs).arg(stylePaletteMs).arg(setStyleSheetMs);
   Settings().setValue("Settings/theme", selected.id);
 }
 

@@ -25,6 +25,7 @@
 #include "settings.h"
 #include "shareservice.h"
 #include "articlecontent.h"
+#include <QElapsedTimer>
 #include <QNetworkRequest>
 #include <QRegularExpression>
 #include <QTextBlock>
@@ -1410,6 +1411,9 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
     return;
   }
 
+  QElapsedTimer renderTimer;
+  renderTimer.start();
+
   articleView_->beginArticles();
   articleView_->setPreloadPages(0);
   const int row = index.row();
@@ -1425,7 +1429,8 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
   const QModelIndex directionIndex = type_ == TabTypeFeed
       ? feedsModel_->indexById(feedId_) : feedIndex;
 
-  if (newspaperCache_.size() >= 64 && !newspaperCache_.contains(newsIdInt))
+  const bool wasCached = newspaperCache_.contains(newsIdInt);
+  if (newspaperCache_.size() >= 64 && !wasCached)
     newspaperCache_.clear();
 
   const CachedArticle &cached = prepareCachedArticle(row, newsIdInt, baseUrl, feedIndex);
@@ -1458,9 +1463,18 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
   htmlStr.replace("<td class=\"title\">",
                   "<td class=\"title\"><a name=\"article-" + newsId +
                   "\">&#8203;</a>");
+  const qint64 prepareMs = renderTimer.restart();
   articleView_->setArticleHtml(htmlStr, preservePosition);
   if (!ltr)
     makeRtlAlignmentAbsolute(articleView_->document());
+  const qint64 setHtmlMs = renderTimer.elapsed();
+  const qint64 totalMs = prepareMs + setHtmlMs;
+  if (htmlStr.size() <= 128 * 1024 && totalMs >= 20) {
+    qInfo().noquote() << QStringLiteral(
+        "[perf] NewsTabWidget::updateArticleView(news=%1): total=%2 ms (prepare=%3, setHtml=%4, chars=%5, cached=%6)")
+        .arg(newsIdInt).arg(totalMs).arg(prepareMs).arg(setHtmlMs)
+        .arg(htmlStr.size()).arg(wasCached ? 1 : 0);
+  }
 }
 
 void NewsTabWidget::loadNewspaper(int refresh)

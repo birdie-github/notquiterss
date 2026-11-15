@@ -33,6 +33,7 @@
 #include "statusbarcontroller.h"
 #include "trayiconcontroller.h"
 #include "updatefeeds.h"
+#include <QElapsedTimer>
 
 #if defined(Q_OS_WIN)
 #include <windows.h>
@@ -318,6 +319,8 @@ void MainWindow::quitApp()
 void MainWindow::finishQuitApp()
 {
   if (!mainApp->finishModalOperations()) return;
+  QElapsedTimer quitStepTimer;
+  quitStepTimer.start();
   quitTimer_.stop();
   mainApp->setClosing();
   databaseUiTimer_.stop();
@@ -337,8 +340,10 @@ void MainWindow::finishQuitApp()
 
   hide();
   trayIconController_->hide();
+  const qint64 uiMs = quitStepTimer.restart();
 
   saveSettings();
+  const qint64 settingsMs = quitStepTimer.restart();
 
   for (int i = 0; i < stackedWidget_->count(); i++) {
     NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
@@ -347,6 +352,10 @@ void MainWindow::finishQuitApp()
 
   mainApp->networkManager()->disconnect(mainApp->networkManager());
   mainApp->updateFeeds()->disconnectObjects();
+  const qint64 disconnectMs = quitStepTimer.elapsed();
+  qInfo().noquote() << QStringLiteral(
+      "[perf] MainWindow::finishQuitApp: total=%1 ms (ui+closingWidget=%2, saveSettings=%3, disconnect=%4)")
+      .arg(uiMs + settingsMs + disconnectMs).arg(uiMs).arg(settingsMs).arg(disconnectMs);
   emit signalQuitApp();
 }
 

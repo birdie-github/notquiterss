@@ -30,6 +30,7 @@
 #include "settings.h"
 
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QThread>
 #include <QDesktopServices>
 #include <QTextDocumentFragment>
@@ -156,6 +157,9 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
   feedChanged_ = false;
   lastBuildDate_ = dtReply;
 
+  QElapsedTimer parseTimer;
+  parseTimer.start();
+
   bool codecOk = false;
   QString convertData;
   QString feedType;
@@ -214,7 +218,9 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
     }
   }
 
+  const qint64 decodeMs = parseTimer.restart();
   const bool parsed = FeedXml::parse(doc, convertData, errorStr, errorLine, errorColumn);
+  const qint64 xmlDomMs = parseTimer.elapsed();
   if (parsed) feedType = doc.documentElement().tagName();
   if (!parsed || (feedType != "feed" && feedType != "rss" && feedType != "rdf:RDF")) {
     const QString detail = !parsed
@@ -222,6 +228,19 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
         : tr("The response is not a supported RSS or Atom feed (root element: %1).").arg(feedType);
     emit signalFinishUpdate(feedId, false, 0, "-6 " + detail);
     return;
+  }
+
+  if (xmlData.size() <= 256 * 1024) {
+    const QString itemTag = (feedType == QLatin1String("feed"))
+        ? QStringLiteral("entry") : QStringLiteral("item");
+    const int itemCount = doc.elementsByTagName(itemTag).count();
+    const qint64 totalParseMs = decodeMs + xmlDomMs;
+    if (itemCount <= 100 && totalParseMs >= 20) {
+      qInfo().noquote() << QStringLiteral(
+          "[perf] ParseObject::slotParse(feed=%1): total=%2 ms (decode=%3, xmlDom=%4, bytes=%5, items=%6)")
+          .arg(feedId).arg(totalParseMs).arg(decodeMs).arg(xmlDomMs)
+          .arg(xmlData.size()).arg(itemCount);
+    }
   }
 
   auto databaseAccess = Database::backgroundAccess();
