@@ -7,7 +7,7 @@ Palette.WindowText=#e1e0e1
 Palette.Base=#464546
 Palette.AlternateBase=#3a393a
 Palette.Text=#e1e0e1
-Palette.Button=#3a393a
+Palette.Button=#504f51
 Palette.ButtonText=#e1e0e1
 Palette.Highlight=#3a393b
 Palette.HighlightedText=#f8fd99
@@ -381,61 +381,6 @@ QPushButton:disabled {
 #ToolButton::menu-button {
 	border: none;
 	width: 16px;
-}
-
-QScrollBar {
-	border: none;
-	margin: 0px;
-	padding: 0px;
-}
-
-QScrollBar:vertical {
-	background: #3a393a;
-	width: 16px;
-}
-
-QScrollBar:horizontal {
-	background: #3a393a;
-	height: 16px;
-}
-
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
-QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-	background: transparent;
-}
-
-QScrollBar::handle:vertical {
-	background: #646365;
-	border-radius: 5px;
-	margin: 2px 3px;
-	min-height: 28px;
-}
-
-QScrollBar::handle:horizontal {
-	background: #646365;
-	border-radius: 5px;
-	margin: 3px 2px;
-	min-width: 28px;
-}
-
-QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
-	background: #7b7a7c;
-}
-
-QScrollBar::handle:vertical:pressed, QScrollBar::handle:horizontal:pressed {
-	background: #8e8d90;
-}
-
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-	border: none;
-	background: none;
-	height: 0px;
-}
-
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-	border: none;
-	background: none;
-	width: 0px;
 }
 
 QGroupBox {

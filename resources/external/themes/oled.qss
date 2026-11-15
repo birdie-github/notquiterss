@@ -7,7 +7,7 @@ Palette.WindowText=#e8e8e8
 Palette.Base=#000000
 Palette.AlternateBase=#101010
 Palette.Text=#e8e8e8
-Palette.Button=#151515
+Palette.Button=#323232
 Palette.ButtonText=#e8e8e8
 Palette.Highlight=#242424
 Palette.HighlightedText=#f8fd99
@@ -15,6 +15,8 @@ Palette.Link=#58a6ff
 Palette.LinkVisited=#c58af9
 Palette.ToolTipBase=#202020
 Palette.ToolTipText=#f0f0f0
+Palette.Light=#525252
+Palette.Midlight=#404040
 Palette.Dark=#555555
 Palette.Mid=#3a393a
 Palette.Shadow=#202020
@@ -385,61 +387,6 @@ QPushButton:disabled {
 #ToolButton::menu-button {
     border: none;
     width: 16px;
-}
-
-QScrollBar {
-    border: none;
-    margin: 0px;
-    padding: 0px;
-}
-
-QScrollBar:vertical {
-    background: #0c0c0c;
-    width: 16px;
-}
-
-QScrollBar:horizontal {
-    background: #0c0c0c;
-    height: 16px;
-}
-
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
-QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-    background: transparent;
-}
-
-QScrollBar::handle:vertical {
-    background: #484848;
-    border-radius: 5px;
-    margin: 2px 3px;
-    min-height: 28px;
-}
-
-QScrollBar::handle:horizontal {
-    background: #484848;
-    border-radius: 5px;
-    margin: 3px 2px;
-    min-width: 28px;
-}
-
-QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
-    background: #686868;
-}
-
-QScrollBar::handle:vertical:pressed, QScrollBar::handle:horizontal:pressed {
-    background: #848484;
-}
-
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    border: none;
-    background: none;
-    height: 0px;
-}
-
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-    border: none;
-    background: none;
-    width: 0px;
 }
 
 QGroupBox {
