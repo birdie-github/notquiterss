@@ -22,6 +22,7 @@ def check(qmake, make):
         shutil.copytree(ROOT / 'resources', source / 'resources')
         (source / 'scripts').mkdir()
         shutil.copy(ROOT / 'scripts/stage-resources.py', source / 'scripts')
+        shutil.copy(ROOT / 'scripts/generate-themes.py', source / 'scripts')
         metadata = json.loads((source / 'project.json').read_text())
         names = metadata['resources']
         prefix = metadata['identity']['name'] + '_'
