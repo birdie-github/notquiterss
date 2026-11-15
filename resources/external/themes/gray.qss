@@ -71,7 +71,12 @@ QMenuBar::item:pressed {
 	color: #000000;
 }
 
-#feedsPanel_, #categoriesPanel_, #stackedWidget_ {
+#feedsPanel_, #categoriesPanel_, #newsPanelWidget_, #buttonPanelWidget {
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #f7f7f7, stop:1 #ececec);
+}
+
+#stackedWidget_ {
 	background: white;
 }
 
@@ -134,70 +139,56 @@ QToolBar {
 }
 
 #buttonColumnView {
-	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #f0f0f0, stop: 1.0 #D5D5D5);
+	border: 1px solid #d5d5d5;
 	border-top: none;
-	border-bottom: 1px solid #D5D5D5;
 	padding: 5px 0px 1px 0px;
-	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #ffffff, stop: 0.4 #ffffff,
-								stop: 0.5 #F6F7F9, stop: 1.0 #F1F2F4);
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #ffffff, stop:1 #f1f2f4);
 }
 
 #buttonColumnView:hover, #buttonColumnView:pressed {
-	border-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #88CBEB, stop: 0.4 #88CBEB,
-								stop: 0.5 #69BBE3, stop: 1.0 #69BBE3);
-	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #E3F7FF, stop: 0.4 #E3F7FF,
-								stop: 0.5 #B7E7FB, stop: 1.0 #B7E7FB);
+	border-color: #808080;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #f0f0f0, stop:1 #dcdcdc);
 }
 
 #progressBar_, #splashProgress {
 	border: 1px solid #A5A5A5;
-	border-radius: 2px;
+	border-radius: 3px;
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-								stop:0 #f4f4f4,
-								stop:0.4 #ECECEC
-								stop:0.5 #DEDEDE,
-								stop:1 #f4f4f4);
+		stop:0 #f4f4f4, stop:1 #e4e4e4);
 }
 
 #progressBar_::chunk, #splashProgress::chunk {
 	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-								stop:0 #9a9a9a,
-								stop:0.4 #909090,
-								stop:0.5 #808080,
-								stop:1 #9a9a9a);
+		stop:0 #9a9a9a, stop:1 #787878);
+	border-radius: 2px;
 	width: 1px;
 }
 
 QHeaderView {
-	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-							stop: 0 #ffffff, stop: 0.4 #ffffff,
-							stop: 0.5 #F6F7F9, stop: 1.0 #F1F2F4);
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #ffffff, stop:1 #f1f2f4);
 	color: #000000;
 }
 
 QHeaderView::section {
-	border-right: 1px solid qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #f0f0f0, stop: 1.0 #D5D5D5);
-	border-bottom: 1px solid #D5D5D5;
+	border-right: 1px solid #d5d5d5;
+	border-bottom: 1px solid #d5d5d5;
 	border-top: none;
 	border-left: none;
-	background-color: transparent;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #ffffff, stop:1 #f1f2f4);
 	padding: 2px;
 	padding-left: 3px;
 }
 
 QHeaderView::section:hover {
-	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #88CBEB, stop: 0.4 #88CBEB,
-								stop: 0.5 #69BBE3, stop: 1.0 #69BBE3);
+	border-right: 1px solid #808080;
+	border-bottom: 1px solid #808080;
 	border-top: none;
-	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-								stop: 0 #E3F7FF, stop: 0.4 #E3F7FF,
-								stop: 0.5 #B7E7FB, stop: 1.0 #B7E7FB);
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #f0f0f0, stop:1 #dcdcdc);
 }
 
 QHeaderView::down-arrow {

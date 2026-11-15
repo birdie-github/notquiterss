@@ -24,7 +24,9 @@ Palette.BrightText=#ffffff
 
 
 QMenuBar {
-    background: #101010;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #141414, stop:1 #080808);
+    border-bottom: 1px solid #2e2e2e;
     color: #e1e0e1;
     padding: 1px;
 }
@@ -32,10 +34,17 @@ QMenuBar {
 QMenuBar::item {
     padding: 3px 6px;
     background: transparent;
+    border-radius: 3px;
 }
 
 QMenuBar::item:selected {
-    background: #181818;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #262626, stop:1 #181818);
+}
+
+QMenuBar::item:pressed {
+    background: #2a82da;
+    color: #ffffff;
 }
 
 QMenu, #AboutDialog QTextEdit {
@@ -60,7 +69,12 @@ QMenu, #AboutDialog QTextEdit {
     color: #e1e0e1;
 }
 
-#feedsPanel_, #categoriesPanel_, #stackedWidget_ {
+#feedsPanel_, #categoriesPanel_, #newsPanelWidget_, #buttonPanelWidget {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #141414, stop:1 #060606);
+}
+
+#stackedWidget_ {
     background: #000000;
 }
 
@@ -137,40 +151,56 @@ QToolBar {
 }
 
 #buttonColumnView {
-    border: 1px solid gray;
+    border: 1px solid #2e2e2e;
     border-radius: 0px;
     border-top: none;
     border-bottom: none;
     margin-bottom: 1px;
     padding: 5px 0px 2px 0px;
-    background-color: #101010;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #161616, stop:1 #0a0a0a);
     min-width: 10px;
 }
 
+#buttonColumnView:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #242424, stop:1 #141414);
+}
+
 #progressBar_, #splashProgress {
-    border: 1px solid #A5A5A5;
-    border-radius: 2px;
-    background: #000000;
+    border: 1px solid #3a393a;
+    border-radius: 3px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #060606, stop:1 #121212);
 }
 
 #progressBar_::chunk, #splashProgress::chunk {
-    background: #2a82da;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #3b92ea, stop:1 #2272c8);
+    border-radius: 2px;
     width: 1px;
 }
 
 QHeaderView {
-    background-color: #101010;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #161616, stop:1 #0a0a0a);
     color: #e1e0e1;
 }
 
 QHeaderView::section {
-    border-right: 1px solid gray;
-    border-bottom: 1px solid gray;
+    border-right: 1px solid #2e2e2e;
+    border-bottom: 1px solid #2e2e2e;
     border-top: none;
     border-left: none;
-    background-color: transparent;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #161616, stop:1 #0a0a0a);
     /*padding: 2px;*/
     padding-left: 3px;
+}
+
+QHeaderView::section:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #242424, stop:1 #141414);
 }
 
 QHeaderView::down-arrow {
@@ -186,17 +216,19 @@ QHeaderView::up-arrow {
 }
 
 #webViewProgress_ {
-	border: 1px solid #242424;
+	border: 1px solid #2e2e2e;
 	border-left: none;
 	border-right: none;
 	border-bottom: none;
 	text-align: center;
-	background: #000000;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #040404, stop:1 #101010);
 	color: #e8e8e8;
 }
 
 #webViewProgress_::chunk {
-	background: #101010;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+		stop:0 #242424, stop:1 #141414);
 	width: 10px;
 }
 
@@ -205,7 +237,8 @@ QHeaderView::up-arrow {
 }
 
 #contentLabel_ {
-    background-color: #000000;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #161616, stop:1 #080808);
     color: #e1e0e1;
 }
 
@@ -237,24 +270,24 @@ QMainWindow::separator {
 }
 
 #notificationWidget {
-    border: 1px solid gray;
+    border: 1px solid #2e2e2e;
     border-radius: 8px;
 }
 
 #titleNotification {
-    border-bottom: 1px solid gray;
+    border-bottom: 1px solid #2e2e2e;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
 }
 
 #bottomNotification {
-    border-top: 1px solid gray;
+    border-top: 1px solid #2e2e2e;
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
 }
 
 #feedItemNotification {
-    border-bottom: 1px solid gray;
+    border-bottom: 1px solid #2e2e2e;
 }
 
 QLineEdit {

@@ -78,7 +78,7 @@ void MainWindow::createFeedsWidget()
   feedsPanel_->setObjectName("feedsPanel_");
   feedsPanel_->setStyleSheet(
         QString("#feedsPanel_ {border-bottom: 1px solid %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
   feedsPanel_->setLayout(feedsPanelLayout);
 
   findFeeds_ = new FindFeed(this);
@@ -123,7 +123,7 @@ void MainWindow::createFeedsWidget()
   feedsSplitter_->setHandleWidth(1);
   feedsSplitter_->setStyleSheet(
         QString("QSplitter::handle {background: %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
   feedsSplitter_->addWidget(feedsView_);
   feedsSplitter_->addWidget(categoriesWidget_);
   feedsSplitter_->setStretchFactor(0, 1);
@@ -269,7 +269,7 @@ void MainWindow::createCentralWidget()
                 "x1: 0, y1: 0, x2: 0, y2: 1,"
                 "stop: 0 %1, stop: 0.07 %2);}").
         arg(feedsPanel_->palette().window().color().name()).
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
   mainSplitter_->setChildrenCollapsible(false);
   mainSplitter_->addWidget(feedsWidget_);
   mainSplitter_->addWidget(stackedWidget_);

@@ -144,12 +144,12 @@ NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feed
                     "x1: 0, y1: 0, x2: 0, y2: 1,"
                     "stop: 0 %1, stop: 0.07 %2);}").
             arg(newsPanelWidget_->palette().window().color().name()).
-            arg(qApp->palette().color(QPalette::Dark).name()));
+            arg(qApp->palette().color(QPalette::Mid).name()));
     } else {
       newsTabWidgetSplitter_->setOrientation(Qt::Vertical);
       newsTabWidgetSplitter_->setStyleSheet(
             QString("QSplitter::handle {background: %1; margin-top: 1px; margin-bottom: 1px;}").
-            arg(qApp->palette().color(QPalette::Dark).name()));
+            arg(qApp->palette().color(QPalette::Mid).name()));
     }
   }
 
@@ -249,7 +249,7 @@ void NewsTabWidget::createNewsList()
   newsPanelWidget_->setObjectName("newsPanelWidget_");
   newsPanelWidget_->setStyleSheet(
         QString("#newsPanelWidget_ {border-bottom: 1px solid %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
 
   newsPanelWidget_->setLayout(newsPanelLayout);
   if (!mainWindow_->newsToolbarToggle_->isChecked())
@@ -355,12 +355,12 @@ void NewsTabWidget::refreshAppearance(bool reloadArticle)
   if (type_ == TabTypeDownloads) return;
 
   const QColor background = qApp->palette().color(QPalette::Base);
-  const QString dark = qApp->palette().color(QPalette::Dark).name();
+  const QString divider = qApp->palette().color(QPalette::Mid).name();
   newsIconMovie_->setFileName(background.lightness() < 128
       ? ":/images/loading_dark" : ":/images/loading");
 
   newsPanelWidget_->setStyleSheet(
-        QString("#newsPanelWidget_ {border-bottom: 1px solid %1;}").arg(dark));
+        QString("#newsPanelWidget_ {border-bottom: 1px solid %1;}").arg(divider));
   if ((mainWindow_->browserPosition_ == RIGHT_POSITION) ||
       (mainWindow_->browserPosition_ == LEFT_POSITION)) {
     newsTabWidgetSplitter_->setStyleSheet(
@@ -368,11 +368,11 @@ void NewsTabWidget::refreshAppearance(bool reloadArticle)
                   "x1: 0, y1: 0, x2: 0, y2: 1,"
                   "stop: 0 %1, stop: 0.07 %2);}").
           arg(newsPanelWidget_->palette().window().color().name()).
-          arg(dark));
+          arg(divider));
   } else {
     newsTabWidgetSplitter_->setStyleSheet(
           QString("QSplitter::handle {background: %1; margin-top: 1px; margin-bottom: 1px;}").
-          arg(dark));
+          arg(divider));
   }
 
   newsView_->setFont(QFont(mainWindow_->newsListFontFamily_, mainWindow_->newsListFontSize_));
@@ -1748,13 +1748,13 @@ void NewsTabWidget::setBrowserPosition()
                   "x1: 0, y1: 0, x2: 0, y2: 1,"
                   "stop: 0 %1, stop: 0.07 %2);}").
           arg(newsPanelWidget_->palette().window().color().name()).
-          arg(qApp->palette().color(QPalette::Dark).name()));
+          arg(qApp->palette().color(QPalette::Mid).name()));
     break;
   default:
     newsTabWidgetSplitter_->setOrientation(Qt::Vertical);
     newsTabWidgetSplitter_->setStyleSheet(
           QString("QSplitter::handle {background: %1; margin-top: 1px; margin-bottom: 1px;}").
-          arg(qApp->palette().color(QPalette::Dark).name()));
+          arg(qApp->palette().color(QPalette::Mid).name()));
   }
 
   newsTabWidgetSplitter_->setChildrenCollapsible(false);

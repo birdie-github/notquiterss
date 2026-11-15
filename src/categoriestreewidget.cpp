@@ -31,7 +31,7 @@ CategoriesTreeWidget::CategoriesTreeWidget(QWidget * parent)
   setContextMenuPolicy(Qt::CustomContextMenu);
   setStyleSheet(
         QString("#newsCategoriesTree_ {border-top: 1px solid %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
   setColumnCount(5);
   setColumnHidden(1, true);
   setColumnHidden(2, true);

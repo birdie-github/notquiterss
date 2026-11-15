@@ -5,7 +5,9 @@
 #include <QLabel>
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QLinearGradient>
 #include <QPainter>
+#include <QPainterPath>
 #include <QStringList>
 #include <QPalette>
 #include <QProgressBar>
@@ -30,24 +32,68 @@ protected:
   void paintEvent(QPaintEvent *) override
   {
     QPainter painter(this);
-    const QRect area = rect().adjusted(1, 1, -1, -1);
-    painter.fillRect(area, palette().brush(QPalette::Base));
-    painter.setPen(palette().color(QPalette::Mid));
-    painter.drawRect(rect().adjusted(0, 0, -1, -1));
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    auto blend = [](const QColor &a, const QColor &b, int aPercent) {
+      const int bPercent = 100 - aPercent;
+      return QColor((a.red() * aPercent + b.red() * bPercent) / 100,
+                    (a.green() * aPercent + b.green() * bPercent) / 100,
+                    (a.blue() * aPercent + b.blue() * bPercent) / 100);
+    };
+
+    const QRectF outer = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const QRectF area = QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0);
+    const qreal radius = 3.0;
+
+    const QColor base = palette().color(QPalette::Base);
+    const QColor mid = palette().color(QPalette::Mid);
+    const QColor window = palette().color(QPalette::Window);
+
+    QPainterPath trackPath;
+    trackPath.addRoundedRect(outer, radius, radius);
+
+    QLinearGradient trackGrad(outer.topLeft(), outer.bottomLeft());
+    trackGrad.setColorAt(0.0, blend(mid, base, 14));
+    trackGrad.setColorAt(1.0, blend(window, base, 25));
+    painter.fillPath(trackPath, trackGrad);
+
     const int span = maximum() - minimum();
-    const int width = span > 0
-        ? int(qint64(area.width()) * qBound(0, value() - minimum(), span) / span) : 0;
-    QRect fill = area;
-    fill.setWidth(width);
+    const qreal fraction = span > 0
+        ? qBound(0.0, qreal(value() - minimum()) / qreal(span), 1.0) : 0.0;
+    QRectF fill = area;
+    fill.setWidth(area.width() * fraction);
     if (layoutDirection() == Qt::RightToLeft) fill.moveRight(area.right());
-    painter.fillRect(fill, palette().brush(QPalette::Highlight));
+
+    if (fill.width() > 0.5) {
+      painter.save();
+      QPainterPath clipPath;
+      clipPath.addRoundedRect(area, radius - 0.5, radius - 0.5);
+      painter.setClipPath(clipPath);
+
+      const QColor highlight = palette().color(QPalette::Highlight);
+      const QColor hiTop = blend(QColor(Qt::white), highlight, 18);
+      const QColor hiBottom = blend(QColor(Qt::black), highlight, 12);
+      QLinearGradient fillGrad(fill.topLeft(), fill.bottomLeft());
+      fillGrad.setColorAt(0.0, hiTop);
+      fillGrad.setColorAt(1.0, hiBottom);
+      painter.fillRect(fill, fillGrad);
+      painter.restore();
+    }
+
+    painter.setPen(mid);
+    painter.drawRoundedRect(outer, radius, radius);
+
     const QString label = fontMetrics().elidedText(label_, Qt::ElideRight,
-                                                  qMax(0, area.width() - 12));
+                                                  qMax(0, int(area.width()) - 12));
     painter.setPen(palette().color(QPalette::Text));
     painter.drawText(area, Qt::AlignCenter, label);
-    painter.setClipRect(fill);
-    painter.setPen(palette().color(QPalette::HighlightedText));
-    painter.drawText(area, Qt::AlignCenter, label);
+    if (fill.width() > 0.5) {
+      painter.save();
+      painter.setClipRect(fill);
+      painter.setPen(palette().color(QPalette::HighlightedText));
+      painter.drawText(area, Qt::AlignCenter, label);
+      painter.restore();
+    }
   }
 
 private:
@@ -69,7 +115,7 @@ StatusBarController::StatusBarController(QStatusBar *statusBar,
 #if defined(HAVE_X11) || defined(Q_OS_MAC)
   statusBar_->setStyleSheet(QString("QStatusBar::item {border-right: 1px solid %1;"
                                     "margin: 1px;}").
-                            arg(qApp->palette().color(QPalette::Dark).name()));
+                            arg(qApp->palette().color(QPalette::Mid).name()));
 #endif
 
   progressBar_->setObjectName("progressBar_");

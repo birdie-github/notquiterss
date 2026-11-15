@@ -66,7 +66,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   contentLabel_->setAlignment(Qt::AlignCenter);
   contentLabel_->setStyleSheet(
         QString("#contentLabel_ {border-bottom: 1px solid %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
   contentLabel_->setMinimumHeight(36);
   contentLabel_->setMargin(4);
   QFont fontContentLabel = contentLabel_->font();

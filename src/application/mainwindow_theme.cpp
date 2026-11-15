@@ -282,19 +282,19 @@ void MainWindow::setThemeColorDefaults()
 
 void MainWindow::refreshApplicationAppearance()
 {
-  const QString dark = qApp->palette().color(QPalette::Dark).name();
+  const QString divider = qApp->palette().color(QPalette::Mid).name();
 
   feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
       ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
   feedsPanel_->setStyleSheet(
-        QString("#feedsPanel_ {border-bottom: 1px solid %1;}").arg(dark));
+        QString("#feedsPanel_ {border-bottom: 1px solid %1;}").arg(divider));
   feedsSplitter_->setStyleSheet(
-        QString("QSplitter::handle {background: %1;}").arg(dark));
+        QString("QSplitter::handle {background: %1;}").arg(divider));
   categoriesTree_->setStyleSheet(
-        QString("#newsCategoriesTree_ {border-top: 1px solid %1;}").arg(dark));
+        QString("#newsCategoriesTree_ {border-top: 1px solid %1;}").arg(divider));
 #if defined(HAVE_X11) || defined(Q_OS_MAC)
   statusBar()->setStyleSheet(
-        QString("QStatusBar::item {border-right: 1px solid %1; margin: 1px;}").arg(dark));
+        QString("QStatusBar::item {border-right: 1px solid %1; margin: 1px;}").arg(divider));
 #endif
 
   feedsView_->viewport()->update();
@@ -305,7 +305,7 @@ void MainWindow::refreshApplicationAppearance()
                 "x1: 0, y1: 0, x2: 0, y2: 1,"
                 "stop: 0 %1, stop: 0.07 %2);}").
         arg(feedsPanel_->palette().window().color().name()).
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(divider));
 
   for (int i = 0; i < stackedWidget_->count(); ++i) {
     NewsTabWidget *tab = qobject_cast<NewsTabWidget*>(stackedWidget_->widget(i));

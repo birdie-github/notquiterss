@@ -6,6 +6,39 @@ Default=true
 */
 /* Follow the palette and widget style supplied by Qt's platform integration. */
 
+QMenuBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(midlight),
+                                stop:1 palette(window));
+    border-bottom: 1px solid palette(mid);
+    padding: 1px;
+}
+
+QMenuBar::item {
+    padding: 3px 6px;
+    background: transparent;
+    border-radius: 3px;
+}
+
+QMenuBar::item:selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(light),
+                                stop:1 palette(midlight));
+    border: 1px solid palette(mid);
+    color: palette(window-text);
+}
+
+QMenuBar::item:pressed {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+}
+
+#feedsPanel_, #categoriesPanel_, #newsPanelWidget_, #buttonPanelWidget {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(light),
+                                stop:1 palette(window));
+}
+
 #feedsView_::item, #newsView_::item, #newsCategoriesTree_::item {
     min-height: 20px;
 }
@@ -70,6 +103,47 @@ QToolBar {
     border-style: none;
 }
 
+#buttonColumnView {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(light),
+                                stop:1 palette(button));
+    border-left: 1px solid palette(mid);
+    border-bottom: 1px solid palette(mid);
+    border-top: none;
+    border-right: none;
+    padding: 4px 0px 2px 0px;
+}
+
+#buttonColumnView:hover, #buttonColumnView:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(midlight),
+                                stop:1 palette(button));
+    border-bottom: 1px solid palette(highlight);
+}
+
+QHeaderView {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(light),
+                                stop:1 palette(button));
+    color: palette(window-text);
+}
+
+QHeaderView::section {
+    background: transparent;
+    border-right: 1px solid palette(mid);
+    border-bottom: 1px solid palette(mid);
+    border-top: none;
+    border-left: none;
+    padding: 3px 4px;
+}
+
+QHeaderView::section:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(midlight),
+                                stop:1 palette(button));
+    border-bottom: 1px solid palette(highlight);
+}
+
 QHeaderView::down-arrow {
     subcontrol-origin: padding;
     subcontrol-position: center top;
@@ -80,6 +154,32 @@ QHeaderView::up-arrow {
     subcontrol-origin: padding;
     subcontrol-position: center top;
     image: url(:/images/images/sortIndicatorA.png);
+}
+
+#webViewProgress_ {
+    border-top: 1px solid palette(mid);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    text-align: center;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(window),
+                                stop:1 palette(midlight));
+}
+
+#webViewProgress_::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(highlight),
+                                stop:1 palette(mid));
+    width: 10px;
+}
+
+#contentLabel_ {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 palette(window),
+                                stop:0.5 palette(midlight),
+                                stop:1 palette(window));
+    color: palette(window-text);
 }
 
 #categoriesTree {
@@ -103,6 +203,27 @@ QStatusBar #progressBar_ {
 
 QMainWindow::separator {
     border: none;
+}
+
+#notificationWidget {
+    border: 1px solid palette(mid);
+    border-radius: 8px;
+}
+
+#titleNotification {
+    border-bottom: 1px solid palette(mid);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+#bottomNotification {
+    border-top: 1px solid palette(mid);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+#feedItemNotification {
+    border-bottom: 1px solid palette(mid);
 }
 
 #pushButtonNull {

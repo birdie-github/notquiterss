@@ -51,7 +51,7 @@ DownloadManager::DownloadManager(QWidget *parent)
   buttonPanelWidget->setObjectName("buttonPanelWidget");
   buttonPanelWidget->setStyleSheet(
         QString("#buttonPanelWidget {border-bottom: 1px solid %1;}").
-        arg(qApp->palette().color(QPalette::Dark).name()));
+        arg(qApp->palette().color(QPalette::Mid).name()));
 
   buttonPanelWidget->setLayout(buttonLayout);
 
