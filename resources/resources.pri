@@ -4,6 +4,13 @@ PROJECT_SOURCE_DIR = $$clean_path($$PWD/..)
 RESOURCE_STAGE_DIR = $$BUILD_DIR/$$PROJECT_RESOURCE_ROOT
 RESOURCE_STAMP = $$BUILD_DIR/resources.stamp
 RESOURCE_SCRIPT = $$PROJECT_SOURCE_DIR/scripts/stage-resources.py
+THEME_GENERATOR_SCRIPT = $$PROJECT_SOURCE_DIR/scripts/generate-themes.py
+THEME_TEMPLATE_DIR = $$PWD/embedded/themes
+THEME_BUILD_DIR = $$BUILD_DIR/themes
+
+!system($$shell_quote($$PYTHON) $$shell_quote($$THEME_GENERATOR_SCRIPT) --source $$shell_quote($$PROJECT_SOURCE_DIR) --output $$shell_quote($$THEME_BUILD_DIR)): error("Theme generation failed")
+RESOURCES += $$THEME_BUILD_DIR/themes.qrc
+QMAKE_INTERNAL_INCLUDED_FILES += $$THEME_GENERATOR_SCRIPT $$files($$THEME_TEMPLATE_DIR/*)
 
 TRANSLATIONS += $$files($$RESOURCE_SOURCE_DIR/$${PROJECT_LANG_DIR}/$${PROJECT_TRANSLATION_PREFIX}*.ts)
 LANG_QM_FILES =
@@ -30,11 +37,11 @@ RESOURCE_COMMAND = $$shell_quote($$PYTHON) $$shell_quote($$RESOURCE_SCRIPT) --so
 # The build target below strictly requires every generated translation.
 !system($$RESOURCE_COMMAND --allow-missing): error("Resource staging failed")
 runtime_stage.target = $$RESOURCE_STAMP
-runtime_stage.depends = $$files($$RESOURCE_SOURCE_DIR/*, true) $$LANG_QM_FILES $$RESOURCE_SCRIPT $$PROJECT_SOURCE_DIR/project.json
+runtime_stage.depends = $$files($$RESOURCE_SOURCE_DIR/*, true) $$files($$THEME_TEMPLATE_DIR/*) $$LANG_QM_FILES $$RESOURCE_SCRIPT $$THEME_GENERATOR_SCRIPT $$PROJECT_SOURCE_DIR/project.json
 runtime_stage.commands = $$RESOURCE_COMMAND --stamp $$shell_quote($$RESOURCE_STAMP)
 QMAKE_EXTRA_TARGETS += runtime_stage
 PRE_TARGETDEPS += $$RESOURCE_STAMP
-DISTFILES += $$RESOURCE_SCRIPT $$files($$PWD/*, true)
+DISTFILES += $$RESOURCE_SCRIPT $$THEME_GENERATOR_SCRIPT $$files($$PWD/*, true)
 
 runtime_resources.files = $$files($$RESOURCE_STAGE_DIR/*)
 unix:!mac {

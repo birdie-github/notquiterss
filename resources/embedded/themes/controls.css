@@ -1,0 +1,217 @@
+QMenu, #AboutDialog QTextEdit {
+    border: 1px solid palette(dark);
+}
+
+#feedsView_::item:selected, #newsView_::item:selected, #newsCategoriesTree_::item:selected {
+    background-color: var(--item_selected_bg);
+    color: var(--item_selected_text);
+}
+
+QTabWidget::pane {
+    border: 1px solid var(--tab_border);
+}
+
+QTabWidget::tab-bar {
+    bottom: -1px;
+}
+
+QTabBar::tab {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_top),
+                                stop:1 var(--tab_bottom));
+    border: 1px solid var(--tab_border);
+    border-bottom: 1px solid var(--tab_border);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 4px 6px;
+    margin: 4px -1px 0px 0px;
+}
+
+QTabBar::tab:last {
+    margin-right: 0px;
+}
+
+QTabBar::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_selected_top),
+                                stop:1 var(--tab_selected_bottom));
+    color: var(--text);
+    border-top: 2px solid var(--accent);
+    border-bottom: none;
+    padding-bottom: 5px;
+    margin-top: 2px;
+}
+
+QTabBar::tab:hover:!selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_hover_top),
+                                stop:1 var(--tab_hover_bottom));
+    color: var(--text);
+}
+
+QTabBar > QToolButton {
+    border: 1px solid var(--tab_border);
+    border-radius: 3px;
+    background: var(--tab_button_bg);
+}
+
+QTabBar > QToolButton:hover {
+    background: var(--tab_button_hover_bg);
+    border-color: var(--accent);
+}
+
+QTabBar QWidget {
+    background: transparent;
+}
+
+QLineEdit {
+    border: 1px solid var(--control_border);
+    background-color: var(--input_bg);
+    color: var(--text);
+    border-radius: 3px;
+}
+
+QLineEdit:hover {
+    border: 1px solid var(--control_hover_border);
+}
+
+QLineEdit:focus {
+    border: 1px solid var(--accent);
+    color: var(--text);
+}
+
+QLineEdit:disabled {
+    border: 1px solid var(--control_disabled_border);
+    background-color: var(--control_disabled_bg);
+    color: var(--control_disabled_text);
+}
+
+QPushButton {
+    border: 1px solid var(--control_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_top),
+                                stop:1 var(--button_bottom));
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 3px;
+    min-width: 80px;
+}
+
+QPushButton:hover {
+    border: 1px solid var(--control_hover_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_hover_top),
+                                stop:1 var(--button_hover_bottom));
+}
+
+QPushButton:pressed, QPushButton:checked {
+    border: 1px solid var(--control_pressed_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_pressed_top),
+                                stop:1 var(--button_pressed_bottom));
+}
+
+QPushButton:focus {
+    border: 1px solid var(--accent);
+    color: var(--text);
+}
+
+QPushButton:disabled {
+    border: 1px solid var(--control_disabled_border);
+    background: var(--control_disabled_bg);
+    color: var(--control_disabled_text);
+}
+
+#ToolButton {
+    border: 1px solid var(--control_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_top),
+                                stop:1 var(--button_bottom));
+    padding: 2px;
+    border-radius: 3px;
+}
+
+#ToolButton:hover {
+    border: 1px solid var(--accent);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_hover_top),
+                                stop:1 var(--button_hover_bottom));
+    color: var(--text);
+}
+
+#ToolButton:pressed, #ToolButton:checked {
+    border: 1px solid var(--accent);
+    background: var(--button_pressed_top);
+}
+
+#ToolButton:disabled {
+    border: 1px solid var(--control_disabled_border);
+    background: var(--control_disabled_bg);
+    color: var(--control_disabled_text);
+}
+
+#ToolButton[popupMode="1"] {
+    padding-right: 16px;
+}
+
+#ToolButton::menu-button {
+    border: none;
+    width: 16px;
+}
+
+QGroupBox {
+    border: 1px solid var(--header_border);
+    border-radius: 4px;
+    margin-top: 2ex;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 5px;
+    padding-left: 3px;
+}
+
+QComboBox {
+    border: 1px solid var(--control_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_top),
+                                stop:1 var(--button_bottom));
+    color: var(--text);
+    border-radius: 3px;
+    padding: 2px 4px;
+    min-width: 2em;
+}
+
+QComboBox:hover {
+    border: 1px solid var(--control_hover_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--button_hover_top),
+                                stop:1 var(--button_hover_bottom));
+}
+
+QComboBox:focus, QComboBox:on {
+    border: 1px solid var(--accent);
+    color: var(--text);
+}
+
+QComboBox:disabled {
+    border: 1px solid var(--control_disabled_border);
+    background: var(--control_disabled_bg);
+    color: var(--control_disabled_text);
+}
+
+QComboBox::drop-down {
+    border: none;
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+}
+
+QComboBox::down-arrow {
+    image: url(:/images/images/bullet_down.png);
+}
+
+QComboBox::down-arrow:on {
+    top: 1px;
+    left: 1px;
+}

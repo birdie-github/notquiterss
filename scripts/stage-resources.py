@@ -1,10 +1,31 @@
 #!/usr/bin/env python3
 """Stage external application data once for every platform; never compile resources."""
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shutil
+
+COMMENT_PATTERN = re.compile(r'/\*.*?\*/', re.DOTALL)
+
+
+def load_theme_generator():
+    script = Path(__file__).resolve().parent / 'generate-themes.py'
+    spec = importlib.util.spec_from_file_location('generate_themes', script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def is_qss_stub(path: Path) -> bool:
+    if path.suffix.lower() != '.qss':
+        return False
+    text = path.read_text(encoding='utf-8')
+    if re.match(r'\A\s*/\* ApplicationStyle\r?\n', text):
+        return False
+    return not COMMENT_PATTERN.sub('', text).strip()
 
 
 def resource_files(source, build, allow_missing=False):
@@ -27,9 +48,14 @@ def resource_files(source, build, allow_missing=False):
             continue
         for path in sorted(directory.rglob('*')):
             if path.is_file() and path.suffix.lower() not in ('.md', '.pri', '.bat'):
+                if directory.name == 'themes' and is_qss_stub(path):
+                    continue
                 relative = path.relative_to(directory)
                 destination = names['styles'] if directory.name == 'themes' else directory.name
                 files[Path(destination) / relative] = path
+    generated_themes = load_theme_generator().generate_all(source, build / 'themes')
+    for theme_id, qss_path in generated_themes.items():
+        files[Path(names['styles']) / f'{theme_id}.qss'] = qss_path
     translations = root / names['translations']
     files[Path(names['translations']) / 'languages.ini'] = translations / 'languages.ini'
     for path in translations.glob('*.qm'):

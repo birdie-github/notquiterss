@@ -1,0 +1,258 @@
+QMenuBar {
+    background: var(--menubar_bg);
+    border-bottom: 1px solid var(--menubar_border_bottom);
+    color: var(--text);
+    padding: 1px;
+}
+
+QMenuBar::item {
+    padding: 3px 6px;
+    background: transparent;
+    border-radius: 3px;
+}
+
+QMenuBar::item:selected {
+    border: 1px solid var(--menubar_selected_border);
+    background: var(--menubar_selected_bg);
+    color: var(--text);
+}
+
+QMenuBar::item:pressed {
+    border: 1px solid var(--menubar_pressed_border);
+    border-bottom: none;
+    background: var(--menubar_pressed_bg);
+    color: var(--menubar_pressed_text);
+}
+
+#feedsView_, #newsCategoriesTree_ {
+    background: var(--sidebar_bg);
+    color: var(--text);
+}
+
+#feedsView_::item, #newsView_::item, #newsCategoriesTree_::item {
+    min-height: 20px;
+}
+
+#categoriesLabel_, #newsTextTitle_ {
+    color: var(--text);
+}
+
+#feedsPanel_, #categoriesPanel_, #newsPanelWidget_, #buttonPanelWidget {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--panel_top),
+                                stop:1 var(--panel_bottom));
+}
+
+#stackedWidget_ {
+    background: var(--base_bg);
+}
+
+#tabBarWidget {
+    background: var(--tabbar_bg);
+    border-bottom: 1px solid var(--tab_border);
+}
+
+#tabBar_ QWidget {
+    background: transparent;
+}
+
+#tabBar_::tab {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_top),
+                                stop:1 var(--tab_bottom));
+    border: 1px solid var(--tab_border);
+    border-bottom: 1px solid var(--tab_border);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 4px 2px 4px 2px;
+    margin: 4px -1px 0px 0px;
+}
+
+#tabBar_::tab:last {
+    margin-right: 0px;
+}
+
+#tabBar_::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_selected_top),
+                                stop:1 var(--tab_selected_bottom));
+    color: var(--text);
+    border-top: 2px solid var(--accent);
+    border-bottom: none;
+    padding-bottom: 5px;
+    margin-top: 2px;
+}
+
+#tabBar_::tab:hover:!selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--tab_hover_top),
+                                stop:1 var(--tab_hover_bottom));
+    color: var(--text);
+}
+
+#tabBar_ > QToolButton {
+    border: 1px solid var(--tab_border);
+    border-radius: 3px;
+    background: var(--tab_button_bg);
+}
+
+#tabBar_ > QToolButton:hover {
+    background: var(--tab_button_hover_bg);
+    border-color: var(--accent);
+}
+
+QToolBar {
+    border-style: none;
+}
+
+#buttonColumnView {
+    border: 1px solid var(--header_border);
+    border-top: none;
+    padding: 5px 0px 1px 0px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--header_top),
+                                stop:1 var(--header_bottom));
+    min-width: 10px;
+}
+
+#buttonColumnView:hover, #buttonColumnView:pressed {
+    border-color: var(--header_hover_border);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--header_hover_top),
+                                stop:1 var(--header_hover_bottom));
+}
+
+#progressBar_, #splashProgress {
+    border: 1px solid var(--progress_border);
+    border-radius: 3px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--progress_bg_top),
+                                stop:1 var(--progress_bg_bottom));
+}
+
+#progressBar_::chunk, #splashProgress::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--progress_chunk_top),
+                                stop:1 var(--progress_chunk_bottom));
+    border-radius: 2px;
+    width: 1px;
+}
+
+QHeaderView {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--header_top),
+                                stop:1 var(--header_bottom));
+    color: var(--text);
+}
+
+QHeaderView::section {
+    border-right: 1px solid var(--header_border);
+    border-bottom: 1px solid var(--header_border);
+    border-top: none;
+    border-left: none;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--header_top),
+                                stop:1 var(--header_bottom));
+    padding: 2px;
+    padding-left: 3px;
+}
+
+QHeaderView::section:hover {
+    border-right: 1px solid var(--header_hover_border);
+    border-bottom: 1px solid var(--header_hover_border);
+    border-top: none;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 var(--header_hover_top),
+                                stop:1 var(--header_hover_bottom));
+}
+
+QHeaderView::down-arrow {
+    subcontrol-origin: padding;
+    subcontrol-position: center top;
+    image: url(:/images/images/sortIndicatorD.png);
+}
+
+QHeaderView::up-arrow {
+    subcontrol-origin: padding;
+    subcontrol-position: center top;
+    image: url(:/images/images/sortIndicatorA.png);
+}
+
+#webViewProgress_ {
+    border: 1px solid var(--header_border);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    text-align: center;
+    background: var(--webview_progress_bg);
+    color: var(--text);
+}
+
+#webViewProgress_::chunk {
+    background: var(--webview_progress_chunk);
+    width: 10px;
+}
+
+#webViewProgressLabel_ {
+    color: var(--text);
+}
+
+#contentLabel_ {
+    background: var(--content_label_bg);
+    color: var(--text);
+}
+
+#categoriesTree {
+    padding: 1px;
+}
+
+#categoriesTree::item, #fontTree::item,
+#languageFileList_::item, #filtersTree::item,
+#shortcutTree::item, #labelsTree_::item,
+#colorsTree_::item {
+    min-height: 20px;
+}
+
+#foldersTree_::item, #feedsTreeFR::item, #feedsTreeNotify_::item {
+    min-height: 18px;
+}
+
+QStatusBar #progressBar_ {
+    margin-right: 5px;
+}
+
+QMainWindow::separator {
+    border: none;
+}
+
+#infoWidgetFR, #actionsWidgetFR {
+    background: var(--base_bg);
+}
+
+#notificationWidget {
+    border: 1px solid var(--notification_border);
+    border-radius: 8px;
+}
+
+#titleNotification {
+    border-bottom: 1px solid var(--notification_inner_border);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+#bottomNotification {
+    border-top: 1px solid var(--notification_inner_border);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+#feedItemNotification {
+    border-bottom: 1px solid var(--notification_border);
+}
+
+#pushButtonNull {
+    background: var(--null_button_bg);
+    border: none;
+    padding: 0px;
+    min-width: 6px;
+}
