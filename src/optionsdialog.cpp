@@ -630,6 +630,8 @@ QWidget *OptionsDialog::createBrowserWidget()
   });
 
   autoLoadImages_ = new QCheckBox(tr("Load images"));
+  highQualityImageScaling_ = new QCheckBox(tr("Use high-quality image scaling (Lanczos)"));
+  highQualityImageScaling_->setToolTip(tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"));
   preloadNewspaperPages_ = new QSpinBox();
   preloadNewspaperPages_->setRange(0, 10);
   preloadNewspaperPages_->setToolTip(tr("0 disables image preloading"));
@@ -638,6 +640,7 @@ QWidget *OptionsDialog::createBrowserWidget()
   preloadLayout->addWidget(preloadNewspaperPages_);
   preloadLayout->addWidget(new QLabel(tr("pages in newspaper mode")));
   preloadLayout->addStretch();
+  connect(autoLoadImages_, &QAbstractButton::toggled, highQualityImageScaling_, &QWidget::setEnabled);
   connect(autoLoadImages_, &QAbstractButton::toggled, preloadNewspaperPages_, &QWidget::setEnabled);
 
   defaultZoomPages_ = new QSpinBox();
@@ -649,6 +652,7 @@ QWidget *OptionsDialog::createBrowserWidget()
   zoomLayout->addStretch();
   QVBoxLayout *articleLayout = new QVBoxLayout();
   articleLayout->addWidget(autoLoadImages_);
+  articleLayout->addWidget(highQualityImageScaling_);
   articleLayout->addLayout(preloadLayout);
   articleLayout->addLayout(zoomLayout);
   articleLayout->addSpacing(12);

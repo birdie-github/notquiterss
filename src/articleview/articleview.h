@@ -29,6 +29,8 @@
 
 class ArticleImages;
 class ArticleDocument;
+class LanczosScaler;
+class SmoothImageHandler;
 class QMovie;
 class QPrinter;
 class QTimer;
@@ -87,6 +89,7 @@ protected:
 
 private:
   friend class ArticleDocument;
+  friend class SmoothImageHandler;
   struct Location { QString article; int offset = 0; int absolute = 0; };
   struct ViewState { Location top, position, anchor; int topOffset = 0; int horizontal = 0; };
   struct ImageSpan { int position = 0; int length = 0; QUrl url; };
@@ -102,6 +105,7 @@ private:
   void installImage(const QUrl &url, const QImage &image);
   void updateProgress();
   ArticleImages *images_;
+  LanczosScaler *lanczos_ = nullptr;
   QTimer *preloadTimer_ = nullptr;
   QHash<QUrl, QImage> imagesCache_;
   QHash<QUrl, QMovie *> movies_;

@@ -19,6 +19,8 @@
 #include "articleview.h"
 #include "articlecontent.h"
 #include "articleimages.h"
+#include "lanczosscaler.h"
+#include "settings.h"
 
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>
@@ -55,13 +57,14 @@ QImage placeholder() {
   painter.drawLine(2, 13, 13, 2);
   return image;
 }
+}
 
 class SmoothImageHandler : public QObject, public QTextObjectInterface {
   Q_OBJECT
   Q_INTERFACES(QTextObjectInterface)
 public:
-  explicit SmoothImageHandler(QTextObjectInterface *base, QObject *parent)
-    : QObject(parent), base_(base) {}
+  explicit SmoothImageHandler(ArticleView *view, QTextObjectInterface *base, QObject *parent)
+    : QObject(parent), view_(view), base_(base) {}
   QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format) override {
     return base_->intrinsicSize(doc, posInDocument, format);
   }
@@ -69,19 +72,39 @@ public:
                   int posInDocument, const QTextFormat &format) override {
     const bool prev = painter->testRenderHint(QPainter::SmoothPixmapTransform);
     painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    if (view_->lanczos_ && AppSettings::highQualityImageScaling.get() &&
+        painter->device() == view_->viewport()) {
+      const QUrl url(format.toImageFormat().name());
+      if (!view_->movies_.contains(url)) {
+        const QImage src = view_->imagesCache_.value(url);
+        if (!src.isNull()) {
+          const qreal dpr = painter->device()->devicePixelRatioF();
+          const QSize targetSize(qMax(1, qRound(rect.width() * dpr)),
+                                 qMax(1, qRound(rect.height() * dpr)));
+          if (src.size() != targetSize) {
+            QPixmap scaled;
+            if (view_->lanczos_->lookupOrSchedule(url, src, targetSize, dpr, &scaled)) {
+              painter->drawPixmap(rect, scaled, scaled.rect());
+              painter->setRenderHint(QPainter::SmoothPixmapTransform, prev);
+              return;
+            }
+          }
+        }
+      }
+    }
     base_->drawObject(painter, rect, doc, posInDocument, format);
     painter->setRenderHint(QPainter::SmoothPixmapTransform, prev);
   }
 private:
+  ArticleView *view_;
   QTextObjectInterface *base_;
 };
-}
 
 class ArticleDocument : public QTextDocument {
 public:
   explicit ArticleDocument(ArticleView *view) : QTextDocument(view), view_(view) {
     if (QTextObjectInterface *base = documentLayout()->handlerForObject(QTextFormat::ImageObject))
-      documentLayout()->registerHandler(QTextFormat::ImageObject, new SmoothImageHandler(base, this));
+      documentLayout()->registerHandler(QTextFormat::ImageObject, new SmoothImageHandler(view, base, this));
   }
 protected:
   QVariant loadResource(int type, const QUrl &name) override {
@@ -95,6 +118,7 @@ private:
 ArticleView::ArticleView(QWidget *parent)
   : QTextBrowser(parent)
   , images_(new ArticleImages(this))
+  , lanczos_(new LanczosScaler(this))
   , preloadTimer_(new QTimer(this))
 {
   setReadOnly(true);
@@ -115,6 +139,7 @@ ArticleView::ArticleView(QWidget *parent)
 void ArticleView::disconnectObjects() {
   ++generation_;
   preloadTimer_->stop();
+  lanczos_->reset();
   images_->reset();
   for (QMovie *movie : movies_) movie->stop();
   pausedMovies_.clear();
@@ -124,6 +149,7 @@ void ArticleView::disconnectObjects() {
 void ArticleView::beginArticles() {
   ++generation_;
   preloadTimer_->stop();
+  lanczos_->reset();
   images_->reset();
   allowedImages_.clear();
   pending_.clear();
@@ -199,6 +225,7 @@ void ArticleView::setArticleHtml(const QString &html, bool preservePosition) {
         movie->stop();
         movie->deleteLater();
       }
+      lanczos_->invalidateUrl(it.key());
       it = imagesCache_.erase(it);
     } else ++it;
   }
@@ -691,8 +718,10 @@ void ArticleView::resizeEvent(QResizeEvent *event) {
   const bool widthChanged = event->oldSize().width() != event->size().width();
   const ViewState state = saveView();
   QTextBrowser::resizeEvent(event);
-  if (widthChanged && !imageSpans_.isEmpty())
+  if (widthChanged && !imageSpans_.isEmpty()) {
+    lanczos_->notifyResize();
     scaleDocument(false);
+  }
   restoreView(state);
   schedulePreload();
 }

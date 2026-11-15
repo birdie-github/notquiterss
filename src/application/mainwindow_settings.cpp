@@ -241,9 +241,10 @@ const MainWindow::SettingBindings::ActionBoolSetting MainWindow::SettingBindings
 };
 
 const MainWindow::SettingBindings::AppBoolCheckSetting MainWindow::SettingBindings::kAppBoolCheck[] = {
-  { &AppSettings::showCloseButtonTab, &OptionsDialog::showCloseButtonTab_, OptionsDialog::PageGeneral },
-  { &AppSettings::updateCheckEnabled, &OptionsDialog::updateCheckEnabled_, OptionsDialog::PageGeneral },
-  { &AppSettings::storeDBMemory,      &OptionsDialog::storeDBMemory_,      OptionsDialog::PageGeneral },
+  { &AppSettings::showCloseButtonTab,      &OptionsDialog::showCloseButtonTab_,      OptionsDialog::PageGeneral },
+  { &AppSettings::updateCheckEnabled,      &OptionsDialog::updateCheckEnabled_,      OptionsDialog::PageGeneral },
+  { &AppSettings::storeDBMemory,           &OptionsDialog::storeDBMemory_,           OptionsDialog::PageGeneral },
+  { &AppSettings::highQualityImageScaling, &OptionsDialog::highQualityImageScaling_, OptionsDialog::PageBrowser },
 };
 
 const MainWindow::SettingBindings::AppIntSpinSetting MainWindow::SettingBindings::kAppIntSpin[] = {
@@ -590,6 +591,7 @@ void MainWindow::initOptionPage(int page)
     optionsDialog_->setProxy(mainApp->networkProxy());
     break;
   case OptionsDialog::PageBrowser: {
+    optionsDialog_->highQualityImageScaling_->setEnabled(autoLoadImages_);
     optionsDialog_->preloadNewspaperPages_->setValue(preloadNewspaperPages_);
     optionsDialog_->preloadNewspaperPages_->setEnabled(autoLoadImages_);
     const int browserMode = AppSettings::externalBrowserOn.get();

@@ -97,6 +97,7 @@ public:
 
   // browser
   QCheckBox *autoLoadImages_;
+  QCheckBox *highQualityImageScaling_;
   QSpinBox *preloadNewspaperPages_;
   QSpinBox *defaultZoomPages_;
   QRadioButton *customExternalBrowser_;
