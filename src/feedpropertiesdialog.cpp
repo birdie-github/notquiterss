@@ -841,6 +841,7 @@ void FeedPropertiesDialog::bulkApplySucceeded(int count)
 void FeedPropertiesDialog::startFaviconUpdate(int totalFeeds)
 {
   faviconUpdateRunning_ = true;
+  faviconStatusPos_ = -1;
   bulkResult_->clear();
   faviconLog_->clear();
   faviconProgress_->setRange(0, qMax(1, totalFeeds));
@@ -852,6 +853,7 @@ void FeedPropertiesDialog::startFaviconUpdate(int totalFeeds)
 void FeedPropertiesDialog::appendFaviconLog(const QString &text, bool newLine)
 {
   if (!faviconLog_) return;
+  faviconStatusPos_ = -1;
   if (newLine) {
     faviconLog_->appendPlainText(text);
   } else {
@@ -860,6 +862,26 @@ void FeedPropertiesDialog::appendFaviconLog(const QString &text, bool newLine)
     cursor.insertText(text);
     faviconLog_->setTextCursor(cursor);
   }
+  if (QScrollBar *bar = faviconLog_->verticalScrollBar())
+    bar->setValue(bar->maximum());
+}
+
+void FeedPropertiesDialog::updateFaviconStatusText(const QString &text, bool finalizeStatus)
+{
+  if (!faviconLog_) return;
+  QTextCursor cursor = faviconLog_->textCursor();
+  if (faviconStatusPos_ >= 0) {
+    cursor.setPosition(faviconStatusPos_);
+    cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+    cursor.insertText(text);
+  } else {
+    cursor.movePosition(QTextCursor::End);
+    faviconStatusPos_ = cursor.position();
+    cursor.insertText(text);
+  }
+  if (finalizeStatus)
+    faviconStatusPos_ = -1;
+  faviconLog_->setTextCursor(cursor);
   if (QScrollBar *bar = faviconLog_->verticalScrollBar())
     bar->setValue(bar->maximum());
 }
@@ -874,6 +896,7 @@ void FeedPropertiesDialog::advanceFaviconProgress(int current, int total)
 void FeedPropertiesDialog::finishFaviconUpdate(const QString &summary)
 {
   faviconUpdateRunning_ = false;
+  faviconStatusPos_ = -1;
   if (!summary.isEmpty()) {
     appendFaviconLog(QString(), true);
     appendFaviconLog(summary, true);
@@ -898,6 +921,25 @@ void FeedPropertiesDialog::updateBulkTargetIcon(int feedId, const QByteArray &fa
     if (item->data(0, FeedSelectionTree::IsFeedRole).toBool())
       item->setIcon(0, icon);
   }
+}
+
+void FeedPropertiesDialog::uncheckBulkTarget(int feedId)
+{
+  if (!bulkTargets_) return;
+  const QList<QTreeWidgetItem *> items = bulkTargets_->findItems(
+      QString::number(feedId), Qt::MatchExactly | Qt::MatchRecursive, 1);
+  bool changed = false;
+  for (QTreeWidgetItem *item : items) {
+    if (item->data(0, FeedSelectionTree::IsFeedRole).toBool() &&
+        item->checkState(0) != Qt::Unchecked) {
+      const QSignalBlocker blocker(bulkTargets_);
+      item->setCheckState(0, Qt::Unchecked);
+      FeedSelectionTree::updateChecks(bulkTargets_, item);
+      changed = true;
+    }
+  }
+  if (changed)
+    updateBulkApplyButton();
 }
 
 void FeedPropertiesDialog::cancelFaviconUpdateForShutdown()

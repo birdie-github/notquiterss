@@ -336,6 +336,7 @@ void MainWindow::showBulkFeedSettings()
                                 .arg(session.currentIndex + 1)
                                 .arg(target.title, target.displayUrl),
                             true);
+    dialog.updateFaviconStatusText(tr(" Connecting... 30"), false);
     const QString requestToken = QString::number(session.currentIndex);
     const QString initialUrl = target.htmlUrl.trimmed().isEmpty() ? target.xmlUrl : target.htmlUrl;
     QMetaObject::invokeMethod(faviconWorker, "requestUrl", Qt::QueuedConnection,
@@ -378,18 +379,31 @@ void MainWindow::showBulkFeedSettings()
     finishSession(true);
   });
 
+  connect(faviconWorker, &FaviconObject::signalConnecting, &dialog,
+          [&](const QString &token, int secondsLeft) {
+    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.connectedLogged) {
+      dialog.updateFaviconStatusText(tr(" Connecting... %1").arg(secondsLeft), false);
+    }
+  });
+
   connect(faviconWorker, &FaviconObject::signalConnected, &dialog, [&](const QString &token) {
     if (!session.running || token != QString::number(session.currentIndex)) return;
     if (!session.connectedLogged) {
       session.connectedLogged = true;
-      dialog.appendFaviconLog(tr(" Connected."), false);
+      dialog.updateFaviconStatusText(tr(" Connected."), true);
     }
   });
 
-  connect(faviconWorker, &FaviconObject::signalIconFailed, &dialog, [&](const QString &token) {
+  connect(faviconWorker, &FaviconObject::signalIconFailed, &dialog,
+          [&](const QString &token, bool timedOut) {
     if (!session.running || token != QString::number(session.currentIndex)) return;
     ++session.failed;
-    dialog.appendFaviconLog(tr(" Connection failed. Favicon unchanged."), false);
+    if (timedOut) {
+      dialog.updateFaviconStatusText(tr(" Connection time out. Favicon unchanged."), true);
+    } else {
+      dialog.updateFaviconStatusText(tr(" Connection failed. Favicon unchanged."), true);
+    }
     dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
     dispatchNext();
   });
@@ -399,7 +413,7 @@ void MainWindow::showBulkFeedSettings()
     if (!session.running || token != QString::number(session.currentIndex)) return;
     if (!session.connectedLogged) {
       session.connectedLogged = true;
-      dialog.appendFaviconLog(tr(" Connected."), false);
+      dialog.updateFaviconStatusText(tr(" Connected."), true);
     }
     dialog.appendFaviconLog(tr(" Downloaded."), false);
 
@@ -411,6 +425,7 @@ void MainWindow::showBulkFeedSettings()
     } else if (sameFaviconImage(faviconData, target.existingIco)) {
       ++session.unchanged;
       dialog.appendFaviconLog(tr(" Favicon unchanged."), false);
+      dialog.uncheckBulkTarget(target.id);
     } else {
       ++session.updated;
       target.existingIco = faviconData;
@@ -424,6 +439,7 @@ void MainWindow::showBulkFeedSettings()
       }
       slotIconFeedUpdate(target.id, faviconData);
       dialog.updateBulkTargetIcon(target.id, faviconData, defaultIconFeeds_);
+      dialog.uncheckBulkTarget(target.id);
     }
     dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
     dispatchNext();

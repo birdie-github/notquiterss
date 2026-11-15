@@ -241,6 +241,7 @@ void FaviconObject::dispatchResource(const QUrl &getUrl, const QString &feedUrl,
   QNetworkRequest request(getUrl);
 
   QNetworkReply *reply = networkManager_->get(request);
+  emit signalConnecting(feedUrl, REQUEST_TIMEOUT);
   connect(reply, &QNetworkReply::metaDataChanged, this, [this, reply, feedUrl] {
     if (indexOfReply(reply) < 0 || reply->property("faviconConnected").toBool())
       return;
@@ -307,12 +308,12 @@ void FaviconObject::finished(QNetworkReply *reply)
             const QString linkFavicon = iconUrl.toString();
             if (!linkFavicon.isEmpty()) {
               qDebug() << "Favicon URL:" << LogFile::urlForLog(QUrl(linkFavicon));
-              emit signalGet(iconUrl, feedUrl, cntRequests+1);
+              requestResource(iconUrl, feedUrl, cntRequests+1, true);
             }
             if (linkFavicon.isEmpty()) {
               if (!isIcon) {
                 QString link = QString("%1://%2/favicon.ico").arg(url.scheme()).arg(url.host());
-                emit signalGet(link, feedUrl, cntRequests+1);
+                requestResource(QUrl(link), feedUrl, cntRequests+1, true);
               }
             }
           } else {
@@ -323,7 +324,7 @@ void FaviconObject::finished(QNetworkReply *reply)
         } else {
           if (!isIcon) {
             QString link = QString("%1://%2/favicon.ico").arg(url.scheme()).arg(url.host());
-            emit signalGet(link, feedUrl, cntRequests+1);
+            requestResource(QUrl(link), feedUrl, cntRequests+1, true);
           } else {
             emit signalIconFailed(feedUrl);
           }
@@ -367,6 +368,10 @@ void FaviconObject::slotRequestTimeout()
       const ActiveRequest active = activeRequests_.takeAt(i);
       QNetworkReply *reply = active.reply;
       const QUrl url = reply->url();
+      const bool connected = reply->property("faviconConnected").toBool();
+
+      if (!connected)
+        emit signalConnecting(active.feedUrl, 0);
 
       // abort() can invoke finished() before returning. The request is retired.
       reply->abort();
@@ -375,10 +380,12 @@ void FaviconObject::slotRequestTimeout()
       if (active.count == 0) {
         emit signalGet(url, active.feedUrl, 2);
       } else {
-        emit signalIconFailed(active.feedUrl);
+        emit signalIconFailed(active.feedUrl, true);
       }
     } else {
       activeRequests_[i].timeLeft = time;
+      if (!activeRequests_.at(i).reply->property("faviconConnected").toBool())
+        emit signalConnecting(activeRequests_.at(i).feedUrl, time);
     }
   }
 }

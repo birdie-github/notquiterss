@@ -145,9 +145,11 @@ public:
   bool isFaviconUpdateRunning() const { return faviconUpdateRunning_; }
   void startFaviconUpdate(int totalFeeds);
   void appendFaviconLog(const QString &text, bool newLine = true);
+  void updateFaviconStatusText(const QString &text, bool finalizeStatus = false);
   void advanceFaviconProgress(int current, int total);
   void finishFaviconUpdate(const QString &summary);
   void updateBulkTargetIcon(int feedId, const QByteArray &faviconData, bool defaultIcons);
+  void uncheckBulkTarget(int feedId);
 
 public slots:
   void slotFaviconUpdate(const QString &feedUrl, const QByteArray &faviconData);
@@ -259,6 +261,7 @@ private:
   QPushButton *faviconCancelButton_ = nullptr;
   QProgressBar *faviconProgress_ = nullptr;
   QPlainTextEdit *faviconLog_ = nullptr;
+  int faviconStatusPos_ = -1;
   QList<QWidget *> bulkEditors_;
   void updateBulkApplyButton();
 

@@ -31,8 +31,10 @@ Actions are:
 - Text direction: enable or disable right-to-left layout.
 - Columns and sorting: replace the column layout and sorting together.
 - Update favicons: sequentially (re)download favicons for the checked feeds with
-  live progress and status logging, keeping existing icons on failure or when
-  unchanged, and allowing cancellation without closing the dialog.
+  live progress and status logging (including a connecting countdown timer),
+  keeping existing icons on failure or when unchanged, unchecking each feed as it
+  completes with an unchanged or newly updated icon so only failed/remaining
+  feeds stay selected, and allowing cancellation without closing the dialog.
 
 Apply affects only the displayed action and checked feeds, never folder records.
 Switching actions does not apply the previous action. Targets stay checked after

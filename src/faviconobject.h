@@ -44,9 +44,10 @@ public slots:
 signals:
   void startTimer();
   void signalGet(const QUrl &getUrl, const QString &feedUrl, const int &count);
+  void signalConnecting(QString feedUrl, int secondsLeft);
   void signalConnected(QString feedUrl);
   void signalIconRecived(QString feedUrl, QByteArray byteArray, QString format);
-  void signalIconFailed(QString feedUrl);
+  void signalIconFailed(QString feedUrl, bool timedOut = false);
 
 private slots:
   void getQueuedUrl();
