@@ -22,8 +22,60 @@ Palette.ToolTipText=#000000
     min-height: 20px;
 }
 
-#tabBar_ QTabWidget::tab-bar {
-    bottom: -1px;
+#tabBarWidget {
+    background: #e8e8e8;
+    border-bottom: 1px solid #c0c0c0;
+}
+
+#tabBar_ QWidget {
+    background: transparent;
+}
+
+#newsTextTitle_ {
+    color: #000000;
+}
+
+#tabBar_::tab {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #f5f5f5,
+                                stop:1 #e4e4e4);
+    border: 1px solid #c0c0c0;
+    border-bottom: 1px solid #c0c0c0;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 4px 2px 4px 2px;
+    margin: 4px -1px 0px 0px;
+}
+
+#tabBar_::tab:last {
+    margin-right: 0px;
+}
+
+#tabBar_::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #ffffff,
+                                stop:1 #f8f8f8);
+    border-top: 2px solid #0078d4;
+    border-bottom: none;
+    padding-bottom: 5px;
+    margin-top: 2px;
+}
+
+#tabBar_::tab:hover:!selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #ffffff,
+                                stop:1 #eeeeee);
+}
+
+#tabBar_ > QToolButton {
+    border: 1px solid #c0c0c0;
+    border-radius: 3px;
+    background: #f5f5f5;
+}
+
+#tabBar_ > QToolButton:hover {
+    background: #ffffff;
+    border-color: #0078d4;
 }
 
 QToolBar {

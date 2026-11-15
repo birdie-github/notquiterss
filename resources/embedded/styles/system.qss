@@ -10,8 +10,60 @@ Default=true
     min-height: 20px;
 }
 
-#tabBar_ QTabWidget::tab-bar {
-    bottom: -1px;
+#tabBarWidget {
+    background: palette(window);
+    border-bottom: 1px solid palette(mid);
+}
+
+#tabBar_ QWidget {
+    background: transparent;
+}
+
+#newsTextTitle_ {
+    color: palette(window-text);
+}
+
+#tabBar_::tab {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(button),
+                                stop:1 palette(window));
+    border: 1px solid palette(mid);
+    border-bottom: 1px solid palette(mid);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 4px 2px 4px 2px;
+    margin: 4px -1px 0px 0px;
+}
+
+#tabBar_::tab:last {
+    margin-right: 0px;
+}
+
+#tabBar_::tab:selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(midlight),
+                                stop:0.25 palette(base),
+                                stop:1 palette(base));
+    border-top: 2px solid palette(highlight);
+    border-bottom: none;
+    padding-bottom: 5px;
+    margin-top: 2px;
+}
+
+#tabBar_::tab:hover:!selected {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 palette(midlight),
+                                stop:1 palette(button));
+}
+
+#tabBar_ > QToolButton {
+    border: 1px solid palette(mid);
+    border-radius: 3px;
+    background: palette(button);
+}
+
+#tabBar_ > QToolButton:hover {
+    background: palette(midlight);
 }
 
 QToolBar {

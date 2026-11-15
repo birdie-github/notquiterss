@@ -75,25 +75,25 @@ QMenuBar::item:pressed {
 	background: white;
 }
 
-#tabBar_ QTabWidget::pane {
-	background: white;
-	border: 1px solid gray;
+#tabBarWidget {
+	background: #e4e4e4;
+	border-bottom: 1px solid #a0a0a0;
 }
 
-#tabBar_ QTabWidget::tab-bar {
-	bottom: -1px;
+#tabBar_ QWidget {
+	background: transparent;
 }
 
 #tabBar_::tab {
-	background-color: transparent;
-	border: 1px solid gray;
-	border-bottom: none;
-	border-top-left-radius: 4px;
-	border-top-right-radius: 4px;
-	padding: 4px 1px 4px 1px;
-	margin: 0;
-	margin-top: 1px;
-	margin-right: -1px;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #f4f4f4,
+	                            stop:1 #e4e4e4);
+	border: 1px solid #a0a0a0;
+	border-bottom: 1px solid #a0a0a0;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+	padding: 4px 2px 4px 2px;
+	margin: 4px -1px 0px 0px;
 }
 
 #tabBar_::tab:last {
@@ -101,25 +101,32 @@ QMenuBar::item:pressed {
 }
 
 #tabBar_::tab:selected {
-	background: #ffffff;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #ffffff,
+	                            stop:1 #f8f8f8);
 	color: #000000;
+	border-top: 2px solid #808080;
 	border-bottom: none;
 	padding-bottom: 5px;
+	margin-top: 2px;
 }
 
 #tabBar_::tab:hover:!selected {
-	background: #f8f8f8;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #ffffff,
+	                            stop:1 #eeeeee);
 	color: #000000;
-	border-bottom: 1px solid gray;
 }
 
-#tabBar_ QToolButton {
-	border: 1px solid gray;
-	border-radius: 2px;
+#tabBar_ > QToolButton {
+	border: 1px solid #a0a0a0;
+	border-radius: 3px;
+	background: #f4f4f4;
 }
 
-#tabBarWidget {
-	border-bottom: 1px solid gray;
+#tabBar_ > QToolButton:hover {
+	background: #ffffff;
+	border-color: #808080;
 }
 
 QToolBar {

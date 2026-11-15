@@ -36,10 +36,6 @@ TabBar::TabBar(QWidget *parent)
   setIconSize(QSize(0, 0));
   setContextMenuPolicy(Qt::CustomContextMenu);
 
-  setStyleSheet(QString("#tabBar_ QToolButton {border: 1px solid %1; border-radius: 2px; background: %2;}").
-                arg(qApp->palette().color(QPalette::Dark).name()).
-                arg(palette().window().color().name()));
-
   addTab("");
 
   connect(this, &QWidget::customContextMenuRequested, this, &TabBar::showContextMenuTabBar);
@@ -56,7 +52,7 @@ bool TabBar::eventFilter(QObject *obj, QEvent *event)
     if (mouseEvent->button() & Qt::MiddleButton) {
       emit closeTab(tabAt(mouseEvent->pos()));
     } else if (mouseEvent->button() & Qt::LeftButton) {
-      if (tabAt(QPoint(mouseEvent->pos().x(), 0)) == 0)
+      if (tabAt(mouseEvent->pos()) == 0)
         tabFixed_ = true;
       else
         tabFixed_ = false;
@@ -64,7 +60,7 @@ bool TabBar::eventFilter(QObject *obj, QEvent *event)
   } else if (event->type() == QEvent::MouseMove) {
     QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
     if (mouseEvent->buttons() & Qt::LeftButton) {
-      if ((tabAt(QPoint(mouseEvent->pos().x()-78, 0)) <= 0) || tabFixed_)
+      if ((tabAt(QPoint(mouseEvent->pos().x()-78, rect().center().y())) <= 0) || tabFixed_)
         return true;
     }
   }

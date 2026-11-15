@@ -283,7 +283,6 @@ void MainWindow::setThemeColorDefaults()
 void MainWindow::refreshApplicationAppearance()
 {
   const QString dark = qApp->palette().color(QPalette::Dark).name();
-  const QString window = qApp->palette().color(QPalette::Window).name();
 
   feedsView_->setStyleSheet(feedsModel_->backgroundColor_.isEmpty()
       ? QString() : QString("#feedsView_ {background: %1;}").arg(feedsModel_->backgroundColor_));
@@ -293,9 +292,6 @@ void MainWindow::refreshApplicationAppearance()
         QString("QSplitter::handle {background: %1;}").arg(dark));
   categoriesTree_->setStyleSheet(
         QString("#newsCategoriesTree_ {border-top: 1px solid %1;}").arg(dark));
-  tabBar_->setStyleSheet(
-        QString("#tabBar_ QToolButton {border: 1px solid %1; border-radius: 2px; background: %2;}").
-        arg(dark).arg(window));
 #if defined(HAVE_X11) || defined(Q_OS_MAC)
   statusBar()->setStyleSheet(
         QString("QStatusBar::item {border-right: 1px solid %1; margin: 1px;}").arg(dark));

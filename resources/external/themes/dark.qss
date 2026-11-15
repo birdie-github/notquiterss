@@ -61,7 +61,7 @@ QMenuBar::item:selected {
 }
 
 QTabWidget::pane {
-	border: 1px solid gray;
+	border: 1px solid #5c5b5c;
 }
 
 QTabWidget::tab-bar {
@@ -69,22 +69,22 @@ QTabWidget::tab-bar {
 }
 
 QTabBar::tab, #tabBar_::tab {
-	background-color: transparent;
-	border: 1px solid gray;
-	border-bottom: none;
-	border-top-left-radius: 4px;
-	border-top-right-radius: 4px;
-	margin: 0;
-	margin-top: 1px;
-	margin-right: -1px;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #403f40,
+	                            stop:1 #363536);
+	border: 1px solid #5c5b5c;
+	border-bottom: 1px solid #5c5b5c;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+	margin: 4px -1px 0px 0px;
 }
 
 QTabBar::tab {
-	padding: 4px;
+	padding: 4px 6px;
 }
 
 #tabBar_::tab {
-	padding: 4px 1px 4px 1px;
+	padding: 4px 2px 4px 2px;
 }
 
 QTabBar::tab:last, #tabBar_::tab:last {
@@ -92,27 +92,40 @@ QTabBar::tab:last, #tabBar_::tab:last {
 }
 
 QTabBar::tab:selected, #tabBar_::tab:selected {
-	background: #464546;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #525152,
+	                            stop:0.25 #464546,
+	                            stop:1 #464546);
+	border-top: 2px solid #2a82da;
 	border-bottom: none;
 	padding-bottom: 5px;
+	margin-top: 2px;
 }
 
-QTabBar::tab:!selected, #tabBar_::tab:!selected {
-	background-color: #3a393a;
-	border-bottom: 1px solid gray;
+QTabBar::tab:hover:!selected, #tabBar_::tab:hover:!selected {
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+	                            stop:0 #4d4c4d,
+	                            stop:1 #403f40);
 }
 
-QTabBar QToolButton {
-	border: 1px solid gray;
-	border-radius: 2px;
+QTabBar > QToolButton {
+	border: 1px solid #5c5b5c;
+	border-radius: 3px;
+	background: #3a393a;
+}
+
+QTabBar > QToolButton:hover {
+	background: #4d4c4d;
+	border-color: #2a82da;
 }
 
 QTabBar QWidget {
-	background: none;
+	background: transparent;
 }
 
 #tabBarWidget {
-	border-bottom: 1px solid gray;
+	background: #363536;
+	border-bottom: 1px solid #5c5b5c;
 }
 
 QToolBar {
