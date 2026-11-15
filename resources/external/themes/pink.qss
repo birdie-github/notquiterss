@@ -286,3 +286,58 @@ QMainWindow::separator {
 	border: none; 
 	padding: 0px;
 }
+
+QScrollBar {
+	border: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+QScrollBar:vertical {
+	background: #f7efef;
+	width: 16px;
+}
+
+QScrollBar:horizontal {
+	background: #f7efef;
+	height: 16px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+	background: transparent;
+}
+
+QScrollBar::handle:vertical {
+	background: #deb8b8;
+	border-radius: 5px;
+	margin: 2px 3px;
+	min-height: 28px;
+}
+
+QScrollBar::handle:horizontal {
+	background: #deb8b8;
+	border-radius: 5px;
+	margin: 3px 2px;
+	min-width: 28px;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+	background: #cc9696;
+}
+
+QScrollBar::handle:vertical:pressed, QScrollBar::handle:horizontal:pressed {
+	background: #cc6666;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+	border: none;
+	background: none;
+	height: 0px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+	border: none;
+	background: none;
+	width: 0px;
+}
