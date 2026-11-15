@@ -1,3 +1,19 @@
+Version 0.95.7 ALPHA (2026-11-15)
+* NEW FEATURE: Add a bulk favicon update action under Tools -> Bulk configure feeds, complete with connection status, timeout handling, and automatic unchecking of finished feeds.
+* NEW FEATURE: Add a shutdown cleanup preview in Options -> Feeds -> Clean Up so you can see what will be removed before it runs.
+* NEW FEATURE: Add smooth image scaling (with an optional high-quality scaling mode) in the article viewer, plus configurable image preloading for Newspaper mode.
+* CHANGE: Improve overall speed and responsiveness when browsing feeds, scrolling in Newspaper mode, resizing article images, and opening the Options dialog.
+* CHANGE: Polish the visual appearance across themes, including rounded tabs, subtle gradients and dividers, and clearer scrollbars and controls in Dark and OLED themes.
+* CHANGE: Improve website feed discovery with better progress feedback, preserved publisher feed names, smoother wizard handoff, and a compatibility workaround for GSMArena.com.
+* CHANGE: Improve Atom and RSS feed parsing to prefer full content over summaries, respect text formatting, and handle feeds with extra trailing data.
+* CHANGE: Improve privacy and security by keeping saved login credentials scoped to their intended sites and hiding sensitive URL details in diagnostic logs.
+* CHANGE: Update Russian translations, documentation, and perform internal code cleanup.
+* BUG FIX: Fix article timezone parsing and date display.
+* BUG FIX: Fix hidden columns reappearing in the feeds list after a refresh.
+* BUG FIX: Fix news search and article filters when searching for text containing special wildcard characters.
+* BUG FIX: Make feed and folder deletion safer and protect the database during pending replacements.
+* BUG FIX: Fix the "Find Feed" action not responding.
+
 Version 0.95.6 BETA (2026-10-18)
 * CHANGE: Addressing technical debt (Qt/C++ modernization)
 * NEW FEATURE: Restore optional focus return after opening article links
