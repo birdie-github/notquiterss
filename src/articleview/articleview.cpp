@@ -38,20 +38,9 @@
 #include <QTextBlock>
 #include <QTextFragment>
 #include <QTextImageFormat>
+#include <QTextObjectInterface>
 #include <QTimer>
 #include <QWheelEvent>
-
-class ArticleDocument : public QTextDocument {
-public:
-  explicit ArticleDocument(ArticleView *view) : QTextDocument(view), view_(view) {}
-protected:
-  QVariant loadResource(int type, const QUrl &name) override {
-    // Never fall back to QTextDocument's local-file resource loader.
-    return view_->loadResource(type, name);
-  }
-private:
-  ArticleView *view_;
-};
 
 namespace {
 const int OriginalFontSize = QTextFormat::UserProperty + 1;
@@ -66,7 +55,42 @@ QImage placeholder() {
   painter.drawLine(2, 13, 13, 2);
   return image;
 }
+
+class SmoothImageHandler : public QObject, public QTextObjectInterface {
+  Q_OBJECT
+  Q_INTERFACES(QTextObjectInterface)
+public:
+  explicit SmoothImageHandler(QTextObjectInterface *base, QObject *parent)
+    : QObject(parent), base_(base) {}
+  QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format) override {
+    return base_->intrinsicSize(doc, posInDocument, format);
+  }
+  void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc,
+                  int posInDocument, const QTextFormat &format) override {
+    const bool prev = painter->testRenderHint(QPainter::SmoothPixmapTransform);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    base_->drawObject(painter, rect, doc, posInDocument, format);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, prev);
+  }
+private:
+  QTextObjectInterface *base_;
+};
 }
+
+class ArticleDocument : public QTextDocument {
+public:
+  explicit ArticleDocument(ArticleView *view) : QTextDocument(view), view_(view) {
+    if (QTextObjectInterface *base = documentLayout()->handlerForObject(QTextFormat::ImageObject))
+      documentLayout()->registerHandler(QTextFormat::ImageObject, new SmoothImageHandler(base, this));
+  }
+protected:
+  QVariant loadResource(int type, const QUrl &name) override {
+    // Never fall back to QTextDocument's local-file resource loader.
+    return view_->loadResource(type, name);
+  }
+private:
+  ArticleView *view_;
+};
 
 ArticleView::ArticleView(QWidget *parent)
   : QTextBrowser(parent)
@@ -695,3 +719,5 @@ void ArticleView::showEvent(QShowEvent *event) {
   }
   pausedMovies_.clear();
 }
+
+#include "articleview.moc"
