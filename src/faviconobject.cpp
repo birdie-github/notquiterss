@@ -112,14 +112,27 @@ FaviconObject::FaviconObject(QObject *parent)
 void FaviconObject::disconnectObjects()
 {
   shuttingDown_ = true;
+  stopRequest();
+  disconnect(this);
+  if (networkManager_)
+    networkManager_->disconnect(networkManager_);
+}
+
+void FaviconObject::stopRequest()
+{
   if (getUrlTimer_)
     getUrlTimer_->stop();
   if (timeout_)
     timeout_->stop();
+  requestQueue_.clear();
   pendingRetries_.clear();
-  disconnect(this);
-  if (networkManager_)
-    networkManager_->disconnect(networkManager_);
+  const QList<ActiveRequest> active = std::exchange(activeRequests_, {});
+  for (const ActiveRequest &req : active) {
+    if (req.reply) {
+      req.reply->abort();
+      req.reply->deleteLater();
+    }
+  }
 }
 
 /** @brief Put requested URL in request queue
@@ -175,9 +188,13 @@ void FaviconObject::getQueuedUrl()
 
     QUrl url = QUrl::fromEncoded(queued.urlString.toUtf8());
     url.setUrl(QString("%1://%2").arg(url.scheme()).arg(url.host()));
-    if (!url.isValid()) {
+    if (!url.isValid() || !NetworkPolicy::isHttpUrl(url)) {
       url = QUrl::fromEncoded(queued.feedUrl.toUtf8());
       url.setUrl(QString("%1://%2").arg(url.scheme()).arg(url.host()));
+    }
+    if (!url.isValid() || !NetworkPolicy::isHttpUrl(url)) {
+      emit signalIconFailed(queued.feedUrl);
+      return;
     }
     emit signalGet(url, queued.feedUrl, 0);
   }
@@ -224,6 +241,12 @@ void FaviconObject::dispatchResource(const QUrl &getUrl, const QString &feedUrl,
   QNetworkRequest request(getUrl);
 
   QNetworkReply *reply = networkManager_->get(request);
+  connect(reply, &QNetworkReply::metaDataChanged, this, [this, reply, feedUrl] {
+    if (indexOfReply(reply) < 0 || reply->property("faviconConnected").toBool())
+      return;
+    reply->setProperty("faviconConnected", true);
+    emit signalConnected(feedUrl);
+  });
   reply->setProperty("feedReply", QVariant(true));
   reply->setProperty("faviconImage", isIcon);
   activeRequests_.append({feedUrl, count, REQUEST_TIMEOUT, reply});
@@ -261,6 +284,8 @@ void FaviconObject::finished(QNetworkReply *reply)
         // directly; an oversized icon must not start another page/icon cycle.
         const QUrl iconUrl = url.resolved(QUrl(QStringLiteral("/favicon.ico")));
         requestResource(iconUrl, feedUrl, cntRequests + 1, true);
+      } else {
+        emit signalIconFailed(feedUrl);
       }
     } else if ((reply->error() == QNetworkReply::NoError) || (reply->error() == QNetworkReply::UnknownContentError)) {
       QUrl redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
@@ -269,6 +294,10 @@ void FaviconObject::finished(QNetworkReply *reply)
           redirectionTarget = CredentialScope::redirectTarget(reply->url(), redirectionTarget);
           if (NetworkPolicy::isSafeRedirect(reply->url(), redirectionTarget))
             requestResource(redirectionTarget, feedUrl, cntRequests+2, isIcon);
+          else
+            emit signalIconFailed(feedUrl);
+        } else {
+          emit signalIconFailed(feedUrl);
         }
       } else {
         QByteArray data = reply->readAll();
@@ -295,6 +324,8 @@ void FaviconObject::finished(QNetworkReply *reply)
           if (!isIcon) {
             QString link = QString("%1://%2/favicon.ico").arg(url.scheme()).arg(url.host());
             emit signalGet(link, feedUrl, cntRequests+1);
+          } else {
+            emit signalIconFailed(feedUrl);
           }
         }
       }
@@ -309,6 +340,8 @@ void FaviconObject::finished(QNetworkReply *reply)
         QString link = QString("%1://%2").arg(url.scheme()).arg(url.host());
         emit signalGet(link, feedUrl, 2);
         qDebug() << "Request Url error: " << LogFile::urlForLog(reply->url()) << reply->errorString();
+      } else {
+        emit signalIconFailed(feedUrl);
       }
     }
   } else {
@@ -341,6 +374,8 @@ void FaviconObject::slotRequestTimeout()
 
       if (active.count == 0) {
         emit signalGet(url, active.feedUrl, 2);
+      } else {
+        emit signalIconFailed(active.feedUrl);
       }
     } else {
       activeRequests_[i].timeLeft = time;

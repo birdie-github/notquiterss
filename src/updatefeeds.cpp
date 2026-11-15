@@ -942,6 +942,18 @@ void UpdateObject::slotIconSave(QString feedUrl, QByteArray faviconData)
   emit signalIconUpdate(feedId, faviconData);
 }
 
+void UpdateObject::slotIconSaveById(int feedId, QByteArray faviconData)
+{
+  auto databaseAccess = Database::backgroundAccess();
+  QSqlQuery q(db_);
+  q.prepare("UPDATE feeds SET image = ? WHERE id == ?");
+  q.addBindValue(faviconData.toBase64());
+  q.addBindValue(feedId);
+  q.exec();
+
+  emit signalIconUpdate(feedId, faviconData);
+}
+
 void UpdateObject::slotSqlQueryExec(QString query)
 {
   auto databaseAccess = Database::backgroundAccess();

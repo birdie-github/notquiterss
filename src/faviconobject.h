@@ -38,12 +38,15 @@ public:
 
 public slots:
   void requestUrl(QString urlString, QString feedUrl);
+  void stopRequest();
   void slotGet(const QUrl &getUrl, const QString &feedUrl, const int &count);
 
 signals:
   void startTimer();
   void signalGet(const QUrl &getUrl, const QString &feedUrl, const int &count);
+  void signalConnected(QString feedUrl);
   void signalIconRecived(QString feedUrl, QByteArray byteArray, QString format);
+  void signalIconFailed(QString feedUrl);
 
 private slots:
   void getQueuedUrl();

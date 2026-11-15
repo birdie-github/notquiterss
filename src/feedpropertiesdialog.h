@@ -142,16 +142,27 @@ public:
   void setFeedProperties(FEED_PROPERTIES properties); //!< Set feed properties into dialog
   void setFolderDisabledCounts(int total, int disabled);
   bool folderDisableChanged() const;
+  bool isFaviconUpdateRunning() const { return faviconUpdateRunning_; }
+  void startFaviconUpdate(int totalFeeds);
+  void appendFaviconLog(const QString &text, bool newLine = true);
+  void advanceFaviconProgress(int current, int total);
+  void finishFaviconUpdate(const QString &summary);
+  void updateBulkTargetIcon(int feedId, const QByteArray &faviconData, bool defaultIcons);
 
 public slots:
   void slotFaviconUpdate(const QString &feedUrl, const QByteArray &faviconData);
+  void cancelFaviconUpdateForShutdown();
+  virtual void reject();
 
 signals:
   void applyRequested();
+  void startFaviconUpdateRequested();
+  void cancelFaviconUpdateRequested();
   void signalLoadIcon(const QString &urlString, const QString &feedUrl);
 
 protected:
   virtual void showEvent(QShowEvent *);
+  virtual void closeEvent(QCloseEvent *event);
 
 private slots:
   void setDefaultTitle();
@@ -193,6 +204,7 @@ private:
   QGroupBox *createUpdateSchedule();
   QWidget *createImageEditor();
   QGroupBox *createImagePreloadEditor();
+  QWidget *createFaviconUpdateEditor();
 
   // Tab "Display"
   QComboBox *imagePolicy_;
@@ -237,11 +249,16 @@ private:
   bool isFeed_;
   bool bulk_;
   bool initialized_ = false;
+  bool faviconUpdateRunning_ = false;
   QLabel *bulkScope_ = nullptr;
   QLabel *bulkResult_ = nullptr;
   QComboBox *bulkAction_ = nullptr;
   QComboBox *bulkState_ = nullptr;
   QTreeWidget *bulkTargets_ = nullptr;
+  QPushButton *faviconStartButton_ = nullptr;
+  QPushButton *faviconCancelButton_ = nullptr;
+  QProgressBar *faviconProgress_ = nullptr;
+  QPlainTextEdit *faviconLog_ = nullptr;
   QList<QWidget *> bulkEditors_;
   void updateBulkApplyButton();
 

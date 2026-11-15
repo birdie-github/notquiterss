@@ -41,7 +41,8 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     bulkState_->addItems({tr("Enabled"), tr("Disabled")});
     layoutDirection_ = new QCheckBox(tr("Right-to-left layout"));
     bulkEditors_ << bulkState_ << createUpdateSchedule() << createImageEditor()
-                 << createImagePreloadEditor() << layoutDirection_ << createColumnsTab();
+                 << createImagePreloadEditor() << layoutDirection_ << createColumnsTab()
+                 << createFaviconUpdateEditor();
     auto *splitter = new QSplitter(this);
 //    auto *actions = new QGroupBox(tr("Action to apply"));
     auto *actions = new QGroupBox();
@@ -51,7 +52,8 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     bulkAction_->addItems({tr("Choose an action..."), tr("Enable/disable"),
                           tr("Update schedule"), tr("Image loading"),
                           tr("Article image preloading"),
-                          tr("Text direction"), tr("Columns and sorting")});
+                          tr("Text direction"), tr("Columns and sorting"),
+                          tr("Update favicons")});
     actionsLayout->addWidget(bulkAction_);
     auto *pages = new QStackedWidget();
     pages->addWidget(new QWidget());
@@ -60,7 +62,7 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
       auto *layout = new QVBoxLayout(page);
       layout->setContentsMargins(0, 0, 0, 0);
       layout->addWidget(bulkEditors_.at(i));
-      if (i != bulkEditors_.size() - 1) layout->addStretch();
+      if (i < bulkEditors_.size() - 2) layout->addStretch();
       pages->addWidget(page);
     }
     actionsLayout->addWidget(pages, 1);
@@ -815,12 +817,114 @@ void FeedPropertiesDialog::updateBulkApplyButton()
 {
   const int count = bulkFeedIds().size();
   bulkScope_->setText(tr("%1 feeds selected. Only the displayed action will be applied. Folder settings will not change.").arg(count));
-  buttonBox->button(QDialogButtonBox::Apply)->setEnabled(count > 0 && bulkAction_->currentIndex() > 0);
+  const int action = bulkAction_->currentIndex();
+  const bool isFaviconAction = (action == 7);
+  if (auto *apply = buttonBox->button(QDialogButtonBox::Apply))
+    apply->setEnabled(!faviconUpdateRunning_ && count > 0 && action > 0 && !isFaviconAction);
+  if (auto *close = buttonBox->button(QDialogButtonBox::Close))
+    close->setEnabled(!faviconUpdateRunning_);
+  if (faviconStartButton_)
+    faviconStartButton_->setEnabled(!faviconUpdateRunning_ && count > 0);
+  if (faviconCancelButton_)
+    faviconCancelButton_->setEnabled(faviconUpdateRunning_);
+  if (bulkAction_)
+    bulkAction_->setEnabled(!faviconUpdateRunning_);
+  if (bulkTargets_)
+    bulkTargets_->setEnabled(!faviconUpdateRunning_);
 }
 
 void FeedPropertiesDialog::bulkApplySucceeded(int count)
 {
   bulkResult_->setText(tr("%1 applied to %2 feeds.").arg(bulkActionName()).arg(count));
+}
+
+void FeedPropertiesDialog::startFaviconUpdate(int totalFeeds)
+{
+  faviconUpdateRunning_ = true;
+  bulkResult_->clear();
+  faviconLog_->clear();
+  faviconProgress_->setRange(0, qMax(1, totalFeeds));
+  faviconProgress_->setValue(0);
+  faviconProgress_->setFormat(QStringLiteral("%v / %m"));
+  updateBulkApplyButton();
+}
+
+void FeedPropertiesDialog::appendFaviconLog(const QString &text, bool newLine)
+{
+  if (!faviconLog_) return;
+  if (newLine) {
+    faviconLog_->appendPlainText(text);
+  } else {
+    QTextCursor cursor = faviconLog_->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertText(text);
+    faviconLog_->setTextCursor(cursor);
+  }
+  if (QScrollBar *bar = faviconLog_->verticalScrollBar())
+    bar->setValue(bar->maximum());
+}
+
+void FeedPropertiesDialog::advanceFaviconProgress(int current, int total)
+{
+  if (!faviconProgress_) return;
+  faviconProgress_->setRange(0, qMax(1, total));
+  faviconProgress_->setValue(current);
+}
+
+void FeedPropertiesDialog::finishFaviconUpdate(const QString &summary)
+{
+  faviconUpdateRunning_ = false;
+  if (!summary.isEmpty()) {
+    appendFaviconLog(QString(), true);
+    appendFaviconLog(summary, true);
+  }
+  updateBulkApplyButton();
+}
+
+void FeedPropertiesDialog::updateBulkTargetIcon(int feedId, const QByteArray &faviconData, bool defaultIcons)
+{
+  if (!bulkTargets_) return;
+  const QList<QTreeWidgetItem *> items = bulkTargets_->findItems(
+      QString::number(feedId), Qt::MatchExactly | Qt::MatchRecursive, 1);
+  if (items.isEmpty()) return;
+  QPixmap icon;
+  if (faviconData.isNull() || defaultIcons) {
+    icon.load(QStringLiteral(":/images/feed"));
+  } else {
+    icon.loadFromData(faviconData);
+    if (icon.isNull()) icon.load(QStringLiteral(":/images/feed"));
+  }
+  for (QTreeWidgetItem *item : items) {
+    if (item->data(0, FeedSelectionTree::IsFeedRole).toBool())
+      item->setIcon(0, icon);
+  }
+}
+
+void FeedPropertiesDialog::cancelFaviconUpdateForShutdown()
+{
+  if (faviconUpdateRunning_)
+    emit cancelFaviconUpdateRequested();
+}
+
+void FeedPropertiesDialog::reject()
+{
+  if (faviconUpdateRunning_) {
+    if (!mainApp || !mainApp->isClosing()) return;
+    cancelFaviconUpdateForShutdown();
+  }
+  Dialog::reject();
+}
+
+void FeedPropertiesDialog::closeEvent(QCloseEvent *event)
+{
+  if (faviconUpdateRunning_) {
+    if (!mainApp || !mainApp->isClosing()) {
+      event->ignore();
+      return;
+    }
+    cancelFaviconUpdateForShutdown();
+  }
+  Dialog::closeEvent(event);
 }
 
 FeedBulkSettings::Columns FeedPropertiesDialog::columnSettings() const
@@ -938,6 +1042,39 @@ QGroupBox *FeedPropertiesDialog::createImagePreloadEditor()
   preloadLayout->addWidget(useGlobalPreload_);
   preloadLayout->addLayout(customLayout);
   return imagePreloadGroup_;
+}
+
+QWidget *FeedPropertiesDialog::createFaviconUpdateEditor()
+{
+  QWidget *editor = new QWidget(this);
+  auto *layout = new QVBoxLayout(editor);
+  layout->setContentsMargins(0, 0, 0, 0);
+
+  auto *buttonsLayout = new QHBoxLayout();
+  buttonsLayout->setContentsMargins(0, 0, 0, 0);
+  faviconStartButton_ = new QPushButton(tr("Start updating favicons"), editor);
+  faviconStartButton_->setEnabled(false);
+  faviconCancelButton_ = new QPushButton(tr("Cancel"), editor);
+  faviconCancelButton_->setEnabled(false);
+  buttonsLayout->addWidget(faviconStartButton_);
+  buttonsLayout->addWidget(faviconCancelButton_);
+  buttonsLayout->addStretch();
+  layout->addLayout(buttonsLayout);
+
+  faviconProgress_ = new QProgressBar(editor);
+  faviconProgress_->setRange(0, 1);
+  faviconProgress_->setValue(0);
+  faviconProgress_->setFormat(QStringLiteral("%v / %m"));
+  layout->addWidget(faviconProgress_);
+
+  faviconLog_ = new QPlainTextEdit(editor);
+  faviconLog_->setReadOnly(true);
+  layout->addWidget(faviconLog_, 1);
+
+  connect(faviconStartButton_, &QPushButton::clicked, this, &FeedPropertiesDialog::startFaviconUpdateRequested);
+  connect(faviconCancelButton_, &QPushButton::clicked, this, &FeedPropertiesDialog::cancelFaviconUpdateRequested);
+
+  return editor;
 }
 
 void FeedPropertiesDialog::setFolderDisabledCounts(int total, int disabled)

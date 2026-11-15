@@ -2,12 +2,47 @@
 #include "mainwindow.h"
 #include "credentialscope.h"
 #include "databasebackup.h"
+#include "faviconobject.h"
 #include "feedbulksettings.h"
 #include "feedpropertiesdialog.h"
 #include "mainapplication.h"
+#include "networkpolicy.h"
 #include "settings.h"
+#include "updatefeeds.h"
+#include <QBuffer>
 #include <QTimeZone>
 #include <utility>
+
+namespace {
+QByteArray prepareFaviconIcoData(const QByteArray &byteArray, const QString &format)
+{
+  QPixmap icon;
+  if (!icon.loadFromData(byteArray) &&
+      (format.isEmpty() || !icon.loadFromData(byteArray, format.toUtf8().constData()))) {
+    return QByteArray();
+  }
+  icon = icon.scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+  QByteArray faviconData;
+  QBuffer buffer(&faviconData);
+  buffer.open(QIODevice::WriteOnly);
+  if (!icon.save(&buffer, "ICO"))
+    return QByteArray();
+  return faviconData;
+}
+
+QString faviconDisplayUrl(const QString &htmlUrl, const QString &xmlUrl)
+{
+  QUrl url = QUrl::fromEncoded(htmlUrl.toUtf8());
+  url.setUrl(QStringLiteral("%1://%2/").arg(url.scheme(), url.host()));
+  if (!url.isValid() || !NetworkPolicy::isHttpUrl(url)) {
+    url = QUrl::fromEncoded(xmlUrl.toUtf8());
+    url.setUrl(QStringLiteral("%1://%2/").arg(url.scheme(), url.host()));
+  }
+  if (!url.isValid() || !NetworkPolicy::isHttpUrl(url))
+    return !htmlUrl.trimmed().isEmpty() ? htmlUrl.trimmed() : xmlUrl.trimmed();
+  return url.toString();
+}
+}
 
 void MainWindow::applyBulkFeedSettings(FeedPropertiesDialog *dialog)
 {
@@ -220,7 +255,165 @@ void MainWindow::showBulkFeedSettings()
   connect(&dialog, &FeedPropertiesDialog::applyRequested, &dialog, [this, &dialog] {
     applyBulkFeedSettings(&dialog);
   });
+
+  QThread faviconThread;
+  faviconThread.setObjectName(QStringLiteral("bulkFaviconThread_"));
+  FaviconObject *faviconWorker = new FaviconObject();
+  faviconWorker->moveToThread(&faviconThread);
+  connect(&faviconThread, &QThread::finished, faviconWorker, &QObject::deleteLater);
+  faviconThread.start(QThread::LowPriority);
+
+  struct BulkFaviconTarget {
+    int id;
+    QString title;
+    QString htmlUrl;
+    QString xmlUrl;
+    QString displayUrl;
+    QByteArray existingIco;
+  };
+  struct BulkFaviconSession {
+    QVector<BulkFaviconTarget> targets;
+    int currentIndex = -1;
+    int tried = 0;
+    int failed = 0;
+    int unchanged = 0;
+    int updated = 0;
+    bool running = false;
+    bool connectedLogged = false;
+    bool anyUpdated = false;
+  } session;
+
+  auto finishSession = [&](bool canceled) {
+    if (!session.running) return;
+    session.running = false;
+    if (canceled) {
+      dialog.appendFaviconLog(tr(" Canceled."), false);
+    }
+    const QString summary = tr("Tried to update: %1 feeds. %2 feeds failed to download. "
+                               "%3 feeds unchanged. %4 feed icons updated.")
+                                .arg(session.tried)
+                                .arg(session.failed)
+                                .arg(session.unchanged)
+                                .arg(session.updated);
+    dialog.finishFaviconUpdate(summary);
+    if (session.anyUpdated) {
+      DatabaseBackup::subscriptionsChanged("update favicons");
+      session.anyUpdated = false;
+    }
+  };
+
+  auto dispatchNext = [&]() {
+    if (!session.running) return;
+    ++session.currentIndex;
+    if (session.currentIndex >= session.targets.size()) {
+      finishSession(false);
+      return;
+    }
+    session.connectedLogged = false;
+    ++session.tried;
+    const BulkFaviconTarget &target = session.targets.at(session.currentIndex);
+    dialog.appendFaviconLog(QStringLiteral("%1. %2, %3.")
+                                .arg(session.currentIndex + 1)
+                                .arg(target.title, target.displayUrl),
+                            true);
+    const QString requestToken = QString::number(session.currentIndex);
+    const QString initialUrl = target.htmlUrl.trimmed().isEmpty() ? target.xmlUrl : target.htmlUrl;
+    QMetaObject::invokeMethod(faviconWorker, "requestUrl", Qt::QueuedConnection,
+                              Q_ARG(QString, initialUrl),
+                              Q_ARG(QString, requestToken));
+  };
+
+  connect(&dialog, &FeedPropertiesDialog::startFaviconUpdateRequested, &dialog, [&]() {
+    if (session.running) return;
+    const QList<int> ids = dialog.bulkFeedIds();
+    if (ids.isEmpty()) return;
+
+    session = BulkFaviconSession{};
+    session.targets.reserve(ids.size());
+    for (int id : ids) {
+      const QModelIndex index = feedsModel_->indexById(id);
+      if (!index.isValid() || feedsModel_->isFolder(index)) continue;
+      BulkFaviconTarget target;
+      target.id = id;
+      target.title = feedsModel_->dataField(index, QStringLiteral("text")).toString();
+      target.htmlUrl = feedsModel_->dataField(index, QStringLiteral("htmlUrl")).toString();
+      target.xmlUrl = feedsModel_->dataField(index, QStringLiteral("xmlUrl")).toString();
+      target.displayUrl = faviconDisplayUrl(target.htmlUrl, target.xmlUrl);
+      const QByteArray existingBase64 = feedsModel_->dataField(index, QStringLiteral("image")).toByteArray();
+      if (!existingBase64.isEmpty())
+        target.existingIco = QByteArray::fromBase64(existingBase64);
+      session.targets.append(target);
+    }
+    if (session.targets.isEmpty()) return;
+
+    session.running = true;
+    dialog.startFaviconUpdate(session.targets.size());
+    dialog.appendFaviconLog(tr("Updating feeds ..."), true);
+    dispatchNext();
+  });
+
+  connect(&dialog, &FeedPropertiesDialog::cancelFaviconUpdateRequested, &dialog, [&]() {
+    if (!session.running) return;
+    QMetaObject::invokeMethod(faviconWorker, &FaviconObject::stopRequest, Qt::QueuedConnection);
+    finishSession(true);
+  });
+
+  connect(faviconWorker, &FaviconObject::signalConnected, &dialog, [&](const QString &token) {
+    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.connectedLogged) {
+      session.connectedLogged = true;
+      dialog.appendFaviconLog(tr(" Connected."), false);
+    }
+  });
+
+  connect(faviconWorker, &FaviconObject::signalIconFailed, &dialog, [&](const QString &token) {
+    if (!session.running || token != QString::number(session.currentIndex)) return;
+    ++session.failed;
+    dialog.appendFaviconLog(tr(" Connection failed. Favicon unchanged."), false);
+    dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
+    dispatchNext();
+  });
+
+  connect(faviconWorker, &FaviconObject::signalIconRecived, &dialog,
+          [&](const QString &token, const QByteArray &byteArray, const QString &format) {
+    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.connectedLogged) {
+      session.connectedLogged = true;
+      dialog.appendFaviconLog(tr(" Connected."), false);
+    }
+    dialog.appendFaviconLog(tr(" Downloaded."), false);
+
+    BulkFaviconTarget &target = session.targets[session.currentIndex];
+    const QByteArray faviconData = prepareFaviconIcoData(byteArray, format);
+    if (faviconData.isEmpty()) {
+      ++session.failed;
+      dialog.appendFaviconLog(tr(" Invalid icon data. Favicon unchanged."), false);
+    } else if (faviconData == target.existingIco) {
+      ++session.unchanged;
+      dialog.appendFaviconLog(tr(" Favicon unchanged."), false);
+    } else {
+      ++session.updated;
+      target.existingIco = faviconData;
+      session.anyUpdated = true;
+      dialog.appendFaviconLog(tr(" Found new icon!"), false);
+      if (mainApp && mainApp->updateFeeds() && mainApp->updateFeeds()->updateObject_) {
+        QMetaObject::invokeMethod(mainApp->updateFeeds()->updateObject_, "slotIconSaveById",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, target.id),
+                                  Q_ARG(QByteArray, faviconData));
+      }
+      slotIconFeedUpdate(target.id, faviconData);
+      dialog.updateBulkTargetIcon(target.id, faviconData, defaultIconFeeds_);
+    }
+    dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
+    dispatchNext();
+  });
+
   dialog.exec();
+
+  faviconWorker->disconnectObjects();
+  faviconThread.quit();
+  faviconThread.wait();
 }
 
 void MainWindow::showFeedPropertiesDlg()

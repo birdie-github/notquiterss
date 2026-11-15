@@ -27,8 +27,12 @@ Actions are:
 - Enable/disable: replace only each selected feed's individual state.
 - Update schedule: global settings, a custom interval, or no scheduled updates.
 - Image loading: never, global settings, or always.
+- Article image preloading: global settings or a custom page count.
 - Text direction: enable or disable right-to-left layout.
 - Columns and sorting: replace the column layout and sorting together.
+- Update favicons: sequentially (re)download favicons for the checked feeds with
+  live progress and status logging, keeping existing icons on failure or when
+  unchanged, and allowing cancellation without closing the dialog.
 
 Apply affects only the displayed action and checked feeds, never folder records.
 Switching actions does not apply the previous action. Targets stay checked after
