@@ -28,6 +28,8 @@
 #include <QString>
 #include <QTimer>
 #include <QUrl>
+#include <atomic>
+#include <memory>
 
 class ArticleView;
 
@@ -46,6 +48,9 @@ public:
   void reset();
 
 private:
+  struct CompletionState;
+  static QImage scaleCancellable(const QImage &src, const QSize &targetSize,
+                                 const std::atomic_bool *canceled);
   void flushScheduled();
   static QString cacheKey(const QUrl &url, qint64 sourceKey, const QSize &targetSize);
 
@@ -60,7 +65,10 @@ private:
   ArticleView *view_;
   QTimer *debounceTimer_;
   QHash<QString, Job> scheduled_;
-  QSet<QString> inflight_;
+  std::shared_ptr<CompletionState> completion_;
+  std::shared_ptr<std::atomic_bool> activeCancellation_;
+  QString activeKey_;
+  bool running_ = false;
   int generation_ = 0;
 };
 

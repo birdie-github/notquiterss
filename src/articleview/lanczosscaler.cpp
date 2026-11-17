@@ -21,7 +21,8 @@
 
 #include <QMetaObject>
 #include <QPixmapCache>
-#include <QPointer>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QRunnable>
 #include <QThreadPool>
 #include <QVector>
@@ -105,7 +106,21 @@ struct KernelTable {
 };
 } // namespace
 
+struct LanczosScaler::CompletionState {
+  QMutex mutex;
+  LanczosScaler *receiver = nullptr; // Access only while holding mutex.
+};
+
 QImage LanczosScaler::scale(const QImage &input, const QSize &targetSize) {
+  return scaleCancellable(input, targetSize, nullptr);
+}
+
+QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetSize,
+                                      const std::atomic_bool *canceled) {
+  const auto isCanceled = [canceled] {
+    return canceled && canceled->load(std::memory_order_relaxed);
+  };
+  if (isCanceled()) return QImage();
   if (input.isNull() || !targetSize.isValid() ||
       targetSize.width() <= 0 || targetSize.height() <= 0) {
     return QImage();
@@ -125,10 +140,12 @@ QImage LanczosScaler::scale(const QImage &input, const QSize &targetSize) {
   const int dstW = targetSize.width();
   const int dstH = targetSize.height();
 
+  if (isCanceled() || src.isNull()) return QImage();
   const KernelTable hTable(srcW, dstW);
   const KernelTable vTable(srcH, dstH);
 
   // Intermediate buffer after horizontal pass: srcH rows of dstW pixels.
+  if (isCanceled()) return QImage();
   QVector<QRgb> temp(size_t(srcH) * size_t(dstW));
   const int *hOffsets = hTable.offsets.constData();
   const int *hCounts = hTable.counts.constData();
@@ -136,6 +153,7 @@ QImage LanczosScaler::scale(const QImage &input, const QSize &targetSize) {
   const qint16 *hWeights = hTable.weights.constData();
 
   for (int y = 0; y < srcH; ++y) {
+    if (isCanceled()) return QImage();
     const QRgb *srcRow = reinterpret_cast<const QRgb *>(src.constScanLine(y));
     QRgb *dstRow = temp.data() + size_t(y) * size_t(dstW);
 
@@ -166,7 +184,9 @@ QImage LanczosScaler::scale(const QImage &input, const QSize &targetSize) {
     }
   }
 
+  if (isCanceled()) return QImage();
   QImage dst(dstW, dstH, targetFormat);
+  if (dst.isNull()) return QImage();
   const int *vOffsets = vTable.offsets.constData();
   const int *vCounts = vTable.counts.constData();
   const int *vWeightOffsets = vTable.weightsOffset.constData();
@@ -174,6 +194,7 @@ QImage LanczosScaler::scale(const QImage &input, const QSize &targetSize) {
   const QRgb *tempData = temp.constData();
 
   for (int y = 0; y < dstH; ++y) {
+    if (isCanceled()) return QImage();
     QRgb *dstRow = reinterpret_cast<QRgb *>(dst.scanLine(y));
     const int top = vOffsets[y];
     const int count = vCounts[y];
@@ -211,13 +232,22 @@ LanczosScaler::LanczosScaler(ArticleView *view)
   : QObject(view)
   , view_(view)
   , debounceTimer_(new QTimer(this))
+  , completion_(std::make_shared<CompletionState>())
 {
+  completion_->receiver = this;
   debounceTimer_->setSingleShot(true);
   debounceTimer_->setInterval(80);
   connect(debounceTimer_, &QTimer::timeout, this, &LanczosScaler::flushScheduled);
 }
 
-LanczosScaler::~LanczosScaler() = default;
+LanczosScaler::~LanczosScaler() {
+  if (activeCancellation_)
+    activeCancellation_->store(true, std::memory_order_relaxed);
+  // Serialize destruction with workers posting completion events. Workers own
+  // this small state independently and never dereference a destroyed receiver.
+  QMutexLocker lock(&completion_->mutex);
+  completion_->receiver = nullptr;
+}
 
 QString LanczosScaler::cacheKey(const QUrl &url, qint64 sourceKey, const QSize &targetSize) {
   return QStringLiteral("nqrss-lanczos:%1:%2:%3x%4")
@@ -228,7 +258,7 @@ QString LanczosScaler::cacheKey(const QUrl &url, qint64 sourceKey, const QSize &
 }
 
 void LanczosScaler::notifyResize() {
-  scheduled_.clear();
+  reset();
   debounceTimer_->start();
 }
 
@@ -243,7 +273,8 @@ void LanczosScaler::reset() {
   ++generation_;
   debounceTimer_->stop();
   scheduled_.clear();
-  inflight_.clear();
+  if (activeCancellation_)
+    activeCancellation_->store(true, std::memory_order_relaxed);
 }
 
 bool LanczosScaler::lookupOrSchedule(const QUrl &url, const QImage &source,
@@ -257,9 +288,14 @@ bool LanczosScaler::lookupOrSchedule(const QUrl &url, const QImage &source,
     out->setDevicePixelRatio(dpr);
     return true;
   }
-  if (inflight_.contains(key))
+  if (running_ && activeKey_ == key)
     return false;
 
+  // Retain at most sixteen waiting source images per view. A completion
+  // repaints the viewport, allowing visible images to request omitted work.
+  constexpr int maxPendingJobs = 16;
+  if (!scheduled_.contains(key) && scheduled_.size() >= maxPendingJobs)
+    return false;
   scheduled_.insert(key, {url, source, targetPhysicalSize, dpr, key});
   if (!debounceTimer_->isActive())
     flushScheduled();
@@ -267,34 +303,39 @@ bool LanczosScaler::lookupOrSchedule(const QUrl &url, const QImage &source,
 }
 
 void LanczosScaler::flushScheduled() {
-  if (scheduled_.isEmpty()) return;
-  const QList<Job> jobs = scheduled_.values();
-  scheduled_.clear();
-
+  if (running_ || debounceTimer_->isActive() || scheduled_.isEmpty()) return;
+  auto it = scheduled_.begin();
+  const Job job = it.value();
+  scheduled_.erase(it);
+  running_ = true;
+  activeKey_ = job.key;
+  activeCancellation_ = std::make_shared<std::atomic_bool>(false);
+  const auto canceled = activeCancellation_;
+  const auto completion = completion_;
   const int gen = generation_;
-  QPointer<LanczosScaler> self(this);
 
-  for (const Job &job : jobs) {
-    if (inflight_.contains(job.key)) continue;
-    inflight_.insert(job.key);
-
-    QThreadPool::globalInstance()->start(QRunnable::create([self, gen, job]() {
-      QImage scaled = LanczosScaler::scale(job.source, job.targetSize);
-      scaled.setDevicePixelRatio(job.dpr);
-      if (!self) return;
-      QMetaObject::invokeMethod(self.data(), [self, gen, job, scaled]() {
-        if (!self) return;
-        self->inflight_.remove(job.key);
-        if (gen != self->generation_ || scaled.isNull()) return;
-        // Raise cache limit if needed so large article photos are not evicted immediately.
+  QThreadPool::globalInstance()->start(QRunnable::create([completion, canceled, gen, job]() {
+    QImage scaled = LanczosScaler::scaleCancellable(job.source, job.targetSize, canceled.get());
+    scaled.setDevicePixelRatio(job.dpr);
+    QMutexLocker lock(&completion->mutex);
+    LanczosScaler *receiver = completion->receiver;
+    if (!receiver) return;
+    // The lock keeps receiver alive until the event is posted. QObject removes
+    // pending events if it is destroyed before delivery on the GUI thread.
+    QMetaObject::invokeMethod(receiver, [receiver, gen, job, scaled]() {
+      receiver->running_ = false;
+      receiver->activeKey_.clear();
+      receiver->activeCancellation_.reset();
+      if (gen == receiver->generation_ && !scaled.isNull()) {
         if (QPixmapCache::cacheLimit() < 65536)
           QPixmapCache::setCacheLimit(65536);
         QPixmap pixmap = QPixmap::fromImage(scaled);
         pixmap.setDevicePixelRatio(job.dpr);
         QPixmapCache::insert(job.key, pixmap);
-        if (self->view_ && self->view_->viewport())
-          self->view_->viewport()->update();
-      }, Qt::QueuedConnection);
-    }));
-  }
+      }
+      if (receiver->view_ && receiver->view_->viewport())
+        receiver->view_->viewport()->update();
+      receiver->flushScheduled();
+    }, Qt::QueuedConnection);
+  }));
 }
