@@ -293,6 +293,7 @@ void MainWindow::showBulkFeedSettings()
   };
   struct BulkFaviconSession {
     QVector<BulkFaviconTarget> targets;
+    QString requestToken;
     int currentIndex = -1;
     int tried = 0;
     int failed = 0;
@@ -302,6 +303,8 @@ void MainWindow::showBulkFeedSettings()
     bool connectedLogged = false;
     bool anyUpdated = false;
   } session;
+  // Keep request identities unique across cancellation and restart in this dialog.
+  quint64 nextRequestToken = 0;
 
   auto finishSession = [&](bool canceled) {
     if (!session.running) return;
@@ -337,11 +340,11 @@ void MainWindow::showBulkFeedSettings()
                                 .arg(target.title, target.displayUrl),
                             true);
     dialog.updateFaviconStatusText(tr(" Connecting... 30"), false);
-    const QString requestToken = QString::number(session.currentIndex);
+    session.requestToken = QString::number(++nextRequestToken);
     const QString initialUrl = target.htmlUrl.trimmed().isEmpty() ? target.xmlUrl : target.htmlUrl;
     QMetaObject::invokeMethod(faviconWorker, "requestUrl", Qt::QueuedConnection,
                               Q_ARG(QString, initialUrl),
-                              Q_ARG(QString, requestToken));
+                              Q_ARG(QString, session.requestToken));
   };
 
   connect(&dialog, &FeedPropertiesDialog::startFaviconUpdateRequested, &dialog, [&]() {
@@ -381,14 +384,14 @@ void MainWindow::showBulkFeedSettings()
 
   connect(faviconWorker, &FaviconObject::signalConnecting, &dialog,
           [&](const QString &token, int secondsLeft) {
-    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.running || token != session.requestToken) return;
     if (!session.connectedLogged) {
       dialog.updateFaviconStatusText(tr(" Connecting... %1").arg(secondsLeft), false);
     }
   });
 
   connect(faviconWorker, &FaviconObject::signalConnected, &dialog, [&](const QString &token) {
-    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.running || token != session.requestToken) return;
     if (!session.connectedLogged) {
       session.connectedLogged = true;
       dialog.updateFaviconStatusText(tr(" Connected."), true);
@@ -397,7 +400,7 @@ void MainWindow::showBulkFeedSettings()
 
   connect(faviconWorker, &FaviconObject::signalIconFailed, &dialog,
           [&](const QString &token, bool timedOut) {
-    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.running || token != session.requestToken) return;
     ++session.failed;
     if (timedOut) {
       dialog.updateFaviconStatusText(tr(" Connection time out. Favicon unchanged."), true);
@@ -410,7 +413,7 @@ void MainWindow::showBulkFeedSettings()
 
   connect(faviconWorker, &FaviconObject::signalIconRecived, &dialog,
           [&](const QString &token, const QByteArray &byteArray, const QString &format) {
-    if (!session.running || token != QString::number(session.currentIndex)) return;
+    if (!session.running || token != session.requestToken) return;
     if (!session.connectedLogged) {
       session.connectedLogged = true;
       dialog.updateFaviconStatusText(tr(" Connected."), true);
