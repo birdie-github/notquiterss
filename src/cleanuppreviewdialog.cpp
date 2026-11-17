@@ -41,6 +41,7 @@ struct PreviewCandidate
   int read = 0;
   int starred = 0;
   QString label;
+  int deleted = 0;
 };
 
 class PreviewFeedsDelegate : public QStyledItemDelegate
@@ -129,8 +130,8 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
   }
 
   if (!q.exec(QStringLiteral(
-          "SELECT id, feedId, received, published, read, starred, label "
-          "FROM news WHERE deleted == 0 ORDER BY published"))) {
+          "SELECT id, feedId, received, published, read, starred, label, deleted "
+          "FROM news WHERE deleted IN (0, 1) ORDER BY published"))) {
     error = q.lastError().text();
     return false;
   }
@@ -147,6 +148,7 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
     candidate.read = q.value(4).toInt();
     candidate.starred = q.value(5).toInt();
     candidate.label = q.value(6).toString();
+    candidate.deleted = q.value(7).toInt();
     articlesByFeed[feedId].append(candidate);
   }
   if (q.lastError().isValid()) {
@@ -180,6 +182,16 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
 
     // Step 1: Dated articles older than retentionCutoff are hard-deleted first.
     for (const PreviewCandidate &article : articles) {
+      if (article.deleted == 1) {
+        // Shutdown applies publication-age retention to Deleted too. These
+        // articles belong in the Deleted preview, never the visible-feed count.
+        // With cleanUpDeleted enabled they were already collected above.
+        if (!config.cleanUpDeleted && isEligible(article) &&
+            NewsRetention::expired(article.published, retentionCutoff)) {
+          plan.deletedBinIds.append(article.id);
+        }
+        continue;
+      }
       if (retentionCutoff.isValid() && isEligible(article) &&
           NewsRetention::expired(article.published, retentionCutoff)) {
         removedForFeed.append(article.id);
