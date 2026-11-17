@@ -1,7 +1,7 @@
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
-#include "websiteoverrides.h"
+#include "network/websiteoverrides.h"
 
 class WebsiteOverridesTest : public QObject
 {

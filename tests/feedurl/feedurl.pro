@@ -4,5 +4,5 @@ CONFIG += console testcase c++17
 CONFIG -= app_bundle
 TEMPLATE = app
 TARGET = feedurl-test
-SOURCES += test_feedurl.cpp ../../src/network/feedurl.cpp ../../src/application/opmlinput.cpp
-INCLUDEPATH += ../../src/network ../../src/application
+SOURCES += test_feedurl.cpp ../../src/network/feedurl.cpp ../../src/feeds/opml/opmlinput.cpp
+INCLUDEPATH += ../../src

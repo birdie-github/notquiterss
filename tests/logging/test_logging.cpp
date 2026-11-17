@@ -2,8 +2,8 @@
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <cstdio>
-#include "commandline.h"
-#include "logfile.h"
+#include "app/commandline.h"
+#include "common/logfile.h"
 #ifdef Q_OS_WIN
 #include <io.h>
 #define LOG_DUP _dup

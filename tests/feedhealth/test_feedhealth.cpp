@@ -1,6 +1,6 @@
 #include <QtTest>
 #include <QtSql>
-#include "feedhealth.h"
+#include "feeds/feedhealth.h"
 class FeedHealthTest : public QObject
 {
   Q_OBJECT

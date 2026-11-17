@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "feeddeletion.h"
+#include "feeds/feeddeletion.h"
 #include <QtTest>
 #include <QSqlError>
 #include <QSqlQuery>

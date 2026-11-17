@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -20,10 +20,10 @@
 #include <utility>
 #include <QScreen>
 
-#include "mainapplication.h"
+#include "app/mainapplication.h"
 #include "notificationsfeeditem.h"
 #include "notificationsnewsitem.h"
-#include "optionsdialog.h"
+#include "preferences/optionsdialog.h"
 
 NotificationWidget::NotificationWidget(QList<int> idFeedList,
                                        QList<int> cntNewNewsList,

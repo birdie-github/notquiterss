@@ -1,0 +1,104 @@
+/* ============================================================
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
+* © 2011-2020 QuiteRSS Project
+* © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* ============================================================ */
+#ifndef ADDFEEDDIALOG_H
+#define ADDFEEDDIALOG_H
+
+#include <QtWidgets>
+#include <QtSql>
+
+#include "widgets/lineedit.h"
+#include "feeds/update/updatefeeds.h"
+
+class AddFeedWizard : public QWizard
+{
+  Q_OBJECT
+public:
+  explicit AddFeedWizard(QWidget *parent, int curFolderId);
+  ~AddFeedWizard();
+
+  enum Result { FeedsSelected = QDialog::Accepted + 1, FeedSkipped };
+  QStringList selectedUrls() const { return selectedUrls_; }
+  void configureFeed(const QString &url, int position, int total);
+  void setUrlFeed(const QString &feedUrl);
+
+  LineEdit *nameFeedEdit_;
+  LineEdit *urlFeedEdit_;
+  QString htmlUrlString_;
+  QString feedUrlString_;
+  int feedId_ = 0;
+  int feedParentId_;
+  int newCount_;
+
+public slots:
+  void getUrlDone(int result, int feedId, QString feedUrlStr,
+                  QString error, QByteArray data,
+                  QDateTime dtReply, QString codecName, QUrl effective, QString mimeType);
+  void slotUpdateFeed(int feedId, bool, int newCount, QString);
+
+signals:
+  void xmlReadyParse(QByteArray data, int feedId,
+                     QDateTime dtReply, QString codecName);
+  void signalRequestUrl(int feedId, QString urlString,
+                        QDateTime date, QString userInfo);
+
+protected:
+  virtual bool validateCurrentPage();
+  virtual void done(int result);
+  void changeEvent(QEvent *event);
+
+private slots:
+  void urlFeedEditChanged(const QString&);
+  void nameFeedEditChanged(const QString&);
+  void backButtonClicked();
+  void nextButtonClicked();
+  void finishButtonClicked();
+  void slotCurrentIdChanged(int);
+  void titleFeedAsNameStateChanged(int);
+  void slotProgressBarUpdate();
+  void newFolder();
+
+private:
+  void addFeed();
+  void failed(const QString &message);
+  bool insertFeed();
+  QStringList selectedUrls_;
+  int scanId_ = RequestFeed::FirstProbe;
+  bool configuring_ = false;
+  void deleteFeed();
+  void showProgressBar();
+  void finish();
+
+  UpdateFeeds *updateFeeds_;
+  QWizardPage *createUrlFeedPage();
+  QWizardPage *createNameFeedPage();
+  QCheckBox *titleFeedAsName_;
+  QGroupBox *authentication_;
+  LineEdit *user_;
+  LineEdit *pass_;
+  QLabel *textWarning;
+  QWidget *warningWidget_;
+  QProgressBar *progressBar_;
+  bool selectedPage;
+  bool finishOn;
+  QTreeWidget *foldersTree_;
+  int curFolderId_;
+
+};
+
+#endif // ADDFEEDDIALOG_H

@@ -4,5 +4,5 @@ CONFIG -= app_bundle
 TEMPLATE = app
 TARGET = pendingdatabase-test
 PKGCONFIG += sqlite3
-INCLUDEPATH += ../../src/database
+INCLUDEPATH += ../../src
 SOURCES += test_pendingdatabase.cpp ../../src/database/pendingdatabase.cpp

@@ -1,5 +1,5 @@
 /* ============================================================
-* NotQuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* NotQuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
 * This program is free software: you can redistribute it and/or modify

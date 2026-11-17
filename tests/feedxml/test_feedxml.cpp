@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "feedxml.h"
+#include "feeds/update/feedxml.h"
 #include <QtTest>
 
 class FeedXmlTest : public QObject

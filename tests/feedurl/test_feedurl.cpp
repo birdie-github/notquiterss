@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <QtTest>
-#include "feedurl.h"
-#include "networkpolicy.h"
-#include "opmlinput.h"
-#include "credentialscope.h"
+#include "network/feedurl.h"
+#include "network/networkpolicy.h"
+#include "feeds/opml/opmlinput.h"
+#include "network/credentialscope.h"
 
 class FeedUrlTest : public QObject
 {

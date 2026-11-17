@@ -1,0 +1,1379 @@
+/* ============================================================
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
+* © 2011-2020 QuiteRSS Project
+* © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* ============================================================ */
+#include "feeddate.h"
+#include "feedxml.h"
+#include "common/logfile.h"
+#include "projectmetadata.h"
+#include <utility>
+#include <QTextCodec>
+#include "parseobject.h"
+
+#include "app/mainapplication.h"
+#include "database/database.h"
+#include "articles/cleanup/newsretention.h"
+#include "preferences/settings.h"
+
+#include <QDebug>
+#include <QElapsedTimer>
+#include <QThread>
+#include <QDesktopServices>
+#include <QTextDocumentFragment>
+#if defined(Q_OS_WIN)
+#include <windows.h>
+#endif
+#include <QRegularExpression>
+
+namespace {
+QString literalTitlePattern(QString title)
+{
+  // Escape the escape character first, then SQL LIKE wildcards. Keep LIKE's
+  // existing case matching while treating every title character literally.
+  title.replace(QLatin1String("!"), QLatin1String("!!"));
+  title.replace(QLatin1String("%"), QLatin1String("!%"));
+  title.replace(QLatin1String("_"), QLatin1String("!_"));
+  return title;
+}
+
+bool hasCommonArticle(const QHash<QString, QSet<int>> &first, const QString &firstValue,
+                      const QHash<QString, QSet<int>> &second, const QString &secondValue)
+{
+  const auto firstRows = first.constFind(firstValue);
+  const auto secondRows = second.constFind(secondValue);
+  return firstRows != first.cend() && secondRows != second.cend() &&
+      firstRows.value().intersects(secondRows.value());
+}
+}
+
+ParseObject::ParseObject(QObject *parent)
+  : QObject(parent)
+{
+  setObjectName("parseObject_");
+
+  parseTimer_ = new QTimer(this);
+  parseTimer_->setSingleShot(true);
+  parseTimer_->setInterval(10);
+  connect(parseTimer_, &QTimer::timeout, this, &ParseObject::getQueuedXml, Qt::QueuedConnection);
+
+  connect(this, &ParseObject::signalReadyParse, this, &ParseObject::slotParse);
+}
+
+ParseObject::~ParseObject()
+{
+
+}
+
+void ParseObject::setDatabase(const QSqlDatabase &database)
+{
+  Q_ASSERT(QThread::currentThread() == thread());
+  Q_ASSERT(database.driver()->thread() == thread());
+  db_ = database;
+}
+
+void ParseObject::setArticleSettings(bool markIdenticalNewsRead, bool avoidOldNews,
+                                     QDate avoidedOldNewsDate)
+{
+  Q_ASSERT(QThread::currentThread() == thread());
+  markIdenticalNewsRead_ = markIdenticalNewsRead;
+  avoidOldNews_ = avoidOldNews;
+  avoidedOldNewsDate_ = avoidedOldNewsDate;
+}
+
+void ParseObject::disconnectObjects()
+{
+  disconnect(this);
+}
+
+/** @brief Queueing xml-data
+ *----------------------------------------------------------------------------*/
+void ParseObject::parseXml(QByteArray data, int feedId,
+                           QDateTime dtReply, QString codecName)
+{
+  idsQueue_.enqueue(feedId);
+  xmlsQueue_.enqueue(data);
+  dtReadyQueue_.enqueue(dtReply);
+  codecNameQueue_.enqueue(codecName);
+  qDebug() << "xmlsQueue_ <<" << feedId << "count=" << xmlsQueue_.count();
+
+  if (!parseTimer_->isActive())
+    parseTimer_->start();
+}
+
+/** @brief Process xml-data queue
+ *----------------------------------------------------------------------------*/
+void ParseObject::getQueuedXml()
+{
+  if (!mutex_.tryLock())
+    return;
+
+  if (idsQueue_.count()) {
+    int feedId = idsQueue_.dequeue();
+    QByteArray currentXml_ = xmlsQueue_.dequeue();
+    QDateTime currentDtReady_ = dtReadyQueue_.dequeue();
+    QString currentCodecName_ = codecNameQueue_.dequeue();
+    qDebug() << "xmlsQueue_ >>" << feedId << "count=" << xmlsQueue_.count();
+
+    emit signalReadyParse(currentXml_, feedId, currentDtReady_, currentCodecName_);
+  }
+
+  mutex_.unlock();
+
+  if (idsQueue_.count())
+    parseTimer_->start();
+}
+
+/** @brief Parse xml-data
+ *----------------------------------------------------------------------------*/
+void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
+                            const QDateTime &dtReply, const QString &codecName)
+{
+  if (mainApp->isSaveDataLastFeed()) {
+    QFile file(mainApp->dataDir()  + ("/" + ProjectMetadata::lastFeed()));
+    if (file.open(QIODevice::WriteOnly)) {
+      file.write(xmlData);
+      file.close();
+    }
+  }
+
+  qDebug() << "=================== parseXml:start ============================";
+
+  parseFeedId_ = feedId;
+  // Decode and build the XML document before reserving SQLite's writer.
+  feedChanged_ = false;
+  lastBuildDate_ = dtReply;
+
+  QElapsedTimer parseTimer;
+  parseTimer.start();
+
+  bool codecOk = false;
+  QString convertData;
+  QString feedType;
+  QDomDocument doc;
+  QString errorStr;
+  int errorLine;
+  int errorColumn;
+
+  static const QRegularExpression xmlEncodingRx(
+      QStringLiteral(R"(^\s*(?:\xEF\xBB\xBF)?<\?xml\b[^>]*?\bencoding\s*=\s*(["'])([^"']+)\1)"),
+      QRegularExpression::CaseInsensitiveOption);
+  const QString prolog = QString::fromLatin1(xmlData.constData(), qMin(xmlData.size(), 512));
+  const QRegularExpressionMatch match = xmlEncodingRx.match(prolog);
+  if (match.hasMatch()) {
+    const QString codecNameT = match.captured(2).trimmed();
+    qDebug() << "Codec name (1):" << codecNameT;
+    QTextCodec *codec = QTextCodec::codecForName(codecNameT.toUtf8());
+    if (codec) {
+      convertData = codec->toUnicode(xmlData);
+      codecOk = true;
+    } else {
+      qWarning() << "Codec not found (1): " << codecNameT << feedId;
+      if (codecNameT.contains(QLatin1String("us-ascii"), Qt::CaseInsensitive)) {
+        convertData = QString::fromUtf8(xmlData);
+        const QString encodingAttr = QStringLiteral("encoding=%1%2%1")
+            .arg(match.captured(1), match.captured(2));
+        convertData.remove(encodingAttr, Qt::CaseInsensitive);
+        codecOk = true;
+      }
+    }
+  }
+
+  if (!codecOk && !codecName.isEmpty()) {
+    qDebug() << "Codec name (2):" << codecName;
+    QTextCodec *codec = QTextCodec::codecForName(codecName.trimmed().toUtf8());
+    if (codec) {
+      convertData = codec->toUnicode(xmlData);
+      codecOk = true;
+    } else {
+      qWarning() << "Codec not found (2): " << codecName << feedId;
+    }
+  }
+
+  if (!codecOk) {
+    if (QTextCodec *utf8 = QTextCodec::codecForName("UTF-8")) {
+      QTextCodec::ConverterState state;
+      const QString candidate = utf8->toUnicode(xmlData.constData(), xmlData.size(), &state);
+      if (state.invalidChars == 0) {
+        qDebug() << "Codec name (3): UTF-8";
+        convertData = candidate;
+        codecOk = true;
+      }
+    }
+    if (!codecOk) {
+      convertData = QString::fromLocal8Bit(xmlData);
+    }
+  }
+
+  const qint64 decodeMs = parseTimer.restart();
+  const bool parsed = FeedXml::parse(doc, convertData, errorStr, errorLine, errorColumn);
+  const qint64 xmlDomMs = parseTimer.elapsed();
+  if (parsed) feedType = doc.documentElement().tagName();
+  if (!parsed || (feedType != "feed" && feedType != "rss" && feedType != "rdf:RDF")) {
+    const QString detail = !parsed
+        ? tr("Invalid XML at line %1, column %2: %3").arg(errorLine).arg(errorColumn).arg(errorStr)
+        : tr("The response is not a supported RSS or Atom feed (root element: %1).").arg(feedType);
+    emit signalFinishUpdate(feedId, false, 0, "-6 " + detail);
+    return;
+  }
+
+  if (xmlData.size() <= 256 * 1024) {
+    const QString itemTag = (feedType == QLatin1String("feed"))
+        ? QStringLiteral("entry") : QStringLiteral("item");
+    const int itemCount = doc.elementsByTagName(itemTag).count();
+    const qint64 totalParseMs = decodeMs + xmlDomMs;
+    if (itemCount <= 100 && totalParseMs >= 20) {
+      qInfo().noquote() << QStringLiteral(
+          "[perf] ParseObject::slotParse(feed=%1): total=%2 ms (decode=%3, xmlDom=%4, bytes=%5, items=%6)")
+          .arg(feedId).arg(totalParseMs).arg(decodeMs).arg(xmlDomMs)
+          .arg(xmlData.size()).arg(itemCount);
+    }
+  }
+
+  auto databaseAccess = Database::backgroundAccess();
+  sqlError_ = QSqlError();
+  UpdateEffects effects;
+  int newCount = 0;
+  bool success = db_.transaction();
+  if (!success) {
+    sqlError_ = db_.lastError();
+  } else {
+    success = storeFeed(doc, feedId, newCount, effects);
+    // storeFeed's queries have been destroyed before commit or rollback.
+    if (success && !db_.commit()) {
+      sqlError_ = db_.lastError();
+      success = false;
+    }
+    if (!success && !db_.rollback())
+      qCritical() << "Feed update rollback failed:" << db_.lastError();
+  }
+  guidIndex_.clear();
+  titleIndex_.clear();
+  publishedIndex_.clear();
+  linkIndex_.clear();
+
+  if (!success) {
+    qWarning() << "Feed update failed:" << feedId << sqlError_;
+    emit signalFinishUpdate(feedId, false, 0,
+                            "-6 " + tr("Database update failed: %1").arg(sqlError_.text()));
+    return;
+  }
+  publishEffects(effects);
+  emit signalFinishUpdate(feedId, feedChanged_, newCount, "0");
+  qDebug() << "=================== parseXml:finish ===========================";
+}
+
+bool ParseObject::storeFeed(const QDomDocument &doc, int feedId, int &newCount,
+                            UpdateEffects &effects)
+{
+  // extract feed id, duplicate news mode and date to avoid from feed table
+  parseFeedId_ = feedId;
+  QString feedUrl;
+  duplicateNewsMode_ = false;
+  addSingleNewsAnyDate_ = false;
+  avoidedOldSingleNews_ = false;
+  avoidedOldSingleNewsDate_ = QDate::currentDate();
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  retentionCutoff_ = QDateTime();
+  if (!checkQuery(q.exec(QString("SELECT duplicateNewsMode, xmlUrl, addSingleNewsAnyDateOn, avoidedOldSingleNewsDateOn, avoidedOldSingleNewsDate, updated"
+                 " FROM feeds WHERE id=='%1'").arg(parseFeedId_)), q)) return false;
+  if (q.first()) {
+    duplicateNewsMode_ = q.value(0).toBool();
+    feedUrl = q.value(1).toString();
+    addSingleNewsAnyDate_ = q.value(2).toBool();
+    avoidedOldSingleNews_ = q.value(3).toBool();
+    avoidedOldSingleNewsDate_ = q.value(4).toDate();
+    // An actual new feed gets its initial history, even if every entry is old.
+    // An emptied existing feed still has an update timestamp.
+    Settings settings;
+    if (!q.value(5).toString().isEmpty() &&
+        settings.value("Settings/cleanupOnShutdown", true).toBool() &&
+        settings.value("Settings/dayClearUpOn", true).toBool()) {
+      retentionCutoff_ = NewsRetention::cutoff(
+          settings.value("Settings/maxDayClearUp", 30).toInt());
+    }
+  }
+
+  if (!checkQuery(!q.lastError().isValid(), q)) return false;
+
+  // id not found (ex. feed deleted while updating)
+  if (feedUrl.isEmpty()) {
+    qWarning() << QString("Feed with id = '%1' not found").arg(parseFeedId_);
+    return true;
+  }
+
+  qDebug() << QString("Feed '%1' found with id = %2").arg(LogFile::urlForLog(QUrl(feedUrl))).arg(parseFeedId_);
+
+  if (!checkQuery(q.exec(QString("SELECT guid, title, published, link_href FROM news WHERE feedId='%1'").arg(feedId)), q)) return false;
+  // Build once per feed update, without adding newly inserted articles to
+  // the snapshot: duplicate handling within the incoming feed stays unchanged.
+  int articleRow = 0;
+  while (q.next()) {
+    guidIndex_[q.value(0).toString()].insert(articleRow);
+    titleIndex_[q.value(1).toString()].insert(articleRow);
+    publishedIndex_[q.value(2).toString()].insert(articleRow);
+    linkIndex_[q.value(3).toString()].insert(articleRow);
+    ++articleRow;
+  }
+  if (!checkQuery(!q.lastError().isValid(), q)) return false;
+  q.finish();
+
+  if (doc.documentElement().tagName() == "feed")
+    parseAtom(feedUrl, doc);
+  else
+    parseRss(feedUrl, doc);
+  if (sqlError_.isValid()) return false;
+
+  const QString updated = QLocale::c().toString(QDateTime::currentDateTimeUtc(),
+                                               "yyyy-MM-ddTHH:mm:ss");
+  const QString lastBuildDate = lastBuildDate_.toString(Qt::ISODate);
+  if (!checkQuery(q.prepare("UPDATE feeds SET updated=?, lastBuildDate=? WHERE id=?"), q)) return false;
+  q.addBindValue(updated);
+  q.addBindValue(lastBuildDate);
+  q.addBindValue(feedId);
+  if (!checkQuery(q.exec(), q)) return false;
+  q.finish();
+
+  if (feedChanged_) {
+    applyUserFilter(feedId, -1, effects);
+    if (sqlError_.isValid()) return false;
+    newCount = recountFeedCounts(feedId, feedUrl, updated, lastBuildDate, effects);
+  }
+  return !sqlError_.isValid();
+}
+
+void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
+{
+  QDomElement rootElem = doc.documentElement();
+  FeedItemStruct feedItem;
+
+  feedItem.linkBase = rootElem.attribute("xml:base");
+  feedItem.title = toPlainText(FeedXml::atomText(rootElem.namedItem("title").toElement()));
+  feedItem.description = rootElem.namedItem("subtitle").toElement().text();
+  feedItem.updated = rootElem.namedItem("updated").toElement().text();
+  feedItem.updated = parseDate(feedItem.updated, feedUrl);
+  QDomElement authorElem = rootElem.namedItem("author").toElement();
+  if (!authorElem.isNull()) {
+    feedItem.author = toPlainText(authorElem.namedItem("name").toElement().text());
+    if (feedItem.author.isEmpty()) feedItem.author = toPlainText(authorElem.text());
+    feedItem.authorUri = authorElem.namedItem("uri").toElement().text();
+    feedItem.authorEmail = authorElem.namedItem("email").toElement().text();
+  }
+  feedItem.language = rootElem.namedItem("language").toElement().text();
+  QDomNodeList linksList = rootElem.elementsByTagName("link");
+  for (int j = 0; j < linksList.size(); j++) {
+    if (linksList.at(j).toElement().attribute("rel") == "alternate") {
+      feedItem.link = linksList.at(j).toElement().attribute("href");
+      break;
+    }
+  }
+  if (feedItem.link.isEmpty()) {
+    for (int j = 0; j < linksList.size(); j++) {
+        if (!(linksList.at(j).toElement().attribute("rel") == "self")) {
+          feedItem.link = linksList.at(j).toElement().attribute("href");
+          break;
+        }
+    }
+  }
+
+  if (QUrl(feedItem.link).host().isEmpty() || (QUrl(feedItem.link).host().indexOf('.')) == -1) {
+    if (!feedItem.linkBase.isEmpty() && !QUrl(feedItem.linkBase).host().isEmpty())
+      feedItem.link = QUrl(feedItem.linkBase).scheme() %  "://" % QUrl(feedItem.linkBase).host();
+    else
+      feedItem.link = QUrl(feedUrl).scheme() %  "://" % QUrl(feedUrl).host();
+  }
+  if (feedItem.linkBase.isEmpty() && !QUrl(feedItem.link).host().isEmpty())
+    feedItem.linkBase = QUrl(feedItem.link).scheme() %  "://" % QUrl(feedItem.link).host();
+  if (QUrl(feedItem.link).host().isEmpty())
+    feedItem.link = feedItem.linkBase + feedItem.link;
+  feedItem.link = toPlainText(feedItem.link);
+  QUrl url = QUrl(feedItem.link);
+  if (url.scheme().isEmpty())
+    url.setScheme(QUrl(feedUrl).scheme());
+  feedItem.link = url.toString();
+
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  QString qStr ("UPDATE feeds "
+                "SET title=?, description=?, htmlUrl=?, "
+                "author_name=?, author_email=?, "
+                "author_uri=?, pubdate=?, language=? "
+                "WHERE id==?");
+  if (!checkQuery(q.prepare(qStr), q)) return;
+  q.addBindValue(feedItem.title);
+  q.addBindValue(feedItem.description);
+  q.addBindValue(feedItem.link);
+  q.addBindValue(feedItem.author);
+  q.addBindValue(feedItem.authorEmail);
+  q.addBindValue(feedItem.authorUri);
+  q.addBindValue(feedItem.updated);
+  q.addBindValue(feedItem.language);
+  q.addBindValue(parseFeedId_);
+  if (!checkQuery(q.exec(), q)) return;
+
+  QDomNodeList newsList = doc.elementsByTagName("entry");
+  for (int i = 0; i < newsList.size(); i++) {
+    NewsItemStruct newsItem;
+    newsItem.id = newsList.item(i).namedItem("id").toElement().text();
+    newsItem.title = toPlainText(FeedXml::atomText(newsList.item(i).namedItem("title").toElement()));
+    newsItem.updated = newsList.item(i).namedItem("published").toElement().text();
+    if (newsItem.updated.isEmpty())
+      newsItem.updated = newsList.item(i).namedItem("updated").toElement().text();
+    newsItem.updated = parseDate(newsItem.updated, feedUrl);
+    QDomElement authorElem = newsList.item(i).namedItem("author").toElement();
+    if (!authorElem.isNull()) {
+      newsItem.author = toPlainText(authorElem.namedItem("name").toElement().text());
+      if (newsItem.author.isEmpty()) newsItem.author = toPlainText(authorElem.text());
+      newsItem.authorUri = authorElem.namedItem("uri").toElement().text();
+      newsItem.authorEmail = authorElem.namedItem("email").toElement().text();
+    }
+
+    newsItem.description = FeedXml::atomText(newsList.item(i).namedItem("summary").toElement());
+    newsItem.content = FeedXml::atomText(newsList.item(i).namedItem("content").toElement());
+    QString imgUrl = newsList.item(i).namedItem("media:thumbnail").toElement().attribute("url");
+    QString community = getCommunity(newsList.item(i).namedItem("media:community"));
+    QDomNode nodeContent = newsList.item(i).namedItem("media:group");
+    if (!nodeContent.isNull()) {
+      QString description = nodeContent.namedItem("media:description").toElement().text();
+      if (description.length() > newsItem.content.length())
+        newsItem.content = description;
+      newsItem.content = fromPlainText(newsItem.content);
+      if (imgUrl.isEmpty())
+        imgUrl = nodeContent.namedItem("media:thumbnail").toElement().attribute("url");
+      if (community.isEmpty())
+        community = getCommunity(nodeContent.namedItem("media:community"));
+    }
+    // Atom content is the article body; a longer summary must not replace it.
+    if (!newsItem.content.isEmpty()) {
+      newsItem.description = newsItem.content;
+    }
+    newsItem.content.clear();
+    if (!imgUrl.isEmpty()) {
+      newsItem.description = "<p class=\"description\">" + newsItem.description + "</p>";
+      newsItem.description += "<img src=\"" + imgUrl + "\" alt=\"image\"/>";
+    }
+    if (!community.isEmpty())
+      newsItem.description += community;
+
+    QDomNodeList categoryElem = newsList.item(i).toElement().elementsByTagName("category");
+    for (int j = 0; j < categoryElem.size(); j++) {
+      if (!newsItem.category.isEmpty()) newsItem.category.append(", ");
+      QString category = categoryElem.at(j).toElement().attribute("label");
+      if (category.isEmpty())
+        category = categoryElem.at(j).toElement().attribute("term");
+      newsItem.category.append(toPlainText(category));
+    }
+    QDomElement enclosureElem = newsList.item(i).namedItem("enclosure").toElement();
+    newsItem.eUrl = enclosureElem.attribute("url");
+    newsItem.eType = enclosureElem.attribute("type");
+    newsItem.eLength = enclosureElem.attribute("length");
+    QDomNodeList linksList = newsList.item(i).toElement().elementsByTagName("link");
+    for (int j = 0; j < linksList.size(); j++) {
+      if (linksList.at(j).toElement().attribute("type") == "text/html") {
+        if (linksList.at(j).toElement().attribute("rel") == "self")
+          newsItem.link = linksList.at(j).toElement().attribute("href");
+        if (linksList.at(j).toElement().attribute("rel") == "alternate")
+          newsItem.linkAlternate = linksList.at(j).toElement().attribute("href");
+        if (linksList.at(j).toElement().attribute("rel") == "replies")
+          newsItem.comments = linksList.at(j).toElement().attribute("href");
+      } else if (newsItem.linkAlternate.isEmpty()) {
+        if (linksList.at(j).toElement().attribute("rel") == "alternate")
+          newsItem.linkAlternate = linksList.at(j).toElement().attribute("href");
+      }
+    }
+    for (int j = 0; j < linksList.size(); j++) {
+      if (newsItem.linkAlternate.isEmpty()) {
+        if (!(linksList.at(j).toElement().attribute("rel") == "self")) {
+          newsItem.linkAlternate = linksList.at(j).toElement().attribute("href");
+          break;
+        }
+      }
+    }
+
+    if (!newsItem.link.isEmpty() && QUrl(newsItem.link).host().isEmpty())
+      newsItem.link = feedItem.linkBase + newsItem.link;
+    newsItem.link = toPlainText(newsItem.link);
+    if (!newsItem.linkAlternate.isEmpty() && QUrl(newsItem.linkAlternate).host().isEmpty())
+      newsItem.linkAlternate = feedItem.linkBase + newsItem.linkAlternate;
+    newsItem.linkAlternate = toPlainText(newsItem.linkAlternate);
+    if (newsItem.link.isEmpty()) {
+      newsItem.link = newsItem.linkAlternate;
+      newsItem.linkAlternate.clear();
+    }
+    url = QUrl(newsItem.link);
+    if (url.scheme().isEmpty())
+      url.setScheme(QUrl(feedUrl).scheme());
+    newsItem.link = url.toString();
+
+    addAtomNewsIntoBase(&newsItem);
+    if (sqlError_.isValid()) return;
+  }
+}
+
+void ParseObject::addAtomNewsIntoBase(NewsItemStruct *newsItem)
+{
+  if (NewsRetention::expired(newsItem->updated, retentionCutoff_)) return;
+
+  // search news duplicates in base
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  QString qStr;
+  qDebug() << "atomId:" << newsItem->id;
+  qDebug() << "title:" << newsItem->title;
+  qDebug() << "published:" << newsItem->updated;
+
+  bool isDuplicate = false;
+  if (!newsItem->id.isEmpty()) {
+    if (duplicateNewsMode_)
+      isDuplicate = guidIndex_.contains(newsItem->id);
+    else if (!newsItem->updated.isEmpty())
+      isDuplicate = hasCommonArticle(guidIndex_, newsItem->id,
+                                     publishedIndex_, newsItem->updated);
+    else if (!newsItem->title.isEmpty())
+      isDuplicate = hasCommonArticle(guidIndex_, newsItem->id,
+                                     titleIndex_, newsItem->title);
+  } else if (!newsItem->updated.isEmpty()) {
+    isDuplicate = publishedIndex_.contains(newsItem->updated);
+  } else if (!newsItem->title.isEmpty()) {
+    isDuplicate = titleIndex_.contains(newsItem->title);
+  }
+
+  // Verify old news before a date to avoid adding them to base
+  bool isOld = false;
+  QDateTime pubDate_ = QDateTime::fromString(newsItem->updated, "yyyy-MM-ddTHH:mm:ss");
+  QDateTime avoidedDate_ = avoidedOldNewsDate_.startOfDay();
+  if (!addSingleNewsAnyDate_) {      //
+    if (avoidedOldSingleNews_ ) {     // avoid adding old single news
+      if (avoidedOldSingleNewsDate_.startOfDay() > pubDate_)
+        isOld = true;
+      } else if (avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
+        isOld = true;
+      }
+   }
+
+  // if duplicates not found and is old news, add them into base
+  if (!isDuplicate && !isOld) {
+    bool read = false;
+    if (markIdenticalNewsRead_) {
+      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title ESCAPE '!' AND feedId!=:id"), q)) return;
+      q.bindValue(":id", parseFeedId_);
+      q.bindValue(":title", literalTitlePattern(newsItem->title));
+      if (!checkQuery(q.exec(), q)) return;
+      if (q.first()) read = true;
+      if (!checkQuery(!q.lastError().isValid(), q)) return;
+    }
+
+    qStr = QString("INSERT INTO news("
+                   "feedId, description, content, guid, title, author_name, "
+                   "author_uri, author_email, published, received, "
+                   "link_href, link_alternate, category, comments, "
+                   "enclosure_url, enclosure_type, enclosure_length, new, read) "
+                   "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if (!checkQuery(q.prepare(qStr), q)) return;
+    q.addBindValue(parseFeedId_);
+    q.addBindValue(newsItem->description);
+    q.addBindValue(newsItem->content);
+    q.addBindValue(newsItem->id);
+    q.addBindValue(newsItem->title);
+    q.addBindValue(newsItem->author);
+    q.addBindValue(newsItem->authorUri);
+    q.addBindValue(newsItem->authorEmail);
+    QString updated = newsItem->updated;
+    if (updated.isEmpty())
+      updated = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    q.addBindValue(updated);
+    q.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
+    q.addBindValue(newsItem->link);
+    q.addBindValue(newsItem->linkAlternate);
+    q.addBindValue(newsItem->category);
+    q.addBindValue(newsItem->comments);
+    q.addBindValue(newsItem->eUrl);
+    q.addBindValue(newsItem->eType);
+    q.addBindValue(newsItem->eLength);
+    q.addBindValue(read ? 0 : 1);
+    q.addBindValue(read ? 2 : 0);
+    if (!checkQuery(q.exec(), q)) return;
+    q.finish();
+
+    if (lastBuildDate_ < QDateTime::fromString(newsItem->updated, Qt::ISODate))
+      lastBuildDate_ = QDateTime::fromString(newsItem->updated, Qt::ISODate);
+    feedChanged_ = true;
+  }
+}
+
+void ParseObject::parseRss(const QString &feedUrl, const QDomDocument &doc)
+{
+  QDomNode channel = doc.documentElement().namedItem("channel");
+  if (channel.isNull())
+    channel = doc.documentElement().namedItem("rss:channel");
+  FeedItemStruct feedItem;
+
+  feedItem.title = toPlainText(channel.namedItem("title").toElement().text());
+  if (feedItem.title.isEmpty())
+    feedItem.title = toPlainText(channel.namedItem("rss:title").toElement().text());
+  feedItem.description = channel.namedItem("description").toElement().text();
+  if (feedItem.description.isEmpty())
+    feedItem.description = toPlainText(channel.namedItem("rss:description").toElement().text());
+  feedItem.link = toPlainText(channel.namedItem("link").toElement().text());
+  if (feedItem.link.isEmpty())
+    feedItem.link = toPlainText(channel.namedItem("rss:link").toElement().text());
+  QUrl url = QUrl(feedItem.link);
+  if (url.host().isEmpty())
+    url.setHost(QUrl(feedUrl).host());
+  if (url.scheme().isEmpty())
+    url.setScheme(QUrl(feedUrl).scheme());
+  feedItem.link = url.toString();
+
+  feedItem.updated = channel.namedItem("pubDate").toElement().text();
+  if (feedItem.updated.isEmpty())
+    feedItem.updated = channel.namedItem("pubdate").toElement().text();
+  feedItem.updated = parseDate(feedItem.updated, feedUrl);
+  feedItem.author = toPlainText(channel.namedItem("author").toElement().text());
+  feedItem.language = channel.namedItem("language").toElement().text();
+  if (feedItem.language.isEmpty())
+    feedItem.language = channel.namedItem("dc:language").toElement().text();
+
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  QString qStr("UPDATE feeds "
+               "SET title=?, description=?, htmlUrl=?, "
+               "author_name=?, pubdate=?, language=? "
+               "WHERE id==?");
+  if (!checkQuery(q.prepare(qStr), q)) return;
+  q.addBindValue(feedItem.title);
+  q.addBindValue(feedItem.description);
+  q.addBindValue(feedItem.link);
+  q.addBindValue(feedItem.author);
+  q.addBindValue(feedItem.updated);
+  q.addBindValue(feedItem.language);
+  q.addBindValue(parseFeedId_);
+  if (!checkQuery(q.exec(), q)) return;
+
+  QDomNodeList newsList = doc.elementsByTagName("item");
+  if (newsList.isEmpty())
+    newsList = doc.elementsByTagName("rss:item");
+  for (int i = 0; i < newsList.size(); i++) {
+    NewsItemStruct newsItem;
+    newsItem.id = newsList.item(i).namedItem("guid").toElement().text();
+    newsItem.title = toPlainText(newsList.item(i).namedItem("title").toElement().text());
+    if (newsItem.title.isEmpty())
+      newsItem.title = toPlainText(newsList.item(i).namedItem("rss:title").toElement().text());
+    newsItem.updated = newsList.item(i).namedItem("pubDate").toElement().text();
+    if (newsItem.updated.isEmpty())
+      newsItem.updated = newsList.item(i).namedItem("pubdate").toElement().text();
+    if (newsItem.updated.isEmpty())
+      newsItem.updated = newsList.item(i).namedItem("dc:date").toElement().text();
+    newsItem.updated = parseDate(newsItem.updated, feedUrl);
+    newsItem.author = toPlainText(newsList.item(i).namedItem("author").toElement().text());
+    if (newsItem.author.isEmpty())
+      newsItem.author = toPlainText(newsList.item(i).namedItem("dc:creator").toElement().text());
+    newsItem.link = toPlainText(newsList.item(i).namedItem("link").toElement().text());
+    if (newsItem.link.isEmpty()) {
+        newsItem.link = toPlainText(newsList.item(i).namedItem("rss:link").toElement().text());
+        if (newsItem.link.isEmpty()) {
+            if (newsList.item(i).namedItem("guid").toElement().attribute("isPermaLink") == "true")
+                newsItem.link = newsItem.id;
+        }
+    }
+    // Keep an absent article link absent: inventing the feed's website URL
+    // would give every linkless entry the same duplicate identity.
+    if (!newsItem.link.isEmpty()) {
+      url = QUrl(newsItem.link);
+      if (url.host().isEmpty())
+        url.setHost(QUrl(feedUrl).host());
+      if (url.scheme().isEmpty())
+        url.setScheme(QUrl(feedUrl).scheme());
+      newsItem.link = url.toString();
+    }
+
+    newsItem.description = newsList.item(i).namedItem("description").toElement().text();
+    QDomNode nodeSummary = newsList.item(i).namedItem("description");
+    if (!nodeSummary.isNull() && newsItem.description.isEmpty()) {
+      QTextStream in(&newsItem.description);
+      nodeSummary.save(in, 0);
+    }
+    newsItem.content = newsList.item(i).namedItem("content:encoded").toElement().text();
+    QDomNode nodeContent = newsList.item(i).namedItem("content:encoded");
+    if (!nodeContent.isNull() && newsItem.content.isEmpty()) {
+      QTextStream in(&newsItem.content);
+      nodeContent.save(in, 0);
+    }
+    QString imgUrl = newsList.item(i).namedItem("media:thumbnail").toElement().attribute("url");
+    QString community = getCommunity(newsList.item(i).namedItem("media:community"));
+    nodeContent = newsList.item(i).namedItem("media:group");
+    if (!nodeContent.isNull()) {
+      QString description = nodeContent.namedItem("media:description").toElement().text();
+      if (description.length() > newsItem.content.length())
+        newsItem.content = description;
+      newsItem.content = fromPlainText(newsItem.content);
+      if (imgUrl.isEmpty())
+        imgUrl = nodeContent.namedItem("media:thumbnail").toElement().attribute("url");
+      if (community.isEmpty())
+        community = getCommunity(nodeContent.namedItem("media:community"));
+    }
+    if (!(newsItem.content.isEmpty() ||
+          (newsItem.description.length() > newsItem.content.length()))) {
+      newsItem.description = newsItem.content;
+    }
+    newsItem.content.clear();
+    if (!imgUrl.isEmpty()) {
+      newsItem.description = "<p class=\"description\">" + newsItem.description + "</p>";
+      newsItem.description += "<img src=\"" + imgUrl + "\" alt=\"image\"/>";
+    }
+    if (!community.isEmpty())
+      newsItem.description += community;
+
+    QDomNodeList categoryElem = newsList.item(i).toElement().elementsByTagName("category");
+    for (int j = 0; j < categoryElem.size(); j++) {
+      if (!newsItem.category.isEmpty()) newsItem.category.append(", ");
+      newsItem.category.append(toPlainText(categoryElem.at(j).toElement().text()));
+    }
+    newsItem.comments = newsList.item(i).namedItem("comments").toElement().text();
+    QDomElement enclosureElem = newsList.item(i).namedItem("enclosure").toElement();
+    newsItem.eUrl = enclosureElem.attribute("url");
+    newsItem.eType = enclosureElem.attribute("type");
+    newsItem.eLength = enclosureElem.attribute("length");
+
+    if (newsItem.title.isEmpty()) {
+      newsItem.title = toPlainText(newsItem.description);
+      if (newsItem.title.size() > 50) {
+        newsItem.title.resize(50);
+        newsItem.title = newsItem.title % "...";
+      }
+    }
+
+    addRssNewsIntoBase(&newsItem);
+    if (sqlError_.isValid()) return;
+  }
+}
+
+void ParseObject::addRssNewsIntoBase(NewsItemStruct *newsItem)
+{
+  if (NewsRetention::expired(newsItem->updated, retentionCutoff_)) return;
+
+  // search news duplicates in base
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  QString qStr;
+  qDebug() << "guid:     " << newsItem->id;
+  qDebug() << "link_href:" << LogFile::urlForLog(QUrl(newsItem->link));
+  qDebug() << "title:"     << newsItem->title;
+  qDebug() << "published:" << newsItem->updated;
+
+  bool isDuplicate = false;
+  if (!newsItem->id.isEmpty() || !newsItem->link.isEmpty()) {
+    const auto &identityIndex = !newsItem->id.isEmpty() ? guidIndex_ : linkIndex_;
+    const QString &identity = !newsItem->id.isEmpty() ? newsItem->id : newsItem->link;
+    if (!newsItem->updated.isEmpty()) {
+      isDuplicate = duplicateNewsMode_ ? identityIndex.contains(identity)
+          : hasCommonArticle(identityIndex, identity, publishedIndex_, newsItem->updated);
+      if (!isDuplicate)
+        isDuplicate = hasCommonArticle(publishedIndex_, newsItem->updated,
+                                       titleIndex_, newsItem->title);
+    } else if (!newsItem->title.isEmpty()) {
+      isDuplicate = hasCommonArticle(identityIndex, identity, titleIndex_, newsItem->title);
+    }
+  } else if (!newsItem->updated.isEmpty()) {
+    // Without a GUID or link, duplicate removal needs a date and title from
+    // the same stored article, not merely any article already in the feed.
+    isDuplicate = hasCommonArticle(publishedIndex_, newsItem->updated,
+                                   titleIndex_, newsItem->title);
+  } else if (!newsItem->title.isEmpty()) {
+    isDuplicate = titleIndex_.contains(newsItem->title);
+  }
+
+  // Verify old news before a date to avoid adding them to base
+  bool isOld = false;
+  QDateTime pubDate_ = QDateTime::fromString(newsItem->updated, "yyyy-MM-ddTHH:mm:ss");
+  QDateTime avoidedDate_ = avoidedOldNewsDate_.startOfDay();
+  if (!addSingleNewsAnyDate_) {      //
+    if (avoidedOldSingleNews_ ) {     // avoid adding old single news
+      if (avoidedOldSingleNewsDate_.startOfDay() > pubDate_)
+        isOld = true;
+      } else if (avoidOldNews_ && avoidedDate_ > pubDate_) {   // avoid adding old news
+              isOld = true;
+      }
+   }
+
+ // if duplicates not found And old news, add them into base
+ if (!isDuplicate && !isOld) {
+    bool read = false;
+    if (markIdenticalNewsRead_) {
+      if (!checkQuery(q.prepare("SELECT id FROM news WHERE title LIKE :title ESCAPE '!' AND feedId!=:id"), q)) return;
+      q.bindValue(":id", parseFeedId_);
+      q.bindValue(":title", literalTitlePattern(newsItem->title));
+      if (!checkQuery(q.exec(), q)) return;
+      if (q.first()) read = true;
+      if (!checkQuery(!q.lastError().isValid(), q)) return;
+    }
+
+    qStr = QString("INSERT INTO news("
+                   "feedId, description, content, guid, title, author_name, "
+                   "published, received, link_href, category, comments, "
+                   "enclosure_url, enclosure_type, enclosure_length, new, read) "
+                   "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if (!checkQuery(q.prepare(qStr), q)) return;
+    q.addBindValue(parseFeedId_);
+    q.addBindValue(newsItem->description);
+    q.addBindValue(newsItem->content);
+    q.addBindValue(newsItem->id);
+    q.addBindValue(newsItem->title);
+    q.addBindValue(newsItem->author);
+    QString updated = newsItem->updated;
+    if (updated.isEmpty())
+      updated = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    q.addBindValue(updated);
+    q.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
+    q.addBindValue(newsItem->link);
+    q.addBindValue(newsItem->category);
+    q.addBindValue(newsItem->comments);
+    q.addBindValue(newsItem->eUrl);
+    q.addBindValue(newsItem->eType);
+    q.addBindValue(newsItem->eLength);
+    q.addBindValue(read ? 0 : 1);
+    q.addBindValue(read ? 2 : 0);
+    if (!checkQuery(q.exec(), q)) return;
+    q.finish();
+
+    if (lastBuildDate_ < QDateTime::fromString(newsItem->updated, Qt::ISODate))
+      lastBuildDate_ = QDateTime::fromString(newsItem->updated, Qt::ISODate);
+    feedChanged_ = true;
+  }
+}
+
+QString ParseObject::toPlainText(const QString &text)
+{
+  return QTextDocumentFragment::fromHtml(text).toPlainText().simplified();
+}
+
+QString ParseObject::fromPlainText(QString text)
+{
+  text = text.replace("\r\n", "<br>");
+  text = text.replace("\n", "<br>");
+  return text;
+}
+
+QString ParseObject::getCommunity(const QDomNode &nodeContent)
+{
+  QString community;
+  if (!nodeContent.isNull()) {
+    QString count = nodeContent.namedItem("media:starRating").toElement().attribute("count");
+    QString average = nodeContent.namedItem("media:starRating").toElement().attribute("average");
+    QString min = nodeContent.namedItem("media:starRating").toElement().attribute("min");
+    QString max = nodeContent.namedItem("media:starRating").toElement().attribute("max");
+    QString views = nodeContent.namedItem("media:statistics").toElement().attribute("views");
+    if (!count.isEmpty())
+      community = QString("Count: %1, average: %2, min: %3, max: %4<br>").
+          arg(count).arg(average).arg(min).arg(max);
+    if (!views.isEmpty())
+      community += QString("Views: %1").arg(views);
+    if (!community.isEmpty())
+      community = "<p><i>" + community + "</i></p>";
+  }
+  return community;
+}
+
+/** @brief Date/time string parsing
+ *----------------------------------------------------------------------------*/
+QString ParseObject::parseDate(const QString &dateString, const QString &urlString)
+{
+  const QString result = FeedDate::normalize(dateString);
+  if (!result.isEmpty() || dateString.isEmpty()) return result;
+
+  qWarning().noquote() << "parseDate: unable to parse date" << dateString
+                       << "for feed" << LogFile::urlForLog(QUrl(urlString));
+  return QString();
+}
+
+/** @brief Apply user filters
+ * @param feedId - Feed Id
+ * @param filterId - Id of particular filter
+ *---------------------------------------------------------------------------*/
+void ParseObject::runUserFilter(int feedId, int filterId)
+{
+  auto databaseAccess = Database::backgroundAccess();
+  sqlError_ = QSqlError();
+  if (!db_.transaction()) {
+    qWarning() << "Cannot start article filter transaction:" << db_.lastError();
+    return;
+  }
+  UpdateEffects effects;
+  applyUserFilter(feedId, filterId, effects);
+  if (!sqlError_.isValid() && db_.commit()) {
+    publishEffects(effects);
+    emit signalUserFilterApplied(feedId);
+    return;
+  }
+  if (!sqlError_.isValid()) sqlError_ = db_.lastError();
+  qWarning() << "Article filter failed:" << sqlError_;
+  if (!db_.rollback())
+    qCritical() << "Article filter rollback failed:" << db_.lastError();
+}
+
+void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effects)
+{
+  QSqlQuery q(db_);
+  bool isAllFilters = true;
+
+  if (filterId != -1) {
+    isAllFilters = false;
+    if (!checkQuery(q.exec(QString("SELECT enable, type FROM filters WHERE id='%1' AND (feeds='*' OR feeds LIKE '%,%2,%')").
+           arg(filterId).arg(feedId)), q)) return;
+  } else {
+    if (!checkQuery(q.exec(QString("SELECT enable, type, id FROM filters WHERE (feeds='*' OR feeds LIKE '%,%1,%') ORDER BY num").
+           arg(feedId)), q)) return;
+  }
+
+  while (q.next()) {
+    if ((q.value(0).toInt() == 0) && isAllFilters) continue;
+
+    if (isAllFilters)
+      filterId = q.value(2).toInt();
+    int filterType = q.value(1).toInt();
+
+    QString qStr("UPDATE news SET");
+    QString qStr1;
+    QString qStr2;
+    QString whereStr;
+    QList<int> idLabelsList;
+    QStringList soundList;
+    QStringList colorList;
+    FilterEffects filterEffects;
+
+    QSqlQuery q1(db_);
+    if (!checkQuery(q1.exec(QString("SELECT action, params FROM filterActions "
+                    "WHERE idFilter=='%1'").arg(filterId)), q1)) return;
+    while (q1.next()) {
+      switch (q1.value(0).toInt()) {
+      case 0: // action -> Mark news as read
+        if (!qStr1.isNull()) qStr1.append(",");
+        qStr1.append(" new=0, read=2");
+        break;
+      case 1: // action -> Add star
+        if (!qStr1.isNull()) qStr1.append(",");
+        qStr1.append(" starred=1");
+        break;
+      case 2: // action -> Delete
+        if (!qStr1.isNull()) qStr1.append(",");
+        qStr1.append(" new=0, read=2, deleted=1, ");
+        qStr1.append(QString("deleteDate='%1'").
+                     arg(QDateTime::currentDateTime().toString(Qt::ISODate)));
+        break;
+      case 3: // action -> Add Label
+        idLabelsList.append(q1.value(1).toInt());
+        break;
+      case 4: // action -> Play Sound
+        soundList.append(q1.value(1).toString());
+        break;
+      case 5: // action -> Show News in Notifier
+        colorList.append(q1.value(1).toString());
+        break;
+      }
+    }
+
+    if (!checkQuery(!q1.lastError().isValid(), q1)) return;
+
+    if (qStr1.isEmpty())
+      qStr.clear();
+    else
+      qStr.append(qStr1);
+
+    whereStr = QString(" WHERE feedId='%1' AND deleted=0").arg(feedId);
+
+    qStr2.clear();
+    switch (filterType) {
+    case 1: // Match all conditions
+      qStr2.append("AND ");
+      break;
+    case 2: // Match any condition
+      qStr2.append("OR ");
+      break;
+    }
+
+    if ((filterType == 1) || (filterType == 2)) {
+      whereStr.append(" AND ( ");
+      qStr1.clear();
+
+      if (!checkQuery(q1.exec(QString("SELECT field, condition, content FROM filterConditions "
+                      "WHERE idFilter=='%1'").arg(filterId)), q1)) return;
+      while (q1.next()) {
+        if (!qStr1.isNull()) qStr1.append(qStr2);
+        QString content = q1.value(2).toString().replace("'", "''");
+        const QString likeContent = literalTitlePattern(content);
+        const QString upperLikeContent = likeContent.toUpper();
+        switch (q1.value(0).toInt()) {
+        case 0: // field -> Title
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("UPPER(title) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("UPPER(title) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 2: // condition -> is
+            qStr1.append(QString("UPPER(title) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 3: // condition -> isn't
+            qStr1.append(QString("UPPER(title) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 4: // condition -> begins with
+            qStr1.append(QString("UPPER(title) LIKE '%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 5: // condition -> ends with
+            qStr1.append(QString("UPPER(title) LIKE '%%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 6: // condition -> regExp
+            qStr1.append(QString("title REGEXP '%1' ").arg(content));
+            break;
+          }
+          break;
+        case 1: // field -> Description
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("UPPER(description) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("UPPER(description) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 2: // condition -> regExp
+            qStr1.append(QString("description REGEXP '%1' ").arg(content));
+            break;
+          }
+          break;
+        case 2: // field -> Author
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("UPPER(author_name) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("UPPER(author_name) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 2: // condition -> is
+            qStr1.append(QString("UPPER(author_name) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 3: // condition -> isn't
+            qStr1.append(QString("UPPER(author_name) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 4: // condition -> regExp
+            qStr1.append(QString("author_name REGEXP '%1' ").arg(content));
+            break;
+          }
+          break;
+        case 3: // field -> Category
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("UPPER(category) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("UPPER(category) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 2: // condition -> is
+            qStr1.append(QString("UPPER(category) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 3: // condition -> isn't
+            qStr1.append(QString("UPPER(category) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 4: // condition -> begins with
+            qStr1.append(QString("UPPER(category) LIKE '%1%' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 5: // condition -> ends with
+            qStr1.append(QString("UPPER(category) LIKE '%%1' ESCAPE '!' ").arg(upperLikeContent));
+            break;
+          case 6: // condition -> regExp
+            qStr1.append(QString("category REGEXP '%1' ").arg(content));
+            break;
+          }
+          break;
+        case 4: // field -> Status
+          if (q1.value(1).toInt() == 0) { // Status -> is
+            switch (q1.value(2).toInt()) {
+            case 0:
+              qStr1.append("new==1 ");
+              break;
+            case 1:
+              qStr1.append("read>=1 ");
+              break;
+            case 2:
+              qStr1.append("starred==1 ");
+              break;
+            }
+          } else { // Status -> isn't
+            switch (q1.value(2).toInt()) {
+            case 0:
+              qStr1.append("new==0 ");
+              break;
+            case 1:
+              qStr1.append("read==0 ");
+              break;
+            case 2:
+              qStr1.append("starred==0 ");
+              break;
+            }
+          }
+          break;
+        case 5: // field -> Link
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("link_href LIKE '%%1%' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("link_href NOT LIKE '%%1%' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 2: // condition -> is
+            qStr1.append(QString("link_href LIKE '%1' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 3: // condition -> isn't
+            qStr1.append(QString("link_href NOT LIKE '%1' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 4: // condition -> begins with
+            qStr1.append(QString("link_href LIKE '%1%' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 5: // condition -> ends with
+            qStr1.append(QString("link_href LIKE '%%1' ESCAPE '!' ").arg(likeContent));
+            break;
+          case 6: // condition -> regExp
+            qStr1.append(QString("link_href REGEXP '%1' ").arg(content));
+            break;
+          }
+          break;
+        case 6: // field -> News
+          switch (q1.value(1).toInt()) {
+          case 0: // condition -> contains
+            qStr1.append(QString("(UPPER(title) LIKE '%%1%' ESCAPE '!' OR UPPER(description) LIKE '%%1%' ESCAPE '!') ").arg(upperLikeContent));
+            break;
+          case 1: // condition -> doesn't contain
+            qStr1.append(QString("(UPPER(title) NOT LIKE '%%1%' ESCAPE '!' AND UPPER(description) NOT LIKE '%%1%' ESCAPE '!') ").arg(upperLikeContent));
+            break;
+          case 2: // condition -> regExp
+            qStr1.append(QString("(title REGEXP '%1' OR description REGEXP '%1') ").arg(content));
+            break;
+          }
+          break;
+        }
+      }
+      if (!checkQuery(!q1.lastError().isValid(), q1)) return;
+      whereStr.append(qStr1).append(")");
+    }
+
+    if (!checkQuery(q1.exec(QString("SELECT id, label FROM news").append(whereStr)), q1)) return;
+    {
+      QSqlQuery q2(db_);
+      if (!idLabelsList.isEmpty()) {
+        if (!checkQuery(q2.prepare(QStringLiteral("UPDATE news SET label=? WHERE id=?")), q2))
+          return;
+      }
+
+      QStringList matchedIds;
+      bool isPlaySound = false;
+
+      while (q1.next()) {
+        const int newsId = q1.value(0).toInt();
+        if (!qStr.isEmpty()) {
+          matchedIds.append(QString::number(newsId));
+        }
+
+        if (!idLabelsList.isEmpty()) {
+          const QString origLabelsStr = q1.value(1).toString();
+          QString idLabelsStr = origLabelsStr;
+          for (int idLabel : std::as_const(idLabelsList)) {
+            if (idLabelsStr.contains(QString(",%1,").arg(idLabel))) continue;
+            if (idLabelsStr.isEmpty()) idLabelsStr.append(",");
+            idLabelsStr.append(QString("%1,").arg(idLabel));
+          }
+          if (idLabelsStr != origLabelsStr) {
+            q2.bindValue(0, idLabelsStr);
+            q2.bindValue(1, newsId);
+            if (!checkQuery(q2.exec(), q2)) return;
+          }
+        }
+
+        if (!colorList.isEmpty()) {
+          filterEffects.colors.append(qMakePair(newsId, colorList.at(0)));
+        }
+
+        isPlaySound = true;
+      }
+
+      if (!checkQuery(!q1.lastError().isValid(), q1)) return;
+
+      if (!qStr.isEmpty() && !matchedIds.isEmpty()) {
+        qStr1 = qStr % QStringLiteral(" WHERE id IN (") % matchedIds.join(QLatin1Char(',')) % QLatin1Char(')');
+        if (!checkQuery(q2.exec(qStr1), q2)) return;
+      }
+
+      if (isPlaySound && !soundList.isEmpty()) {
+        filterEffects.sound = soundList.at(0);
+        filterEffects.playSound = true;
+      }
+    }
+    effects.filters.append(filterEffects);
+  }
+  checkQuery(!q.lastError().isValid(), q);
+}
+
+/** @brief Update feed counts and all its parent categories
+ *
+ *  Update fields: unread news number,
+ *  new news number, categories last update date/time
+ * @param feedId - Feed Id
+ * @param feedUrl - Feed URL
+ * @param updated - Time feed updated
+ *----------------------------------------------------------------------------*/
+int ParseObject::recountFeedCounts(int feedId, const QString &feedUrl,
+                                   const QString &updated, const QString &lastBuildDate,
+                                   UpdateEffects &effects)
+{
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  QString qStr;
+  QString htmlUrl;
+  QString title;
+
+  int feedParId = 0;
+  if (!checkQuery(q.exec(QString("SELECT parentId, htmlUrl, title FROM feeds WHERE id=='%1'").arg(feedId)), q)) return 0;
+  if (q.first()) {
+    feedParId = q.value(0).toInt();
+    htmlUrl = q.value(1).toString();
+    title = q.value(2).toString();
+  }
+  if (!checkQuery(!q.lastError().isValid(), q)) return 0;
+
+  FeedCountStruct counts;
+  int undeleteCount = 0;
+  int unreadCount = 0;
+  int newNewsCount = 0;
+
+  // Calculate all three counters in one scan of this feed's live articles.
+  qStr = QString("SELECT count(*), sum(read=0), sum(new=1) "
+                 "FROM news WHERE feedId=='%1' AND deleted==0").arg(feedId);
+  if (!checkQuery(q.exec(qStr), q)) return 0;
+  if (q.first()) {
+    undeleteCount = q.value(0).toInt();
+    unreadCount = q.value(1).toInt();
+    newNewsCount = q.value(2).toInt();
+  }
+  if (!checkQuery(!q.lastError().isValid(), q)) return 0;
+
+  int unreadCountOld = 0;
+  int newCountOld = 0;
+  int undeleteCountOld = 0;
+  qStr = QString("SELECT unread, newCount, undeleteCount FROM feeds WHERE id=='%1'").
+      arg(feedId);
+  if (!checkQuery(q.exec(qStr), q)) return 0;
+  if (q.first()) {
+    unreadCountOld = q.value(0).toInt();
+    newCountOld = q.value(1).toInt();
+    undeleteCountOld = q.value(2).toInt();
+  }
+  if (!checkQuery(!q.lastError().isValid(), q)) return 0;
+
+  if ((unreadCount == unreadCountOld) && (newNewsCount == newCountOld) &&
+      (undeleteCount == undeleteCountOld)) {
+    counts.feedId = feedId;
+    counts.unreadCount = unreadCount;
+    counts.newCount = newNewsCount;
+    counts.undeleteCount = undeleteCount;
+    counts.updated = updated;
+    counts.lastBuildDate = lastBuildDate;
+
+    effects.counts.append(counts);
+    return 0;
+  }
+
+  // Set number unread, new and all(undelete) news for feed
+  qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3' "
+                 "WHERE id=='%4'").
+      arg(unreadCount).arg(newNewsCount).arg(undeleteCount).arg(feedId);
+  if (!checkQuery(q.exec(qStr), q)) return 0;
+
+  counts.feedId = feedId;
+  counts.unreadCount = unreadCount;
+  counts.newCount = newNewsCount;
+  counts.undeleteCount = undeleteCount;
+  counts.updated = updated;
+  counts.lastBuildDate = lastBuildDate;
+  counts.htmlUrl = htmlUrl;
+  counts.xmlUrl = feedUrl;
+  counts.title = title;
+
+  effects.counts.append(counts);
+
+  // Recount counters for all feed parents
+  int l_feedParId = feedParId;
+  while (l_feedParId) {
+    QString updatedParent;
+    int newCount = 0;
+
+    qStr = QString("SELECT sum(unread), sum(newCount), sum(undeleteCount), "
+                   "max(updated) FROM feeds WHERE parentId=='%1'").
+        arg(l_feedParId);
+    if (!checkQuery(q.exec(qStr), q)) return 0;
+    if (q.first()) {
+      unreadCount   = q.value(0).toInt();
+      newCount      = q.value(1).toInt();
+      undeleteCount = q.value(2).toInt();
+      updatedParent = q.value(3).toString();
+    }
+    if (!checkQuery(!q.lastError().isValid(), q)) return 0;
+    if (!checkQuery(q.prepare("UPDATE feeds SET unread=?, newCount=?, undeleteCount=?, "
+                              "updated=? WHERE id==?"), q)) return 0;
+    q.addBindValue(unreadCount);
+    q.addBindValue(newCount);
+    q.addBindValue(undeleteCount);
+    q.addBindValue(updatedParent);
+    q.addBindValue(l_feedParId);
+    if (!checkQuery(q.exec(), q)) return 0;
+
+    FeedCountStruct counts;
+    counts.feedId = l_feedParId;
+
+    if (!checkQuery(q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(l_feedParId)), q)) return 0;
+    l_feedParId = q.first() ? q.value(0).toInt() : 0;
+    if (!checkQuery(!q.lastError().isValid(), q)) return 0;
+
+    counts.unreadCount = unreadCount;
+    counts.newCount = newCount;
+    counts.undeleteCount = undeleteCount;
+    counts.updated = updatedParent;
+
+    effects.counts.append(counts);
+  }
+
+  return (newNewsCount - newCountOld);
+}
+
+// Preserve the first SQL error so callers can roll back the complete operation.
+bool ParseObject::checkQuery(bool success, const QSqlQuery &query)
+{
+  if (!success && !sqlError_.isValid()) {
+    sqlError_ = query.lastError();
+    if (!sqlError_.isValid())
+      sqlError_ = QSqlError(QString(), tr("Database query failed."), QSqlError::StatementError);
+  }
+  return success && !sqlError_.isValid();
+}
+
+void ParseObject::publishEffects(const UpdateEffects &effects)
+{
+  for (const auto &filter : effects.filters) {
+    for (const auto &color : filter.colors)
+      emit signalAddColorList(color.first, color.second);
+    if (filter.playSound) emit signalPlaySound(filter.sound);
+  }
+  for (const auto &counts : effects.counts)
+    emit feedCountsUpdate(counts);
+}

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = (ROOT / 'src/application/databasebackup.cpp').read_text()
+SOURCE = (ROOT / 'src/backup/databasebackup.cpp').read_text()
 START = SOURCE.index('bool filterCopy(sqlite3 *db, QString &error)')
 END = SOURCE.index('\n}\n', START)
 BLOCK = SOURCE[START:END]

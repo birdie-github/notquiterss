@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -17,7 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "cookiejar.h"
-#include "logfile.h"
+#include "common/logfile.h"
 
 #include <QDateTime>
 #include <QFile>

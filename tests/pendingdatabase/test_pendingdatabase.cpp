@@ -5,7 +5,7 @@
 #include <QTemporaryDir>
 #include <memory>
 #include <sqlite3.h>
-#include "pendingdatabase.h"
+#include "database/pendingdatabase.h"
 
 namespace {
 using Handle = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;

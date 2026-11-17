@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -22,7 +22,7 @@
 #include <QtWidgets>
 #include <QtSql>
 
-#include "toolbutton.h"
+#include "widgets/toolbutton.h"
 
 class NewsItem : public QWidget
 {

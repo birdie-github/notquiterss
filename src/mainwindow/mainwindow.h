@@ -1,0 +1,773 @@
+/* ============================================================
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
+* © 2011-2020 QuiteRSS Project
+* © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* ============================================================ */
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
+#include <QtWidgets>
+#include "preferences/shortcutregistry.h"
+#include <QtSql>
+#include <QElapsedTimer>
+#include <QPrintDialog>
+#include <QPrintPreviewDialog>
+#include <QPrinter>
+#include <QSet>
+#include <functional>
+#include <QUrl>
+#include <map>
+
+#include "articles/categoriestreewidget.h"
+#include "feeds/feedsmodel.h"
+#include "articles/feedreadstate.h"
+#include "feeds/feedsview.h"
+#include "feeds/findfeed.h"
+#include "articles/newsheader.h"
+#include "articles/newsmodel.h"
+#include "articles/newstabwidget.h"
+#include "articles/newsview.h"
+#include "notifications/notificationswidget.h"
+#include "articles/tabbar.h"
+#include "preferences/optionsdialog.h"
+#include "app/updateappdialog.h"
+#include "articles/rendering/articleview.h"
+#include "feeds/update/parseobject.h"
+#include "widgets/toolbutton.h"
+
+#define TAB_WIDGET_PERMANENT 0
+
+#define NEW_TAB_FOREGROUND 1
+#define NEW_TAB_BACKGROUND 2
+
+#define MAX_TAB_WIDTH 150
+
+enum FeedReedType {
+  FeedReadSwitchingFeed,
+  FeedReadClosingTab,
+  FeedReadPlaceToTray,
+  FeedReadTypeCount,
+  FeedReadSwitchingTab
+};
+
+class FeedPropertiesDialog;
+class StatusBarController;
+class TrayIconController;
+class SoundPlayer;
+
+class MainWindow : public QMainWindow
+{
+  Q_OBJECT
+public:
+  explicit MainWindow(QWidget *parent = 0);
+  ~MainWindow();
+  void requestDefaultFeedIcons();
+  bool openArticleUrl(const QUrl &url);
+
+  void loadSettings();
+  void saveSettings();
+  void updateNewsActionStates(bool hasSelection, bool hasNews, bool hasArticle);
+  static const int kColorOptionCount = 23;
+  static const int kFontOptionCount = 5;
+  static const char *colorSettingKey(int row);
+  static const char *fontFamilySettingKey(int row);
+  static const char *fontSizeSettingKey(int row);
+  QString defaultColorForOption(int row) const;
+  QFont fontForOption(int row) const;
+  void setFontForOption(int row, const QFont &font);
+  static QFont defaultFontForOption(int row);
+
+  bool showSplashScreen_;
+  bool showTrayIcon_;
+  bool startingTray_;
+  bool isMinimizeToTray_;
+  QSystemTrayIcon *trayIcon() const;
+
+  QString getIdFeedsString(int idFolder, int idException = -1);
+  void recountCategoryCounts();
+
+  void setToolBarStyle(const QString &styleStr);
+  void setToolBarIconSize(QToolBar *toolbar, const QString &iconSizeStr);
+
+  static QStringList nameLabels() {
+    QStringList nameLabels;
+    nameLabels << "Important" << "Work" << "Personal"
+               << "To Do" << "Later" << "Amusingly";
+    return nameLabels;
+  }
+  static QStringList trNameLabels() {
+    QStringList trNameLabels;
+    trNameLabels << tr("Important") << tr("Work") << tr("Personal")
+                 << tr("To Do") << tr("Later") << tr("Amusingly");
+    return trNameLabels;
+  }
+
+  QSqlDatabase db_;
+  FeedsModel *feedsModel_;
+  FeedsProxyModel *feedsProxyModel_;
+  FeedsView *feedsView_;
+  CategoriesTreeWidget *categoriesTree_;
+  QStackedWidget *stackedWidget_;
+
+  bool showFeedsTabPermanent_;
+
+  NewsTabWidget *currentNewsTab;
+
+  QAction *newsToolbarToggle_;
+  QAction *categoriesPanelToggle_;
+  QAction *statusBarToggle_;
+  QAction *newsFilter_;
+  QAction *openDescriptionNewsAct_;
+  QAction *openInExternalBrowserAct_;
+  QAction *markNewsRead_;
+  QAction *markAllNewsRead_;
+  QAction *markStarAct_;
+  QAction *updateFeedAct_;
+  QAction *deleteNewsAct_;
+  QAction *deleteAllNewsAct_;
+  QAction *newsKeyUpAct_;
+  QAction *newsKeyDownAct_;
+  QAction *newsKeyPageUpAct_;
+  QAction *newsKeyPageDownAct_;
+  QAction *prevUnreadNewsAct_;
+  QAction *nextUnreadNewsAct_;
+  QAction *autoLoadImagesToggle_;
+  QAction *printAct_;
+  QAction *printPreviewAct_;
+  QAction *savePageAsAct_;
+  QAction *restoreNewsAct_;
+  QAction *restoreLastNewsAct_;
+  QAction *newsLabelAction_;
+  QAction *newsLabelMenuAction_;
+  QAction *showLabelsMenuAct_;
+  QAction *findTextAct_;
+  QAction *openHomeFeedAct_;
+  QAction *shareMenuAct_;
+  QAction *copyLinkAct_;
+  QAction *pageUpWebViewAct_;
+  QAction *pageDownWebViewAct_;
+  QAction *nextFolderAct_;
+  QAction *prevFolderAct_;
+  QAction *expandFolderAct_;
+  QAction *closeTabAct_;
+  QAction *closeOtherTabsAct_;
+  QAction *closeAllTabsAct_;
+  QAction *settingPageLabelsAct_;
+
+  QActionGroup *newsFilterGroup_;
+  QActionGroup *newsLabelGroup_;
+  QActionGroup *shareGroup_;
+
+  QMenu *newsLabelMenu_;
+  QMenu *shareMenu_;
+  QMenu *newsSortByMenu_;
+
+  QString newsListFontFamily_;
+  int newsListFontSize_;
+  QString newsTitleFontFamily_;
+  int newsTitleFontSize_;
+  QString newsTextFontFamily_;
+  int newsTextFontSize_;
+  QString notificationFontFamily_;
+  int notificationFontSize_;
+  QString newsListTextColor_;
+  QString newsListBackgroundColor_;
+  QString newNewsTextColor_;
+  QString unreadNewsTextColor_;
+  QString focusedNewsTextColor_;
+  QString focusedNewsBGColor_;
+  QString linkColor_;
+  QString titleColor_;
+  QString dateColor_;
+  QString authorColor_;
+  QString newsTextColor_;
+  QString newsTitleBackgroundColor_;
+  QString newsBackgroundColor_;
+  QString alternatingRowColors_;
+  QString notifierTextColor_;
+  QString notifierBackgroundColor_;
+  QSet<int> customColorRows_;
+  QString formatDate_;
+  QString formatTime_;
+
+  bool markNewsReadOn_;
+  bool markCurNewsRead_;
+  int  markNewsReadTime_;
+  bool markPrevNewsRead_;
+  bool markReadSwitchingFeed_;
+  bool markReadClosingTab_;
+  bool markReadMinimize_;
+  bool alternatingRowColorsNews_;
+  bool simplifiedDateTime_;
+  bool notDeleteStarred_;
+  bool notDeleteLabeled_;
+  bool markIdenticalNewsRead_;
+  bool avoidOldNews_;
+  QDate avoidedOldNewsDate_;
+
+  bool autoLoadImages_;
+  int preloadNewspaperPages_;
+
+  QString downloadLocation_;
+  bool askDownloadLocation_;
+  int defaultZoomPages_;
+
+  int newsLayout_;
+  int browserPosition_;
+
+  QString newsFilterStr;
+
+  int oldState;
+
+  bool hideFeedsOpenTab_;
+  bool showToggleFeedsTree_;
+  bool defaultIconFeeds_;
+
+  int screenNotify_;
+  int positionNotify_;
+  int transparencyNotify_;
+  int countShowNewsNotify_;
+  int widthTitleNewsNotify_;
+  int timeShowNewsNotify_;
+  bool showTitlesFeedsNotify_;
+  bool showIconFeedNotify_;
+  bool showButtonMarkAllNotify_;
+  bool showButtonMarkReadNotify_;
+  bool showButtonExBrowserNotify_;
+  bool showButtonDeleteNotify_;
+  bool closeNotify_;
+  QList<int> idFeedsNotifyList_;
+
+public slots:
+  void restoreFeedsOnStartUp();
+  void addFeed();
+  void addFolder();
+  void deleteItemFeedsTree();
+  void slotImportFeeds();
+  void slotImportFinished(bool updatesQueued);
+  void slotExportFeeds();
+  void slotFeedClicked(QModelIndex index);
+  void slotFeedSelected(QModelIndex index, bool createTab = false);
+  void setFeedsFilter(bool clicked = true);
+  void slotGetFeed();
+  void slotGetAllFeeds();
+  void slotStopUpdate();
+  void startFeedUpdateCycle();
+  void showProgressBar(int addToMaximum);
+  void queueFeedProgress(int feedId, QString name);
+  void setFeedProgressStage(int feedId, QString stage);
+  void finishFeedProgress(int feedId);
+  void showMessageStatusBar(QString message, int timeout = 0);
+  void slotCountsStatusBar(int unreadCount, int allCount);
+  void slotPlaySound(const QString &path);
+  void slotAddColorList(int id, const QString &color);
+  void showOptionDlg(int index = -1);
+  void initOptionPage(int page);
+  void slotPlaceToTray();
+  void slotActivationTray(QSystemTrayIcon::ActivationReason reason);
+  void slotTrayOpenNotifyTimer();
+  void showWindows(bool trayClick = false);
+  void quitApp();
+  void myEmptyWorkingSet();
+  void slotUpdateFeed(int feedId, bool changed, int newCount, bool finish);
+  void slotFeedCountsUpdate(FeedCountStruct counts);
+  void slotUpdateNews(int refresh);
+  void slotUpdateStatus(int feedId, bool changed = true);
+  void slotScheduledFeedsChecked();
+  void setNewsFilter(QAction*, bool clicked = true);
+  void slotCloseTab(int index);
+  void feedsModelReload(bool checkFilter = false);
+  void setStatusFeed(int feedId, QString status);
+  void slotPrint();
+  void slotPrintPreview();
+
+  void slotRecountCategoryCounts(CategoryCounts counts);
+  void slotFeedsViewportUpdate();
+  void slotRefreshNewsView(int nextUnread = -1);
+  void slotIconFeedPreparing(QString feedUrl, QByteArray byteArray, QString format);
+  void slotIconFeedUpdate(int feedId, QByteArray faviconData);
+  void findText();
+  void slotRefreshInfoTray(int newCount, int unreadCount);
+  void setTextTitle(const QString &text, NewsTabWidget *widget);
+
+signals:
+  void articleSettingsChanged(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
+  void signalQuitApp();
+  void signalPlaceToTray();
+  void signalGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
+  void signalGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
+  void signalGetFeedsFolder(QString query);
+  void signalGetAllFeeds();
+  void signalGetAllFeedsStartup();
+  void signalStopUpdate();
+  void signalImportFeeds(QByteArray xmlData, bool upgradeHttp);
+  void signalRequestUrl(int feedId, QString urlString,
+                        QDateTime date, QString userInfo);
+  void faviconRequestUrl(QString urlString, QString feedUrl);
+  void signalIconFeedReady(QString feedUrl, QByteArray faviconData);
+  void signalSetCurrentTab(int index, bool updateTab = false);
+  void signalShowNotification(bool bShowRecentNews=false);
+  void signalRefreshInfoTray();
+  void signalNextUpdate(bool finish);
+  void signalRecountCategoryCounts();
+  void signalRecountFeedCounts(int feedId, bool update = true);
+  void signalSetFeedRead(int readType, int feedId, int idException, QList<int> idNewsList,
+                         bool markAllRead = false, bool markCurrentNewsRead = false);
+  void signalPlaySoundNewNews();
+  void signalUpdateStatus(int feedId, bool changed);
+  void signalMarkAllFeedsRead();
+  void signalMarkFeedRead(int id, bool isFolder, bool openFeed);
+  void signalRefreshNewsView(int nextUnread);
+  void signalSetFeedsFilter(bool clicked = false);
+  void signalMarkAllFeedsOld();
+  void signalMarkReadCategory(int type, int idLabel);
+
+private slots:
+  void showMainMenu();
+  void slotVisibledFeedsWidget();
+  void updateIconToolBarNull(bool feedsWidgetVisible);
+  void setFeedRead(int type, int feedId, FeedReedType feedReadType,
+                   NewsTabWidget *widgetTab = 0, int idException = -1);
+  void markFeedRead();
+  void slotPlaySoundNewNews();
+
+  void slotShowAboutDlg();
+
+  void showContextMenuFeed(const QPoint & pos);
+  void slotFeedsFilter();
+  void slotNewsFilter();
+  void slotGetFeedsTimer();
+  void slotShowUpdateAppDlg();
+  void showContextMenuToolBar(const QPoint &pos);
+  void showFeedPropertiesDlg();
+  void slotFeedMenuShow();
+  void showNewsFiltersDlg(bool newFilter = false);
+  void showFilterRulesDlg();
+  void slotUpdateAppCheck();
+  void slotNewVersion(const QString &newVersion);
+  void slotFeedUpPressed();
+  void slotFeedDownPressed();
+  void slotFeedHomePressed();
+  void slotFeedEndPressed();
+  void slotFeedPageUpPressed();
+  void slotFeedPageDownPressed();
+  void slotFeedPrevious();
+  void slotFeedNext();
+  void setStyleApp(QAction*);
+  void rebuildStyleMenu();
+  void applyThemeColors(bool clearOverrides);
+  void setThemeColorDefaults();
+  QString colorValueForOption(int row) const;
+  void setColorValueForOption(int row, const QString &value);
+  void refreshApplicationAppearance();
+  void slotSwitchFocus();
+  void slotSwitchPrevFocus();
+  void slotOpenFeedNewTab();
+  void slotOpenCategoryNewTab();
+  void slotTabCurrentChanged(int index);
+  void slotTabMoved(int fromIndex, int toIndex);
+  void feedsColumnVisible(QAction *action);
+  void setNewsLayout(QAction *action);
+  void setNewsLayout();
+  void setBrowserPosition(QAction *action);
+  void slotOpenNewsWebView();
+
+  void slotNewsUpPressed();
+  void slotNewsDownPressed();
+  void slotNewsPageUpPressed();
+  void slotNewsPageDownPressed();
+  void markNewsRead();
+  void markAllNewsRead();
+  void markNewsStar();
+  void deleteNews();
+  void deleteAllNewsList();
+  void restoreNews();
+  void openInExternalBrowserNews();
+  void slotCopyLinkNews();
+  void slotShowLabelsMenu();
+  void slotPageUpWebView();
+  void slotPageDownWebView();
+  void setCurrentTab(int index, bool updateCurrentTab = false);
+
+  void showNotification(bool bShowRecentNews=false);
+  void deleteNotification();
+  void clearNotification(bool bClearRecentNews=false);
+  void slotOpenNew(int feedId, int newsId);
+  void slotOpenNewBrowser(const QUrl &url);
+  void slotMarkReadNewsInNotification(int feedId, int newsId, int read);
+  void slotDeleteNewsInNotification(int feedId, int newsId);
+  void slotMarkAllReadNewsInNotification();
+
+  void slotFindFeeds(QString);
+  void slotSelectFind();
+  void findFeedVisible(bool visible);
+
+  void browserZoom(QAction*);
+  void slotReportProblem();
+
+  void slotSavePageAs();
+
+  void setFullScreen();
+  void setStayOnTop();
+#ifdef HAVE_X11
+  void setAllWorkspaces();
+#endif
+  void showMenuBar();
+
+  void slotMoveIndex(const QModelIndex &indexWhere, int how);
+
+
+  void slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTab = false);
+  void clearDeleted();
+  void slotMarkReadCategory(QTreeWidgetItem *item);
+  void showNewsCategoriesTree();
+  void feedsSplitterMoved(int pos, int);
+
+  void setLabelNews(QAction *action);
+  void setDefaultLabelNews();
+  void getLabelNews();
+
+
+  void lockMainToolbar(bool lock);
+  void hideMainToolbar();
+
+  void reduceNewsList();
+  void increaseNewsList();
+
+  void restoreLastNews();
+
+  void nextUnreadNews();
+  void prevUnreadNews();
+
+  void slotIndentationFeedsTree();
+
+  void customizeMainToolbar();
+  void showCustomizeToolbarDlg(QAction *action);
+
+  void slotShareNews(QAction *action);
+  void showMenuShareNews();
+
+  void slotOpenHomeFeed();
+  void sortedByTitleFeedsTree();
+
+  void showNewsMenu();
+  void showNewsSortByMenu();
+  void setNewsSortByColumn();
+
+  void slotNextFolder();
+  void slotPrevFolder();
+  void slotExpandFolder();
+
+  void showDownloadManager(bool activate = true);
+  void updateInfoDownloads(const QString &text);
+
+  void cleanUp();
+
+  void showSettingPageLabels();
+
+  void createBackup();
+
+private:
+  void updateFeedActionText();
+  QModelIndexList selectedFeedIndexes() const;
+  void finishQuitApp();
+  QTimer quitTimer_;
+  QTimer returnFocusAfterLinkTimer_;
+
+  enum class DeferredDatabaseUi { FeedSelection, TabSelection, FeedsReload, NewsRefresh };
+  void deferDatabaseUi(DeferredDatabaseUi operation, std::function<void()> retry);
+  void retryDatabaseUi();
+  QTimer databaseUiTimer_;
+  QTimer updateNewsTimer_;
+  std::map<DeferredDatabaseUi, std::function<void()>> deferredDatabaseUi_;
+
+  void showBulkFeedSettings();
+  QString updateScheduleDescription() const;
+  QString imagePreloadDescription() const;
+  void applyBulkFeedSettings(FeedPropertiesDialog *dialog);
+  void saveFolderProperties(FeedPropertiesDialog *dialog, int folderId);
+  void refreshFeedSettings(const QList<int> &ids, bool columns, bool images, bool direction);
+  bool bulkFeedSettingsConfirmed_ = false;
+  void setStatusCounts(int unreadCount, int allCount);
+  void updateCurrentTabStatusCounts(int updatedFeedId = -1);
+  void closeEvent(QCloseEvent *event);
+  bool eventFilter(QObject *obj, QEvent *event);
+  void changeEvent(QEvent *event);
+
+  void createFeedsWidget();
+  void createNewsTab(int index);
+  void createToolBarNull();
+  void createActions();
+  void createShortcut();
+  void createMenu();
+  void createToolBar();
+  void createStatusBar();
+  void createTray();
+  void createTabBarWidget();
+  void createCentralWidget();
+  void loadSettingsFeeds();
+  void retranslateStrings();
+  void recountFeedCategories(const QList<int> &categoriesList);
+  void creatFeedTab(int feedId, int feedParId);
+  void initUpdateFeeds();
+  void addDefaultFeed();
+  bool defaultFeedIconsPending_ = false;
+
+  int addTab(NewsTabWidget *widget);
+
+  NewsModel *newsModel_;
+#ifndef Q_OS_MAC
+  QMenu *mainMenu_;
+#endif
+  ToolButton *mainMenuButton_;
+  TabBar *tabBar_;
+  QWidget *tabBarWidget_;
+  QSplitter *mainSplitter_;
+  QWidget *feedsPanel_;
+  QFrame *feedsWidget_;
+  QWidget *centralWidget_;
+
+  ShortcutRegistry shortcutRegistry_;
+  QString shareConfigurationMessage_;
+
+  QAction *addAct_;
+  QAction *addFeedAct_;
+  QAction *addFeedTrayAct_;
+  QAction *addFolderAct_;
+  QAction *deleteFeedAct_;
+  QAction *importFeedsAct_;
+  QAction *exportFeedsAct_;
+  QAction *mainToolbarToggle_;
+  QAction *feedsToolbarToggle_;
+  QAction *toolBarLockAct_;
+  QAction *toolBarHideAct_;
+  QAction *customizeMainToolbarAct_;
+  QAction *customizeMainToolbarAct2_;
+  QAction *customizeFeedsToolbarAct_;
+  QAction *customizeNewsToolbarAct_;
+  QAction *classicLayoutAct_;
+  QAction *newspaperLayoutAct_;
+  QAction *layoutToggle_;
+  QAction *topBrowserPositionAct_;
+  QAction *bottomBrowserPositionAct_;
+  QAction *rightBrowserPositionAct_;
+  QAction *leftBrowserPositionAct_;
+  QAction *showCleanUpWizardAct_;
+  QAction *showDownloadManagerAct_;
+  QAction *setNewsFiltersAct_;
+  QAction *bulkFeedSettingsAct_;
+  QAction *websiteCookiesAct_;
+  QAction *setFilterNewsAct_;
+  QAction *optionsAct_;
+  QAction *updateAllFeedsAct_;
+  QAction *stopUpdateAct_;
+  QAction *markAllFeedsRead_;
+  QAction *indentationFeedsTreeAct_;
+  QAction *sortedByTitleFeedsTreeAct_;
+  QAction *collapseAllFoldersAct_;
+  QAction *expandAllFoldersAct_;
+  QAction *exitAct_;
+  QAction *feedsFilter_;
+  QAction *filterFeedsAll_;
+  QAction *filterFeedsNew_;
+  QAction *filterFeedsUnread_;
+  QAction *filterFeedsStarred_;
+  QAction *filterFeedsError_;
+
+  QAction *filterNewsAll_;
+  QAction *filterNewsNew_;
+  QAction *filterNewsUnread_;
+  QAction *filterNewsStar_;
+  QAction *filterNewsNotStarred_;
+  QAction *filterNewsUnreadStar_;
+  QAction *filterNewsLastDay_;
+  QAction *filterNewsLastWeek_;
+  QAction *aboutAct_;
+  QAction *updateAppAct_;
+  QAction *reportProblemAct_;
+
+  QAction *markFeedRead_;
+  QAction *feedProperties_;
+  QAction *showWindowAct_;
+  QAction *feedKeyUpAct_;
+  QAction *feedKeyDownAct_;
+  QAction *switchFocusAct_;
+  QAction *switchFocusPrevAct_;
+  QAction *feedsWidgetVisibleAct_;
+  QAction *openFeedNewTabAct_;
+  QAction *placeToTrayAct_;
+
+  QAction *zoomInAct_;
+  QAction *zoomOutAct_;
+  QAction *zoomTo100Act_;
+
+  QActionGroup *customizeToolbarGroup_;
+  QActionGroup *layoutGroup_;
+  QActionGroup *styleGroup_;
+  QActionGroup *browserPositionGroup_;
+  QActionGroup *feedsFilterGroup_;
+  QActionGroup *browserZoomGroup_;
+  QActionGroup *newsSortByColumnGroup_;
+  QActionGroup *newsSortOrderGroup_;
+
+  QAction *feedsFilterAction_; //!< Filter name storage, needed to enable last used filter
+  QAction *newsFilterAction_;  //!< Filter name storege, needed to enable last used filter
+  QString mainNewsFilter_;
+
+  QAction *showUnreadCount_;
+  QAction *showUndeleteCount_;
+  QAction *showLastUpdated_;
+  QActionGroup *feedsColumnsGroup_;
+
+  QAction *findFeedAct_;
+  QAction *fullScreenAct_;
+  QAction *stayOnTopAct_;
+#ifdef HAVE_X11
+  QAction *allWorkspacesAct_;
+#endif
+
+  QAction *nextTabAct_;
+  QAction *prevTabAct_;
+
+  QAction *reduceNewsListAct_;
+  QAction *increaseNewsListAct_;
+
+  QAction *createBackupAct_;
+  QAction *showMenuBarAct_;
+
+  QMenu *fileMenu_;
+  QMenu *newMenu_;
+  QMenu *viewMenu_;
+  QMenu *toolbarsMenu_;
+  QMenu *customizeToolbarMenu_;
+  QMenu *layoutMenu_;
+  QMenu *styleMenu_;
+  QMenu *browserPositionMenu_;
+  QMenu *feedMenu_;
+  QMenu *newsMenu_;
+  QMenu *browserMenu_;
+  QMenu *toolsMenu_;
+  QMenu *helpMenu_;
+  QMenu *newsContextMenu_;
+  QMenu *feedsFilterMenu_;
+  QMenu *newsFilterMenu_;
+  QMenu *feedsColumnsMenu_;
+  QMenu *browserZoomMenu_;
+
+  QToolBar *mainToolbar_;
+  QToolBar *feedsToolBar_;
+
+  NewsView *newsView_;
+
+  StatusBarController *statusBarController_;
+  TrayIconController *trayIconController_;
+
+  QPushButton *pushButtonNull_;
+
+  QTimer *updateFeedsTimer_;
+  QElapsedTimer updateScheduleClock_;
+  bool scheduledUpdatePending_ = false;
+  bool updateFeedsEnable_;
+  int  updateFeedsInterval_;
+  int  updateFeedsIntervalType_;
+  QList<int> feedIdList_;
+
+  bool minimizingTray_;
+  bool closingTray_;
+  bool singleClickTray_;
+  bool clearStatusNew_;
+  bool emptyWorking_;
+  int behaviorIconTray_;
+
+  int openingFeedAction_;
+  bool openNewsWebViewOn_;
+
+  SoundPlayer *soundPlayer_;
+
+  bool soundNewNews_;
+  QString soundNotifyPath_;
+  bool playSoundNewNews_ = false;
+  bool showNotifyOn_;
+  bool fullscreenModeNotify_;
+  bool showNotifyInactiveApp_;
+  bool onlySelectedFeeds_;
+
+  UpdateAppDialog *updateAppDialog_;
+
+  bool cleanupOnShutdown_;
+  int maxDayCleanUp_;
+  int maxNewsCleanUp_;
+  bool dayCleanUpOn_;
+  bool newsCleanUpOn_;
+  bool readCleanUp_;
+  bool neverUnreadCleanUp_;
+  bool neverStarCleanUp_;
+  bool neverLabelCleanUp_;
+  bool cleanUpDeleted_;
+  bool optimizeDB_;
+
+  struct NewNewsData
+  {
+    QList<int> idFeedList_;
+    QList<int> cntNewsList_;
+  };
+
+  NewNewsData newNews;
+  NewNewsData recentNews;
+
+  QList<int> idColorList_;
+  QStringList colorList_;
+
+  QTimer timerTrayOpenNotify;
+
+  bool reopenFeedStartup_;
+  bool openNewTabNextToActive_;
+
+  bool updateCurrentTab_;
+
+  NotificationWidget *notificationWidget;
+
+  FindFeed *findFeeds_;
+  QWidget *findFeedsWidget_;
+
+  int feedIdOld_;
+
+
+  QWidget *categoriesPanel_;
+  QLabel *categoriesLabel_;
+  ToolButton *showCategoriesButton_;
+  QWidget *categoriesWidget_;
+  QSplitter *feedsSplitter_;
+  QByteArray feedsWidgetSplitterState_;
+
+  qint64 activationStateChangedTime_;
+
+  bool isStartImportFeed_;
+
+  bool changeBehaviorActionNUN_;
+
+  bool recountCategoryCountsOn_;
+  bool recountCategoryCountsPending_ = false;
+
+  OptionsDialog *optionsDialog_;
+
+  struct SettingBindings;
+  struct UiBindings;
+  struct ThemeBindings;
+
+};
+
+#endif // MAINWINDOW_H

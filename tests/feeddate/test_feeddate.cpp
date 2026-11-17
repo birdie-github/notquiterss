@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "feeddate.h"
-#include "newsretention.h"
+#include "feeds/update/feeddate.h"
+#include "articles/cleanup/newsretention.h"
 #include <QtTest>
 #include <QTimeZone>
 

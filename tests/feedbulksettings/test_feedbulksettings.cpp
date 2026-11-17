@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "feedbulksettings.h"
+#include "feeds/feedbulksettings.h"
 #include <QtTest>
 #include <QSqlQuery>
 #include <QSqlError>

@@ -1,7 +1,7 @@
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
-#include "applicationstyle.h"
+#include "preferences/applicationstyle.h"
 
 class ApplicationStyleTest : public QObject
 {

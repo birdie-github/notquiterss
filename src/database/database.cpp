@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -16,14 +16,14 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
-#include "databasebackup.h"
+#include "backup/databasebackup.h"
 #include <utility>
 #include "database.h"
 
-#include "common.h"
-#include "mainapplication.h"
-#include "mainwindow.h"
-#include "settings.h"
+#include "common/common.h"
+#include "app/mainapplication.h"
+#include "mainwindow/mainwindow.h"
+#include "preferences/settings.h"
 #include "sqlitedriver.h"
 
 #include <sqlite3.h>

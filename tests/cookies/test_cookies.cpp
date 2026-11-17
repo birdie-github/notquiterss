@@ -1,5 +1,5 @@
-#include "cookiejar.h"
-#include "logfile.h"
+#include "network/cookiejar.h"
+#include "common/logfile.h"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QFile>

@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -23,8 +23,8 @@
 #include <QNetworkReply>
 #include <QNetworkProxy>
 
-#include "dialog.h"
-#include "lineedit.h"
+#include "widgets/dialog.h"
+#include "widgets/lineedit.h"
 
 class AuthenticationDialog : public Dialog
 {

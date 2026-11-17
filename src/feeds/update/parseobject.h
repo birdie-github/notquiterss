@@ -1,0 +1,164 @@
+/* ============================================================
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
+* © 2011-2020 QuiteRSS Project
+* © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* ============================================================ */
+#ifndef PARSEOBJECT_H
+#define PARSEOBJECT_H
+
+#include <QtSql>
+#include <QDateTime>
+#include <QDomDocument>
+#include <QQueue>
+#include <QObject>
+#include <QUrl>
+#include <QMutex>
+#include <QHash>
+#include <QSet>
+
+struct FeedItemStruct {
+  QString title;
+  QString updated;
+  QString link;
+  QString linkBase;
+  QString language;
+  QString author;
+  QString authorUri;
+  QString authorEmail;
+  QString description;
+};
+
+struct NewsItemStruct {
+  QString id;
+  QString title;
+  QString updated;
+  QString link;
+  QString linkAlternate;
+  QString language;
+  QString author;
+  QString authorUri;
+  QString authorEmail;
+  QString description;
+  QString content;
+  QString category;
+  QString eUrl;
+  QString eType;
+  QString eLength;
+  QString comments;
+};
+
+struct FeedCountStruct{
+  int feedId;
+  int unreadCount;
+  int newCount;
+  int undeleteCount;
+  QString updated;
+  QString lastBuildDate;
+  QString htmlUrl;
+  QString xmlUrl;
+  QString title;
+};
+
+Q_DECLARE_METATYPE(FeedCountStruct)
+
+class ParseObject : public QObject
+{
+  Q_OBJECT
+public:
+  explicit ParseObject(QObject *parent = 0);
+  ~ParseObject();
+
+  void disconnectObjects();
+  void setDatabase(const QSqlDatabase &database);
+
+public slots:
+  void setArticleSettings(bool markIdenticalNewsRead, bool avoidOldNews, QDate avoidedOldNewsDate);
+  void parseXml(QByteArray data, int feedId,
+                QDateTime dtReply, QString codecName);
+  void runUserFilter(int feedId, int filterId = -1);
+
+signals:
+  void signalReadyParse(const QByteArray &xml, const int &feedId,
+                        const QDateTime &dtReply, const QString &codecName);
+  void signalFinishUpdate(int feedId, bool changed, int newCount, QString status);
+  void signalUserFilterApplied(int feedId);
+  void feedCountsUpdate(FeedCountStruct counts);
+  void signalPlaySound(const QString &soundPath);
+  void signalAddColorList(int id, const QString &color);
+
+private slots:
+  void getQueuedXml();
+  void slotParse(const QByteArray &xmlData, const int &feedId,
+                 const QDateTime &dtReply, const QString &codecName);
+  void addAtomNewsIntoBase(NewsItemStruct *newsItem);
+  void addRssNewsIntoBase(NewsItemStruct *newsItem);
+
+private:
+  struct FilterEffects {
+    QList<QPair<int, QString>> colors;
+    QString sound;
+    bool playSound = false;
+  };
+  struct UpdateEffects {
+    QList<FeedCountStruct> counts;
+    QList<FilterEffects> filters;
+  };
+  bool storeFeed(const QDomDocument &doc, int feedId, int &newCount, UpdateEffects &effects);
+  void applyUserFilter(int feedId, int filterId, UpdateEffects &effects);
+  bool checkQuery(bool success, const QSqlQuery &query);
+  void publishEffects(const UpdateEffects &effects);
+  void parseAtom(const QString &feedUrl, const QDomDocument &doc);
+  void parseRss(const QString &feedUrl, const QDomDocument &doc);
+  QString toPlainText(const QString &text);
+  QString fromPlainText(QString text);
+  QString getCommunity(const QDomNode &nodeContent);
+  QString parseDate(const QString &dateString, const QString &urlString);
+  int recountFeedCounts(int feedId, const QString &feedUrl,
+                        const QString &updated, const QString &lastBuildDate, UpdateEffects &effects);
+
+  QSqlDatabase db_;
+  QSqlError sqlError_;
+  QTimer *parseTimer_;
+  QMutex mutex_;
+  QQueue<int> idsQueue_;
+  QQueue<QByteArray> xmlsQueue_;
+  QQueue<QDateTime> dtReadyQueue_;
+  QQueue<QString> codecNameQueue_;
+
+  int parseFeedId_;
+  bool duplicateNewsMode_;
+  bool feedChanged_;
+  // Updated in this object's thread, between feed parses.
+  bool markIdenticalNewsRead_ = true;
+  bool avoidOldNews_ = false;
+  QDate avoidedOldNewsDate_;
+  bool addSingleNewsAnyDate_;
+  bool avoidedOldSingleNews_;
+  QDate avoidedOldSingleNewsDate_;
+
+  // Each set contains row numbers from the stored-article snapshot. Shared
+  // row numbers preserve comparisons that must match the same article.
+  QHash<QString, QSet<int>> guidIndex_;
+  QHash<QString, QSet<int>> linkIndex_;
+  QHash<QString, QSet<int>> titleIndex_;
+  QHash<QString, QSet<int>> publishedIndex_;
+
+  QDateTime lastBuildDate_;
+  QDateTime retentionCutoff_;
+
+};
+
+#endif // PARSEOBJECT_H

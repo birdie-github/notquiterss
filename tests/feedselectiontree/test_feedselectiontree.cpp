@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "feedselectiontree.h"
+#include "feeds/feedselectiontree.h"
 #include <QtTest>
 #include <QSqlQuery>
 #include <algorithm>

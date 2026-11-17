@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -35,10 +35,10 @@
 * ============================================================ */
 #include "downloaditem.h"
 
-#include "mainapplication.h"
-#include "networkmanager.h"
-#include "networkpolicy.h"
-#include "credentialscope.h"
+#include "app/mainapplication.h"
+#include "network/networkmanager.h"
+#include "network/networkpolicy.h"
+#include "network/credentialscope.h"
 
 #if defined(Q_OS_WIN)
 #include <qt_windows.h>

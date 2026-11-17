@@ -1,5 +1,5 @@
 /* ============================================================
-* QuiteRSS is a open-source cross-platform RSS/Atom news feeds reader
+* QuiteRSS is an open-source cross-platform RSS/Atom news feeds reader
 * © 2011-2020 QuiteRSS Project
 * © 2026 Artem S. Tashkinov <aros@gmx.com> and ChatGPT
 *
@@ -19,7 +19,7 @@
 #ifndef COOKIESDIALOG_H
 #define COOKIESDIALOG_H
 
-#include "dialog.h"
+#include "widgets/dialog.h"
 
 class CookiesDialog : public Dialog
 {

@@ -1,7 +1,7 @@
 #include <QtTest>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include "releaseinfo.h"
+#include "app/releaseinfo.h"
 
 class ReleaseInfoTest : public QObject
 {

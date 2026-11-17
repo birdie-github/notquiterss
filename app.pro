@@ -54,191 +54,179 @@ unix:!mac:qtHaveModule(dbus) {
   QT += dbus
   DEFINES += HAVE_FILEMANAGER_DBUS
 }
-HEADERS += src/application/commandline.h
-SOURCES += src/application/commandline.cpp
-HEADERS += src/feedreadstate.h
+HEADERS += src/app/commandline.h
+SOURCES += src/app/commandline.cpp
+HEADERS += src/articles/feedreadstate.h
 HEADERS += src/network/websiteoverrides.h
 SOURCES += src/network/websiteoverrides.cpp
-SOURCES += src/feedreadstate.cpp
+SOURCES += src/articles/feedreadstate.cpp
 equals(QT_MAJOR_VERSION, 6): QT += core5compat
 CONFIG += c++17 link_pkgconfig
 !packagesExist(libxml-2.0) {
   error("libxml2 development files and pkg-config are required. Set PKG_CONFIG_PATH to the directory containing libxml-2.0.pc. See INSTALL for Linux, MSYS2 and Homebrew setup.")
 }
 PKGCONFIG += libxml-2.0
-HEADERS += src/application/applicationstyle.h
-SOURCES += src/application/applicationstyle.cpp
+HEADERS += src/preferences/applicationstyle.h
+SOURCES += src/preferences/applicationstyle.cpp
 
-HEADERS += src/application/releaseinfo.h
-SOURCES += src/application/releaseinfo.cpp
+HEADERS += src/app/releaseinfo.h
+SOURCES += src/app/releaseinfo.cpp
 
-HEADERS += src/application/languagecatalog.h
-SOURCES += src/application/languagecatalog.cpp
+HEADERS += src/preferences/languagecatalog.h
+SOURCES += src/preferences/languagecatalog.cpp
 
-HEADERS += src/network/credentialscope.h src/network/networkpolicy.h src/articleview/articlecontent.h src/articleview/articleimages.h src/articleview/lanczosscaler.h src/sharing/shareservice.h src/newsretention.h src/application/statusbarcontroller.h src/application/trayiconcontroller.h src/application/soundplayer.h
-SOURCES += src/articleview/articlecontent.cpp src/articleview/articleimages.cpp src/articleview/lanczosscaler.cpp src/sharing/shareservice.cpp src/application/statusbarcontroller.cpp src/application/trayiconcontroller.cpp src/application/soundplayer.cpp
+HEADERS += src/network/credentialscope.h src/network/networkpolicy.h src/articles/rendering/articlecontent.h src/articles/rendering/articleimages.h src/articles/rendering/lanczosscaler.h src/sharing/shareservice.h src/articles/cleanup/newsretention.h src/mainwindow/statusbarcontroller.h src/mainwindow/trayiconcontroller.h src/platform/soundplayer.h
+SOURCES += src/articles/rendering/articlecontent.cpp src/articles/rendering/articleimages.cpp src/articles/rendering/lanczosscaler.cpp src/sharing/shareservice.cpp src/mainwindow/statusbarcontroller.cpp src/mainwindow/trayiconcontroller.cpp src/platform/soundplayer.cpp
 
 unix:!mac:DEFINES += HAVE_X11
 
 TEMPLATE = app
 
 HEADERS += \
-    src/parseobject.h \
-    src/optionsdialog.h \
-    src/newsview/newsview.h \
-    src/newsview/newsmodel.h \
-    src/newsview/newsheader.h \
-    src/aboutdialog.h \
-    src/updateappdialog.h \
-    src/feedpropertiesdialog.h \
-    src/feedsview/feedselectiontree.h \
-    src/feeddiscovery.h \
-    src/addfeedwizard.h \
-    src/newstabwidget.h \
-    src/findtext.h \
-    src/findfeed.h \
-    src/feedsview/feedsview.h \
-    src/feedsview/feedhealth.h \
-    src/feedsview/feedstatusdelegate.h \
-    src/feedsview/feedsmodel.h \
-    src/addfolderdialog.h \
-    src/labeldialog.h \
-    src/faviconobject.h \
-    src/customizetoolbardialog.h \
+    src/feeds/update/parseobject.h \
+    src/preferences/optionsdialog.h \
+    src/articles/newsview.h \
+    src/articles/newsmodel.h \
+    src/articles/newsheader.h \
+    src/app/aboutdialog.h \
+    src/app/updateappdialog.h \
+    src/feeds/feedpropertiesdialog.h \
+    src/feeds/feedselectiontree.h \
+    src/feeds/feeddiscovery.h \
+    src/feeds/addfeedwizard.h \
+    src/articles/newstabwidget.h \
+    src/articles/findtext.h \
+    src/feeds/findfeed.h \
+    src/feeds/feedsview.h \
+    src/feeds/feedhealth.h \
+    src/feeds/feedstatusdelegate.h \
+    src/feeds/feedsmodel.h \
+    src/feeds/addfolderdialog.h \
+    src/articles/labeldialog.h \
+    src/feeds/update/faviconobject.h \
+    src/mainwindow/customizetoolbardialog.h \
     src/downloads/downloadmanager.h \
     src/downloads/downloaditem.h \
-    src/tabbar.h \
-    src/categoriestreewidget.h \
-    src/cleanuppreviewdialog.h \
-    src/cleanupwizard.h \
-    src/updatefeeds.h \
-    src/requestfeed.h \
+    src/articles/tabbar.h \
+    src/articles/categoriestreewidget.h \
+    src/articles/cleanup/cleanuppreviewdialog.h \
+    src/articles/cleanup/cleanupwizard.h \
+    src/feeds/update/updatefeeds.h \
+    src/feeds/update/requestfeed.h \
     src/notifications/notificationsfeeditem.h \
     src/notifications/notificationsnewsitem.h \
     src/notifications/notificationswidget.h \
-    src/application/mainapplication.h \
-    src/application/settings.h \
-    src/application/databasebackup.h \
-    src/application/backupsettingspage.h \
-    src/application/filemanager.h \
-    src/application/logfile.h \
-    src/application/mainwindow.h \
-    src/application/opmlexporter.h \
-    src/application/shortcutregistry.h \
-    src/application/splashscreen.h \
+    src/app/mainapplication.h \
+    src/preferences/settings.h \
+    src/backup/databasebackup.h \
+    src/backup/backupsettingspage.h \
+    src/platform/filemanager.h \
+    src/common/logfile.h \
+    src/mainwindow/mainwindow.h \
+    src/feeds/opml/opmlexporter.h \
+    src/preferences/shortcutregistry.h \
+    src/app/splashscreen.h \
     src/network/authenticationdialog.h \
     src/network/cookiejar.h \
     src/network/cookiesdialog.h \
     src/network/networkmanager.h \
-    src/articleview/articleview.h \
+    src/articles/rendering/articleview.h \
     src/database/database.h \
     src/database/pendingdatabase.h \
-    src/database/feedbulksettings.h \
-    src/database/feeddeletion.h \
+    src/feeds/feedbulksettings.h \
+    src/feeds/feeddeletion.h \
     src/common/common.h \
-    src/common/feedxml.h \
-    src/common/feeddate.h \
-    src/common/delegatewithoutfocus.h \
-    src/common/dialog.h \
-    src/common/lineedit.h \
-    src/common/toolbutton.h \
-    src/newsfilters/filterrulesdialog.h \
-    src/newsfilters/newsfiltersdialog.h \
-    src/newsfilters/itemcondition.h \
-    src/newsfilters/itemaction.h \
+    src/feeds/update/feedxml.h \
+    src/feeds/update/feeddate.h \
+    src/widgets/delegatewithoutfocus.h \
+    src/widgets/dialog.h \
+    src/widgets/lineedit.h \
+    src/widgets/toolbutton.h \
+    src/articles/filters/filterrulesdialog.h \
+    src/articles/filters/newsfiltersdialog.h \
+    src/articles/filters/itemcondition.h \
+    src/articles/filters/itemaction.h \
     src/network/networkmanagerproxy.h \
-    src/feedsview/feedsproxymodel.h \
-    src/main/globals.h \
+    src/feeds/feedsproxymodel.h \
+    src/app/globals.h \
 
 SOURCES += \
-    src/parseobject.cpp \
-    src/optionsdialog.cpp \
-    src/newsview/newsview.cpp \
-    src/newsview/newsmodel.cpp \
-    src/newsview/newsheader.cpp \
-    src/aboutdialog.cpp \
-    src/updateappdialog.cpp \
-    src/feedpropertiesdialog.cpp \
-    src/database/feedbulksettings.cpp \
-    src/application/feedsettings.cpp \
-    src/feeddiscovery.cpp \
-    src/addfeedwizard.cpp \
-    src/newstabwidget.cpp \
-    src/findtext.cpp \
-    src/findfeed.cpp \
-    src/feedsview/feedsview.cpp \
-    src/feedsview/feedselectiontree.cpp \
-    src/feedsview/feedhealth.cpp \
-    src/feedsview/feedstatusdelegate.cpp \
-    src/feedsview/feedsmodel.cpp \
-    src/addfolderdialog.cpp \
-    src/labeldialog.cpp \
-    src/faviconobject.cpp \
-    src/customizetoolbardialog.cpp \
+    src/feeds/update/parseobject.cpp \
+    src/preferences/optionsdialog.cpp \
+    src/articles/newsview.cpp \
+    src/articles/newsmodel.cpp \
+    src/articles/newsheader.cpp \
+    src/app/aboutdialog.cpp \
+    src/app/updateappdialog.cpp \
+    src/feeds/feedpropertiesdialog.cpp \
+    src/feeds/feedbulksettings.cpp \
+    src/mainwindow/feedsettings.cpp \
+    src/feeds/feeddiscovery.cpp \
+    src/feeds/addfeedwizard.cpp \
+    src/articles/newstabwidget.cpp \
+    src/articles/findtext.cpp \
+    src/feeds/findfeed.cpp \
+    src/feeds/feedsview.cpp \
+    src/feeds/feedselectiontree.cpp \
+    src/feeds/feedhealth.cpp \
+    src/feeds/feedstatusdelegate.cpp \
+    src/feeds/feedsmodel.cpp \
+    src/feeds/addfolderdialog.cpp \
+    src/articles/labeldialog.cpp \
+    src/feeds/update/faviconobject.cpp \
+    src/mainwindow/customizetoolbardialog.cpp \
     src/downloads/downloadmanager.cpp \
     src/downloads/downloaditem.cpp \
-    src/tabbar.cpp \
-    src/categoriestreewidget.cpp \
-    src/cleanuppreviewdialog.cpp \
-    src/cleanupwizard.cpp \
-    src/updatefeeds.cpp \
-    src/requestfeed.cpp \
+    src/articles/tabbar.cpp \
+    src/articles/categoriestreewidget.cpp \
+    src/articles/cleanup/cleanuppreviewdialog.cpp \
+    src/articles/cleanup/cleanupwizard.cpp \
+    src/feeds/update/updatefeeds.cpp \
+    src/feeds/update/requestfeed.cpp \
     src/notifications/notificationsfeeditem.cpp \
     src/notifications/notificationsnewsitem.cpp \
     src/notifications/notificationswidget.cpp \
-    src/application/mainapplication.cpp \
-    src/application/settings.cpp \
-    src/application/databasebackup.cpp \
-    src/application/backupsettingspage.cpp \
-    src/application/filemanager.cpp \
-    src/application/logfile.cpp \
-    src/application/mainwindow.cpp \
-    src/application/mainwindow_feeds.cpp \
-    src/application/mainwindow_news.cpp \
-    src/application/mainwindow_notifications.cpp \
-    src/application/mainwindow_settings.cpp \
-    src/application/mainwindow_theme.cpp \
-    src/application/mainwindow_ui.cpp \
-    src/application/opmlexporter.cpp \
-    src/application/shortcutregistry.cpp \
-    src/main/globals.cpp \
-    src/main/main.cpp \
-    src/application/splashscreen.cpp \
+    src/app/mainapplication.cpp \
+    src/preferences/settings.cpp \
+    src/backup/databasebackup.cpp \
+    src/backup/backupsettingspage.cpp \
+    src/platform/filemanager.cpp \
+    src/common/logfile.cpp \
+    src/mainwindow/mainwindow.cpp \
+    src/mainwindow/mainwindow_feeds.cpp \
+    src/mainwindow/mainwindow_news.cpp \
+    src/mainwindow/mainwindow_notifications.cpp \
+    src/mainwindow/mainwindow_settings.cpp \
+    src/mainwindow/mainwindow_theme.cpp \
+    src/mainwindow/mainwindow_ui.cpp \
+    src/feeds/opml/opmlexporter.cpp \
+    src/preferences/shortcutregistry.cpp \
+    src/app/globals.cpp \
+    src/app/main.cpp \
+    src/app/splashscreen.cpp \
     src/network/authenticationdialog.cpp \
     src/network/cookiejar.cpp \
     src/network/cookiesdialog.cpp \
     src/network/networkmanager.cpp \
-    src/articleview/articleview.cpp \
+    src/articles/rendering/articleview.cpp \
     src/database/database.cpp \
-    src/database/feeddeletion.cpp \
+    src/feeds/feeddeletion.cpp \
     src/database/pendingdatabase.cpp \
     src/common/common.cpp \
-    src/common/feedxml.cpp \
-    src/common/feeddate.cpp \
-    src/common/delegatewithoutfocus.cpp \
-    src/common/dialog.cpp \
-    src/common/lineedit.cpp \
-    src/common/toolbutton.cpp \
-    src/newsfilters/filterrulesdialog.cpp \
-    src/newsfilters/newsfiltersdialog.cpp \
-    src/newsfilters/itemcondition.cpp \
-    src/newsfilters/itemaction.cpp \
+    src/feeds/update/feedxml.cpp \
+    src/feeds/update/feeddate.cpp \
+    src/widgets/delegatewithoutfocus.cpp \
+    src/widgets/dialog.cpp \
+    src/widgets/lineedit.cpp \
+    src/widgets/toolbutton.cpp \
+    src/articles/filters/filterrulesdialog.cpp \
+    src/articles/filters/newsfiltersdialog.cpp \
+    src/articles/filters/itemcondition.cpp \
+    src/articles/filters/itemaction.cpp \
     src/network/networkmanagerproxy.cpp \
-    src/feedsview/feedsproxymodel.cpp
+    src/feeds/feedsproxymodel.cpp
 
-INCLUDEPATH +=  $$PWD/src \
-                $$PWD/src/application \
-                $$PWD/src/common \
-                $$PWD/src/main \
-                $$PWD/src/database \
-                $$PWD/src/downloads \
-                $$PWD/src/feedsview \
-                $$PWD/src/newsfilters \
-                $$PWD/src/newsview \
-                $$PWD/src/notifications \
-                $$PWD/src/network \
-                $$PWD/src/articleview \
-                $$PWD/src/sharing \
+INCLUDEPATH += $$PWD/src
 
 # Use the toolchain/command-line choice of single or dual configuration.
 CONFIG(debug, debug|release) {
@@ -358,5 +346,5 @@ OTHER_FILES += \
     INSTALL \
     $$PWD/$${PROJECT_RESOURCE_ROOT}/$${PROJECT_SHARING_ICONS}/$${PROJECT_SHARING_CONFIG}
 
-HEADERS += src/network/feedurl.h src/application/opmlinput.h
-SOURCES += src/network/feedurl.cpp src/application/opmlinput.cpp
+HEADERS += src/network/feedurl.h src/feeds/opml/opmlinput.h
+SOURCES += src/network/feedurl.cpp src/feeds/opml/opmlinput.cpp
