@@ -119,6 +119,23 @@
 <context>
     <name>AddFeedWizard</name>
     <message>
+        <location filename="../../../src/feeds/addfeedwizard.cpp" line="117"/>
+        <source>Choose Name and Folder…</source>
+        <translation>Выбрать имя и папку…</translation>
+    </message>
+    <message>
+        <location filename="../../../src/feeds/addfeedwizard.cpp" line="118"/>
+        <location filename="../../../src/feeds/addfeedwizard.cpp" line="198"/>
+        <source>Add Feed</source>
+        <comment>button</comment>
+        <translation>Добавить ленту</translation>
+    </message>
+    <message>
+        <location filename="../../../src/feeds/addfeedwizard.cpp" line="287"/>
+        <source>Add and Continue</source>
+        <translation>Добавить и продолжить</translation>
+    </message>
+    <message>
         <location filename="../../../src/feeds/addfeedwizard.cpp" line="43"/>
         <source>Add Feed</source>
         <translation>Добавление ленты</translation>

@@ -114,6 +114,8 @@ QWizardPage *AddFeedWizard::createUrlFeedPage()
 {
   QWizardPage *page = new QWizardPage;
   page->setTitle(tr("Create New Feed"));
+  page->setButtonText(QWizard::NextButton, tr("Choose Name and Folder…"));
+  page->setButtonText(QWizard::FinishButton, tr("Add Feed", "button"));
 
   selectedPage = false;
   finishOn = false;
@@ -193,6 +195,7 @@ QWizardPage *AddFeedWizard::createNameFeedPage()
   QWizardPage *page = new QWizardPage;
   page->setTitle(tr("Create New Feed"));
   page->setFinalPage(false);
+  page->setButtonText(QWizard::FinishButton, tr("Add Feed", "button"));
 
   nameFeedEdit_ = new LineEdit(this);
 
@@ -280,7 +283,8 @@ void AddFeedWizard::configureFeed(const QString &url, int position, int total)
   setUrlFeed(url);
   page(1)->setSubTitle(url.toHtmlEscaped());
   setWindowTitle(tr("Create New Feed (%1 of %2)").arg(position).arg(total));
-  if (position < total) setButtonText(QWizard::FinishButton, tr("Add and Continue"));
+  if (position < total)
+    page(1)->setButtonText(QWizard::FinishButton, tr("Add and Continue"));
   setOption(QWizard::HaveCustomButton1, total > 1);
   setButtonText(QWizard::CustomButton1, tr("Skip"));
   connect(button(QWizard::CustomButton1), &QAbstractButton::clicked, this, [this] { done(FeedSkipped); });
