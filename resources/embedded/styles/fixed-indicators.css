@@ -14,27 +14,28 @@ OptionsDialog QFrame[frameShape="6"] {
 }
 
 QCheckBox::indicator, QGroupBox::indicator, QRadioButton::indicator,
-QMenu::indicator {
+QMenu::indicator, QTreeView::indicator {
     width: 12px;
     height: 12px;
     border: 1px solid %1;
     background-color: palette(base);
     image: none;
 }
-QCheckBox::indicator, QGroupBox::indicator, QMenu::indicator:non-exclusive {
+QCheckBox::indicator, QGroupBox::indicator, QMenu::indicator:non-exclusive,
+QTreeView::indicator {
     border-radius: 2px;
 }
 QRadioButton::indicator, QMenu::indicator:exclusive {
     border-radius: 7px;
 }
 QCheckBox::indicator:checked, QGroupBox::indicator:checked,
-QMenu::indicator:non-exclusive:checked {
+QMenu::indicator:non-exclusive:checked, QTreeView::indicator:checked {
     image: url(:/style/indicators/check-%2.png);
 }
 QRadioButton::indicator:checked, QMenu::indicator:exclusive:checked {
     image: url(:/style/indicators/dot-%2.png);
 }
-QCheckBox::indicator:indeterminate {
+QCheckBox::indicator:indeterminate, QTreeView::indicator:indeterminate {
     image: url(:/style/indicators/mixed-%2.png);
 }
 QCheckBox::indicator:hover, QGroupBox::indicator:hover,
@@ -47,17 +48,20 @@ QRadioButton::indicator:focus {
     border-style: dashed;
 }
 QCheckBox::indicator:disabled, QGroupBox::indicator:disabled,
-QRadioButton::indicator:disabled, QMenu::indicator:disabled {
+QRadioButton::indicator:disabled, QMenu::indicator:disabled,
+QTreeView::indicator:disabled {
     border-color: %3;
 }
 QCheckBox::indicator:checked:disabled, QGroupBox::indicator:checked:disabled,
-QMenu::indicator:non-exclusive:checked:disabled {
+QMenu::indicator:non-exclusive:checked:disabled,
+QTreeView::indicator:checked:disabled {
     image: url(:/style/indicators/check-%2-disabled.png);
 }
 QRadioButton::indicator:checked:disabled, QMenu::indicator:exclusive:checked:disabled {
     image: url(:/style/indicators/dot-%2-disabled.png);
 }
-QCheckBox::indicator:indeterminate:disabled {
+QCheckBox::indicator:indeterminate:disabled,
+QTreeView::indicator:indeterminate:disabled {
     image: url(:/style/indicators/mixed-%2-disabled.png);
 }
 
