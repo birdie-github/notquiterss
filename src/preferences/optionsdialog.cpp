@@ -630,7 +630,7 @@ QWidget *OptionsDialog::createBrowserWidget()
   });
 
   autoLoadImages_ = new QCheckBox(tr("Load images"));
-  highQualityImageScaling_ = new QCheckBox(tr("Use high-quality image scaling (Lanczos)"));
+  highQualityImageScaling_ = new QCheckBox(tr("Use Lanczos scaling for article images"));
   highQualityImageScaling_->setToolTip(tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"));
   preloadNewspaperPages_ = new QSpinBox();
   preloadNewspaperPages_->setRange(0, 10);

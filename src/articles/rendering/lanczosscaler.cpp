@@ -37,6 +37,10 @@ constexpr int kFixedOne = 1 << kFixedShift;
 constexpr qint64 kMaxWorkingBytes = 64LL * 1024 * 1024;
 constexpr qint64 kPixelBytes = sizeof(QRgb);
 
+// Signed channels retain Lanczos undershoot and overshoot between passes.
+struct IntermediatePixel { qint16 r, g, b, a; };
+constexpr int kIntermediateShift = 4;
+
 double kernelSupport(int srcSize, int dstSize) {
   return std::max(1.0, double(srcSize) / dstSize) * kLanczosA;
 }
@@ -68,7 +72,8 @@ bool fitsWorkingBudget(const QImage &source, const QSize &targetSize) {
   if (intermediatePixels > maxPixels || outputPixels > maxPixels || conversionPixels > maxPixels)
     return false;
 
-  const qint64 pixelBytes = (intermediatePixels + outputPixels + conversionPixels) * kPixelBytes;
+  const qint64 pixelBytes = intermediatePixels * qint64(sizeof(IntermediatePixel)) +
+      (outputPixels + conversionPixels) * kPixelBytes;
   // Include both table reservations and each axis's temporary weight buffer
   // for a conservative estimate of the worker's additional allocations.
   return pixelBytes +
@@ -184,7 +189,7 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
   // Intermediate buffer after horizontal pass: srcH rows of dstW pixels.
   if (isCanceled()) return QImage();
   const int intermediatePixels = int(qint64(srcH) * dstW);
-  QVector<QRgb> temp(intermediatePixels);
+  QVector<IntermediatePixel> temp(intermediatePixels);
   const int *hOffsets = hTable.offsets.constData();
   const int *hCounts = hTable.counts.constData();
   const int *hWeightOffsets = hTable.weightsOffset.constData();
@@ -193,17 +198,17 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
   for (int y = 0; y < srcH; ++y) {
     if (isCanceled()) return QImage();
     const QRgb *srcRow = reinterpret_cast<const QRgb *>(src.constScanLine(y));
-    QRgb *dstRow = temp.data() + size_t(y) * size_t(dstW);
+    IntermediatePixel *dstRow = temp.data() + size_t(y) * size_t(dstW);
 
     for (int x = 0; x < dstW; ++x) {
       const QRgb *s = srcRow + hOffsets[x];
       const qint16 *w = hWeights + hWeightOffsets[x];
       const int count = hCounts[x];
 
-      int r = 1 << (kFixedShift - 1);
-      int g = 1 << (kFixedShift - 1);
-      int b = 1 << (kFixedShift - 1);
-      int a = 1 << (kFixedShift - 1);
+      int r = 1 << (kFixedShift - kIntermediateShift - 1);
+      int g = 1 << (kFixedShift - kIntermediateShift - 1);
+      int b = 1 << (kFixedShift - kIntermediateShift - 1);
+      int a = 1 << (kFixedShift - kIntermediateShift - 1);
 
       for (int i = 0; i < count; ++i) {
         const QRgb px = s[i];
@@ -214,11 +219,9 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
         b += int(px & 0xff) * weight;
       }
 
-      const int outA = qBound(0, a >> kFixedShift, 255);
-      const int outR = qBound(0, r >> kFixedShift, outA);
-      const int outG = qBound(0, g >> kFixedShift, outA);
-      const int outB = qBound(0, b >> kFixedShift, outA);
-      dstRow[x] = (uint(outA) << 24) | (uint(outR) << 16) | (uint(outG) << 8) | uint(outB);
+      constexpr int shift = kFixedShift - kIntermediateShift;
+      dstRow[x] = {qint16(r >> shift), qint16(g >> shift),
+                   qint16(b >> shift), qint16(a >> shift)};
     }
   }
 
@@ -229,7 +232,7 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
   const int *vCounts = vTable.counts.constData();
   const int *vWeightOffsets = vTable.weightsOffset.constData();
   const qint16 *vWeights = vTable.weights.constData();
-  const QRgb *tempData = temp.constData();
+  const IntermediatePixel *tempData = temp.constData();
 
   for (int y = 0; y < dstH; ++y) {
     if (isCanceled()) return QImage();
@@ -239,26 +242,23 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
     const qint16 *w = vWeights + vWeightOffsets[y];
 
     for (int x = 0; x < dstW; ++x) {
-      int r = 1 << (kFixedShift - 1);
-      int g = 1 << (kFixedShift - 1);
-      int b = 1 << (kFixedShift - 1);
-      int a = 1 << (kFixedShift - 1);
+      constexpr int shift = kFixedShift + kIntermediateShift;
+      qint64 r = 1 << (shift - 1);
+      qint64 g = r, b = r, a = r;
 
-      const QRgb *colPtr = tempData + size_t(top) * size_t(dstW) + x;
       for (int i = 0; i < count; ++i) {
-        const QRgb px = *colPtr;
-        colPtr += dstW;
+        const IntermediatePixel &px = tempData[size_t(top + i) * dstW + x];
         const int weight = w[i];
-        a += int((px >> 24) & 0xff) * weight;
-        r += int((px >> 16) & 0xff) * weight;
-        g += int((px >> 8) & 0xff) * weight;
-        b += int(px & 0xff) * weight;
+        r += px.r * weight;
+        g += px.g * weight;
+        b += px.b * weight;
+        a += px.a * weight;
       }
 
-      const int outA = qBound(0, a >> kFixedShift, 255);
-      const int outR = qBound(0, r >> kFixedShift, outA);
-      const int outG = qBound(0, g >> kFixedShift, outA);
-      const int outB = qBound(0, b >> kFixedShift, outA);
+      const int outA = qBound(0, int(a >> shift), 255);
+      const int outR = qBound(0, int(r >> shift), outA);
+      const int outG = qBound(0, int(g >> shift), outA);
+      const int outB = qBound(0, int(b >> shift), outA);
       dstRow[x] = (uint(outA) << 24) | (uint(outR) << 16) | (uint(outG) << 8) | uint(outB);
     }
   }
