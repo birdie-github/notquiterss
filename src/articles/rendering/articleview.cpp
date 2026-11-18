@@ -359,10 +359,12 @@ bool ArticleView::updateArticleStarState(int newsId, bool isStarred) {
 QVariant ArticleView::loadResource(int type, const QUrl &url) {
   if (type != QTextDocument::ImageResource) return QByteArray();
   const bool icon = url.scheme() == "qrc" && url.path().startsWith("/images/");
-  const bool allowed = icon || ArticleContent::isInlineImage(url) ||
+  const bool inlineImage = ArticleContent::isInlineImage(url);
+  const bool allowed = icon || inlineImage ||
       (allowedImages_.contains(url) && ArticleContent::isRemoteImage(url));
   if (!allowed) return placeholder();
   if (imagesCache_.contains(url)) return imagesCache_.value(url);
+  if (failed_.contains(url)) return placeholder();
   if (icon) {
     const QImage image(QLatin1Char(':') + url.path());
     if (!image.isNull()) {
@@ -370,12 +372,13 @@ QVariant ArticleView::loadResource(int type, const QUrl &url) {
       return image;
     }
   }
-  if (ArticleContent::isInlineImage(url)) {
-    const QString text = url.toString(QUrl::FullyEncoded);
-    const int comma = text.indexOf(QLatin1Char(','));
-    const QImage image = comma > 0
-        ? QImage::fromData(QByteArray::fromBase64(text.mid(comma + 1).toLatin1()))
-        : QImage();
+  if (inlineImage) {
+    // Use the representation already checked by isInlineImage(), which
+    // allows whitespace in the base64 payload.
+    const QString text = url.toString();
+    const auto comma = text.indexOf(QLatin1Char(','));
+    const QByteArray bytes = QByteArray::fromBase64(text.mid(comma + 1).toLatin1());
+    const QImage image = readImage(url, bytes);
     if (!image.isNull()) {
       imagesCache_.insert(url, image);
       return image;
@@ -383,7 +386,7 @@ QVariant ArticleView::loadResource(int type, const QUrl &url) {
     failed_.insert(url);
     return placeholder();
   }
-  if (!pending_.contains(url) && !failed_.contains(url)) {
+  if (!pending_.contains(url)) {
     pending_.insert(url);
     ++requested_;
     const int generation = generation_;
@@ -434,37 +437,48 @@ void ArticleView::requestImage(const QUrl &url) {
     pending_.remove(url);
     ++completed_;
     const QByteArray bytes = reply->readAll();
-    const QImage image = reply->error() == QNetworkReply::NoError ? QImage::fromData(bytes) : QImage();
+    const QImage image = reply->error() == QNetworkReply::NoError ? readImage(url, bytes) : QImage();
     if (image.isNull()) {
       failed_.insert(url);
       ArticleImages::trace("article image unavailable " + ArticleImages::describeUrl(url));
     } else {
       installImage(url, image);
-      // QMovie uses the same installed Qt image handlers; it does not fetch URLs.
-      QBuffer probe;
-      probe.setData(bytes); probe.open(QIODevice::ReadOnly);
-      QImageReader reader(&probe);
-      if (reader.supportsAnimation()) {
-        QMovie *movie = new QMovie(this);
-        QBuffer *buffer = new QBuffer(movie);
-        buffer->setData(bytes); buffer->open(QIODevice::ReadOnly);
-        movie->setDevice(buffer);
-        movie->setCacheMode(QMovie::CacheNone);
-        movies_.insert(url, movie);
-        connect(movie, &QMovie::frameChanged, this, [this, url, movie](int) {
-          if (movies_.value(url) == movie) installImage(url, movie->currentImage());
-        });
-        movie->start();
-        // start() decodes the first frame synchronously. Stop its timer if the
-        // image finished loading in a hidden tab or window.
-        if (!animationsVisible_ && movie->state() == QMovie::Running) {
-          movie->setPaused(true);
-          pausedMovies_.insert(movie);
-        }
-      }
     }
     updateProgress();
   });
+}
+
+QImage ArticleView::readImage(const QUrl &url, const QByteArray &bytes) {
+  QBuffer input;
+  input.setData(bytes);
+  input.open(QIODevice::ReadOnly);
+  QImageReader reader(&input);
+  // The network reply has already validated downloaded image headers.
+  if (url.scheme() == QLatin1String("data") && ArticleImages::validatedFormat(reader, url).isEmpty())
+    return {};
+
+  const bool animated = reader.supportsAnimation();
+  const QImage image = reader.read();
+  if (image.isNull() || !animated) return image;
+
+  QMovie *movie = new QMovie(this);
+  QBuffer *buffer = new QBuffer(movie);
+  buffer->setData(bytes);
+  buffer->open(QIODevice::ReadOnly);
+  movie->setDevice(buffer);
+  movie->setCacheMode(QMovie::CacheNone);
+  movies_.insert(url, movie);
+  movie->start();
+  if (!animationsVisible_ && movie->state() == QMovie::Running) {
+    movie->setPaused(true);
+    pausedMovies_.insert(movie);
+  }
+  // start() emits frameChanged synchronously. The caller installs the first
+  // frame, so connect afterward to avoid relayout inside loadResource().
+  connect(movie, &QMovie::frameChanged, this, [this, url, movie](int) {
+    if (movies_.value(url) == movie) installImage(url, movie->currentImage());
+  });
+  return image;
 }
 
 void ArticleView::installImage(const QUrl &url, const QImage &image) {

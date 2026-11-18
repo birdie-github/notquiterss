@@ -102,6 +102,7 @@ private:
   void schedulePreload();
   void preloadImages();
   void requestImage(const QUrl &url);
+  QImage readImage(const QUrl &url, const QByteArray &bytes);
   void installImage(const QUrl &url, const QImage &image);
   void updateProgress();
   ArticleImages *images_;

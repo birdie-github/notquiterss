@@ -166,14 +166,8 @@ private:
       if (body_.size() > 16 * 1024 * 1024) { finish(QNetworkReply::ContentAccessDenied, "Article image exceeds size limit"); return; }
       QBuffer buffer(&body_); buffer.open(QIODevice::ReadOnly);
       QImageReader reader(&buffer);
-      const QByteArray format = reader.format().toLower();
-      const QSize size = reader.size();
-      ArticleImages::trace("image " + ArticleImages::describeUrl(pending_->url()) +
-                           " format=" + QString::fromLatin1(format) +
-                           " size=" + QString::number(size.width()) + "x" + QString::number(size.height()) +
-                           " bytes=" + QString::number(body_.size()) + " decoder=" + reader.errorString());
-      if (!(format == "png" || format == "jpeg" || format == "gif" || format == "webp" || format == "bmp") ||
-          !size.isValid() || qint64(size.width()) * size.height() > 64 * 1024 * 1024) {
+      const QByteArray format = ArticleImages::validatedFormat(reader, pending_->url());
+      if (format.isEmpty()) {
         finish(QNetworkReply::ContentAccessDenied, "Unsupported article image"); return;
       }
       setAttribute(QNetworkRequest::HttpStatusCodeAttribute, 200);
@@ -191,6 +185,20 @@ private:
   bool done_;
 };
 }
+
+QByteArray ArticleImages::validatedFormat(QImageReader &reader, const QUrl &url) {
+  const QByteArray format = reader.format().toLower();
+  const QSize size = reader.size();
+  trace("image " + describeUrl(url) +
+        " format=" + QString::fromLatin1(format) +
+        " size=" + QString::number(size.width()) + "x" + QString::number(size.height()) +
+        " bytes=" + QString::number(reader.device()->size()) + " decoder=" + reader.errorString());
+  if (!(format == "png" || format == "jpeg" || format == "gif" || format == "webp" || format == "bmp") ||
+      size.isEmpty() || qint64(size.width()) * size.height() > 64 * 1024 * 1024)
+    return {};
+  return format;
+}
+
 ArticleImages::ArticleImages(QObject *parent) : QNetworkAccessManager(parent), fetcher_(new QNetworkAccessManager(this)) {
   if (tracingEnabled()) {
     const QSslConfiguration ssl = QSslConfiguration::defaultConfiguration();

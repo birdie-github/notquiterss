@@ -21,11 +21,13 @@
 #include <QNetworkAccessManager>
 #include <QSet>
 #include <QUrl>
+class QImageReader;
 class ArticleImages : public QNetworkAccessManager {
 public:
   explicit ArticleImages(QObject *parent = nullptr);
   void allow(const QSet<QUrl> &urls) { allowed_ += urls; }
   void reset();
+  static QByteArray validatedFormat(QImageReader &reader, const QUrl &url);
   static bool tracingEnabled();
   static void trace(const QString &message);
   static QString describeUrl(const QUrl &url);
