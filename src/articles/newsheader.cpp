@@ -392,7 +392,7 @@ void NewsHeader::retranslateStrings()
 {
   if (count() == 0) return;
 
-  model_->setHeaderData(model_->fieldIndex("feedId"), Qt::Horizontal, tr("Icon Feed"));
+  model_->setHeaderData(model_->fieldIndex("feedId"), Qt::Horizontal, tr("Feed Icon"));
   model_->setHeaderData(model_->fieldIndex("title"), Qt::Horizontal, tr("Title"));
   model_->setHeaderData(model_->fieldIndex("published"), Qt::Horizontal, tr("Published"));
   model_->setHeaderData(model_->fieldIndex("received"), Qt::Horizontal, tr("Received"));

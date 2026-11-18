@@ -90,7 +90,7 @@ FindTextContent::FindTextContent(QWidget *parent)
   connect(clearButton_, &QAbstractButton::clicked, this, &FindTextContent::slotClear);
   connect(this, &QLineEdit::textChanged, this, &FindTextContent::updateClearButton);
 
-  findLabel_ = new QLabel(tr("Find in News"), this);
+  findLabel_ = new QLabel(tr("Search Articles"), this);
   findLabel_->setStyleSheet("QLabel { color: gray; background: none; }");
 
   int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
@@ -105,13 +105,13 @@ FindTextContent::FindTextContent(QWidget *parent)
 
 void FindTextContent::retranslateStrings()
 {
-  findInNewsAct_->setText(tr("Find in News"));
-  findTitleAct_->setText(tr("Find in Titles"));
-  findAuthorAct_->setText(tr("Find in Authors"));
-  findCategoryAct_->setText(tr("Find in Categories"));
-  findContentAct_->setText(tr("Find in Descriptions"));
-  findLinkAct_->setText(tr("Find in Links"));
-  findInBrowserAct_->setText(tr("Find in Article"));
+  findInNewsAct_->setText(tr("All Articles"));
+  findTitleAct_->setText(tr("Titles"));
+  findAuthorAct_->setText(tr("Authors"));
+  findCategoryAct_->setText(tr("Categories"));
+  findContentAct_->setText(tr("Descriptions"));
+  findLinkAct_->setText(tr("Links"));
+  findInBrowserAct_->setText(tr("Current Article"));
   findLabel_->setText(findGroup_->checkedAction()->text());
   if (findLabel_->isVisible()) {
     findLabel_->hide();

@@ -75,8 +75,8 @@ FindFeed::FindFeed(QWidget *parent)
 
 void FindFeed::retranslateStrings()
 {
-  findNameAct_->setText(tr("Find Name"));
-  findLinkAct_->setText(tr("Find Link"));
+  findNameAct_->setText(tr("Find by Name"));
+  findLinkAct_->setText(tr("Find by Link"));
   findLabel_->setText(findGroup_->checkedAction()->text());
   if (findLabel_->isVisible()) {
     findLabel_->hide();

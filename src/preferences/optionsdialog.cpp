@@ -425,7 +425,7 @@ QWidget *OptionsDialog::createTraySystemWidget()
 
   singleClickTray_ = new QCheckBox(
         tr("Use a single click instead of a double click to show the window"));
-  clearStatusNew_ = new QCheckBox(tr("Clear new status when minimizing to tray"));
+  clearStatusNew_ = new QCheckBox(tr("Clear 'new' status when minimizing to tray"));
   emptyWorking_ = new QCheckBox(tr("Empty working set when minimizing to tray"));
 
   QVBoxLayout *trayLayout = new QVBoxLayout(showTrayIconBox_);
@@ -756,7 +756,7 @@ QWidget *OptionsDialog::createFeedsWidget()
   generalFeedsLayout->addWidget(updateFeedsStartUp_);
   generalFeedsLayout->addLayout(updateFeedsLayout);
   generalFeedsLayout->addSpacing(10);
-  generalFeedsLayout->addWidget(new QLabel(tr("Action on feed opening:")));
+  generalFeedsLayout->addWidget(new QLabel(tr("Action when opening a feed:")));
   generalFeedsLayout->addLayout(openingFeedsLayout);
   generalFeedsLayout->addWidget(markIdenticalNewsRead_);
   generalFeedsLayout->addSpacing(15);
@@ -801,7 +801,7 @@ QWidget *OptionsDialog::createFeedsWidget()
   formatDateLayout->addStretch();
 
   alternatingRowColorsNews_ = new QCheckBox(tr("Alternating row background colors"));
-  simplifiedDateTime_ = new QCheckBox(tr("Simplified representation of date and time"));
+  simplifiedDateTime_ = new QCheckBox(tr("Simplified date and time format"));
 
   itemList.clear();
   itemList << tr("Show All")  << tr("Show New") << tr("Show Unread")

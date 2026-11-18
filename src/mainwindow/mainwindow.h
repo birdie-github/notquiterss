@@ -105,13 +105,13 @@ public:
   static QStringList nameLabels() {
     QStringList nameLabels;
     nameLabels << "Important" << "Work" << "Personal"
-               << "To Do" << "Later" << "Amusingly";
+               << "To Do" << "Later" << "Fun";
     return nameLabels;
   }
   static QStringList trNameLabels() {
     QStringList trNameLabels;
     trNameLabels << tr("Important") << tr("Work") << tr("Personal")
-                 << tr("To Do") << tr("Later") << tr("Amusingly");
+                 << tr("To Do") << tr("Later") << tr("Fun");
     return trNameLabels;
   }
 

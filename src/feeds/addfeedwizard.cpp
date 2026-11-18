@@ -265,7 +265,7 @@ QWizardPage *AddFeedWizard::createNameFeedPage()
   foldersTree_->setLayout(newFolderVLayout);
 
   QVBoxLayout *layout = new QVBoxLayout;
-  layout->addWidget(new QLabel(tr("Displayed name:")));
+  layout->addWidget(new QLabel(tr("Display name:")));
   layout->addWidget(nameFeedEdit_);
   layout->addWidget(new QLabel(tr("Location:")));
   layout->addWidget(foldersTree_);

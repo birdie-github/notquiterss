@@ -26,7 +26,7 @@ ItemAction::ItemAction(QWidget * parent)
   itemList /*<< tr("Move News to")  << tr("Copy News to")*/
       << tr("Mark News as Read") << tr("Add Star")
       << tr("Delete") << tr("Add Label")
-      << tr("Play Sound") << tr("Show Article in Notification");
+      << tr("Play Sound") << tr("Show Article in a Notification");
   comboBox1_->addItems(itemList);
 
   comboBox2_ = new QComboBox(this);
