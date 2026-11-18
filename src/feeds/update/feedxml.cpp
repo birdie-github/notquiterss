@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "feedxml.h"
 
+#include <QDebug>
+#include <QRegularExpression>
+#include <QTextCodec>
 #include <QTextStream>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -71,6 +74,45 @@ bool parseFeed(QDomDocument &doc, const Input &input, QString &error, int &line,
   // Preserve the original DOM error if there was no complete, valid feed root.
   return false;
 }
+}
+
+QString FeedXml::decode(const QByteArray &input, const QString &httpCharset)
+{
+  if (QTextCodec *codec = QTextCodec::codecForUtfText(input, nullptr))
+    return codec->toUnicode(input);
+
+  static const QRegularExpression xmlEncodingRx(
+      QStringLiteral(R"(^\s*<\?xml\b[^>]*?\bencoding\s*=\s*(["'])([^"']+)\1)"),
+      QRegularExpression::CaseInsensitiveOption);
+  const QString prolog = QString::fromLatin1(input.constData(), int(qMin<qint64>(input.size(), 512)));
+  const auto match = xmlEncodingRx.match(prolog);
+  if (match.hasMatch()) {
+    const QString encoding = match.captured(2).trimmed();
+    if (QTextCodec *codec = QTextCodec::codecForName(encoding.toUtf8()))
+      return codec->toUnicode(input);
+    qWarning() << "Unsupported feed XML encoding:" << encoding;
+    if (encoding.compare(QLatin1String("us-ascii"), Qt::CaseInsensitive) == 0) {
+      QString decoded = QString::fromUtf8(input);
+      const QString attribute = QStringLiteral("encoding=%1%2%1").arg(match.captured(1), match.captured(2));
+      decoded.remove(attribute, Qt::CaseInsensitive);
+      return decoded;
+    }
+  }
+
+  const QString charset = httpCharset.trimmed();
+  if (!charset.isEmpty()) {
+    if (QTextCodec *codec = QTextCodec::codecForName(charset.toUtf8()))
+      return codec->toUnicode(input);
+    qWarning() << "Unsupported feed HTTP charset:" << charset;
+  }
+
+  if (QTextCodec *utf8 = QTextCodec::codecForName("UTF-8")) {
+    QTextCodec::ConverterState state;
+    const QString candidate = utf8->toUnicode(input.constData(), input.size(), &state);
+    if (state.invalidChars == 0 && state.remainingChars == 0)
+      return candidate;
+  }
+  return QString::fromLocal8Bit(input);
 }
 
 bool FeedXml::parse(QDomDocument &doc, const QByteArray &input, QString &error, int &line, int &column)

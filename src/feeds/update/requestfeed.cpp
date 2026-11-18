@@ -456,14 +456,12 @@ void RequestFeed::finished(QNetworkReply *reply)
           emit signalGet(replyUrl, feedId, feedUrl, feedDate);
         }
         else {
-          QString codecName;
-          QRegularExpression rx("charset=([^\t]+)$",
-              QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
-          QRegularExpressionMatch match = rx.match(reply->header(QNetworkRequest::ContentTypeHeader).toString());
-          int pos = match.capturedStart();
-          if (pos > -1) {
-            codecName = match.captured(1);
-          }
+          const QString contentType = reply->header(QNetworkRequest::ContentTypeHeader).toString();
+          static const QRegularExpression charsetRx(
+              QStringLiteral(R"rx(;\s*charset\s*=\s*(?:"([^"]*)"|([^;\s]+)))rx"),
+              QRegularExpression::CaseInsensitiveOption);
+          const auto match = charsetRx.match(contentType);
+          const QString codecName = match.capturedStart(1) >= 0 ? match.captured(1) : match.captured(2);
 
           QByteArray data = reply->readAll();
           data = data.trimmed();
@@ -478,7 +476,7 @@ void RequestFeed::finished(QNetworkReply *reply)
           else
             emit getUrlDone(requestQueue_.count(), feedId, feedUrl, "", data, replyLocalDate, codecName,
                             replyUrl.adjusted(QUrl::RemoveUserInfo | QUrl::RemoveFragment),
-                            reply->header(QNetworkRequest::ContentTypeHeader).toString().section(';', 0, 0).trimmed().toLower());
+                            contentType.section(';', 0, 0).trimmed().toLower());
         }
       }
     }

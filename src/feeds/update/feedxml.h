@@ -7,6 +7,8 @@
 #include <QString>
 
 namespace FeedXml {
+// Decode a downloaded feed using its BOM, XML declaration, or HTTP charset.
+QString decode(const QByteArray &input, const QString &httpCharset);
 // Parse the complete input first. Only a complete RSS/Atom root may be recovered
 // when trailing material makes the full document invalid.
 bool parse(QDomDocument &doc, const QByteArray &input, QString &error, int &line, int &column);

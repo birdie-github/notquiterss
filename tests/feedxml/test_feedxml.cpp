@@ -157,10 +157,34 @@ private slots:
     QString error;
     int line = 0, column = 0;
     QVERIFY2(FeedXml::parse(bytesDoc, utf16, error, line, column), qPrintable(error));
-    QVERIFY2(FeedXml::parse(textDoc, xml, error, line, column), qPrintable(error));
+    QVERIFY2(FeedXml::parse(textDoc, FeedXml::decode(utf16, QString()), error, line, column),
+             qPrintable(error));
     const QString expected = QString::fromUtf8("Пример 😀");
     QCOMPARE(bytesDoc.elementsByTagName("title").at(0).toElement().text(), expected);
     QCOMPARE(textDoc.elementsByTagName("title").at(0).toElement().text(), expected);
+  }
+
+  void downloadedFeedEncoding_data()
+  {
+    QTest::addColumn<QByteArray>("declaration");
+    QTest::addColumn<QString>("httpCharset");
+    QTest::newRow("charset only") << QByteArray() << QString("windows-1251");
+    QTest::newRow("XML declaration takes precedence")
+        << QByteArray("<?xml version='1.0' encoding='windows-1251'?>") << QString("UTF-8");
+  }
+
+  void downloadedFeedEncoding()
+  {
+    QFETCH(QByteArray, declaration);
+    QFETCH(QString, httpCharset);
+    const QByteArray xml = declaration + "<rss><channel><title>"
+        "\xCF\xF0\xE8\xEC\xE5\xF0" "</title></channel></rss>";
+    QDomDocument doc;
+    QString error;
+    int line = 0, column = 0;
+    QVERIFY2(FeedXml::parse(doc, FeedXml::decode(xml, httpCharset), error, line, column), qPrintable(error));
+    QVERIFY(FeedXml::isFeed(doc));
+    QCOMPARE(doc.elementsByTagName("title").at(0).toElement().text(), QString::fromUtf8("Пример"));
   }
 
   void malformedRootIsNotRecovered_data()

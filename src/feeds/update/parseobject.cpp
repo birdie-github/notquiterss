@@ -21,7 +21,6 @@
 #include "common/logfile.h"
 #include "projectmetadata.h"
 #include <utility>
-#include <QTextCodec>
 #include "parseobject.h"
 
 #include "app/mainapplication.h"
@@ -37,7 +36,6 @@
 #if defined(Q_OS_WIN)
 #include <windows.h>
 #endif
-#include <QRegularExpression>
 
 namespace {
 QString literalTitlePattern(QString title)
@@ -160,64 +158,13 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
   QElapsedTimer parseTimer;
   parseTimer.start();
 
-  bool codecOk = false;
-  QString convertData;
   QString feedType;
   QDomDocument doc;
   QString errorStr;
   int errorLine;
   int errorColumn;
 
-  static const QRegularExpression xmlEncodingRx(
-      QStringLiteral(R"(^\s*(?:\xEF\xBB\xBF)?<\?xml\b[^>]*?\bencoding\s*=\s*(["'])([^"']+)\1)"),
-      QRegularExpression::CaseInsensitiveOption);
-  const QString prolog = QString::fromLatin1(xmlData.constData(), qMin(xmlData.size(), 512));
-  const QRegularExpressionMatch match = xmlEncodingRx.match(prolog);
-  if (match.hasMatch()) {
-    const QString codecNameT = match.captured(2).trimmed();
-    qDebug() << "Codec name (1):" << codecNameT;
-    QTextCodec *codec = QTextCodec::codecForName(codecNameT.toUtf8());
-    if (codec) {
-      convertData = codec->toUnicode(xmlData);
-      codecOk = true;
-    } else {
-      qWarning() << "Codec not found (1): " << codecNameT << feedId;
-      if (codecNameT.contains(QLatin1String("us-ascii"), Qt::CaseInsensitive)) {
-        convertData = QString::fromUtf8(xmlData);
-        const QString encodingAttr = QStringLiteral("encoding=%1%2%1")
-            .arg(match.captured(1), match.captured(2));
-        convertData.remove(encodingAttr, Qt::CaseInsensitive);
-        codecOk = true;
-      }
-    }
-  }
-
-  if (!codecOk && !codecName.isEmpty()) {
-    qDebug() << "Codec name (2):" << codecName;
-    QTextCodec *codec = QTextCodec::codecForName(codecName.trimmed().toUtf8());
-    if (codec) {
-      convertData = codec->toUnicode(xmlData);
-      codecOk = true;
-    } else {
-      qWarning() << "Codec not found (2): " << codecName << feedId;
-    }
-  }
-
-  if (!codecOk) {
-    if (QTextCodec *utf8 = QTextCodec::codecForName("UTF-8")) {
-      QTextCodec::ConverterState state;
-      const QString candidate = utf8->toUnicode(xmlData.constData(), xmlData.size(), &state);
-      if (state.invalidChars == 0) {
-        qDebug() << "Codec name (3): UTF-8";
-        convertData = candidate;
-        codecOk = true;
-      }
-    }
-    if (!codecOk) {
-      convertData = QString::fromLocal8Bit(xmlData);
-    }
-  }
-
+  const QString convertData = FeedXml::decode(xmlData, codecName);
   const qint64 decodeMs = parseTimer.restart();
   const bool parsed = FeedXml::parse(doc, convertData, errorStr, errorLine, errorColumn);
   const qint64 xmlDomMs = parseTimer.elapsed();

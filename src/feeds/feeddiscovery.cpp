@@ -234,7 +234,7 @@ void FeedDiscovery::next()
 }
 
 void FeedDiscovery::received(int result, int id, QString requested, QString diagnostic, QByteArray data,
-                             QDateTime, QString, QUrl effective)
+                             QDateTime, QString codecName, QUrl effective)
 {
   if (finished_ || id != scanId_) return;
   const QUrl url(requested);
@@ -243,7 +243,7 @@ void FeedDiscovery::received(int result, int id, QString requested, QString diag
   QDomDocument doc;
   QString error;
   int line, column;
-  if (result >= 0 && FeedXml::parse(doc, data, error, line, column) &&
+  if (result >= 0 && FeedXml::parse(doc, FeedXml::decode(data, codecName), error, line, column) &&
       FeedXml::isFeed(doc)) {
     QDomElement container = doc.documentElement();
     if (container.tagName() != "feed") container = container.firstChildElement("channel");

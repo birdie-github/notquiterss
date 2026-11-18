@@ -466,7 +466,8 @@ void AddFeedWizard::getUrlDone(int result, int id, QString, QString error, QByte
   }
   QDomDocument doc;
   int line, column;
-  if (FeedXml::parse(doc, data, error, line, column) && FeedXml::isFeed(doc)) {
+  if (FeedXml::parse(doc, FeedXml::decode(data, codecName), error, line, column) &&
+      FeedXml::isFeed(doc)) {
     if (!insertFeed()) return;
     if (configuring_) button(QWizard::CustomButton1)->setEnabled(false);
     emit xmlReadyParse(data, feedId_, dtReply, codecName);
