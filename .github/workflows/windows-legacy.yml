@@ -5,6 +5,8 @@ jobs:
     name: Windows legacy CPUs (Qt 5, x86/SSE2)
     runs-on: windows-2022
     timeout-minutes: 180
+    env:
+      LEGACY_OPENSSL_VERSION: '3.5.9'
     defaults:
       run:
         shell: msys2 {0}
@@ -17,6 +19,7 @@ jobs:
           install: >-
             curl
             git
+            make
             perl
             tar
             xz
@@ -28,8 +31,29 @@ jobs:
             mingw-w64-i686-pkgconf
             mingw-w64-i686-sqlite3
             mingw-w64-i686-libiconv
-            mingw-w64-i686-openssl
             mingw-w64-i686-ntldd
+      - name: Build pinned OpenSSL for x86/SSE2
+        run: |
+          set -euo pipefail
+          test "$(gcc -dumpmachine)" = i686-w64-mingw32
+          version="$LEGACY_OPENSSL_VERSION"
+          archive="openssl-$version.tar.gz"
+          work_dir="$(cygpath -u "$RUNNER_TEMP/openssl-source")"
+          openssl_prefix="$(cygpath -m "$RUNNER_TEMP/openssl-x86")"
+          mkdir -p "$work_dir"
+          cd "$work_dir"
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://github.com/openssl/openssl/releases/download/openssl-$version/$archive" -o "$archive"
+          echo "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a  $archive" | sha256sum -c -
+          tar -xzf "$archive"
+          cd "openssl-$version"
+          # OpenSSL's MinGW build uses MSYS Perl and POSIX Make. Qt's native
+          # configure.bat still uses Strawberry Perl and mingw32-make below.
+          /usr/bin/perl ./Configure mingw shared no-tests \
+            --prefix="$openssl_prefix" --libdir=lib -march=pentium4 -mtune=generic
+          /usr/bin/make -j"$(nproc)"
+          /usr/bin/make install_sw
+          install -Dm644 LICENSE.txt "$openssl_prefix/share/licenses/openssl/LICENSE.txt"
       - name: Identify Qt dependency cache
         id: qt5-cache-key
         run: |
@@ -39,7 +63,7 @@ jobs:
         id: qt5-cache
         with:
           path: ${{ runner.temp }}/qt5-x86
-          key: qt5-x86-${{ runner.os }}-${{ hashFiles('scripts/prepare-qt5-win32.py') }}-${{ steps.qt5-cache-key.outputs.packages }}
+          key: qt5-x86-${{ runner.os }}-${{ hashFiles('scripts/prepare-qt5-win32.py', '.github/workflows/windows-legacy.yml') }}-${{ steps.qt5-cache-key.outputs.packages }}
       - name: Build pinned Qt5 for x86/SSE2
         if: steps.qt5-cache.outputs.cache-hit != 'true'
         run: |
@@ -49,7 +73,9 @@ jobs:
           # or pkg-config; select native Perl ahead of MSYS /usr/bin/perl.
           test -f /c/Strawberry/perl/bin/perl.exe
           export PATH="/mingw32/bin:/ucrt64/bin:/c/Strawberry/perl/bin:$PATH"
-          export PKG_CONFIG_PATH="$(cygpath -m /mingw32/lib/pkgconfig)"
+          openssl_prefix="$(cygpath -m "$RUNNER_TEMP/openssl-x86")"
+          export PKG_CONFIG_PATH="$openssl_prefix/lib/pkgconfig;$(cygpath -m /mingw32/lib/pkgconfig)"
+          test "$(pkg-config --modversion openssl)" = "$LEGACY_OPENSSL_VERSION"
           python3 scripts/prepare-qt5-win32.py \
             --work-dir "$(cygpath -m "$RUNNER_TEMP/qt5-source")" \
             --prefix "$(cygpath -m "$RUNNER_TEMP/qt5-x86")" --jobs "$(nproc)"
@@ -136,7 +162,8 @@ jobs:
             --resources "$DEPLOY_DIR/$PROJECT_RESOURCE_ROOT" \
             --qt-translations "$(qmake -query QT_INSTALL_TRANSLATIONS)"
           # Qt5 loads OpenSSL at runtime, so an import-table scan cannot find it.
-          cp /mingw32/bin/libssl-3.dll /mingw32/bin/libcrypto-3.dll "$DEPLOY_DIR/"
+          openssl_prefix="$(cygpath -u "$RUNNER_TEMP/openssl-x86")"
+          cp "$openssl_prefix/bin/libssl-3.dll" "$openssl_prefix/bin/libcrypto-3.dll" "$DEPLOY_DIR/"
           # Include libraries used outside Qt, plus their transitive dependencies.
           find "$DEPLOY_DIR" \( -iname '*.exe' -o -iname '*.dll' \) -print0 |
           while IFS= read -r -d '' binary; do
@@ -153,6 +180,7 @@ jobs:
             fi
           done
           mkdir -p "$DEPLOY_DIR/licenses"
+          cp -R "$openssl_prefix/share/licenses/openssl" "$DEPLOY_DIR/licenses/"
           cp -R "$qt_prefix/share/licenses/qt5" "$DEPLOY_DIR/licenses/"
           cp -R "$RUNNER_TEMP/app-deps-x86/install/share/licenses/qtsingleapplication" "$DEPLOY_DIR/licenses/"
           cp -R "$RUNNER_TEMP/app-deps-x86/miniaudio/share/licenses/miniaudio" "$DEPLOY_DIR/licenses/"

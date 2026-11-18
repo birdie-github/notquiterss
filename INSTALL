@@ -199,18 +199,20 @@ Windows legacy CPU CI package (Qt5, 32-bit x86)
 =============================================
 Manually dispatch the "Windows legacy CPUs (Qt 5, x86/SSE2)" workflow from
 GitHub Actions. It uses the MSYS2 MINGW32 compiler with 64-bit host build tools.
-It builds Qt 5.15.18 and a pinned libxml2 release from source. Qt, libxml2, the
-application and QtSingleApplication use -march=pentium4 -mtune=generic. The
+It builds Qt 5.15.18, OpenSSL 3.5 LTS and a pinned libxml2 release from source.
+All three libraries, the application and QtSingleApplication use
+-march=pentium4 -mtune=generic. The
 package requires SSE2 and also runs on 64-bit Windows with
 32-bit application support. CPU compatibility does not establish compatibility
 with obsolete Windows releases; those need testing on the actual target OS.
 
 Qt includes SVG/image-format plugins and widget translations. Packaging adds
 32-bit runtime dependencies and rejects any 64-bit EXE/DLL. The source-built Qt
-installation is cached against its build script and installed toolchain packages;
-the first build, or a cache miss after updates, takes substantially longer.
-libxml2 is linked statically. SQLite, iconv, OpenSSL and compiler runtime DLLs
-come from MSYS2 packages. Test their CPU and OS requirements on the target PC.
+installation is cached against the workflow, build script and installed toolchain
+packages. libxml2 is linked statically, and the workflow packages the same
+OpenSSL major version that Qt was built against. SQLite, iconv and compiler
+runtime DLLs come from MSYS2 packages. Test their CPU and OS requirements on
+the target PC.
 
 Windows (MSYS2 UCRT64, x86-64)
 =============================
