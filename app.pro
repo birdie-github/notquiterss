@@ -44,9 +44,9 @@ QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/project.json $$PWD/scripts/generate-proje
 DISTFILES += $$PWD/project.json $$PWD/scripts/generate-project.py $$files($$PWD/packaging/*.in)
 
 # Invoke the matching qmake; this option validates, rather than switches, its Qt.
-isEmpty(USE_QT): USE_QT = 5
+isEmpty(USE_QT): USE_QT = 6
 !equals(USE_QT, 5):!equals(USE_QT, 6): error("USE_QT must be 5 or 6")
-!equals(QT_MAJOR_VERSION, $$USE_QT): error("Run qmake from the requested Qt installation. Qt 6 requires USE_QT=6; Qt 5 is the default.")
+!equals(QT_MAJOR_VERSION, $$USE_QT): error("Run qmake from the requested Qt installation. Qt 6 is the default. For Qt 5, pass USE_QT=5.")
 equals(QT_MAJOR_VERSION, 5):lessThan(QT_MINOR_VERSION, 15): error("$$PROJECT_NAME requires Qt 5.15 or newer within Qt 5")
 equals(QT_MAJOR_VERSION, 6):lessThan(QT_MINOR_VERSION, 2): error("$$PROJECT_NAME requires Qt 6.2 or newer within Qt 6")
 QT += widgets network xml printsupport sql svg

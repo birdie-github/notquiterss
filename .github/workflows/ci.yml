@@ -37,9 +37,9 @@ jobs:
           mkdir _build
           cd _build
           if [ "${{ matrix.compiler }}" = "clang++" ]; then
-            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release QMAKE_LFLAGS+=-fuse-ld=lld CONFIG+=lto
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release QMAKE_LFLAGS+=-fuse-ld=lld CONFIG+=lto
           else
-            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
           fi
           make -j"$(nproc)"
 

@@ -9,7 +9,7 @@ See resources/external/translations/README.md for discovery paths, optional meta
   SQLite 3.36.0 or newer with the memdb VFS, including development headers and sqlite3.pc
   libxml2 development headers and libxml-2.0.pc
   pkg-config (pkgconf is supported)
-  Qt 5.15.x (default) or Qt 6.2+ development packages and matching qmake
+  Qt 6.2+ (default) or Qt 5.15.x development packages and matching qmake
   Qt modules: Core, Gui, Widgets, PrintSupport, Network, Sql, Xml, Svg
   Qt's QSQLITE plugin (used for initialization and VACUUM)
   Qt 6 additionally requires Core5Compat for the existing QTextCodec decoders
@@ -18,16 +18,16 @@ See resources/external/translations/README.md for discovery paths, optional meta
 
 Selecting Qt 5 or Qt 6
 =====================
-The application defaults to Qt 5. Invoke qmake from the matching Qt installation:
+The application defaults to Qt 6. Invoke qmake from the matching Qt installation:
 
-  qmake-qt5 ../app.pro CONFIG+=release CONFIG-=debug_and_release
-  qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release
+  qmake-qt5 ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release
+  qmake6 ../app.pro CONFIG+=release CONFIG-=debug_and_release
 
 USE_QT accepts only 5 or 6; a mismatch with qmake's Qt is an error.
 It cannot switch the libraries used by an already selected qmake executable.
 Use separate application build directories and QtSingleApplication work directories
 for each Qt/toolchain. Prepare the dependency with the SAME qmake as the application.
-The platform recipes below retain Qt 5 defaults. The main Windows CI build uses
+The Linux and Windows recipes below explicitly select Qt 5. The main Windows CI build uses
 Qt 6; a separate Windows-Qt5-x86-SSE2 artifact targets older CPUs.
 
 For Qt 6 on MSYS2, substitute qt6-base, qt6-svg, qt6-tools and
@@ -38,8 +38,7 @@ the Qt 5 --no-angle option is not applicable.
 
 On Linux, install the equivalent Qt 6 development packages, including
 Core5Compat, and use the helper if no matching QtSingleApplication feature
-is packaged. On Homebrew, select the Qt 6 formula's bin directory instead of
-qt@5, prepare QtSingleApplication with that qmake, and pass USE_QT=6.
+is packaged. The Homebrew recipe below uses Qt 6.
 Executable names vary by distribution; an absolute path to qmake is also valid.
 
 Both builds read/write UTF-8 INI values so non-ASCII settings survive switching
@@ -184,7 +183,7 @@ Linux (Fedora 44)
   export MINIAUDIO_INCLUDE_DIR="$HOME/miniaudio-snapshot/include"
   mkdir _build
   cd _build
-  qmake-qt5 ../app.pro CONFIG+=release CONFIG-=debug_and_release PREFIX=/usr
+  qmake-qt5 ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release PREFIX=/usr
   make -j2
   sudo make install
 
@@ -237,7 +236,7 @@ From the application source directory:
   export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
   mkdir _build
   cd _build
-  qmake-qt5 ../app.pro CONFIG+=release CONFIG-=debug_and_release
+  qmake-qt5 ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release
   mingw32-make -j2
   mingw32-make install
   ./release/target/notquiterss.exe
