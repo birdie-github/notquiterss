@@ -45,7 +45,7 @@ QHeaderView::up-arrow {
     min-height: 18px;
 }
 
-QStatusBar #progressBar_ {
+QStatusBar #feedUpdateProgressBar {
     margin-right: 5px;
 }
 

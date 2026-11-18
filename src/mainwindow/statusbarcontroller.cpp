@@ -118,7 +118,7 @@ StatusBarController::StatusBarController(QStatusBar *statusBar,
                             arg(qApp->palette().color(QPalette::Mid).name()));
 #endif
 
-  progressBar_->setObjectName("progressBar_");
+  progressBar_->setObjectName("feedUpdateProgressBar");
   progressBar_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   progressBar_->setMinimumWidth(qMax(1, (statusBar_->width() + 3) / 4));
   progressBar_->setRange(0, 1);
