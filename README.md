@@ -85,3 +85,22 @@ Minimally tested Windows 32-bit builds targeting SSE2 CPUs and supporting Window
 and later are available [here](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32).
 Bug reports specific to these builds, unless you can reproduce them on a standard
 Qt6-based Windows 64 build, will **not be accepted**.
+
+## HTTPS and certificate trust on older Windows
+--------------------------------------------
+The legacy package uses Qt 5 with bundled OpenSSL for TLS 1.2 and later.
+NotQuiteRSS gets its default CA certificates from the Windows certificate
+store through Qt. Windows 7 SP1 and Vista SP2 compatibility with the complete
+package needs testing on those systems.
+
+If HTTPS feeds fail certificate validation, check the system clock and make
+sure Windows automatic root updates are enabled, subject to your administrator's
+policy. Restart NotQuiteRSS after updating the store.
+
+For offline systems, Microsoft KB2813430 documents how administrators can
+refresh both the trusted and disallowed certificate trust lists (CTLs) on
+Windows 7 SP1 and Vista SP2. Use an up-to-date Windows computer to download
+both lists with certutil -syncWithWU, then follow Microsoft's CTL deployment
+instructions for the legacy computer. Importing a trusted-root bundle alone
+does not refresh the disallowed list. Keep certificate verification enabled.
+https://support.microsoft.com/help/2813430
