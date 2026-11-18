@@ -114,7 +114,7 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
     }
   });
   connect(list_, &QTreeWidget::itemChanged, this, [this, nextButton] {
-    nextButton->setEnabled(finished_ && !selection().isEmpty());
+    nextButton->setEnabled(!selection().isEmpty());
   });
   connect(buttons_, &QDialogButtonBox::accepted, this, &QDialog::accept);
   connect(buttons_, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -168,15 +168,8 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
       "/category/feed", "/tag/feed", "/comments/feed"
   };
 
-  for (const QString &path : fallbackPaths) {
-    if (path.startsWith("/?")) {
-      QUrl queryUrl = page;
-      queryUrl.setQuery(path.mid(2));
-      enqueue(queryUrl);
-    } else {
-      enqueue(page.resolved(QUrl(path)));
-    }
-  }
+  for (const QString &path : fallbackPaths)
+    enqueue(page.resolved(QUrl(path)));
 
   // Automatic probes contact only the page origin. Ask before contacting
   // additional origins advertised in untrusted HTML.
