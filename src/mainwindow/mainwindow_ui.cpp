@@ -236,6 +236,8 @@ void MainWindow::createTabBarWidget()
   mainMenuButton_->setIcon(QIcon(":/images/menu"));
 
   tabBar_ = new TabBar();
+  // The enclosing row draws the separator across the tabs and side controls.
+  tabBar_->setDrawBase(false);
 
   QHBoxLayout *tabBarLayout = new QHBoxLayout();
   tabBarLayout->setContentsMargins(0, 0, 0, 0);

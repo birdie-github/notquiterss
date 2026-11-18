@@ -14,6 +14,10 @@ QToolBar {
     border-style: none;
 }
 
+#tabBarWidget {
+    border-bottom: 1px solid palette(mid);
+}
+
 QHeaderView::down-arrow {
     subcontrol-origin: padding;
     subcontrol-position: center top;
