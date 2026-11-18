@@ -1,3 +1,14 @@
+Version 0.95.8 BETA (2026-11-18)
+* CHANGE: Color the text in the Bulk Update Favicons dialog.
+* CHANGE: Improve the Bulk Update Favicons dialog.
+* CHANGE: Attempt to improve the quality of images processed with the Lanczos filter.
+* CHANGE: Improve XML code page detection.
+* CHANGE: Improve the text of the buttons for the Add Feed wizard dialog.
+* CHANGE: Switch to a Qt6 build by default. Not sure if we should keep Qt5 because it's becoming increasingly difficult to compile.
+* NEW FEATURE: Add a donation button that can be disabled completely at compile time.
+* BUG FIX: Address invisible checkboxes in the OLED theme.
+* BUG FIX: Address multiple minor issues.
+
 Version 0.95.7 ALPHA (2026-11-15)
 * NEW FEATURE: Add a bulk favicon update action under Tools -> Bulk configure feeds, complete with connection status, timeout handling, and automatic unchecking of finished feeds.
 * NEW FEATURE: Add a shutdown cleanup preview in Options -> Feeds -> Clean Up so you can see what will be removed before it runs.
