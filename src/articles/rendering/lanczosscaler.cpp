@@ -26,6 +26,7 @@
 #include <QRunnable>
 #include <QThreadPool>
 #include <QVector>
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -33,6 +34,47 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kLanczosA = 3.0;
 constexpr int kFixedShift = 14;
 constexpr int kFixedOne = 1 << kFixedShift;
+constexpr qint64 kMaxWorkingBytes = 64LL * 1024 * 1024;
+constexpr qint64 kPixelBytes = sizeof(QRgb);
+
+double kernelSupport(int srcSize, int dstSize) {
+  return std::max(1.0, double(srcSize) / dstSize) * kLanczosA;
+}
+
+qint64 kernelMaxTaps(double support) {
+  return qint64(std::ceil(support * 2.0)) + 2;
+}
+
+qint64 kernelBytes(int srcSize, int dstSize) {
+  const qint64 taps = kernelMaxTaps(kernelSupport(srcSize, dstSize));
+  return qint64(dstSize) * (3 * qint64(sizeof(int)) + taps * qint64(sizeof(qint16))) +
+      taps * qint64(sizeof(double));
+}
+
+QImage::Format workingFormat(const QImage &source) {
+  return source.hasAlphaChannel() ? QImage::Format_ARGB32_Premultiplied : QImage::Format_RGB32;
+}
+
+bool fitsWorkingBudget(const QImage &source, const QSize &targetSize) {
+  if (source.isNull() || targetSize.isEmpty()) return false;
+
+  const qint64 intermediatePixels = qint64(source.height()) * targetSize.width();
+  const qint64 outputPixels = qint64(targetSize.width()) * targetSize.height();
+  const qint64 conversionPixels = source.format() == workingFormat(source)
+      ? 0 : qint64(source.width()) * source.height();
+  // Check each plane before multiplying by bytes per pixel. The bound also
+  // keeps vector sizes and kernel offsets representable by int on Qt 5.
+  constexpr qint64 maxPixels = kMaxWorkingBytes / kPixelBytes;
+  if (intermediatePixels > maxPixels || outputPixels > maxPixels || conversionPixels > maxPixels)
+    return false;
+
+  const qint64 pixelBytes = (intermediatePixels + outputPixels + conversionPixels) * kPixelBytes;
+  // Include both table reservations and each axis's temporary weight buffer
+  // for a conservative estimate of the worker's additional allocations.
+  return pixelBytes +
+      kernelBytes(source.width(), targetSize.width()) +
+      kernelBytes(source.height(), targetSize.height()) <= kMaxWorkingBytes;
+}
 
 inline double sinc(double x) {
   if (std::abs(x) < 1e-8) return 1.0;
@@ -56,9 +98,9 @@ struct KernelTable {
     : offsets(dstSize), counts(dstSize), weightsOffset(dstSize)
   {
     const double scale = double(srcSize) / double(dstSize);
-    const double support = std::max(1.0, scale) * kLanczosA;
+    const double support = kernelSupport(srcSize, dstSize);
     const double invSupportScale = 1.0 / std::max(1.0, scale);
-    const int maxTaps = int(std::ceil(support * 2.0)) + 2;
+    const int maxTaps = int(kernelMaxTaps(support));
     weights.reserve(dstSize * maxTaps);
 
     QVector<double> rawWeights;
@@ -120,17 +162,12 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
   const auto isCanceled = [canceled] {
     return canceled && canceled->load(std::memory_order_relaxed);
   };
-  if (isCanceled()) return QImage();
-  if (input.isNull() || !targetSize.isValid() ||
-      targetSize.width() <= 0 || targetSize.height() <= 0) {
-    return QImage();
-  }
+  if (isCanceled() || input.isNull() || targetSize.isEmpty()) return QImage();
   if (input.size() == targetSize)
     return input;
+  if (!fitsWorkingBudget(input, targetSize)) return QImage();
 
-  const QImage::Format targetFormat = input.hasAlphaChannel()
-      ? QImage::Format_ARGB32_Premultiplied
-      : QImage::Format_RGB32;
+  const QImage::Format targetFormat = workingFormat(input);
   const QImage src = (input.format() == targetFormat)
       ? input
       : input.convertToFormat(targetFormat);
@@ -146,7 +183,8 @@ QImage LanczosScaler::scaleCancellable(const QImage &input, const QSize &targetS
 
   // Intermediate buffer after horizontal pass: srcH rows of dstW pixels.
   if (isCanceled()) return QImage();
-  QVector<QRgb> temp(size_t(srcH) * size_t(dstW));
+  const int intermediatePixels = int(qint64(srcH) * dstW);
+  QVector<QRgb> temp(intermediatePixels);
   const int *hOffsets = hTable.offsets.constData();
   const int *hCounts = hTable.counts.constData();
   const int *hWeightOffsets = hTable.weightsOffset.constData();
@@ -279,8 +317,7 @@ void LanczosScaler::reset() {
 
 bool LanczosScaler::lookupOrSchedule(const QUrl &url, const QImage &source,
                                      const QSize &targetPhysicalSize, qreal dpr, QPixmap *out) {
-  if (source.isNull() || !targetPhysicalSize.isValid() ||
-      targetPhysicalSize.width() <= 0 || targetPhysicalSize.height() <= 0) {
+  if (!fitsWorkingBudget(source, targetPhysicalSize)) {
     return false;
   }
   const QString key = cacheKey(url, source.cacheKey(), targetPhysicalSize);
