@@ -11,6 +11,8 @@
 #include <libxml/HTMLparser.h>
 
 namespace {
+constexpr int probePauseSeconds = 2;
+
 QString takeText(xmlChar *value)
 {
   QString result = QString::fromUtf8(reinterpret_cast<const char *>(value));
@@ -90,6 +92,45 @@ struct Links {
 };
 }
 
+class FeedDiscovery::ProbeUrlLabel final : public QLabel
+{
+public:
+  explicit ProbeUrlLabel(QWidget *parent) : QLabel(parent)
+  {
+    setTextFormat(Qt::PlainText);
+    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+  }
+
+  void setUrl(const QString &url)
+  {
+    url_ = url;
+    setToolTip(QStringLiteral("<qt>") + url.toHtmlEscaped() + QStringLiteral("</qt>"));
+    setAccessibleName(url);
+    updateText();
+  }
+
+protected:
+  void resizeEvent(QResizeEvent *event) override
+  {
+    QLabel::resizeEvent(event);
+    updateText();
+  }
+
+  void changeEvent(QEvent *event) override
+  {
+    QLabel::changeEvent(event);
+    if (event->type() == QEvent::FontChange) updateText();
+  }
+
+private:
+  void updateText()
+  {
+    setText(fontMetrics().elidedText(url_, Qt::ElideMiddle, contentsRect().width()));
+  }
+
+  QString url_;
+};
+
 FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, const QUrl &page, const QUrl &enteredUrl,
                              int scanId, QWidget *parent) : QDialog(parent), scanId_(scanId)
 {
@@ -98,6 +139,9 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
   auto *layout = new QVBoxLayout(this);
   status_ = new QLabel(tr("Looking for feeds…"));
   layout->addWidget(status_);
+  probeUrl_ = new ProbeUrlLabel(this);
+  layout->addWidget(probeUrl_);
+  probeUrl_->hide();
   list_ = new QTreeWidget;
   list_->setRootIsDecorated(false);
   list_->setHeaderLabels({tr("Feed"), tr("URL")});
@@ -219,10 +263,9 @@ void FeedDiscovery::next()
   if (finished_) return;
   if (pending_.isEmpty()) { finishScan(); return; }
   const QString url = pending_.takeFirst().toString();
-  status_->setText(tr("Probing (%1 of %2): %3 ...")
-                       .arg(++probed_)
-                       .arg(total_)
-                       .arg(url));
+  status_->setText(tr("Checking feed URL %1 of %2").arg(++probed_).arg(total_));
+  probeUrl_->setUrl(url);
+  probeUrl_->show();
   emit requestUrl(scanId_, url, {}, {});
 }
 
@@ -251,8 +294,9 @@ void FeedDiscovery::received(int result, int id, QString requested, QString diag
     finishScan();
     return;
   }
-  status_->setText(tr("Pausing ..."));
-  QTimer::singleShot(2000, this, &FeedDiscovery::next);
+  status_->setText(tr("Checked feed URL %1 of %2 · Next check in %3 seconds")
+                       .arg(probed_).arg(total_).arg(probePauseSeconds));
+  QTimer::singleShot(probePauseSeconds * 1000, this, &FeedDiscovery::next);
 }
 
 void FeedDiscovery::addResult(const QUrl &url, QString title, const QString &detail)
@@ -278,6 +322,7 @@ void FeedDiscovery::addResult(const QUrl &url, QString title, const QString &det
 void FeedDiscovery::finishScan()
 {
   finished_ = true;
+  probeUrl_->hide();
   for (const QUrl &url : std::as_const(advertised_))
     addResult(url, names_.value(url), tr("Verification did not finish"));
   list_->resizeColumnToContents(0);
