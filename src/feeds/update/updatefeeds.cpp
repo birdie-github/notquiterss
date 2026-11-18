@@ -942,16 +942,30 @@ void UpdateObject::slotIconSave(QString feedUrl, QByteArray faviconData)
   emit signalIconUpdate(feedId, faviconData);
 }
 
-void UpdateObject::slotIconSaveById(int feedId, QByteArray faviconData)
+void UpdateObject::slotIconSaveById(int feedId, QByteArray faviconData, QString resultKey)
 {
   auto databaseAccess = Database::backgroundAccess();
   QSqlQuery q(db_);
-  q.prepare("UPDATE feeds SET image = ? WHERE id == ?");
+  const auto reportSqlError = [&]() {
+    emit signalIconSaveFinished(resultKey, {}, tr("Database error: %1").arg(q.lastError().text()));
+  };
+  if (!q.prepare("UPDATE feeds SET image = ? WHERE id == ?")) {
+    reportSqlError();
+    return;
+  }
   q.addBindValue(faviconData.toBase64());
   q.addBindValue(feedId);
-  q.exec();
+  if (!q.exec()) {
+    reportSqlError();
+    return;
+  }
+  if (q.numRowsAffected() != 1) {
+    emit signalIconSaveFinished(resultKey, {}, tr("The feed was not updated."));
+    return;
+  }
 
   emit signalIconUpdate(feedId, faviconData);
+  emit signalIconSaveFinished(resultKey, faviconData, {});
 }
 
 void UpdateObject::slotSqlQueryExec(QString query)

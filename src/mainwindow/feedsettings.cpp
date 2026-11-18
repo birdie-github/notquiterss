@@ -6,12 +6,12 @@
 #include "feeds/feedbulksettings.h"
 #include "feeds/feedpropertiesdialog.h"
 #include "app/mainapplication.h"
-#include "network/networkpolicy.h"
 #include "preferences/settings.h"
 #include "feeds/update/updatefeeds.h"
 #include <QBuffer>
 #include <QImage>
 #include <QTimeZone>
+#include <QUuid>
 #include <utility>
 
 namespace {
@@ -52,13 +52,8 @@ bool sameFaviconImage(const QByteArray &first, const QByteArray &second)
 
 QString faviconDisplayUrl(const QString &htmlUrl, const QString &xmlUrl)
 {
-  QUrl url = QUrl::fromEncoded(htmlUrl.toUtf8());
-  url.setUrl(QStringLiteral("%1://%2/").arg(url.scheme(), url.host()));
-  if (!url.isValid() || !NetworkPolicy::isHttpUrl(url)) {
-    url = QUrl::fromEncoded(xmlUrl.toUtf8());
-    url.setUrl(QStringLiteral("%1://%2/").arg(url.scheme(), url.host()));
-  }
-  if (!url.isValid() || !NetworkPolicy::isHttpUrl(url))
+  const QUrl url = FaviconObject::initialPageUrl(htmlUrl, xmlUrl);
+  if (url.isEmpty())
     return !htmlUrl.trimmed().isEmpty() ? htmlUrl.trimmed() : xmlUrl.trimmed();
   return url.toString();
 }
@@ -282,6 +277,7 @@ void MainWindow::showBulkFeedSettings()
   faviconWorker->moveToThread(&faviconThread);
   connect(&faviconThread, &QThread::finished, faviconWorker, &QObject::deleteLater);
   faviconThread.start(QThread::LowPriority);
+  auto *saveWorker = mainApp->updateFeeds() ? mainApp->updateFeeds()->updateObject_ : nullptr;
 
   struct BulkFaviconTarget {
     int id;
@@ -301,10 +297,9 @@ void MainWindow::showBulkFeedSettings()
     int updated = 0;
     bool running = false;
     bool connectedLogged = false;
-    bool anyUpdated = false;
+    bool saving = false;
+    bool cancelRequested = false;
   } session;
-  // Keep request identities unique across cancellation and restart in this dialog.
-  quint64 nextRequestToken = 0;
 
   auto finishSession = [&](bool canceled) {
     if (!session.running) return;
@@ -312,16 +307,15 @@ void MainWindow::showBulkFeedSettings()
     if (canceled) {
       dialog.appendFaviconLog(tr(" Canceled."), false);
     }
-    const QString summary = tr("Tried to update: %1 feeds. %2 feeds failed to download. "
+    const QString summary = tr("Tried to update: %1 feeds. %2 feeds failed. "
                                "%3 feeds unchanged. %4 feed icons updated.")
                                 .arg(session.tried)
                                 .arg(session.failed)
                                 .arg(session.unchanged)
                                 .arg(session.updated);
     dialog.finishFaviconUpdate(summary);
-    if (session.anyUpdated) {
+    if (session.updated > 0) {
       DatabaseBackup::subscriptionsChanged("update favicons");
-      session.anyUpdated = false;
     }
   };
 
@@ -340,11 +334,17 @@ void MainWindow::showBulkFeedSettings()
                                 .arg(target.title, target.displayUrl),
                             true);
     dialog.updateFaviconStatusText(tr(" Connecting... 30"), false);
-    session.requestToken = QString::number(++nextRequestToken);
-    const QString initialUrl = target.htmlUrl.trimmed().isEmpty() ? target.xmlUrl : target.htmlUrl;
-    QMetaObject::invokeMethod(faviconWorker, "requestUrl", Qt::QueuedConnection,
-                              Q_ARG(QString, initialUrl),
+    session.requestToken = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QMetaObject::invokeMethod(faviconWorker, "requestUrlWithKey", Qt::QueuedConnection,
+                              Q_ARG(QString, target.htmlUrl),
+                              Q_ARG(QString, target.xmlUrl),
                               Q_ARG(QString, session.requestToken));
+  };
+
+  auto finishTarget = [&]() {
+    dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
+    if (session.cancelRequested) finishSession(true);
+    else dispatchNext();
   };
 
   connect(&dialog, &FeedPropertiesDialog::startFaviconUpdateRequested, &dialog, [&]() {
@@ -377,9 +377,13 @@ void MainWindow::showBulkFeedSettings()
   });
 
   connect(&dialog, &FeedPropertiesDialog::cancelFaviconUpdateRequested, &dialog, [&]() {
-    if (!session.running) return;
+    if (!session.running || session.cancelRequested) return;
+    session.cancelRequested = true;
     QMetaObject::invokeMethod(faviconWorker, &FaviconObject::stopRequest, Qt::QueuedConnection);
-    finishSession(true);
+    if (session.saving)
+      dialog.appendFaviconLog(tr(" Canceling after the current save."), false);
+    else
+      finishSession(true);
   });
 
   connect(faviconWorker, &FaviconObject::signalConnecting, &dialog,
@@ -400,27 +404,26 @@ void MainWindow::showBulkFeedSettings()
 
   connect(faviconWorker, &FaviconObject::signalIconFailed, &dialog,
           [&](const QString &token, bool timedOut) {
-    if (!session.running || token != session.requestToken) return;
+    if (!session.running || session.saving || token != session.requestToken) return;
     ++session.failed;
     if (timedOut) {
       dialog.updateFaviconStatusText(tr(" Connection time out. Favicon unchanged."), true);
     } else {
       dialog.updateFaviconStatusText(tr(" Connection failed. Favicon unchanged."), true);
     }
-    dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
-    dispatchNext();
+    finishTarget();
   });
 
   connect(faviconWorker, &FaviconObject::signalIconRecived, &dialog,
           [&](const QString &token, const QByteArray &byteArray, const QString &format) {
-    if (!session.running || token != session.requestToken) return;
+    if (!session.running || session.saving || token != session.requestToken) return;
     if (!session.connectedLogged) {
       session.connectedLogged = true;
       dialog.updateFaviconStatusText(tr(" Connected."), true);
     }
     dialog.appendFaviconLog(tr(" Downloaded."), false);
 
-    BulkFaviconTarget &target = session.targets[session.currentIndex];
+    const BulkFaviconTarget &target = session.targets.at(session.currentIndex);
     const QByteArray faviconData = prepareFaviconIcoData(byteArray, format);
     if (faviconData.isEmpty()) {
       ++session.failed;
@@ -430,23 +433,39 @@ void MainWindow::showBulkFeedSettings()
       dialog.appendFaviconLog(tr(" Favicon unchanged."), false);
       dialog.uncheckBulkTarget(target.id);
     } else {
-      ++session.updated;
-      target.existingIco = faviconData;
-      session.anyUpdated = true;
-      dialog.appendFaviconLog(tr(" Found new icon!"), false);
-      if (mainApp && mainApp->updateFeeds() && mainApp->updateFeeds()->updateObject_) {
-        QMetaObject::invokeMethod(mainApp->updateFeeds()->updateObject_, "slotIconSaveById",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(int, target.id),
-                                  Q_ARG(QByteArray, faviconData));
+      if (saveWorker && QMetaObject::invokeMethod(saveWorker, "slotIconSaveById",
+                                                Qt::QueuedConnection,
+                                                Q_ARG(int, target.id),
+                                                Q_ARG(QByteArray, faviconData),
+                                                Q_ARG(QString, token))) {
+        session.saving = true;
+        dialog.appendFaviconLog(tr(" Saving new icon..."), false);
+        return;
       }
-      slotIconFeedUpdate(target.id, faviconData);
-      dialog.updateBulkTargetIcon(target.id, faviconData, defaultIconFeeds_);
-      dialog.uncheckBulkTarget(target.id);
+      ++session.failed;
+      dialog.appendFaviconLog(tr(" Could not start saving the favicon."), false);
     }
-    dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
-    dispatchNext();
+    finishTarget();
   });
+
+  if (saveWorker) {
+    connect(saveWorker, &UpdateObject::signalIconSaveFinished, &dialog,
+            [&](const QString &token, const QByteArray &faviconData, const QString &error) {
+      if (!session.running || !session.saving || token != session.requestToken) return;
+      session.saving = false;
+      if (error.isEmpty()) {
+        ++session.updated;
+        const int feedId = session.targets.at(session.currentIndex).id;
+        dialog.updateBulkTargetIcon(feedId, faviconData, defaultIconFeeds_);
+        dialog.uncheckBulkTarget(feedId);
+        dialog.appendFaviconLog(tr(" Favicon saved."), false);
+      } else {
+        ++session.failed;
+        dialog.appendFaviconLog(tr(" Could not save the favicon. %1").arg(error), false);
+      }
+      finishTarget();
+    });
+  }
 
   dialog.exec();
 

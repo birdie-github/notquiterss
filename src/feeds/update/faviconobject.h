@@ -24,6 +24,7 @@
 #include <QQueue>
 #include <QNetworkReply>
 #include <QTimer>
+#include <QUrl>
 
 #include "network/networkmanager.h"
 
@@ -35,19 +36,19 @@ public:
   explicit FaviconObject(QObject *parent = 0);
 
   void disconnectObjects();
+  static QUrl initialPageUrl(const QString &websiteUrl, const QString &feedUrl);
 
 public slots:
   void requestUrl(QString urlString, QString feedUrl);
+  void requestUrlWithKey(QString urlString, QString feedUrl, QString resultKey);
   void stopRequest();
-  void slotGet(const QUrl &getUrl, const QString &feedUrl, const int &count);
 
 signals:
   void startTimer();
-  void signalGet(const QUrl &getUrl, const QString &feedUrl, const int &count);
-  void signalConnecting(QString feedUrl, int secondsLeft);
-  void signalConnected(QString feedUrl);
-  void signalIconRecived(QString feedUrl, QByteArray byteArray, QString format);
-  void signalIconFailed(QString feedUrl, bool timedOut = false);
+  void signalConnecting(QString resultKey, int secondsLeft);
+  void signalConnected(QString resultKey);
+  void signalIconRecived(QString resultKey, QByteArray byteArray, QString format);
+  void signalIconFailed(QString resultKey, bool timedOut = false);
 
 private slots:
   void getQueuedUrl();
@@ -55,13 +56,19 @@ private slots:
   void slotRequestTimeout();
 
 private:
+  struct RequestIdentity {
+    // Host throttling follows the feed, while callers choose the result key.
+    QString feedHost;
+    QString resultKey;
+  };
+
   struct QueuedRequest {
-    QString urlString;
-    QString feedUrl;
+    QUrl pageUrl;
+    RequestIdentity identity;
   };
 
   struct ActiveRequest {
-    QString feedUrl;
+    RequestIdentity identity;
     int count;
     int timeLeft;
     QNetworkReply *reply;
@@ -70,13 +77,13 @@ private:
   struct PendingRetry {
     quint64 token;
     QUrl getUrl;
-    QString feedUrl;
+    RequestIdentity identity;
     int count;
     bool isIcon;
   };
 
-  void requestResource(const QUrl &url, const QString &feedUrl, int count, bool isIcon);
-  void dispatchResource(const QUrl &url, const QString &feedUrl, int count, bool isIcon);
+  void requestResource(const QUrl &url, const RequestIdentity &identity, int count, bool isIcon);
+  void dispatchResource(const QUrl &url, const RequestIdentity &identity, int count, bool isIcon);
   int indexOfReply(QNetworkReply *reply) const;
 
   NetworkManager *networkManager_;

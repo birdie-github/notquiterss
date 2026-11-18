@@ -98,7 +98,7 @@ public slots:
   void slotMarkAllFeedsRead();
   void slotMarkReadCategory(int type, int idLabel);
   void slotIconSave(QString feedUrl, QByteArray faviconData);
-  void slotIconSaveById(int feedId, QByteArray faviconData);
+  void slotIconSaveById(int feedId, QByteArray faviconData, QString resultKey);
   void slotSqlQueryExec(QString query);
   void slotMarkAllFeedsOld();
   void saveMemoryDatabase();
@@ -127,6 +127,7 @@ signals:
   void signalUpdateNews(int refresh = NewsTabWidget::RefreshInsert);
   void signalMarkAllFeedsRead(int nextUnread = -1);
   void signalIconUpdate(int feedId, QByteArray faviconData);
+  void signalIconSaveFinished(QString resultKey, QByteArray faviconData, QString error);
   void signalFinishCleanUp(int countDeleted, QString warning);
   void signalCleanUpFailed(QString error);
   void signalCleanUpRollbackFailed(QString error);
