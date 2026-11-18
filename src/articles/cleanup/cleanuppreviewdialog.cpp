@@ -94,6 +94,27 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
   QSqlQuery q(db);
   q.setForwardOnly(true);
 
+  if (config.cleanUpDeleted) {
+    if (!q.exec(QStringLiteral("SELECT id FROM news WHERE deleted == 1 ORDER BY id"))) {
+      error = q.lastError().text();
+      return false;
+    }
+    while (q.next()) {
+      plan.deletedBinIds.append(q.value(0).toInt());
+    }
+    if (q.lastError().isValid()) {
+      error = q.lastError().text();
+      return false;
+    }
+    q.finish();
+  }
+
+  // Emptying Deleted needs only the IDs above. Without a visible-article
+  // rule, there are no per-feed candidates to read or sort.
+  if (!config.dayCleanUpOn && !config.newsCleanUpOn && !config.readCleanUp) {
+    return true;
+  }
+
   QSet<int> validFeedIds;
   if (!q.exec(QStringLiteral("SELECT id, xmlUrl FROM feeds"))) {
     error = q.lastError().text();
@@ -110,28 +131,19 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
   }
   q.finish();
 
-  if (config.cleanUpDeleted) {
-    if (!q.exec(QStringLiteral("SELECT id FROM news WHERE deleted == 1 ORDER BY id"))) {
-      error = q.lastError().text();
-      return false;
-    }
-    while (q.next()) {
-      plan.deletedBinIds.append(q.value(0).toInt());
-    }
-    if (q.lastError().isValid()) {
-      error = q.lastError().text();
-      return false;
-    }
-    q.finish();
-  }
-
   if (validFeedIds.isEmpty()) {
     return true;
   }
 
-  if (!q.exec(QStringLiteral(
-          "SELECT id, feedId, received, published, read, starred, label, deleted "
-          "FROM news WHERE deleted IN (0, 1) ORDER BY published"))) {
+  const QDateTime retentionCutoff = config.dayCleanUpOn
+      ? NewsRetention::cutoff(config.maxDayCleanUp)
+      : QDateTime();
+  const bool includeDeleted = retentionCutoff.isValid() && !config.cleanUpDeleted;
+  const QString candidates = QStringLiteral(
+      "SELECT id, feedId, received, published, read, starred, label, deleted FROM news WHERE ") +
+      (includeDeleted ? QStringLiteral("deleted IN (0, 1)") : QStringLiteral("deleted == 0")) +
+      QStringLiteral(" ORDER BY published");
+  if (!q.exec(candidates)) {
     error = q.lastError().text();
     return false;
   }
@@ -157,9 +169,6 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
   }
   q.finish();
 
-  const QDateTime retentionCutoff = config.dayCleanUpOn
-      ? NewsRetention::cutoff(config.maxDayCleanUp)
-      : QDateTime();
   const QDateTime currentDateTime = QDateTime::currentDateTime();
 
   auto isEligible = [&](const PreviewCandidate &article) {
@@ -183,11 +192,8 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
     // Step 1: Dated articles older than retentionCutoff are hard-deleted first.
     for (const PreviewCandidate &article : articles) {
       if (article.deleted == 1) {
-        // Shutdown applies publication-age retention to Deleted too. These
-        // articles belong in the Deleted preview, never the visible-feed count.
-        // With cleanUpDeleted enabled they were already collected above.
-        if (!config.cleanUpDeleted && isEligible(article) &&
-            NewsRetention::expired(article.published, retentionCutoff)) {
+        // Deleted candidates are only read for publication-age retention.
+        if (isEligible(article) && NewsRetention::expired(article.published, retentionCutoff)) {
           plan.deletedBinIds.append(article.id);
         }
         continue;
