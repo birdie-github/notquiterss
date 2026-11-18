@@ -67,6 +67,9 @@ public:
   QCheckBox *openNewTabNextToActive_;
   QCheckBox *hideFeedsOpenTab_;
   QCheckBox *showCloseButtonTab_;
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  QCheckBox *hideDonateButton_ = nullptr;
+#endif
   QCheckBox *showToggleFeedsTree_;
   QCheckBox *defaultIconFeeds_;
   QCheckBox *autocollapseFolder_;

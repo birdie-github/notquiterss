@@ -25,6 +25,9 @@ The application defaults to Qt 6. Invoke qmake from the matching Qt installation
 
 USE_QT accepts only 5 or 6; a mismatch with qmake's Qt is an error.
 It cannot switch the libraries used by an already selected qmake executable.
+
+Pass CONFIG+=no_donate_button to qmake to build without the donation button
+and its Options setting.
 Use separate application build directories and QtSingleApplication work directories
 for each Qt/toolchain. Prepare the dependency with the SAME qmake as the application.
 The Linux and Windows recipes below explicitly select Qt 5. The main Windows CI build uses

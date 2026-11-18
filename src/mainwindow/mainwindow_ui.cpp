@@ -27,6 +27,9 @@
 #include "sharing/shareservice.h"
 #include "statusbarcontroller.h"
 #include "trayiconcontroller.h"
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+#include "widgets/donatebutton.h"
+#endif
 #include <QFileInfo>
 #include <QPainter>
 #include <QPixmap>
@@ -216,6 +219,14 @@ QSystemTrayIcon *MainWindow::trayIcon() const
   return trayIconController_->systemTrayIcon();
 }
 
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+void MainWindow::setDonateButtonHidden(bool hidden)
+{
+  donateButton_->setVisible(!hidden);
+  donationHeart_->setVisible(hidden);
+}
+#endif
+
 /** @brief Create tabbar widget
  *---------------------------------------------------------------------------*/
 void MainWindow::createTabBarWidget()
@@ -237,6 +248,21 @@ void MainWindow::createTabBarWidget()
   tabBarWidget_->setObjectName("tabBarWidget");
   tabBarWidget_->setMinimumHeight(1);
   tabBarWidget_->setLayout(tabBarLayout);
+
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  donateButton_ = new DonateButton(tabBarWidget_);
+  donationHeart_ = new QLabel(QStringLiteral("❤️"), tabBarWidget_);
+  donationHeart_->setContentsMargins(6, 0, 6, 0);
+  donationHeart_->setAccessibleName(tr("Thank you"));
+  tabBarLayout->addWidget(donateButton_, 0, Qt::AlignVCenter);
+  tabBarLayout->addWidget(donationHeart_, 0, Qt::AlignVCenter);
+  setDonateButtonHidden(AppSettings::hideDonateButton.get());
+
+  connect(donateButton_, &QPushButton::clicked, this, [this] {
+    if (!mainApp->openExternalUrl(QUrl(QStringLiteral("https://paypal.me/ArtemTashkinov"))))
+      QMessageBox::warning(this, tr("Donate"), tr("Could not open the PayPal donation page."));
+  });
+#endif
 
   connect(mainMenuButton_, &QAbstractButton::clicked, this, &MainWindow::showMainMenu);
   connect(tabBar_, &TabBar::closeTab, this, &MainWindow::slotCloseTab);

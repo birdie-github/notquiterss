@@ -350,6 +350,10 @@ QWidget *OptionsDialog::createGeneralWidget()
   generalLayout->addWidget(defaultIconFeeds_);
   generalLayout->addWidget(autocollapseFolder_);
   generalLayout->addWidget(showCloseButtonTab_);
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  hideDonateButton_ = new QCheckBox(tr("Hide the donate button"));
+  generalLayout->addWidget(hideDonateButton_);
+#endif
   generalLayout->addSpacing(20);
 
 #if defined(Q_OS_WIN)

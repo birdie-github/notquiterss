@@ -241,6 +241,9 @@ const MainWindow::SettingBindings::ActionBoolSetting MainWindow::SettingBindings
 };
 
 const MainWindow::SettingBindings::AppBoolCheckSetting MainWindow::SettingBindings::kAppBoolCheck[] = {
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  { &AppSettings::hideDonateButton, &OptionsDialog::hideDonateButton_, OptionsDialog::PageGeneral },
+#endif
   { &AppSettings::showCloseButtonTab,      &OptionsDialog::showCloseButtonTab_,      OptionsDialog::PageGeneral },
   { &AppSettings::updateCheckEnabled,      &OptionsDialog::updateCheckEnabled_,      OptionsDialog::PageGeneral },
   { &AppSettings::storeDBMemory,           &OptionsDialog::storeDBMemory_,           OptionsDialog::PageGeneral },
@@ -817,6 +820,9 @@ void MainWindow::showOptionDlg(int index)
     feedsModel_->defaultIconFeeds_ = defaultIconFeeds_;
     feedsView_->autocollapseFolder_ = optionsDialog_->autocollapseFolder_->isChecked();
     pushButtonNull_->setVisible(showToggleFeedsTree_);
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+    setDonateButtonHidden(AppSettings::hideDonateButton.get());
+#endif
 
     if (saveDBMemFileInterval != optionsDialog_->saveDBMemFileInterval_->value()) {
       saveDBMemFileInterval = optionsDialog_->saveDBMemFileInterval_->value();

@@ -61,6 +61,12 @@ HEADERS += src/network/websiteoverrides.h
 SOURCES += src/network/websiteoverrides.cpp
 SOURCES += src/articles/feedreadstate.cpp
 equals(QT_MAJOR_VERSION, 6): QT += core5compat
+
+!contains(CONFIG, no_donate_button) {
+  DEFINES += NQRSS_ENABLE_DONATE_BUTTON
+  HEADERS += src/widgets/donatebutton.h
+  SOURCES += src/widgets/donatebutton.cpp
+}
 CONFIG += c++17 link_pkgconfig
 !packagesExist(libxml-2.0) {
   error("libxml2 development files and pkg-config are required. Set PKG_CONFIG_PATH to the directory containing libxml-2.0.pc. See INSTALL for Linux, MSYS2 and Homebrew setup.")

@@ -535,6 +535,11 @@ private:
   ToolButton *mainMenuButton_;
   TabBar *tabBar_;
   QWidget *tabBarWidget_;
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  QPushButton *donateButton_ = nullptr;
+  QLabel *donationHeart_ = nullptr;
+  void setDonateButtonHidden(bool hidden);
+#endif
   QSplitter *mainSplitter_;
   QWidget *feedsPanel_;
   QFrame *feedsWidget_;

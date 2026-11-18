@@ -68,6 +68,9 @@ constexpr Setting<bool> autoUpdatefeedsStartUp = {"Settings/autoUpdatefeedsStart
 constexpr Setting<bool> storeDBMemory = {"Settings/storeDBMemory", true};
 constexpr Setting<int> saveDBMemFileInterval = {"Settings/saveDBMemFileInterval", 30};
 constexpr Setting<bool> showCloseButtonTab = {"Settings/showCloseButtonTab", true};
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+constexpr Setting<bool> hideDonateButton = {"Settings/hideDonateButton", false};
+#endif
 constexpr Setting<bool> updateCheckEnabled = {"Settings/updateCheckEnabled", true};
 constexpr Setting<int> openingFeedAction = {"Settings/openingFeedAction", 0};
 constexpr Setting<bool> openNewsWebViewOn = {"Settings/openNewsWebViewOn", true};
