@@ -2381,13 +2381,7 @@ void OptionsDialog::loadNotifier()
 //----------------------------------------------------------------------------
 void OptionsDialog::applyNotifier()
 {
-  if (!isPageCreated(PageNotifications)) return;
-  if (!loadNotifierOk_) {
-    if (!onlySelectedFeeds_->isChecked())
-      mainApp->mainWindow()->idFeedsNotifyList_.clear();
-    return;
-  }
-  mainApp->mainWindow()->idFeedsNotifyList_.clear();
+  if (!loadNotifierOk_) return;
 
   feedsTreeNotify_->expandAll();
   QTreeWidgetItem *treeWidgetItem =
@@ -2401,9 +2395,6 @@ void OptionsDialog::applyNotifier()
     QString qStr = QString("UPDATE feeds_ex SET value='%1' WHERE feedId='%2' AND name='showNotification'").
         arg(check).arg(treeWidgetItem->text(1).toInt());
     q.exec(qStr);
-
-    if (check && onlySelectedFeeds_->isChecked())
-      mainApp->mainWindow()->idFeedsNotifyList_.append(treeWidgetItem->text(1).toInt());
 
     treeWidgetItem = feedsTreeNotify_->itemBelow(treeWidgetItem);
   }

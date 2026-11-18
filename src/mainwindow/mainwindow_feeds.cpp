@@ -36,6 +36,7 @@
 #include "trayiconcontroller.h"
 #include "feeds/update/updatefeeds.h"
 
+#include <QSqlError>
 #include <utility>
 
 /** @brief Add feed to feed list
@@ -723,16 +724,32 @@ void MainWindow::slotFeedSelected(QModelIndex index, bool createTab)
 }
 
 // ----------------------------------------------------------------------------
+void MainWindow::reloadNotificationFeeds()
+{
+  if (!onlySelectedFeeds_) {
+    idFeedsNotifyList_.clear();
+    return;
+  }
+
+  QSqlQuery q(db_);
+  q.setForwardOnly(true);
+  if (!q.exec("SELECT feedId FROM feeds_ex WHERE value=1 AND name='showNotification'")) {
+    qWarning() << "Cannot load notification feed selections:" << q.lastError();
+    return;
+  }
+  QList<int> selectedFeeds;
+  while (q.next())
+    selectedFeeds.append(q.value(0).toInt());
+  if (q.lastError().isValid()) {
+    qWarning() << "Cannot read notification feed selections:" << q.lastError();
+    return;
+  }
+  idFeedsNotifyList_ = std::move(selectedFeeds);
+}
+
 void MainWindow::initUpdateFeeds()
 {
-  QSqlQuery q;
-
-  if (onlySelectedFeeds_) {
-    q.exec("SELECT feedId FROM feeds_ex WHERE value=1 AND name='showNotification'");
-    while (q.next()) {
-      idFeedsNotifyList_.append(q.value(0).toInt());
-    }
-  }
+  reloadNotificationFeeds();
 
   updateScheduleClock_.start();
 

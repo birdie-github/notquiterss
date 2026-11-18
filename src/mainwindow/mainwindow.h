@@ -249,7 +249,6 @@ public:
   bool showButtonExBrowserNotify_;
   bool showButtonDeleteNotify_;
   bool closeNotify_;
-  QList<int> idFeedsNotifyList_;
 
 public slots:
   void restoreFeedsOnStartUp();
@@ -523,6 +522,7 @@ private:
   void recountFeedCategories(const QList<int> &categoriesList);
   void creatFeedTab(int feedId, int feedParId);
   void initUpdateFeeds();
+  void reloadNotificationFeeds();
   void addDefaultFeed();
   bool defaultFeedIconsPending_ = false;
 
@@ -704,6 +704,7 @@ private:
   bool fullscreenModeNotify_;
   bool showNotifyInactiveApp_;
   bool onlySelectedFeeds_;
+  QList<int> idFeedsNotifyList_;
 
   UpdateAppDialog *updateAppDialog_;
 

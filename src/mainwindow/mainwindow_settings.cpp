@@ -876,6 +876,7 @@ void MainWindow::showOptionDlg(int index)
 
   if (optionsDialog_->isPageCreated(OptionsDialog::PageNotifications)) {
     soundNotifyPath_ = optionsDialog_->editSoundNotifier_->text();
+    reloadNotificationFeeds();
   }
 
   if (optionsDialog_->isPageCreated(OptionsDialog::PageLanguage) && mainApp->language() != optionsDialog_->language()) {
