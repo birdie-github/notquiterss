@@ -194,8 +194,8 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
 
   static const QStringList fallbackPaths = {
       // Standard Root Slugs & Extensions
-      "/feed", "/rss", "/atom", "/feed/", "/rss/", "/atom/",
-      "/feed.xml", "/rss.xml", "/atom.xml", "/index.xml",
+      "/feed", "/feeds", "/rss", "/atom", "/feed/", "/feeds/", "/rss/", "/atom/",
+      "/feed.xml", "/feeds.xml", "/rss.xml", "/atom.xml", "/index.xml",
       "/index.rss", "/index.atom", "/feed.json", "/index.json",
       "/rdf", "/feed.rdf", "/index.rdf", "/rss.rdf", "/rss.rss",
 
@@ -209,7 +209,7 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
       "/rss.php", "/backend.php", "/atom.aspx", "/rss.ashx",
 
       // Taxonomy / Comments Fallbacks
-      "/category/feed", "/tag/feed", "/comments/feed"
+      "/category/feed", "/tag/feed"
   };
 
   for (const QString &path : fallbackPaths)
