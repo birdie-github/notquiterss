@@ -8,6 +8,8 @@
 #include <QStyleOptionFocusRect>
 
 namespace {
+constexpr qreal buttonScale = 0.9;
+
 QString caption()
 {
     return QCoreApplication::translate("DonateButton", "Donate with ");
@@ -36,7 +38,7 @@ QSize DonateButton::sizeHint() const
     return QSize(fontMetrics().horizontalAdvance(caption())
         + brand.horizontalAdvance(QStringLiteral("Pay"))
         + brand.horizontalAdvance(QStringLiteral("Pal")) + 24,
-        qMax(fontMetrics().height(), brand.height()) + 12);
+        qMax(fontMetrics().height(), brand.height()) + 12) * buttonScale;
 }
 
 void DonateButton::paintEvent(QPaintEvent *)
@@ -44,7 +46,10 @@ void DonateButton::paintEvent(QPaintEvent *)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     if (!isEnabled()) painter.setOpacity(0.5);
-    const QRectF pill = QRectF(rect()).adjusted(1, 1, -1, -1);
+    painter.save();
+    painter.scale(buttonScale, buttonScale);
+    const QRectF canvas(0, 0, width() / buttonScale, height() / buttonScale);
+    const QRectF pill = canvas.adjusted(1, 1, -1, -1);
     QLinearGradient gradient(pill.topLeft(), pill.bottomLeft());
     const auto shade = [this](QColor color) {
         if (isDown()) return color.darker(110);
@@ -62,17 +67,18 @@ void DonateButton::paintEvent(QPaintEvent *)
     const int prefixWidth = fontMetrics().horizontalAdvance(caption());
     const int payWidth = brandMetrics.horizontalAdvance(QStringLiteral("Pay"));
     const int textWidth = prefixWidth + payWidth + brandMetrics.horizontalAdvance(QStringLiteral("Pal"));
-    int x = (width() - textWidth) / 2;
-    const int baseline = (height() - fontMetrics().height()) / 2 + fontMetrics().ascent();
+    qreal x = (canvas.width() - textWidth) / 2;
+    const qreal baseline = (canvas.height() - fontMetrics().height()) / 2 + fontMetrics().ascent();
     painter.setFont(font());
     painter.setPen(QColor("#1a1a1a"));
-    painter.drawText(x, baseline, caption());
+    painter.drawText(QPointF(x, baseline), caption());
     x += prefixWidth;
     painter.setFont(brand);
     painter.setPen(QColor("#003087"));
-    painter.drawText(x, baseline, QStringLiteral("Pay"));
+    painter.drawText(QPointF(x, baseline), QStringLiteral("Pay"));
     painter.setPen(QColor("#009cde"));
-    painter.drawText(x + payWidth, baseline, QStringLiteral("Pal"));
+    painter.drawText(QPointF(x + payWidth, baseline), QStringLiteral("Pal"));
+    painter.restore();
 
     if (hasFocus()) {
         QStyleOptionFocusRect focus;
