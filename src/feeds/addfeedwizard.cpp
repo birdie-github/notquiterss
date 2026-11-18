@@ -18,7 +18,9 @@
 * ============================================================ */
 #include "feeds/update/feedxml.h"
 #include "feeddiscovery.h"
+#include "feeddeletion.h"
 #include "common/logfile.h"
+#include "database/database.h"
 #include "network/credentialscope.h"
 #include "network/feedurl.h"
 #include "network/networkpolicy.h"
@@ -75,8 +77,11 @@ AddFeedWizard::~AddFeedWizard()
 /*virtual*/ void AddFeedWizard::done(int result)
 {
   if (result == QDialog::Rejected || result == FeedSkipped) {
-    if (feedId_ > 0)
-      deleteFeed();
+    // Leave the provisional row in place until the in-flight parser reports
+    // its result. Cancel and Skip are already disabled during this step.
+    if (feedId_ > 0 && !selectedPage && !page(0)->isEnabled()) return;
+    const QString error = deleteFeed();
+    if (!error.isEmpty()) qWarning().noquote() << "Unfinished subscription cleanup failed:" << error;
   }
   // Selection and skipping return control to the feed queue without
   // finishing the current subscription. Its page may still be incomplete.
@@ -316,10 +321,11 @@ void AddFeedWizard::nameFeedEditChanged(const QString& text)
 
 void AddFeedWizard::backButtonClicked()
 {
-  deleteFeed();
+  const QString error = deleteFeed();
   nameFeedEdit_->clear();
   page(0)->setEnabled(true);
   selectedPage = false;
+  if (!error.isEmpty()) failed(error);
 }
 
 void AddFeedWizard::nextButtonClicked()
@@ -343,6 +349,11 @@ void AddFeedWizard::finishButtonClicked()
 void AddFeedWizard::addFeed()
 {
   if (!page(0)->isEnabled()) return;
+  const QString cleanupError = deleteFeed();
+  if (!cleanupError.isEmpty()) {
+    failed(cleanupError);
+    return;
+  }
   QUrl feedUrl = FeedUrl::normalize(urlFeedEdit_->text());
   if (!FeedUrl::confirm(this, feedUrl)) return;
   feedUrlString_ = feedUrl.toString();
@@ -394,25 +405,20 @@ bool AddFeedWizard::insertFeed()
   return true;
 }
 
-void AddFeedWizard::deleteFeed()
+QString AddFeedWizard::deleteFeed()
 {
-  QSqlQuery q;
-  q.exec(QString("DELETE FROM feeds WHERE id='%1'").arg(feedId_));
-  q.exec(QString("DELETE FROM news WHERE feedId='%1'").arg(feedId_));
-  q.exec(QString("DELETE FROM feeds_ex WHERE feedId='%1'").arg(feedId_));
+  if (feedId_ <= 0) return {};
+
+  auto databaseAccess = Database::tryAccess();
+  if (!databaseAccess.owns_lock())
+    return tr("The database is busy. Please try again shortly.");
+
+  QString error;
+  if (!FeedDeletion::apply(QSqlDatabase::database(), {feedId_}, error))
+    return tr("Could not remove the unfinished subscription. %1").arg(error);
 
   feedId_ = 0;
-  // Correct rowToParent field
-  QList<int> idList;
-  q.exec("SELECT id FROM feeds WHERE parentId=0 ORDER BY rowToParent");
-  while (q.next()) {
-    idList << q.value(0).toInt();
-  }
-  for (int i = 0; i < idList.count(); i++) {
-    q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-           arg(i).arg(idList.at(i)));
-  }
-  q.finish();
+  return {};
 }
 
 void AddFeedWizard::slotCurrentIdChanged(int idPage)
@@ -498,10 +504,22 @@ void AddFeedWizard::getUrlDone(int result, int id, QString, QString error, QByte
   }
 }
 
-void AddFeedWizard::slotUpdateFeed(int feedId, bool, int newCount, QString)
+void AddFeedWizard::slotUpdateFeed(int feedId, bool, int newCount, const QString &status)
 {
+  if (feedId_ <= 0 || feedId != feedId_) return;
   qDebug() << "ParseDone: " << LogFile::urlForLog(QUrl(feedUrlString_));
   if (configuring_) button(QWizard::CustomButton1)->setEnabled(true);
+  if (status != QLatin1String("0")) {
+    QString error = status;
+    if (status.section(' ', 0, 0).toInt() < 0) error = status.section(' ', 1);
+    if (error.isEmpty()) error = tr("Could not import the feed.");
+
+    const QString cleanupError = deleteFeed();
+    if (!cleanupError.isEmpty()) error += QLatin1Char('\n') + cleanupError;
+    failed(error);
+    return;
+  }
+
   selectedPage = true;
   newCount_ = newCount;
 

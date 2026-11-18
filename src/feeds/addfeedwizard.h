@@ -49,7 +49,7 @@ public slots:
   void getUrlDone(int result, int feedId, QString feedUrlStr,
                   QString error, QByteArray data,
                   QDateTime dtReply, QString codecName, QUrl effective, QString mimeType);
-  void slotUpdateFeed(int feedId, bool, int newCount, QString);
+  void slotUpdateFeed(int feedId, bool, int newCount, const QString &status);
 
 signals:
   void xmlReadyParse(QByteArray data, int feedId,
@@ -80,7 +80,7 @@ private:
   QStringList selectedUrls_;
   int scanId_ = RequestFeed::FirstProbe;
   bool configuring_ = false;
-  void deleteFeed();
+  QString deleteFeed();
   void showProgressBar();
   void finish();
 

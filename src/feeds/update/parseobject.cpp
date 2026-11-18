@@ -214,6 +214,8 @@ void ParseObject::slotParse(const QByteArray &xmlData, const int &feedId,
 
   if (!success) {
     qWarning() << "Feed update failed:" << feedId << sqlError_;
+    // The add-feed wizard may immediately clean up its provisional feed.
+    if (databaseAccess.owns_lock()) databaseAccess.unlock();
     emit signalFinishUpdate(feedId, false, 0,
                             "-6 " + tr("Database update failed: %1").arg(sqlError_.text()));
     return;
