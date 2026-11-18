@@ -89,9 +89,14 @@ struct Writer {
           }
         }
         const QUrl link = base.resolved(QUrl(source));
-        if (!source.isEmpty() && ArticleContent::isExternalLink(link))
+        if (!source.isEmpty() && ArticleContent::isExternalLink(link)) {
+          QString label;
+          if (tag == "iframe") label = attr(node, "title").trimmed();
+          if (label.isEmpty())
+            label = QCoreApplication::translate("ArticleContent", "Open embedded media externally");
           out += "<p><a" + attribute("href", link.toString()) + ">" +
-            QCoreApplication::translate("ArticleContent", "Open embedded media externally").toHtmlEscaped() + "</a></p>";
+            label.toHtmlEscaped() + "</a></p>";
+        }
         continue;
       }
       if (drop.contains(tag)) continue;
