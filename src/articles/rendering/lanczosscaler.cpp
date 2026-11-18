@@ -287,15 +287,14 @@ LanczosScaler::~LanczosScaler() {
   completion_->receiver = nullptr;
 }
 
-QString LanczosScaler::cacheKey(const QUrl &url, qint64 sourceKey, const QSize &targetSize) {
-  return QStringLiteral("nqrss-lanczos:%1:%2:%3x%4")
-      .arg(url.toString())
+QString LanczosScaler::cacheKey(qint64 sourceKey, const QSize &targetSize) {
+  return QStringLiteral("nqrss-lanczos:%1:%2x%3")
       .arg(sourceKey)
       .arg(targetSize.width())
       .arg(targetSize.height());
 }
 
-void LanczosScaler::notifyResize() {
+void LanczosScaler::notifyLayoutChange() {
   reset();
   debounceTimer_->start();
 }
@@ -311,6 +310,8 @@ void LanczosScaler::reset() {
   ++generation_;
   debounceTimer_->stop();
   scheduled_.clear();
+  attempted_.clear();
+  activeKey_.clear();
   if (activeCancellation_)
     activeCancellation_->store(true, std::memory_order_relaxed);
 }
@@ -320,16 +321,16 @@ bool LanczosScaler::lookupOrSchedule(const QUrl &url, const QImage &source,
   if (!fitsWorkingBudget(source, targetPhysicalSize)) {
     return false;
   }
-  const QString key = cacheKey(url, source.cacheKey(), targetPhysicalSize);
+  const QString key = cacheKey(source.cacheKey(), targetPhysicalSize);
   if (QPixmapCache::find(key, out)) {
     out->setDevicePixelRatio(dpr);
     return true;
   }
-  if (running_ && activeKey_ == key)
+  if (attempted_.contains(key) || activeKey_ == key)
     return false;
 
-  // Retain at most sixteen waiting source images per view. A completion
-  // repaints the viewport, allowing visible images to request omitted work.
+  // A successful cache insertion repaints the viewport, allowing visible
+  // images to request work omitted by the queue limit.
   constexpr int maxPendingJobs = 16;
   if (!scheduled_.contains(key) && scheduled_.size() >= maxPendingJobs)
     return false;
@@ -363,15 +364,21 @@ void LanczosScaler::flushScheduled() {
       receiver->running_ = false;
       receiver->activeKey_.clear();
       receiver->activeCancellation_.reset();
-      if (gen == receiver->generation_ && !scaled.isNull()) {
-        if (QPixmapCache::cacheLimit() < 65536)
-          QPixmapCache::setCacheLimit(65536);
-        QPixmap pixmap = QPixmap::fromImage(scaled);
-        pixmap.setDevicePixelRatio(job.dpr);
-        QPixmapCache::insert(job.key, pixmap);
+      if (gen == receiver->generation_) {
+        // A failed result or a later eviction must not turn the next paint
+        // into another attempt at the same resize.
+        receiver->attempted_.insert(job.key);
+        if (!scaled.isNull()) {
+          if (QPixmapCache::cacheLimit() < 65536)
+            QPixmapCache::setCacheLimit(65536);
+          QPixmap pixmap = QPixmap::fromImage(scaled);
+          pixmap.setDevicePixelRatio(job.dpr);
+          if (!pixmap.isNull() && QPixmapCache::insert(job.key, pixmap) &&
+              receiver->view_ && receiver->view_->viewport()) {
+            receiver->view_->viewport()->update();
+          }
+        }
       }
-      if (receiver->view_ && receiver->view_->viewport())
-        receiver->view_->viewport()->update();
       receiver->flushScheduled();
     }, Qt::QueuedConnection);
   }));

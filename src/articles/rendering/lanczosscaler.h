@@ -41,7 +41,7 @@ public:
 
   static QImage scale(const QImage &src, const QSize &targetSize);
 
-  void notifyResize();
+  void notifyLayoutChange();
   bool lookupOrSchedule(const QUrl &url, const QImage &source,
                         const QSize &targetPhysicalSize, qreal dpr, QPixmap *out);
   void invalidateUrl(const QUrl &url);
@@ -52,7 +52,7 @@ private:
   static QImage scaleCancellable(const QImage &src, const QSize &targetSize,
                                  const std::atomic_bool *canceled);
   void flushScheduled();
-  static QString cacheKey(const QUrl &url, qint64 sourceKey, const QSize &targetSize);
+  static QString cacheKey(qint64 sourceKey, const QSize &targetSize);
 
   struct Job {
     QUrl url;
@@ -65,6 +65,7 @@ private:
   ArticleView *view_;
   QTimer *debounceTimer_;
   QHash<QString, Job> scheduled_;
+  QSet<QString> attempted_;
   std::shared_ptr<CompletionState> completion_;
   std::shared_ptr<std::atomic_bool> activeCancellation_;
   QString activeKey_;

@@ -638,6 +638,7 @@ void ArticleView::setZoomFactor(qreal factor) {
   if (qFuzzyCompare(zoom_, clamped)) return;
   const ViewState state = saveView();
   zoom_ = clamped;
+  lanczos_->notifyLayoutChange();
   scaleDocument(true);
   restoreView(state);
 }
@@ -733,7 +734,7 @@ void ArticleView::resizeEvent(QResizeEvent *event) {
   const ViewState state = saveView();
   QTextBrowser::resizeEvent(event);
   if (widthChanged && !imageSpans_.isEmpty()) {
-    lanczos_->notifyResize();
+    lanczos_->notifyLayoutChange();
     scaleDocument(false);
   }
   restoreView(state);
