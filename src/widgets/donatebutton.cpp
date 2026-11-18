@@ -38,7 +38,7 @@ QSize DonateButton::sizeHint() const
     return QSize(fontMetrics().horizontalAdvance(caption())
         + brand.horizontalAdvance(QStringLiteral("Pay"))
         + brand.horizontalAdvance(QStringLiteral("Pal")) + 24,
-        qMax(fontMetrics().height(), brand.height()) + 12) * buttonScale;
+        qMax(fontMetrics().height(), brand.height()) + 6) * buttonScale;
 }
 
 void DonateButton::paintEvent(QPaintEvent *)
