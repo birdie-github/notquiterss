@@ -1173,6 +1173,14 @@ Expired cookies skipped: %1.</source>
 <context>
     <name>FeedPropertiesDialog</name>
     <message>
+        <source>Start</source>
+        <translation>Начать</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="33"/>
         <source>Bulk configure feeds</source>
         <translation>Массовая настройка подписок</translation>

@@ -823,10 +823,8 @@ void FeedPropertiesDialog::updateBulkApplyButton()
     apply->setEnabled(!faviconUpdateRunning_ && count > 0 && action > 0 && !isFaviconAction);
   if (auto *close = buttonBox->button(QDialogButtonBox::Close))
     close->setEnabled(!faviconUpdateRunning_);
-  if (faviconStartButton_)
-    faviconStartButton_->setEnabled(!faviconUpdateRunning_ && count > 0);
-  if (faviconCancelButton_)
-    faviconCancelButton_->setEnabled(faviconUpdateRunning_);
+  if (faviconActionButton_)
+    faviconActionButton_->setEnabled(faviconUpdateRunning_ || count > 0);
   if (bulkAction_)
     bulkAction_->setEnabled(!faviconUpdateRunning_);
   if (bulkTargets_)
@@ -846,7 +844,8 @@ void FeedPropertiesDialog::startFaviconUpdate(int totalFeeds)
   faviconLog_->clear();
   faviconProgress_->setRange(0, qMax(1, totalFeeds));
   faviconProgress_->setValue(0);
-  faviconProgress_->setFormat(QStringLiteral("%v / %m"));
+  faviconProgress_->show();
+  faviconActionButton_->setText(tr("Cancel"));
   updateBulkApplyButton();
 }
 
@@ -896,6 +895,8 @@ void FeedPropertiesDialog::advanceFaviconProgress(int current, int total)
 void FeedPropertiesDialog::finishFaviconUpdate(const QString &summary)
 {
   faviconUpdateRunning_ = false;
+  faviconProgress_->hide();
+  faviconActionButton_->setText(tr("Start"));
   faviconStatusPos_ = -1;
   if (!summary.isEmpty()) {
     appendFaviconLog(QString(), true);
@@ -1092,29 +1093,24 @@ QWidget *FeedPropertiesDialog::createFaviconUpdateEditor()
   auto *layout = new QVBoxLayout(editor);
   layout->setContentsMargins(0, 0, 0, 0);
 
-  auto *buttonsLayout = new QHBoxLayout();
-  buttonsLayout->setContentsMargins(0, 0, 0, 0);
-  faviconStartButton_ = new QPushButton(tr("Start updating favicons"), editor);
-  faviconStartButton_->setEnabled(false);
-  faviconCancelButton_ = new QPushButton(tr("Cancel"), editor);
-  faviconCancelButton_->setEnabled(false);
-  buttonsLayout->addWidget(faviconStartButton_);
-  buttonsLayout->addWidget(faviconCancelButton_);
-  buttonsLayout->addStretch();
-  layout->addLayout(buttonsLayout);
-
-  faviconProgress_ = new QProgressBar(editor);
-  faviconProgress_->setRange(0, 1);
-  faviconProgress_->setValue(0);
-  faviconProgress_->setFormat(QStringLiteral("%v / %m"));
-  layout->addWidget(faviconProgress_);
-
   faviconLog_ = new QPlainTextEdit(editor);
   faviconLog_->setReadOnly(true);
   layout->addWidget(faviconLog_, 1);
 
-  connect(faviconStartButton_, &QPushButton::clicked, this, &FeedPropertiesDialog::startFaviconUpdateRequested);
-  connect(faviconCancelButton_, &QPushButton::clicked, this, &FeedPropertiesDialog::cancelFaviconUpdateRequested);
+  faviconProgress_ = new QProgressBar(editor);
+  faviconProgress_->setFormat(QStringLiteral("%v / %m"));
+  faviconProgress_->hide();
+  layout->addWidget(faviconProgress_);
+
+  faviconActionButton_ = new QPushButton(tr("Start"), editor);
+  faviconActionButton_->setEnabled(false);
+  layout->addWidget(faviconActionButton_, 0, Qt::AlignHCenter);
+  connect(faviconActionButton_, &QPushButton::clicked, this, [this] {
+    if (faviconUpdateRunning_)
+      emit cancelFaviconUpdateRequested();
+    else
+      emit startFaviconUpdateRequested();
+  });
 
   return editor;
 }

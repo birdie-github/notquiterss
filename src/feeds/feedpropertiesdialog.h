@@ -257,8 +257,7 @@ private:
   QComboBox *bulkAction_ = nullptr;
   QComboBox *bulkState_ = nullptr;
   QTreeWidget *bulkTargets_ = nullptr;
-  QPushButton *faviconStartButton_ = nullptr;
-  QPushButton *faviconCancelButton_ = nullptr;
+  QPushButton *faviconActionButton_ = nullptr;
   QProgressBar *faviconProgress_ = nullptr;
   QPlainTextEdit *faviconLog_ = nullptr;
   int faviconStatusPos_ = -1;
