@@ -341,6 +341,7 @@ void MainWindow::showBulkFeedSettings()
                               Q_ARG(QString, session.requestToken));
   };
 
+  using FaviconLogResult = FeedPropertiesDialog::FaviconLogResult;
   auto finishTarget = [&]() {
     dialog.advanceFaviconProgress(session.currentIndex + 1, session.targets.size());
     if (session.cancelRequested) finishSession(true);
@@ -411,6 +412,7 @@ void MainWindow::showBulkFeedSettings()
     } else {
       dialog.updateFaviconStatusText(tr(" Connection failed. Favicon unchanged."), true);
     }
+    dialog.colorFaviconLogLine(FaviconLogResult::Failed);
     finishTarget();
   });
 
@@ -428,6 +430,7 @@ void MainWindow::showBulkFeedSettings()
     if (faviconData.isEmpty()) {
       ++session.failed;
       dialog.appendFaviconLog(tr(" Invalid icon data. Favicon unchanged."), false);
+      dialog.colorFaviconLogLine(FaviconLogResult::Failed);
     } else if (sameFaviconImage(faviconData, target.existingIco)) {
       ++session.unchanged;
       dialog.appendFaviconLog(tr(" Favicon unchanged."), false);
@@ -444,6 +447,7 @@ void MainWindow::showBulkFeedSettings()
       }
       ++session.failed;
       dialog.appendFaviconLog(tr(" Could not start saving the favicon."), false);
+      dialog.colorFaviconLogLine(FaviconLogResult::Failed);
     }
     finishTarget();
   });
@@ -459,9 +463,11 @@ void MainWindow::showBulkFeedSettings()
         dialog.updateBulkTargetIcon(feedId, faviconData, defaultIconFeeds_);
         dialog.uncheckBulkTarget(feedId);
         dialog.appendFaviconLog(tr(" Favicon saved."), false);
+        dialog.colorFaviconLogLine(FaviconLogResult::Updated);
       } else {
         ++session.failed;
         dialog.appendFaviconLog(tr(" Could not save the favicon. %1").arg(error), false);
+        dialog.colorFaviconLogLine(FaviconLogResult::Failed);
       }
       finishTarget();
     });

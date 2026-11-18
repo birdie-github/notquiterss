@@ -24,6 +24,10 @@
 #include "feedselectiontree.h"
 #include "feedhealth.h"
 
+#include <QTextBlockFormat>
+#include <QTextCharFormat>
+#include <QTextDocument>
+
 FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bulk)
   : Dialog(parent)
   , isFeed_(isFeed)
@@ -853,14 +857,13 @@ void FeedPropertiesDialog::appendFaviconLog(const QString &text, bool newLine)
 {
   if (!faviconLog_) return;
   faviconStatusPos_ = -1;
-  if (newLine) {
-    faviconLog_->appendPlainText(text);
-  } else {
-    QTextCursor cursor = faviconLog_->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    cursor.insertText(text);
+  QTextCursor cursor(faviconLog_->document());
+  cursor.movePosition(QTextCursor::End);
+  if (newLine && !faviconLog_->document()->isEmpty())
+    cursor.insertBlock(QTextBlockFormat(), QTextCharFormat());
+  cursor.insertText(text, QTextCharFormat());
+  if (!newLine)
     faviconLog_->setTextCursor(cursor);
-  }
   if (QScrollBar *bar = faviconLog_->verticalScrollBar())
     bar->setValue(bar->maximum());
 }
@@ -883,6 +886,20 @@ void FeedPropertiesDialog::updateFaviconStatusText(const QString &text, bool fin
   faviconLog_->setTextCursor(cursor);
   if (QScrollBar *bar = faviconLog_->verticalScrollBar())
     bar->setValue(bar->maximum());
+}
+
+void FeedPropertiesDialog::colorFaviconLogLine(FaviconLogResult result)
+{
+  const bool darkBackground = qGray(faviconLog_->palette().color(QPalette::Base).rgb()) < 128;
+  const QColor updated = darkBackground ? QColor("#77dd88") : QColor("#176b32");
+  const QColor failed = darkBackground ? QColor("#ff8585") : QColor("#ad2020");
+  QTextCharFormat format;
+  format.setForeground(result == FaviconLogResult::Updated ? updated : failed);
+
+  QTextCursor cursor(faviconLog_->document());
+  cursor.movePosition(QTextCursor::End);
+  cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+  cursor.mergeCharFormat(format);
 }
 
 void FeedPropertiesDialog::advanceFaviconProgress(int current, int total)

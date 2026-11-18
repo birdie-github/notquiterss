@@ -146,6 +146,8 @@ public:
   void startFaviconUpdate(int totalFeeds);
   void appendFaviconLog(const QString &text, bool newLine = true);
   void updateFaviconStatusText(const QString &text, bool finalizeStatus = false);
+  enum class FaviconLogResult { Updated, Failed };
+  void colorFaviconLogLine(FaviconLogResult result);
   void advanceFaviconProgress(int current, int total);
   void finishFaviconUpdate(const QString &summary);
   void updateBulkTargetIcon(int feedId, const QByteArray &faviconData, bool defaultIcons);
