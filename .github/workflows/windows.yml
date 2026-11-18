@@ -1,0 +1,114 @@
+name: Windows
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-make
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-translations
+            mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-sqlite3
+            mingw-w64-ucrt-x86_64-libxml2
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-ntldd
+      - name: Test resource staging
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
+          python3 tests/resources/test_translation_build.py --qmake qmake6 --make mingw32-make
+      - name: Prepare external QtSingleApplication and build
+        run: |
+          export PKG_CONFIG_PATH="$(cygpath -m /ucrt64/lib/pkgconfig)"
+          dep_work="$(cygpath -m "$RUNNER_TEMP/app-deps")"
+          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake qmake6 --make mingw32-make
+          export QMAKEFEATURES="$dep_work/install/features"
+          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
+          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
+          mkdir _build
+          cd _build
+          # GCC's LTO wrapper needs the native make executable and an explicit
+          # worker count on this Windows toolchain.
+          export MAKE=mingw32-make
+          qmake6 ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto LTO_JOBS="$(nproc)"
+          mingw32-make -j"$(nproc)"
+          mingw32-make install
+          python3 ../scripts/stage-resources.py --source .. --build-dir release --verify-windows release/target
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_EXECUTABLE="+d["executable"]); print("PROJECT_RESOURCE_ROOT="+d["root"])' >> "$GITHUB_ENV"
+
+      - name: Deploy with windeployqt
+        run: |
+          DEPLOY_DIR=release/target
+          EXE="$DEPLOY_DIR/$PROJECT_EXECUTABLE.exe"
+
+          cd _build
+          # Deploy into the same folder that contains the executable
+          # --release          → only release DLLs
+          # --compiler-runtime → copy MinGW/UCRT runtime DLLs
+          # --verbose 1        → useful log in the Actions output
+          windeployqt6 \
+            --release \
+            --compiler-runtime \
+            --no-translations \
+            --no-opengl-sw \
+            --verbose 1 \
+            "$EXE"
+
+          python3 ../scripts/deploy-qt-translations.py --source .. \
+            --resources "$DEPLOY_DIR/$PROJECT_RESOURCE_ROOT" \
+            --qt-translations "$(qmake6 -query QT_INSTALL_TRANSLATIONS)"
+
+          echo "=== Collecting MSYS2 runtime dependencies ==="
+
+          find "$DEPLOY_DIR" \
+            \( -iname '*.exe' -o -iname '*.dll' \) \
+            -print0 |
+          while IFS= read -r -d '' binary; do
+            ntldd -R "$binary" 2>/dev/null || true
+          done |
+          awk '$2 == "=>" {
+            name=$1
+            path=$3
+            gsub(/\\/, "/", path)
+
+            if (tolower(path) ~ /\/ucrt64\/bin\//)
+              print name
+          }' |
+          sort -fu |
+          while IFS= read -r dll; do
+            src="/ucrt64/bin/$dll"
+
+            if [ -f "$src" ]; then
+              if [ ! -f "$DEPLOY_DIR/$dll" ]; then
+                cp -a "$src" "$DEPLOY_DIR/"
+                echo "Copied $dll"
+              fi
+            else
+              echo "WARNING: unresolved MSYS2 dependency: $dll"
+            fi
+          done
+
+      - name: Upload Windows build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-Windows-${{ github.sha }}
+          path: _build/release/target/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,162 @@
+name: MacOS
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  macos:
+    name: MacOS
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install qt qttranslations sqlite libxml2 pkgconf python
+      - name: Test resource staging and translation build
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
+          python3 tests/resources/test_translation_build.py --qmake "$(brew --prefix qt)/bin/qmake"
+      - name: Prepare external QtSingleApplication and build
+        run: |
+          set -euo pipefail
+          qt_bin="$(brew --prefix qt)/bin"
+          export PATH="$qt_bin:$PATH"
+          export PKG_CONFIG_PATH="$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig"
+          dep_work="$RUNNER_TEMP/app-deps"
+          python3 scripts/prepare-qtsingleapplication.py --work-dir "$dep_work" --qmake "$qt_bin/qmake"
+          export QMAKEFEATURES="$dep_work/install/features"
+          python3 scripts/prepare-miniaudio.py --prefix "$dep_work/miniaudio"
+          export MINIAUDIO_INCLUDE_DIR="$dep_work/miniaudio/include"
+          mkdir _build
+          cd _build
+          "$qt_bin/qmake" ../app.pro USE_QT=6 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
+          make -j"$(sysctl -n hw.ncpu)"
+          python3 -c 'import json; d=json.load(open("generated/project-build.json")); print("PROJECT_NAME="+d["name"]); print("PROJECT_VERSION="+d["version"]); print("PROJECT_EXECUTABLE="+d["executable"])' >> "$GITHUB_ENV"
+
+      - name: Deploy, sign and package macOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          qt_bin="$(brew --prefix qt)/bin"
+          export PATH="$qt_bin:$PATH"
+          cd _build/release/target
+          bundle="$PROJECT_NAME.app"
+          test -d "$bundle"
+          test "$(uname -m)" = arm64
+          lipo "$bundle/Contents/MacOS/$PROJECT_EXECUTABLE" -verify_arch arm64
+
+          # Include the notices supplied by our external dependency helpers.
+          mkdir -p "$bundle/Contents/Resources/licenses"
+          cp -R "$RUNNER_TEMP/app-deps/install/share/licenses/qtsingleapplication" "$bundle/Contents/Resources/licenses/"
+          cp -R "$RUNNER_TEMP/app-deps/miniaudio/share/licenses/miniaudio" "$bundle/Contents/Resources/licenses/"
+
+          # Stage the plugin types used by this Widgets application. Keep all
+          # image formats, but exclude the unused QML virtual keyboard.
+          qt_plugins="$("$qt_bin/qmake" -query QT_INSTALL_PLUGINS)"
+          deploy_args=(-no-plugins -verbose=2 -no-codesign)
+          shopt -s nullglob
+          for plugin_type in platforms printsupport styles tls networkinformation imageformats iconengines platforminputcontexts sqldrivers; do
+            for plugin in "$qt_plugins/$plugin_type/"*.dylib; do
+              plugin_name="${plugin##*/}"
+              case "$plugin_name" in
+                *_debug.dylib|libqtvirtualkeyboard*.dylib) continue ;;
+              esac
+              if [ "$plugin_type" = platforms ] && [ "$plugin_name" != libqcocoa.dylib ]; then
+                continue
+              fi
+              mkdir -p "$bundle/Contents/PlugIns/$plugin_type"
+              destination="$bundle/Contents/PlugIns/$plugin_type/$plugin_name"
+              cp "$plugin" "$destination"
+              deploy_args+=("-executable=$destination")
+            done
+          done
+
+          # Homebrew installs Qt frameworks in separate formula directories.
+          # Search them without copying modules that no retained binary uses.
+          brew_prefix="$(brew --prefix)"
+          deploy_args+=("-libpath=$brew_prefix/lib"
+            "-libpath=$(brew --prefix sqlite)/lib"
+            "-libpath=$(brew --prefix libxml2)/lib")
+          for qt_lib in "$brew_prefix"/opt/qt*/lib; do
+            [ -d "$qt_lib" ] && deploy_args+=("-libpath=$qt_lib")
+          done
+          "$qt_bin/macdeployqt" "$bundle" "${deploy_args[@]}"
+          python3 "$GITHUB_WORKSPACE/scripts/deploy-qt-translations.py" \
+            --source "$GITHUB_WORKSPACE" --resources "$bundle/Contents/Resources" \
+            --qt-translations "$("$qt_bin/qmake" -query QT_INSTALL_TRANSLATIONS)"
+          test -f "$bundle/Contents/PlugIns/platforms/libqcocoa.dylib"
+          test -f "$bundle/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
+
+          # Some transitive Homebrew references survive deployment even when
+          # their libraries were copied. Repair only references with an existing
+          # bundle counterpart; never leave a dependency on the build machine.
+          while IFS= read -r -d '' binary; do
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            install_id="$(otool -D "$binary" | tail -n +2)"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                "$brew_prefix"/*|@rpath/*)
+                  case "$dependency" in
+                    @rpath/*) relative="${dependency#@rpath/}" ;;
+                    *.framework/*) relative="${dependency#*/lib/}" ;;
+                    *) relative="${dependency##*/}" ;;
+                  esac
+                  target="$bundle/Contents/Frameworks/$relative"
+                  if [ ! -f "$target" ]; then
+                    echo "Missing bundled dependency for $binary: $dependency" >&2
+                    exit 1
+                  fi
+                  replacement="@executable_path/../Frameworks/$relative"
+                  if [ "$dependency" = "$install_id" ]; then
+                    install_name_tool -id "$replacement" "$binary"
+                  else
+                    install_name_tool -change "$dependency" "$replacement" "$binary"
+                  fi
+                  ;;
+              esac
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
+          done < <(find "$bundle" -type f -print0)
+
+          # Signing does not check library availability. Reject missing
+          # bundle-relative dependencies as well as build-host references.
+          while IFS= read -r -d '' binary; do
+            file_type="$(file -b "$binary")"
+            [[ "$file_type" == *Mach-O* ]] || continue
+            dependencies="$(otool -L "$binary")"
+            while IFS= read -r dependency; do
+              case "$dependency" in
+                /System/Library/*|/usr/lib/*) continue ;;
+                @executable_path/*)
+                  target="$bundle/Contents/MacOS/${dependency#@executable_path/}" ;;
+                @loader_path/*)
+                  target="${binary%/*}/${dependency#@loader_path/}" ;;
+                *)
+                  echo "Unbundled dependency in $binary: $dependency" >&2
+                  exit 1 ;;
+              esac
+              if [ ! -f "$target" ]; then
+                echo "Missing bundled dependency for $binary: $dependency" >&2
+                exit 1
+              fi
+            done <<< "$(printf '%s\n' "$dependencies" | sed -n '2,$s/^[[:space:]]*\(.*\) (compatibility version.*$/\1/p')"
+          done < <(find "$bundle" -type f -print0)
+          # All binary edits must precede signing. Deep signing is intentional
+          # for this ad-hoc beta bundle, not a Developer ID/notarization workflow.
+          codesign --force --deep --sign - "$bundle"
+          codesign --verify --deep --strict --verbose=2 "$bundle"
+          dmg_stage="$(mktemp -d "$RUNNER_TEMP/notquiterss-dmg.XXXXXX")"
+          ditto "$bundle" "$dmg_stage/$bundle"
+          ln -s /Applications "$dmg_stage/Applications"
+          hdiutil create -volname "$PROJECT_NAME" -srcfolder "$dmg_stage" \
+            -format UDZO "$PROJECT_NAME.dmg"
+          hdiutil verify "$PROJECT_NAME.dmg"
+          mkdir -p ../../artifacts
+          mv "$PROJECT_NAME.dmg" "../../artifacts/$PROJECT_NAME-$PROJECT_VERSION-macOS-arm64.dmg"
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-macOS-arm64-${{ github.sha }}
+          path: _build/artifacts/*.dmg
+          if-no-files-found: error
+          retention-days: 14

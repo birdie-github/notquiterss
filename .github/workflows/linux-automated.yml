@@ -1,0 +1,47 @@
+name: Linux Automated
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  linux-automated:
+    name: Linux Automated (${{ matrix.label }})
+    runs-on: ubuntu-22.04
+    container: fedora:44
+    strategy:
+      matrix:
+        include:
+          - compiler: g++
+            label: GCC
+            spec: linux-g++
+          - compiler: clang++
+            label: Clang
+            spec: linux-clang
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y git python3 gcc-c++ clang lld make pkgconf-pkg-config qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel qtsingleapplication-qt5-devel sqlite-devel libxml2-devel
+      - uses: actions/checkout@v4
+      - name: Test resource staging and translation build
+        run: |
+          python3 tests/resources/test_resources.py
+          python3 tests/resources/test_qt_translations.py
+          python3 tests/resources/test_translation_build.py --qmake qmake-qt5
+      - name: Test cookie storage (Qt 5)
+        run: |
+          mkdir _cookie_tests
+          cd _cookie_tests
+          qmake-qt5 -spec ${{ matrix.spec }} ../tests/cookies/cookies.pro
+          make -j"$(nproc)"
+          ./cookies-test
+      - name: Prepare miniaudio
+        run: |
+          python3 scripts/prepare-miniaudio.py --prefix "$RUNNER_TEMP/miniaudio-snapshot"
+          echo "MINIAUDIO_INCLUDE_DIR=$RUNNER_TEMP/miniaudio-snapshot/include" >> "$GITHUB_ENV"
+      - name: Build
+        run: |
+          mkdir _build
+          cd _build
+          if [ "${{ matrix.compiler }}" = "clang++" ]; then
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release QMAKE_LFLAGS+=-fuse-ld=lld CONFIG+=lto
+          else
+            qmake-qt5 -spec ${{ matrix.spec }} ../app.pro USE_QT=5 CONFIG+=release CONFIG-=debug_and_release CONFIG+=lto
+          fi
+          make -j"$(nproc)"

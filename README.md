@@ -1,4 +1,7 @@
-![Build Status](https://github.com/birdie-github/notquiterss/actions/workflows/ci.yml/badge.svg?branch=master)
+[![Linux Automated](https://github.com/birdie-github/notquiterss/actions/workflows/linux-automated.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/linux-automated.yml)
+[![Linux AppImage](https://github.com/birdie-github/notquiterss/actions/workflows/linux-appimage.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/linux-appimage.yml)
+[![Windows](https://github.com/birdie-github/notquiterss/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/windows.yml)
+[![MacOS](https://github.com/birdie-github/notquiterss/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/macos.yml)
 
 © 2011-2020 QuiteRSS Project  
 © 2026 Artem S. Tashkinov and LLMs
