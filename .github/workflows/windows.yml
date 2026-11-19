@@ -1,5 +1,10 @@
 name: Windows
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches-ignore:
+      - "dependabot/**"
+  pull_request:
+  workflow_dispatch:
 jobs:
   windows:
     name: Windows
