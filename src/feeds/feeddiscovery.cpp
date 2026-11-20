@@ -150,13 +150,6 @@ FeedDiscovery::FeedDiscovery(const QByteArray &html, const QString &charset, con
   auto *nextButton = buttons_->button(QDialogButtonBox::Ok);
   nextButton->setText(tr("Next"));
   nextButton->setEnabled(false);
-  auto *all = buttons_->addButton(tr("Select all"), QDialogButtonBox::ActionRole);
-  connect(all, &QPushButton::clicked, this, [this] {
-    for (int i = 0; i < list_->topLevelItemCount(); ++i) {
-      auto *item = list_->topLevelItem(i);
-      if (!item->isDisabled()) item->setCheckState(0, Qt::Checked);
-    }
-  });
   connect(list_, &QTreeWidget::itemChanged, this, [this, nextButton] {
     nextButton->setEnabled(!selection().isEmpty());
   });
@@ -316,6 +309,15 @@ void FeedDiscovery::addResult(const QUrl &url, QString title, const QString &det
   if (!detail.isEmpty()) {
     item->setToolTip(0, detail.toHtmlEscaped());
     item->setToolTip(1, detail.toHtmlEscaped());
+  }
+  if (!subscribed && !selectAllButton_) {
+    selectAllButton_ = buttons_->addButton(tr("Select all"), QDialogButtonBox::ActionRole);
+    connect(selectAllButton_, &QPushButton::clicked, this, [this] {
+      for (int i = 0; i < list_->topLevelItemCount(); ++i) {
+        auto *item = list_->topLevelItem(i);
+        if (!item->isDisabled()) item->setCheckState(0, Qt::Checked);
+      }
+    });
   }
 }
 

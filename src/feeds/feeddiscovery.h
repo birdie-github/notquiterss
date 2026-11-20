@@ -11,6 +11,7 @@
 
 class QTreeWidget;
 class QDialogButtonBox;
+class QPushButton;
 
 // Uses the wizard's existing RequestFeed worker, one probe at a time.
 class FeedDiscovery final : public QDialog
@@ -38,6 +39,7 @@ private:
   QSet<QUrl> found_;
   QTreeWidget *list_;
   QDialogButtonBox *buttons_;
+  QPushButton *selectAllButton_ = nullptr;
   class QLabel *status_;
   class ProbeUrlLabel;
   ProbeUrlLabel *probeUrl_;

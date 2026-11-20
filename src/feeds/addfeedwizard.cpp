@@ -492,6 +492,8 @@ void AddFeedWizard::getUrlDone(int result, int id, QString, QString error, QByte
     return;
   }
 
+  // Discovery has its own progress display. The initial page request is done.
+  progressBar_->hide();
   FeedDiscovery discovery(data, codecName, effective, QUrl(feedUrlString_), scanId_--, this);
   auto *worker = updateFeeds_->requestFeed_;
   connect(&discovery, &FeedDiscovery::stopRequests, worker, &RequestFeed::stopRequest);
