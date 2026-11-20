@@ -860,15 +860,14 @@ void FeedsView::paintEvent(QPaintEvent *event)
     const double lineLight = relativeLuminance(brush.color()) + 0.05;
     const double darker = qMin(backgroundLight, lineLight);
     const double lighter = qMax(backgroundLight, lineLight);
+    QBrush lineBrush = brush;
     if (lighter / darker < 2.0) {
-      // Keep the theme color in the center and add a visible edge.
+      // Pick a solid color that stands out against the tree and its highlight.
       const double blackContrast = darker / 0.05;
       const double whiteContrast = 1.05 / lighter;
-      const QColor edge = blackContrast >= whiteContrast ? Qt::black : Qt::white;
-      painter.setPen(QPen(edge, 4));
-      painter.drawLines(lines, 3);
+      lineBrush = QBrush(blackContrast >= whiteContrast ? Qt::black : Qt::white);
     }
-    painter.setPen(QPen(brush, 2));
+    painter.setPen(QPen(lineBrush, 2));
     painter.drawLines(lines, 3);
   } else {
     painter.setPen(QPen(brush, 1, Qt::DashLine));
