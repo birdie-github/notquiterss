@@ -25,6 +25,19 @@
 #include <QSqlTableModel>
 #include <QSqlQuery>
 
+#include <cmath>
+
+namespace {
+double relativeLuminance(const QColor &color)
+{
+  const auto linear = [](double channel) {
+    return channel <= 0.04045 ? channel / 12.92 : std::pow((channel + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
+         0.0722 * linear(color.blueF());
+}
+}
+
 void FeedsView::navigateUp()
 {
   QModelIndex indexBefore = currentIndex();
@@ -825,35 +838,39 @@ void FeedsView::paintEvent(QPaintEvent *event)
 
   QRect rectText = visualRect(indexText);
   rectText.setRight(viewport()->width()-2);
-  QBrush brush = qApp->palette().brush(QPalette::Highlight);
+  const QBrush brush = qApp->palette().brush(QPalette::Highlight);
+  const bool nearTop = qAbs(rectText.top() - dragPos_.y()) < 3;
+  const bool nearBottom = qAbs(rectText.bottom() - dragPos_.y()) < 3;
+  if (!nearTop && !nearBottom && !isFolder(dragIndex))
+    return;
 
-  QPainter painter;
+  QPainter painter(viewport());
+  if (nearTop || nearBottom) {
+    const int y = nearTop ? rectText.top() : rectText.bottom();
+    const int left = rectText.left() - 2;
+    const int right = rectText.right();
+    const QLine lines[] = {{left, y, right, y},
+                           {left, y - 2, left, y + 2},
+                           {right, y - 2, right, y + 2}};
 
-  if (qAbs(rectText.top() - dragPos_.y()) < 3) {
-    painter.begin(this->viewport());
+    const QColor overrideColor(sourceModel_->backgroundColor_);
+    const QColor background = overrideColor.isValid()
+        ? overrideColor : viewport()->palette().color(QPalette::Base);
+    const double backgroundLight = relativeLuminance(background) + 0.05;
+    const double lineLight = relativeLuminance(brush.color()) + 0.05;
+    const double darker = qMin(backgroundLight, lineLight);
+    const double lighter = qMax(backgroundLight, lineLight);
+    if (lighter / darker < 2.0) {
+      // Keep the theme color in the center and add a visible edge.
+      const double blackContrast = darker / 0.05;
+      const double whiteContrast = 1.05 / lighter;
+      const QColor edge = blackContrast >= whiteContrast ? Qt::black : Qt::white;
+      painter.setPen(QPen(edge, 4));
+      painter.drawLines(lines, 3);
+    }
     painter.setPen(QPen(brush, 2));
-    painter.drawLine(rectText.topLeft().x()-2, rectText.top(),
-                     viewport()->width()-2, rectText.top());
-    painter.drawLine(rectText.topLeft().x()-2, rectText.top()-2,
-                     rectText.topLeft().x()-2, rectText.top()+2);
-    painter.drawLine(viewport()->width()-2, rectText.top()-2,
-                     viewport()->width()-2, rectText.top()+2);
-  }
-  else if (qAbs(rectText.bottom() - dragPos_.y()) < 3) {
-    painter.begin(this->viewport());
-    painter.setPen(QPen(brush, 2));
-    painter.drawLine(rectText.bottomLeft().x()-2, rectText.bottom(),
-                     viewport()->width()-2, rectText.bottom());
-    painter.drawLine(rectText.topLeft().x()-2, rectText.bottom()-2,
-                     rectText.topLeft().x()-2, rectText.bottom()+2);
-    painter.drawLine(viewport()->width()-2, rectText.bottom()-2,
-                     viewport()->width()-2, rectText.bottom()+2);
-  }
-  else {
-    if (!isFolder(dragIndex))
-      return;
-
-    painter.begin(this->viewport());
+    painter.drawLines(lines, 3);
+  } else {
     painter.setPen(QPen(brush, 1, Qt::DashLine));
     painter.setOpacity(0.5);
     painter.drawRect(rectText);
@@ -863,8 +880,6 @@ void FeedsView::paintEvent(QPaintEvent *event)
     painter.setOpacity(0.1);
     painter.drawRect(rectText);
   }
-
-  painter.end();
 }
 
 // ----------------------------------------------------------------------------
