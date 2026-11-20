@@ -25,20 +25,17 @@
 ;
 ; All examples below are commented out. Uncomment only rules you want.
 
-; [example.com]
+; [test.com]
 ; IncludeSubdomains=true
-; UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0"
+; UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0"
 
-; Reddit example: enable ONLY if the feeds you use require authenticated URLs.
-; This is not a claim that all public Reddit feeds require these parameters.
-; "user" and "feed" below are parameter NAMES, not literal required values.
-; Obtain your own complete feed URL; do not put a shared token in this sample.
-; This host-wide rule also blocks Reddit discovery URLs without the parameters.
-; [reddit.com]
+; example.com: enable ONLY if the feeds you use require authenticated URLs.
+; This host-wide rule also BLOCKS example.com discovery URLs WITHOUT the parameters.
+; [example.com]
 ; IncludeSubdomains=true
 ; RequiredQueryParameters=user,feed
 ; MissingParametersMessage=Copy the complete authenticated feed URL from Reddit, including its user and feed query parameters.
 
 [gsmarena.com]
 IncludeSubdomains=true
-UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0"
+UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0"
