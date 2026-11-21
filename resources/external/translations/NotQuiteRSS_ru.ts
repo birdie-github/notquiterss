@@ -392,12 +392,12 @@
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="69"/>
         <source>Keep only starred or labelled articles in backups</source>
-        <translation>Хранить только новости с метками и отмеченные звёздами</translation>
+        <translation>Хранить только статьи с метками и отмеченные звёздами</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="74"/>
         <source>Backups will exclude other articles</source>
-        <translation>Резервные копии не будут включать остальные новости</translation>
+        <translation>Резервные копии не будут включать остальные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="75"/>
@@ -406,16 +406,16 @@
 Restoring such a backup cannot recover excluded articles, and feeds may no longer provide them.
 
 Your current database will not be changed. Pre-upgrade safety backups always remain complete.</source>
-        <translation>Эти резервные копии будут содержать ваши подписки и настройки, но только новости, отмеченные звездочкой или меткой. Все остальные новости, включая непрочитанные, будут исключены.
+        <translation>Эти резервные копии будут содержать ваши подписки и настройки, но только статьи, отмеченные звездочкой или меткой. Все остальные статьи, включая непрочитанные, будут исключены.
 
-При восстановлении такой резервной копии исключенные новости не будут восстановлены, и их может больше не быть в лентах.
+При восстановлении такой резервной копии исключенные статьи не будут восстановлены, и их может больше не быть в лентах.
 
 Ваша текущая база данных не изменится. Резервные копии, созданные в целях безопасности перед обновлением, всегда остаются полными.</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="86"/>
         <source>Each backup set includes the database and application settings. Pre-upgrade safety backups are always enabled and always complete. Schedules run while the application is running, with a catch-up check at startup. Back Up Now uses the article selection above; other changes take effect when you accept Settings.</source>
-        <translation>Каждый набор резервных копий включает в себя настройки базы данных и приложения. Резервное копирование для обеспечения надёжности перед обновлением всегда включено и всегда выполняется полностью. Задания по резервному копированию выполняются во время работы приложения, а при запуске проводится проверка на наличие пропущенных данных. Функция «Сделать резервную копию сейчас» использует выбранные выше параметры; остальные изменения вступают в силу после подтверждения настроек.</translation>
+        <translation>Каждый набор резервных копий включает в себя настройки базы данных и приложения. Резервное копирование для обеспечения надёжности перед обновлением всегда включено и всегда выполняется полностью. Задания по резервному копированию выполняются во время работы приложения, а при запуске проводится проверка на наличие пропущенных данных. Функция «Сделать резервную копию сейчас» использует выбранный набор статей выше; остальные изменения вступают в силу после подтверждения настроек.</translation>
     </message>
 </context>
 <context>
@@ -494,32 +494,32 @@ Your current database will not be changed. Pre-upgrade safety backups always rem
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="164"/>
         <source>Maximum article age to keep (days):</source>
-        <translation>Максимальный срок хранения новостей (в днях):</translation>
+        <translation>Максимальный срок хранения статей (в днях):</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="170"/>
         <source>Maximum number of articles to keep:</source>
-        <translation>Максимальное количество новостей для хранения:</translation>
+        <translation>Максимальное количество статей для хранения:</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="176"/>
         <source>Delete read articles</source>
-        <translation>Удалять прочтённые новости</translation>
+        <translation>Удалять прочтённые статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="177"/>
         <source>Never delete unread articles</source>
-        <translation>Никогда не удалять непрочтённые новости</translation>
+        <translation>Никогда не удалять непрочтённые статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="178"/>
         <source>Never delete starred articles</source>
-        <translation>Никогда не удалять новости отмеченные звёздочкой</translation>
+        <translation>Никогда не удалять статьи отмеченные звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="179"/>
         <source>Never delete labeled articles</source>
-        <translation>Никогда не удалять новости с метками</translation>
+        <translation>Никогда не удалять статьи с метками</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="192"/>
@@ -536,7 +536,7 @@ Your current database will not be changed. Pre-upgrade safety backups always rem
         <source>Permanently remove records marked as deleted from the database.
 Deleted articles may be downloaded again.</source>
         <translation>Окончательно удалить из базы данных записи, помеченные как удаленные.
-Удаленные новости могут быть загружены повторно.</translation>
+Удаленные статьи могут быть загружены повторно.</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="341"/>
@@ -570,7 +570,7 @@ Deleted articles may be downloaded again.</source>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="381"/>
         <source>Cleanup wizard deleted %1 articles</source>
-        <translation>Мастер очистки удалил %1 новостей</translation>
+        <translation>Мастер очистки удалил %1 статей</translation>
     </message>
 </context>
 <context>
@@ -1397,7 +1397,7 @@ Expired cookies skipped: %1.</source>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="58"/>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="1102"/>
         <source>Article image preloading</source>
-        <translation>Предзагрузка изображений в новостях</translation>
+        <translation>Предзагрузка изображений в статьях</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="59"/>
@@ -1502,17 +1502,17 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="190"/>
         <source>Automatically delete duplicate articles</source>
-        <translation>Автоматическое удаление дубликатов новостей</translation>
+        <translation>Автоматическое удаление дубликатов статей</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="207"/>
         <source>Add articles regardless of publication date</source>
-        <translation>Добавлять новости независимо от даты публикации</translation>
+        <translation>Добавлять статьи независимо от даты публикации</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="220"/>
         <source>Do not add articles published before this date to the database:</source>
-        <translation>Не добавлять в базу новости, опубликованные до этой даты:</translation>
+        <translation>Не добавлять в базу статьи, опубликованные до этой даты:</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="235"/>
@@ -3090,7 +3090,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="568"/>
         <source>&amp;Article</source>
-        <translation>&amp;Новость</translation>
+        <translation>&amp;Статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="569"/>
@@ -3167,7 +3167,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="574"/>
         <source>Article Pane Position</source>
-        <translation>Расположение Панели Новостей</translation>
+        <translation>Расположение Области Новостей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="398"/>
@@ -3236,27 +3236,27 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="458"/>
         <source>Switch Focus to Next Panel</source>
-        <translation>Переключить фокус на следующую панель</translation>
+        <translation>Переключить Фокус на Следующую Панель</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="458"/>
         <source>Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)</source>
-        <translation>Переключить Фокус на Следующую Панель (Лерево Ленты, Список Новостей, Панель Новостей)</translation>
+        <translation>Переключить Фокус на Следующую Панель (Дерево Ленты, Список Новостей, Окно Новостей)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="459"/>
         <source>Switch Focus to Previous Panel</source>
-        <translation>Переключить фокус на предыдущую панель</translation>
+        <translation>Переключить Фокус на Предыдущую Панель</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="459"/>
         <source>Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)</source>
-        <translation>Переключить Фокус на Предыдущую Панель (Лерево Ленты, Список Новостей, Панель Новостей)</translation>
+        <translation>Переключить Фокус на Предыдущую Панель (Лерево Ленты, Список Новостей, Область Новостей)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="460"/>
         <source>Feeds Pane</source>
-        <translation>Панель Лент</translation>
+        <translation>Область Лент</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="466"/>
@@ -3470,12 +3470,12 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="477"/>
         <source>Decrease article list / increase article pane</source>
-        <translation>Уменьшить список новстей / увеличить панель новстей</translation>
+        <translation>Уменьшить список новостей / увеличить область с новостью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="478"/>
         <source>Increase article list / decrease article pane</source>
-        <translation>Увеличить список новстей / уменьшитьпанель новстей</translation>
+        <translation>Увеличить список новостей / уменьшить область с новостью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="465"/>
@@ -3566,7 +3566,7 @@ Details:
         <location filename="../../../src/mainwindow/mainwindow_news.cpp" line="756"/>
         <location filename="../../../src/mainwindow/mainwindow_news.cpp" line="767"/>
         <source>Article</source>
-        <translation>Новость</translation>
+        <translation>Статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_news.cpp" line="895"/>
@@ -3591,7 +3591,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_news.cpp" line="1058"/>
         <source>Article sharing</source>
-        <translation>Поделиться новостью</translation>
+        <translation>Поделиться статьёй</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow.h" line="113"/>
@@ -3816,12 +3816,12 @@ Details:
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="535"/>
         <source>Hide images in this article pane</source>
-        <translation>Скрыть изображения в панели этой новости</translation>
+        <translation>Скрывать изображения в области этой новости</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="535"/>
         <source>Load images in this article pane</source>
-        <translation>Показать изображения в панели этой новости</translation>
+        <translation>Показывать изображения в области этой новости</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1345"/>
@@ -3861,7 +3861,7 @@ Details:
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1569"/>
         <source>Star Article</source>
-        <translation>Пометить Новость Звёздочкой</translation>
+        <translation>Пометить Статью Звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1573"/>
@@ -3925,7 +3925,7 @@ Details:
         <location filename="../../../src/articles/newstabwidget.cpp" line="2110"/>
         <location filename="../../../src/articles/newstabwidget.cpp" line="2117"/>
         <source>Article sharing</source>
-        <translation>Поделиться новостью</translation>
+        <translation>Поделиться статьёй</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="2114"/>
@@ -4569,7 +4569,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="851"/>
         <source>Article style sheet:</source>
-        <translation>Таблица стилей новостей:</translation>
+        <translation>Таблица стилей статьи:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="862"/>
@@ -4614,7 +4614,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="907"/>
         <source>Change behavior of the &apos;Next Unread Article&apos; action</source>
-        <translation>Изменить поведение действия «Следующая Непрочитанная Новость»</translation>
+        <translation>Изменить поведение действия «Следующая Непрочитанная Статья»</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="914"/>
