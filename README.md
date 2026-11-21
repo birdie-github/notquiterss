@@ -51,6 +51,25 @@ Launching system commands would introduce platform-dependent format support and 
 managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
 reader, keeping a consistent built-in audio backend is the more practical choice.
 
+## Using QuiteRSS styles
+
+**Application themes (`.qss`).** You can try a QuiteRSS theme such as
+`System2.qss` by copying it into NotQuiteRSS's installed `styles` directory
+and selecting it under **View → Application Theme**. NotQuiteRSS loads a QSS
+file without theme metadata as an overlay on the system palette. Compatibility
+with legacy QuiteRSS themes is outside the project's support scope. Their
+appearance can vary with Qt, the system palette, and changes to widget names
+or layout. For the directory on your platform and the current theme format, see the
+[theme guide](resources/external/themes/README.md).
+
+**Article stylesheets (`.css`).** Article styling is configured separately
+under **Options → Feeds → Display → Article style sheet**. If no stylesheet
+path is saved, NotQuiteRSS looks for `news.css` in the installed `styles`
+directory and falls back to its bundled stylesheet if that file cannot be
+read. Legacy article CSS may need adapting because the article pane uses Qt
+rich text, which supports a subset of browser CSS. See the
+[article view guide](docs/ARTICLE_VIEW.md).
+
 ## Migrating your data from QuiteRSS
 
 The new application is fully compatible with QuiteRSS data, but you will need to copy
