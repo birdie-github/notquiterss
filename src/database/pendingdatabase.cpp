@@ -12,11 +12,6 @@ namespace {
 using Handle = std::unique_ptr<sqlite3, decltype(&sqlite3_close)>;
 using Statement = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
 
-QString tr(const char *text)
-{
-  return QCoreApplication::translate("PendingDatabase", text);
-}
-
 bool validate(sqlite3 *source, QString &error)
 {
   sqlite3_stmt *raw = nullptr;
@@ -30,7 +25,8 @@ bool validate(sqlite3 *source, QString &error)
   if (rc != SQLITE_ROW ||
       qstrcmp(reinterpret_cast<const char *>(sqlite3_column_text(check.get(), 0)), "ok") != 0 ||
       sqlite3_step(check.get()) != SQLITE_DONE) {
-    error = tr("The pending database failed its integrity check.");
+    error = QCoreApplication::translate("PendingDatabase",
+        "The pending database failed its integrity check.");
     return false;
   }
   check.reset();
@@ -43,8 +39,9 @@ bool validate(sqlite3 *source, QString &error)
     rc = sqlite3_prepare_v2(source, sql, -1, &raw, nullptr);
     Statement statement(raw, sqlite3_finalize);
     if (rc != SQLITE_OK || sqlite3_step(statement.get()) != SQLITE_DONE) {
-      error = tr("The pending file is not a supported feed database: %1")
-                  .arg(QString::fromUtf8(sqlite3_errmsg(source)));
+      error = QCoreApplication::translate("PendingDatabase",
+          "The pending file is not a supported feed database: %1")
+          .arg(QString::fromUtf8(sqlite3_errmsg(source)));
       return false;
     }
   }
@@ -59,18 +56,22 @@ bool PendingDatabase::install(const QString &databasePath, QString &error)
   const QFileInfo pending(pendingPath);
   if (!pending.exists() && !pending.isSymLink()) return true;
   if (!pending.isFile() || pending.size() == 0) {
-    error = tr("The pending database is missing, empty or not a regular file: %1").arg(pendingPath);
+    error = QCoreApplication::translate("PendingDatabase",
+        "The pending database is missing, empty or not a regular file: %1")
+        .arg(pendingPath);
     return false;
   }
   // Consuming just the main file would strand a source WAL at this filename.
   // Require a standalone replacement; never discard or manually unlink its WAL.
   if (QFileInfo(pendingPath + QStringLiteral("-wal")).size() > 0) {
-    error = tr("The pending database has a WAL file. Checkpoint and close it before restarting: %1")
-                .arg(pendingPath);
+    error = QCoreApplication::translate("PendingDatabase",
+        "The pending database has a WAL file. Checkpoint and close it before restarting: %1")
+        .arg(pendingPath);
     return false;
   }
   if (pending.canonicalFilePath() == QFileInfo(databasePath).canonicalFilePath()) {
-    error = tr("The pending database and the current database refer to the same file.");
+    error = QCoreApplication::translate("PendingDatabase",
+        "The pending database and the current database refer to the same file.");
     return false;
   }
 
@@ -111,8 +112,9 @@ bool PendingDatabase::install(const QString &databasePath, QString &error)
   // even after a failed step. Finish succeeding alone does not imply completion.
   const int finishRc = sqlite3_backup_finish(copy);
   if (rc != SQLITE_DONE || finishRc != SQLITE_OK) {
-    error = tr("Cannot install the pending database (copy: %1, finish: %2): %3")
-                .arg(rc).arg(finishRc).arg(QString::fromUtf8(sqlite3_errmsg(target.get())));
+    error = QCoreApplication::translate("PendingDatabase",
+        "Cannot install the pending database (copy: %1, finish: %2): %3")
+        .arg(rc).arg(finishRc).arg(QString::fromUtf8(sqlite3_errmsg(target.get())));
     return false;
   }
   // Close both connections before removing the consumed file on Windows.
@@ -120,8 +122,9 @@ bool PendingDatabase::install(const QString &databasePath, QString &error)
   source.reset();
   QFile consumed(pendingPath);
   if (!consumed.remove()) {
-    error = tr("The replacement was installed, but its pending file could not be removed: %1\n%2")
-                .arg(pendingPath, consumed.errorString());
+    error = QCoreApplication::translate("PendingDatabase",
+        "The replacement was installed, but its pending file could not be removed: %1\n%2")
+        .arg(pendingPath, consumed.errorString());
     return false;
   }
   return true;

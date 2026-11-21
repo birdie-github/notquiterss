@@ -9,13 +9,6 @@
 #include <QVariant>
 #include <utility>
 
-namespace {
-QString tr(const char *text)
-{
-  return QCoreApplication::translate("FeedDeletion", text);
-}
-}
-
 bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
 {
   error.clear();
@@ -28,7 +21,8 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
   auto rollback = [&]() {
     q.finish();
     if (!db.rollback())
-      error += '\n' + tr("Rollback failed: %1").arg(db.lastError().text());
+      error += '\n' + QCoreApplication::translate("FeedDeletion", "Rollback failed: %1")
+          .arg(db.lastError().text());
     return false;
   };
   auto execute = [&](const QString &sql, const QVariantList &values) {
@@ -61,7 +55,8 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
     if (!execute("SELECT parentId FROM feeds WHERE id=?", {id})) return rollback();
     if (!q.next()) {
       error = q.lastError().isValid() ? q.lastError().text()
-          : tr("A selected feed or folder no longer exists. Please select it again.");
+          : QCoreApplication::translate("FeedDeletion",
+              "A selected feed or folder no longer exists. Please select it again.");
       return rollback();
     }
     parents.insert(q.value(0).toInt());
@@ -84,7 +79,7 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
       if (!execute(QString::fromLatin1(sql), {id})) return rollback();
     }
     if (q.numRowsAffected() != 1) {
-      error = tr("A selected feed or folder could not be deleted.");
+      error = QCoreApplication::translate("FeedDeletion", "A selected feed or folder could not be deleted.");
       return rollback();
     }
   }
@@ -105,14 +100,14 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
     QSet<int> visited;
     while (parent > 0) {
       if (visited.contains(parent)) {
-        error = tr("The feed folder hierarchy contains a cycle.");
+        error = QCoreApplication::translate("FeedDeletion", "The feed folder hierarchy contains a cycle.");
         return rollback();
       }
       visited.insert(parent);
       if (!execute("SELECT parentId FROM feeds WHERE id=?", {parent})) return rollback();
       if (!q.next()) {
         error = q.lastError().isValid() ? q.lastError().text()
-            : tr("A parent folder no longer exists.");
+            : QCoreApplication::translate("FeedDeletion", "A parent folder no longer exists.");
         return rollback();
       }
       const int next = q.value(0).toInt();
@@ -120,7 +115,7 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
                    "FROM feeds WHERE parentId=?", {parent})) return rollback();
       if (!q.next()) {
         error = q.lastError().isValid() ? q.lastError().text()
-            : tr("Cannot recount the parent folder.");
+            : QCoreApplication::translate("FeedDeletion", "Cannot recount the parent folder.");
         return rollback();
       }
       const QVariantList counts{q.value(0).toInt(), q.value(1).toInt(), q.value(2).toInt(), parent};

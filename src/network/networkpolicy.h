@@ -1,6 +1,7 @@
 #ifndef NETWORKPOLICY_H
 #define NETWORKPOLICY_H
 
+#include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -67,14 +68,16 @@ public:
     setUrl(request.url());
     open(QIODevice::ReadOnly);
     setError(QNetworkReply::ProtocolUnknownError,
-             tr("Unsupported URL scheme: %1").arg(request.url().scheme()));
+             QCoreApplication::translate("NetworkPolicy::RejectedReply", "Unsupported URL scheme: %1")
+                 .arg(request.url().scheme()));
     QTimer::singleShot(0, this, [this]() { complete(); });
   }
 
   void abort() override
   {
     if (isFinished()) return;
-    setError(QNetworkReply::OperationCanceledError, tr("Operation canceled"));
+    setError(QNetworkReply::OperationCanceledError,
+             QCoreApplication::translate("NetworkPolicy::RejectedReply", "Operation canceled"));
     complete();
   }
 

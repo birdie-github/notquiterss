@@ -51,14 +51,16 @@ QString tooltip(const QString &title, const QString &status, const QDateTime &fa
 {
   const auto state = read(status);
   if (state.error.isEmpty()) return {};
-  auto tr = [](const char *s) { return QCoreApplication::translate("FeedHealth", s); };
   auto date = [&](const QDateTime &d) {
-    return d.isValid() ? QLocale().toString(d.toLocalTime(), QLocale::ShortFormat) : tr("Unknown");
+    return d.isValid() ? QLocale().toString(d.toLocalTime(), QLocale::ShortFormat)
+                       : QCoreApplication::translate("FeedHealth", "Unknown");
   };
-  const QString text = title + "\n\n" + tr("Last refresh failed: %1").arg(state.error) +
-    "\n" + tr("Consecutive failed refreshes: %1").arg(state.failures) +
-    "\n" + tr("Last failure: %1").arg(date(state.failedAt)) +
-    "\n" + tr("Last successful retrieval: %1").arg(date(state.succeededAt.isValid() ? state.succeededAt : fallbackSuccess));
+  const QString text = title + "\n\n" +
+    QCoreApplication::translate("FeedHealth", "Last refresh failed: %1").arg(state.error) +
+    "\n" + QCoreApplication::translate("FeedHealth", "Consecutive failed refreshes: %1").arg(state.failures) +
+    "\n" + QCoreApplication::translate("FeedHealth", "Last failure: %1").arg(date(state.failedAt)) +
+    "\n" + QCoreApplication::translate("FeedHealth", "Last successful retrieval: %1")
+      .arg(date(state.succeededAt.isValid() ? state.succeededAt : fallbackSuccess));
   return "<qt>" + text.toHtmlEscaped().replace("\n", "<br>") + "</qt>";
 }
 }
