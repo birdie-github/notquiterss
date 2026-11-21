@@ -104,16 +104,6 @@ OptionsDialog::OptionsDialog(QWidget *parent)
     contentStack_->addWidget(scrollArea);
   }
 
-  // Measure the translated labels with the current font and item style.
-  categoriesTree_->ensurePolished();
-  categoriesTree_->resizeColumnToContents(1);
-  const int scrollBarWidth = categoriesTree_->style()->pixelMetric(
-      QStyle::PM_ScrollBarExtent, nullptr, categoriesTree_);
-  const int categoryWidth = categoriesTree_->header()->length() +
-      2 * categoriesTree_->frameWidth() + scrollBarWidth;
-  categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-  categoriesTree_->setMinimumWidth(categoryWidth);
-
   splitter_ = new QSplitter();
   splitter_->setChildrenCollapsible(false);
   splitter_->addWidget(categoriesTree_);
@@ -188,8 +178,13 @@ void OptionsDialog::showEvent(QShowEvent *event)
   move(pos() + QPoint(x, y) - frame.topLeft());
 
   if (!showLogged_) {
-    // Use the laid-out width so restored wide windows give extra space to the page.
-    const int categoryWidth = categoriesTree_->minimumWidth();
+    // Measure the visible sections directly. The hidden ID column must not
+    // contribute to the navigation width.
+    categoriesTree_->resizeColumnToContents(1);
+    const int categoryWidth = categoriesTree_->columnWidth(1) + categoriesTree_->columnWidth(2) +
+        categoriesTree_->width() - categoriesTree_->viewport()->width();
+    categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+    categoriesTree_->setMinimumWidth(1); // Allow the user to narrow the pane past the labels.
     const int paneWidth = splitter_->contentsRect().width() - splitter_->handle(1)->width();
     splitter_->setSizes({categoryWidth, qMax(0, paneWidth - categoryWidth)});
     showLogged_ = true;
