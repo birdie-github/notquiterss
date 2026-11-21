@@ -15,6 +15,8 @@ for rendering behavior, image-format plugins and validation notes.
 Notification sounds use miniaudio with built-in decoding, without Qt Multimedia
 or GStreamer codec plugins. See INSTALL for the pinned header preparation step.
 
+See [Windows and CPU requirements](#windows-and-cpu-requirements) before choosing a Windows build.
+
 Links:
 * Git repository: you are here 😉️
 * Issue tracker: https://github.com/birdie-github/notquiterss/issues
@@ -69,25 +71,24 @@ On Windows:
    now `AppData\Local\NotQuiteRSS`.
    
 
-## CPU Requirements 
+## Windows and CPU requirements
 
-### Windows x86-64
+| Build | Windows | CPU |
+| --- | --- | --- |
+| Standard 64-bit (Qt 6) | Windows 10 version 1809 or later, or Windows 11 | x86-64-v2 |
+| Experimental 32-bit (Qt 5) | Targets Windows 7 and later. Compatibility on older Windows is unverified. | x86 with SSE2 |
 
-The Windows 64-bit version of NotQuiteRSS targets the **x86-64-v2** architecture,
-requiring a processor with SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, and
-LAHF/SAHF support. This requirement reflects the CPU optimizations used not just by
-NotQuiteRSS but by its underlying Qt 6 framework and bundled libraries. Most Intel
-CPUs manufactured since 2009 and AMD CPUs since 2011 meet these requirements, but
-older models, including AMD Phenom and Phenom II, are **unsupported**. Attempting
-to run NotQuiteRSS on an incompatible CPU may result in an immediate crash with an
-*Illegal Instruction* exception (`0xC000001D`).
+**Windows 8 and 8.1 are unsupported by the standard Qt 6 build.**
+The [experimental 32-bit Qt 5 build](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32)
+is available as-is for users who want to try it on an older Windows version or
+an SSE2-capable CPU that falls short of x86-64-v2. Please reproduce any issue
+on the standard build before filing a bug report.
 
-### Windows 32bit
-
-Minimally tested Windows 32-bit builds targeting SSE2 CPUs and supporting Windows 7
-and later are available [here](https://github.com/birdie-github/notquiterss/releases/tag/0.95.5-alpha-win32).
-Bug reports specific to these builds, unless you can reproduce them on a standard
-Qt6-based Windows 64 build, will **not be accepted**.
+The standard build requires all **x86-64-v2** CPU features, including SSE3,
+SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B, and LAHF/SAHF. Check the CPU model
+even if it runs 64-bit Windows. For example, AMD Phenom and Phenom II CPUs lack
+SSE4.1 and SSE4.2. Attempting to run the standard build on an incompatible CPU
+may cause an *Illegal Instruction* exception (`0xC000001D`).
 
 ## HTTPS and certificate trust on older Windows
 --------------------------------------------
