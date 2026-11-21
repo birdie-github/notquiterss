@@ -23,7 +23,7 @@
     <message>
         <location filename="../../../src/app/aboutdialog.cpp" line="59"/>
         <source>%1 is an open-source, cross-platform RSS/Atom news feed reader</source>
-        <translation>%1 является open-source, кросс-платформенной программой для чтения лент новостей RSS/Atom</translation>
+        <translation>%1 — кроссплатформенная программа с открытым исходным кодом для чтения лент RSS/Atom</translation>
     </message>
     <message>
         <location filename="../../../src/app/aboutdialog.cpp" line="60"/>
@@ -357,7 +357,7 @@
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="35"/>
         <source>After feed subscriptions are changed</source>
-        <translation>После изменений в лентах новостей</translation>
+        <translation>После изменения подписок на ленты</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="36"/>
@@ -392,12 +392,12 @@
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="69"/>
         <source>Keep only starred or labelled articles in backups</source>
-        <translation>Хранить только статьи с метками и отмеченные звёздами</translation>
+        <translation>Сохранять в резервных копиях только статьи со звёздочкой или метками</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="74"/>
         <source>Backups will exclude other articles</source>
-        <translation>Резервные копии не будут включать остальные статьи</translation>
+        <translation>Остальные статьи не попадут в резервные копии</translation>
     </message>
     <message>
         <location filename="../../../src/backup/backupsettingspage.cpp" line="75"/>
@@ -453,7 +453,7 @@ Your current database will not be changed. Pre-upgrade safety backups always rem
     <message>
         <location filename="../../../src/articles/categoriestreewidget.cpp" line="138"/>
         <source>Mark Read</source>
-        <translation>Отметить прочитанной</translation>
+        <translation>Отметить как прочитанное</translation>
     </message>
 </context>
 <context>
@@ -494,27 +494,27 @@ Your current database will not be changed. Pre-upgrade safety backups always rem
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="164"/>
         <source>Maximum article age to keep (days):</source>
-        <translation>Максимальный срок хранения статей (в днях):</translation>
+        <translation>Максимальный срок хранения статей (дней):</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="170"/>
         <source>Maximum number of articles to keep:</source>
-        <translation>Максимальное количество статей для хранения:</translation>
+        <translation>Максимальное количество хранимых статей:</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="176"/>
         <source>Delete read articles</source>
-        <translation>Удалять прочтённые статьи</translation>
+        <translation>Удалять прочитанные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="177"/>
         <source>Never delete unread articles</source>
-        <translation>Никогда не удалять непрочтённые статьи</translation>
+        <translation>Никогда не удалять непрочитанные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="178"/>
         <source>Never delete starred articles</source>
-        <translation>Никогда не удалять статьи отмеченные звёздочкой</translation>
+        <translation>Никогда не удалять статьи со звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/articles/cleanup/cleanupwizard.cpp" line="179"/>
@@ -703,7 +703,7 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/mainwindow/customizetoolbardialog.cpp" line="41"/>
         <source>Customize News Toolbar</source>
-        <translation>Настройка панели списка новостей</translation>
+        <translation>Настройка панели статей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/customizetoolbardialog.cpp" line="76"/>
@@ -1527,7 +1527,7 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="297"/>
         <source>These settings affect this folder&apos;s combined article view, not its contained feeds.</source>
-        <translation>Эти настройки влияют на объединенный просмотр новостей в этой папке, а не на содержащиеся в ней ленты.</translation>
+        <translation>Эти настройки действуют в общем списке статей папки. У каждой ленты свои настройки.</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="331"/>
@@ -1572,7 +1572,7 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="388"/>
         <source>These columns and sorting affect this folder&apos;s combined article view, not its contained feeds.</source>
-        <translation>Эти столбцы и настройки сортировки влияют на объединенный вид новостей в этой папке, а не на содержащиеся в ней ленты.</translation>
+        <translation>Эти настройки столбцов и сортировки действуют в общем списке статей папки. У каждой ленты свои настройки.</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="405"/>
@@ -1636,7 +1636,7 @@ Expired cookies skipped: %1.</source>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="468"/>
         <source>Article count:</source>
-        <translation>Количество новостей:</translation>
+        <translation>Количество статей:</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/feedpropertiesdialog.cpp" line="506"/>
@@ -1822,7 +1822,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/articles/filters/filterrulesdialog.cpp" line="80"/>
         <source>Match all news</source>
-        <translation>Соответствует всем новостям</translation>
+        <translation>Применять ко всем статьям</translation>
     </message>
     <message>
         <location filename="../../../src/articles/filters/filterrulesdialog.cpp" line="80"/>
@@ -1847,7 +1847,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/articles/filters/filterrulesdialog.cpp" line="294"/>
         <source>Please enter a search condition for the article filter.</source>
-        <translation>Введите критерий поиска для фильтра лент.</translation>
+        <translation>Укажите условие поиска для фильтра статей.</translation>
     </message>
 </context>
 <context>
@@ -1868,42 +1868,42 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="93"/>
         <source>Search Articles</source>
-        <translation>Поиск по Новостях</translation>
+        <translation>Поиск по статьям</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="108"/>
         <source>All Articles</source>
-        <translation>Всем Новостях</translation>
+        <translation>По всем статьям</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="109"/>
         <source>Titles</source>
-        <translation>По Заголовкам</translation>
+        <translation>По заголовкам</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="110"/>
         <source>Authors</source>
-        <translation>По Авторам</translation>
+        <translation>По авторам</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="111"/>
         <source>Categories</source>
-        <translation>По Категориям</translation>
+        <translation>По категориям</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="112"/>
         <source>Descriptions</source>
-        <translation>По Описаниям</translation>
+        <translation>По описаниям</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="113"/>
         <source>Links</source>
-        <translation>По Ссылкам</translation>
+        <translation>По ссылкам</translation>
     </message>
     <message>
         <location filename="../../../src/articles/findtext.cpp" line="114"/>
         <source>Current Article</source>
-        <translation>В Этой Новости</translation>
+        <translation>В текущей статье</translation>
     </message>
 </context>
 <context>
@@ -1911,7 +1911,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/articles/filters/itemaction.cpp" line="27"/>
         <source>Mark News as Read</source>
-        <translation>Отметить как прочитанной</translation>
+        <translation>Отметить статью как прочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/articles/filters/itemaction.cpp" line="27"/>
@@ -1936,7 +1936,7 @@ All %2 feeds in this folder are disabled.</source>
     <message>
         <location filename="../../../src/articles/filters/itemaction.cpp" line="29"/>
         <source>Show Article in a Notification</source>
-        <translation>Показать новость в оповещении</translation>
+        <translation>Показать статью в уведомлении</translation>
     </message>
     <message>
         <location filename="../../../src/articles/filters/itemaction.cpp" line="38"/>
@@ -2012,7 +2012,7 @@ All %2 feeds in this folder are disabled.</source>
         <location filename="../../../src/articles/filters/itemcondition.cpp" line="32"/>
         <location filename="../../../src/articles/filters/itemcondition.cpp" line="113"/>
         <source>News</source>
-        <translation>Новости</translation>
+        <translation>Заголовок или описание</translation>
     </message>
     <message>
         <location filename="../../../src/articles/filters/itemcondition.cpp" line="37"/>
@@ -2289,7 +2289,7 @@ The pending file has been retained at:
     <message>
         <location filename="../../../src/app/mainapplication.cpp" line="807"/>
         <source>Could not start the configured browser. Check the custom browser setting in Article View.</source>
-        <translation>Не удалось запустить настроенный браузер. Проверьте настройки пользовательского браузера в разделе «Просмотр новостей».</translation>
+        <translation>Не удалось запустить выбранный браузер. Проверьте его настройки в разделе «Просмотр статей».</translation>
     </message>
     <message>
         <location filename="../../../src/feeds/update/updatefeeds.cpp" line="1482"/>
@@ -2532,12 +2532,12 @@ Install %3 and its sharing icons in:
 
 If no installed definition is present, the complete user configuration may be placed in:
 %2</source>
-        <translation>Не удалось загрузить настройки поделиться новостями.
+        <translation>Не удалось загрузить настройки отправки ссылок на статьи.
 
-Установите %3 и его иконками для поделиться в:
+Поместите %3 и значки служб в каталог:
 %1
 
-Если установленных определений нет, полную конфигурацию пользователя можно разместить в:
+Если файл настроек не установлен, полную пользовательскую конфигурацию можно разместить в каталоге:
 %2</translation>
     </message>
     <message>
@@ -2692,13 +2692,13 @@ Details:
         <location filename="../../../src/mainwindow/mainwindow.cpp" line="648"/>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="1114"/>
         <source>New Articles: %1</source>
-        <translation>Свежие Новости: %1</translation>
+        <translation>Новые статьи: %1</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow.cpp" line="650"/>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="1116"/>
         <source>Unread Articles: %1</source>
-        <translation>Непрочтённые Новости: %1</translation>
+        <translation>Непрочитанные статьи: %1</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="1119"/>
@@ -2814,7 +2814,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="387"/>
         <source>Categories Panel</source>
-        <translation>Панель Категорий</translation>
+        <translation>Окно категорий</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="410"/>
@@ -2830,7 +2830,7 @@ Details:
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="411"/>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="411"/>
         <source>Stop Updating Feeds</source>
-        <translation>Остановить Загрузку Лент</translation>
+        <translation>Остановить обновление лент</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="412"/>
@@ -2840,18 +2840,18 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="417"/>
         <source>Mark Article Read/Unread</source>
-        <translation>Отметить Новость Прочитанной/Непрочитанной</translation>
+        <translation>Отметить статью как прочитанную или непрочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="417"/>
         <source>Mark Current Article Read/Unread</source>
-        <translation>Отметить Текущую Новость Прочитанной/Непрочитанной</translation>
+        <translation>Отметить текущую статью как прочитанную или непрочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="418"/>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="418"/>
         <source>Mark All Articles Read</source>
-        <translation>Отметить Все Новости Прочитанными</translation>
+        <translation>Отметить все статьи как прочитанные</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow.cpp" line="879"/>
@@ -2869,7 +2869,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="421"/>
         <source>Article Filters...</source>
-        <translation>Фильтры Новостей...</translation>
+        <translation>Фильтры статей...</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="422"/>
@@ -2884,7 +2884,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="424"/>
         <source>Filter Articles...</source>
-        <translation>Фильтр Новостей...</translation>
+        <translation>Фильтр статей...</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="425"/>
@@ -2927,7 +2927,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="432"/>
         <source>Filter News</source>
-        <translation>Фильтр новостей</translation>
+        <translation>Фильтр статей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="436"/>
@@ -2942,7 +2942,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="438"/>
         <source>Show Unread or Starred</source>
-        <translation>Показать непрочитанные и со звёздочкой</translation>
+        <translation>Показать непрочитанные или со звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="439"/>
@@ -2977,12 +2977,12 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="464"/>
         <source>Open Article</source>
-        <translation>Открыть новость</translation>
+        <translation>Открыть статью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="464"/>
         <source>Open Article Description</source>
-        <translation>Открыть Описание Новости</translation>
+        <translation>Открыть описание статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="444"/>
@@ -2993,7 +2993,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="431"/>
         <source>Show Feeds With Errors</source>
-        <translation>Показать Ленты с Ошибками</translation>
+        <translation>Показать ленты с ошибками</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="445"/>
@@ -3003,7 +3003,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="445"/>
         <source>Star Article</source>
-        <translation>Пометить Новость Звёздочкой</translation>
+        <translation>Пометить статью звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="446"/>
@@ -3013,17 +3013,17 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="446"/>
         <source>Delete Selected Articles</source>
-        <translation>Удалить Выбранные Новости</translation>
+        <translation>Удалить выбранные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="447"/>
         <source>Delete All Articles</source>
-        <translation>Удалить Все Новости</translation>
+        <translation>Удалить все статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="447"/>
         <source>Delete All Articles from List</source>
-        <translation>Удалить Все Новости из Списка</translation>
+        <translation>Удалить все статьи из списка</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="232"/>
@@ -3034,7 +3034,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="448"/>
         <source>Restore Article</source>
-        <translation>Восстановить Новость</translation>
+        <translation>Восстановить статью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="482"/>
@@ -3044,17 +3044,17 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="482"/>
         <source>Copy Article Link</source>
-        <translation>Скопировать Ссылку на Новость</translation>
+        <translation>Скопировать ссылку на статью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="449"/>
         <source>Restore Last Deleted Article</source>
-        <translation>Восстановить Последнюю Удалённую Новость</translation>
+        <translation>Восстановить последнюю удалённую статью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="450"/>
         <source>Mark Read</source>
-        <translation>Отметить прочитанной</translation>
+        <translation>Отметить как прочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="450"/>
@@ -3131,7 +3131,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="394"/>
         <source>News Toolbar...</source>
-        <translation>Панель списка новостей...</translation>
+        <translation>Панель статей...</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="391"/>
@@ -3167,7 +3167,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="574"/>
         <source>Article Pane Position</source>
-        <translation>Расположение Области Новостей</translation>
+        <translation>Расположение окна статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="398"/>
@@ -3206,57 +3206,57 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="454"/>
         <source>Previous Article</source>
-        <translation>Предыдущаяя Новость</translation>
+        <translation>Предыдущая статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="455"/>
         <source>Next Article</source>
-        <translation>Следующая Новость</translation>
+        <translation>Следующая статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="456"/>
         <source>Article Page Up</source>
-        <translation>Старница Вверх в Новости</translation>
+        <translation>Прокрутить статью на страницу вверх</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="457"/>
         <source>Article Page Down</source>
-        <translation>Старница Вниз в Новости</translation>
+        <translation>Прокрутить статью на страницу вниз</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="479"/>
         <source>Next Unread Article</source>
-        <translation>Следующая Непрочтённая Новость</translation>
+        <translation>Следующая непрочитанная статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="480"/>
         <source>Previous Unread Article</source>
-        <translation>Предыдущая Непрочтённая Новость</translation>
+        <translation>Предыдущая непрочитанная статья</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="458"/>
         <source>Switch Focus to Next Panel</source>
-        <translation>Переключить Фокус на Следующую Панель</translation>
+        <translation>Перейти к следующей части окна</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="458"/>
         <source>Switch Focus to Next Panel (Feed Tree, Article List, Article Pane)</source>
-        <translation>Переключить Фокус на Следующую Панель (Дерево Ленты, Список Новостей, Окно Новостей)</translation>
+        <translation>Перейти к следующей части окна (дерево лент, список статей, окно статьи)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="459"/>
         <source>Switch Focus to Previous Panel</source>
-        <translation>Переключить Фокус на Предыдущую Панель</translation>
+        <translation>Перейти к предыдущей части окна</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="459"/>
         <source>Switch Focus to Previous Panel (Feed Tree, Article Pane, Article List)</source>
-        <translation>Переключить Фокус на Предыдущую Панель (Лерево Ленты, Список Новостей, Область Новостей)</translation>
+        <translation>Перейти к предыдущей части окна (дерево лент, окно статьи, список статей)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="460"/>
         <source>Feeds Pane</source>
-        <translation>Область Лент</translation>
+        <translation>Окно лент</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="466"/>
@@ -3276,12 +3276,12 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="461"/>
         <source>Number of unread articles</source>
-        <translation>Количество непрочтённых новостей</translation>
+        <translation>Количество непрочитанных статей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="462"/>
         <source>Total number of articles</source>
-        <translation>Всего новостей</translation>
+        <translation>Всего статей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="463"/>
@@ -3342,7 +3342,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="403"/>
         <source>Print Article</source>
-        <translation>Напечатать Новость</translation>
+        <translation>Напечатать статью</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="404"/>
@@ -3352,17 +3352,17 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="404"/>
         <source>Preview Article</source>
-        <translation>Предпросмотр Новости</translation>
+        <translation>Предварительный просмотр статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="483"/>
         <source>Page up (Article)</source>
-        <translation>Страница вверх (Новость)</translation>
+        <translation>Страница вверх (статья)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="484"/>
         <source>Page down (Article)</source>
-        <translation>Страница вниз (Новость)</translation>
+        <translation>Страница вниз (статья)</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="405"/>
@@ -3372,7 +3372,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="405"/>
         <source>Save Article As...</source>
-        <translation>Сохранить Новость Как...</translation>
+        <translation>Сохранить статью как...</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="577"/>
@@ -3387,7 +3387,7 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="386"/>
         <source>News Toolbar</source>
-        <translation>Панель списка новостей</translation>
+        <translation>Панель статей</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="388"/>
@@ -3470,12 +3470,12 @@ Details:
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="477"/>
         <source>Decrease article list / increase article pane</source>
-        <translation>Уменьшить список новостей / увеличить область с новостью</translation>
+        <translation>Уменьшить список статей / увеличить окно статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="478"/>
         <source>Increase article list / decrease article pane</source>
-        <translation>Увеличить список новостей / уменьшить область с новостью</translation>
+        <translation>Увеличить список статей / уменьшить окно статьи</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="465"/>
@@ -3642,7 +3642,7 @@ Details:
     <message>
         <location filename="../../../src/articles/filters/newsfiltersdialog.cpp" line="32"/>
         <source>News Filters</source>
-        <translation>Фильтры новостей</translation>
+        <translation>Фильтры статей</translation>
     </message>
     <message>
         <location filename="../../../src/articles/filters/newsfiltersdialog.cpp" line="46"/>
@@ -3775,12 +3775,12 @@ Details:
     <message>
         <location filename="../../../src/notifications/notificationsnewsitem.cpp" line="38"/>
         <source>Mark Read/Unread</source>
-        <translation>Отметить прочитанной/непрочитанной</translation>
+        <translation>Отметить как прочитанную или непрочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/notifications/notificationsnewsitem.cpp" line="47"/>
         <source>Delete News</source>
-        <translation>Удалить новость</translation>
+        <translation>Удалить статью</translation>
     </message>
 </context>
 <context>
@@ -3816,12 +3816,12 @@ Details:
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="535"/>
         <source>Hide images in this article pane</source>
-        <translation>Скрывать изображения в области этой новости</translation>
+        <translation>Скрыть изображения в окне статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="535"/>
         <source>Load images in this article pane</source>
-        <translation>Показывать изображения в области этой новости</translation>
+        <translation>Загрузить изображения в окне статьи</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1345"/>
@@ -3856,12 +3856,12 @@ Details:
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1538"/>
         <source>Mark Read/Unread</source>
-        <translation>Отметить прочитанной/непрочитанной</translation>
+        <translation>Отметить как прочитанную или непрочитанную</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1569"/>
         <source>Star Article</source>
-        <translation>Пометить Статью Звёздочкой</translation>
+        <translation>Пометить статью звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="1573"/>
@@ -3930,7 +3930,7 @@ Details:
     <message>
         <location filename="../../../src/articles/newstabwidget.cpp" line="2114"/>
         <source>The system could not open the sharing URL for %1.</source>
-        <translation>Система не смогла открыть URL адрес для поделиться с %1.</translation>
+        <translation>Не удалось открыть ссылку для отправки статьи через %1.</translation>
     </message>
 </context>
 <context>
@@ -3943,7 +3943,7 @@ Details:
     <message>
         <location filename="../../../src/notifications/notificationswidget.cpp" line="165"/>
         <source>Mark All News Read</source>
-        <translation>Отметить все новости прочитанными</translation>
+        <translation>Отметить все статьи как прочитанные</translation>
     </message>
     <message>
         <location filename="../../../src/notifications/notificationswidget.cpp" line="171"/>
@@ -3958,7 +3958,7 @@ Details:
     <message>
         <location filename="../../../src/notifications/notificationswidget.cpp" line="376"/>
         <source>Incoming News: %1</source>
-        <translation>Входящие новости: %1</translation>
+        <translation>Новые статьи: %1</translation>
     </message>
     <message>
         <location filename="../../../src/notifications/notificationswidget.cpp" line="381"/>
@@ -3994,7 +3994,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="41"/>
         <source>Article View</source>
-        <translation>Просмотр Новостей</translation>
+        <translation>Просмотр статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="42"/>
@@ -4183,17 +4183,17 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="422"/>
         <source>Change icon when new articles arrive</source>
-        <translation>Изменять значок при появлении свежих новостей</translation>
+        <translation>Менять значок при появлении новых статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="423"/>
         <source>Show number of new articles</source>
-        <translation>Показать количество свежих новостей</translation>
+        <translation>Показывать количество новых статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="424"/>
         <source>Show number of unread articles</source>
-        <translation>Показать количество непрочтённых новостей</translation>
+        <translation>Показывать количество непрочитанных статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="433"/>
@@ -4313,7 +4313,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="610"/>
         <source>Use double quotes around paths containing spaces. The article URL is appended automatically.</source>
-        <translation>Пути, содержащие пробелы, следует заключать в двойные кавычки. URL новости добавляется автоматически.</translation>
+        <translation>Пути с пробелами заключайте в двойные кавычки. Ссылка на статью добавляется автоматически.</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="612"/>
@@ -4341,7 +4341,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="630"/>
         <source>Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.</source>
-        <translation>Пытается вернуть %1 на передний план после открытия новости в браузере. Это может быть невозможно из-за настроек рабочего стола, особенно при использовании Wayland.</translation>
+        <translation>После открытия ссылки на статью в браузере %1 попытается вернуться на передний план. Рабочая среда может запретить это, особенно при использовании Wayland.</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="635"/>
@@ -4362,7 +4362,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="660"/>
         <source>Default article zoom:</source>
-        <translation>Масштаб новости по умолчанию:</translation>
+        <translation>Масштаб статьи по умолчанию:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="669"/>
@@ -4382,7 +4382,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="693"/>
         <source>Articles</source>
-        <translation>Новости</translation>
+        <translation>Статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="694"/>
@@ -4424,22 +4424,22 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="729"/>
         <source>Focus the last opened article</source>
-        <translation>Фокус на последней открытой новости</translation>
+        <translation>Перейти к последней открытой статье</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="730"/>
         <source>Focus the first article in the list</source>
-        <translation>Фокус на первый новости в списке</translation>
+        <translation>Перейти к первой статье в списке</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="731"/>
         <source>Focus the first unread article</source>
-        <translation>Фокус на первой непрочтённой открытой новости</translation>
+        <translation>Перейти к первой непрочитанной статье</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="732"/>
         <source>Open the article</source>
-        <translation>Открыть новость</translation>
+        <translation>Открыть статью</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="733"/>
@@ -4449,12 +4449,12 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="745"/>
         <source>Automatically mark identical news as read</source>
-        <translation>Автоматически отметить одинаковые новости как прочитанные</translation>
+        <translation>Автоматически отмечать одинаковые статьи как прочитанные</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="756"/>
         <source>Do not add articles published before this date to the database:</source>
-        <translation>Не добавлять в базу новости, опубликованные до этой даты:</translation>
+        <translation>Не добавлять в базу статьи, опубликованные до этой даты:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="778"/>
@@ -4489,12 +4489,12 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="643"/>
         <source>Use Lanczos scaling for article images</source>
-        <translation>Использовать Lanczos для масштабирования картинок</translation>
+        <translation>Масштабировать изображения в статьях методом Ланцоша</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="644"/>
         <source>Scales article images using a 2-pass Lanczos-3 filter on a background thread</source>
-        <translation>Масштабирует изображения в статье с помощью двухпроходного фильтра Lanczos-3 в фоновом потоке</translation>
+        <translation>Масштабирует изображения в статьях двухпроходным фильтром Ланцоша (Lanczos-3) в фоновом потоке</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="647"/>
@@ -4564,7 +4564,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="830"/>
         <source>Default article filter:</source>
-        <translation>Фильтр новостей по умолчанию:</translation>
+        <translation>Фильтр статей по умолчанию:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="851"/>
@@ -4574,7 +4574,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="862"/>
         <source>Mark articles as read:</source>
-        <translation>Пометить новости как прочитанные:</translation>
+        <translation>Отмечать статьи как прочитанные:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="872"/>
@@ -4584,37 +4584,37 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="888"/>
         <source>after switching to another article</source>
-        <translation>после перехода на другую новость</translation>
+        <translation>после перехода к другой статье</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="894"/>
         <source>Mark displayed news as read when switching feeds</source>
-        <translation>Отметить отображаемые новости как прочитанные при переключении ленты</translation>
+        <translation>Отмечать показанные статьи как прочитанные при переключении ленты</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="895"/>
         <source>Mark displayed news as read when closing tab</source>
-        <translation>Отметить отображаемые новости как прочитанные при закрытии вкладки</translation>
+        <translation>Отмечать показанные статьи как прочитанные при закрытии вкладки</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="896"/>
         <source>Mark displayed news as read on minimize</source>
-        <translation>Отметить отображаемые новости как прочитанные при минимизации</translation>
+        <translation>Отмечать показанные статьи как прочитанные при сворачивании окна</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="900"/>
         <source>starred news</source>
-        <translation>новостей отмеченых звёздочкой</translation>
+        <translation>статей со звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="901"/>
         <source>labeled news</source>
-        <translation>новостей с метками</translation>
+        <translation>статей с метками</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="907"/>
         <source>Change behavior of the &apos;Next Unread Article&apos; action</source>
-        <translation>Изменить поведение действия «Следующая Непрочитанная Статья»</translation>
+        <translation>Изменить поведение команды «Следующая непрочитанная статья»</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="914"/>
@@ -4629,37 +4629,37 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="929"/>
         <source>Maximum article age to keep (days):</source>
-        <translation>Максимальный срок хранения новостей (в днях):</translation>
+        <translation>Максимальный срок хранения статей (дней):</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="930"/>
         <source>Removes expired articles on shutdown and ignores expired incoming articles on later updates. The first successful fetch of a new feed is exempt. Unread, starred and labeled articles are preserved according to the options below. Articles without a usable publication date use their received date for cleanup and retain a record to prevent reappearance.</source>
-        <translation>Удаляет устаревшие новости при завершении работы и игнорирует новые устаревшие новостипри последующих обновлениях. Исключением является первая успешная загрузка новой ленты. Непрочитанные, добавленные в избранное и помеченные метками новости сохраняются в соответствии с приведёнными ниже настройками. Для новостей без чёткой даты публикации при очистке используется дата получения; запись о них сохраняется, чтобы предотвратить повторное появление.</translation>
+        <translation>При завершении работы удаляет старые статьи, а при следующих обновлениях пропускает новые записи, срок хранения которых уже истёк. Первая успешная загрузка новой ленты выполняется без этого ограничения. Непрочитанные статьи, статьи со звёздочкой и статьи с метками сохраняются согласно настройкам ниже. Если дата публикации неизвестна, используется дата получения. Сведения об удалённой статье сохраняются, чтобы она не появилась снова.</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="940"/>
         <source>Maximum number of articles to keep:</source>
-        <translation>Максимальное количество новостей для хранения:</translation>
+        <translation>Максимальное количество хранимых статей:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="946"/>
         <source>Delete read news</source>
-        <translation>Удалять прочитанные новости</translation>
+        <translation>Удалять прочитанные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="947"/>
         <source>Never delete unread news</source>
-        <translation>Никогда не удалять непрочитанные новости</translation>
+        <translation>Никогда не удалять непрочитанные статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="948"/>
         <source>Never delete starred news</source>
-        <translation>Никогда не удалять новости отмеченные звёздочкой</translation>
+        <translation>Никогда не удалять статьи со звёздочкой</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="949"/>
         <source>Never delete labeled news</source>
-        <translation>Никогда не удалять новости с метками</translation>
+        <translation>Никогда не удалять статьи с метками</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="951"/>
@@ -4719,7 +4719,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1080"/>
         <source>Show notifications for incoming articles</source>
-        <translation>Показывать уведомления о новых новостях</translation>
+        <translation>Показывать уведомления о новых статьях</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1093"/>
@@ -4754,7 +4754,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1102"/>
         <source>Close notification after opening an article</source>
-        <translation>Закрыть уведомление после открытия новости</translation>
+        <translation>Закрывать уведомление после открытия статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1113"/>
@@ -4814,12 +4814,12 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1142"/>
         <source>Show button &apos;Mark All News Read&apos;</source>
-        <translation>Показывать кнопку &apos;Отметить все новости прочитанными&apos;</translation>
+        <translation>Показывать кнопку «Отметить все статьи как прочитанные»</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1143"/>
         <source>Show button &apos;Mark Read/Unread&apos;</source>
-        <translation>Показывать кнопку &apos;Отметить прочитанной/непрочитанной&apos;</translation>
+        <translation>Показывать кнопку «Отметить как прочитанную или непрочитанную»</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1144"/>
@@ -4829,17 +4829,17 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1145"/>
         <source>Show button &apos;Delete News&apos;</source>
-        <translation>Показывать кнопку &apos;Удалить новость&apos;</translation>
+        <translation>Показывать кнопку «Удалить статью»</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1155"/>
         <source>Only show selected feeds:</source>
-        <translation>Показывать новости только выбранных лент:</translation>
+        <translation>Показывать статьи только из выбранных лент:</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1191"/>
         <source>Play a sound for incoming articles</source>
-        <translation>Воспроизводить звук при поступлении новостей</translation>
+        <translation>Воспроизводить звук при появлении новых статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1197"/>
@@ -4934,17 +4934,17 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1394"/>
         <source>Article list font</source>
-        <translation>Шрифт списка новостей</translation>
+        <translation>Шрифт списка статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1395"/>
         <source>Article title font</source>
-        <translation>Шрифт заголовков новостей</translation>
+        <translation>Шрифт заголовка статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1396"/>
         <source>Article text font</source>
-        <translation>Шрифт текста новостей</translation>
+        <translation>Шрифт текста статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1397"/>
@@ -4977,22 +4977,22 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1436"/>
         <source>Article list text color</source>
-        <translation>Цвет текста списка новостей</translation>
+        <translation>Цвет текста списка статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1437"/>
         <source>Article list background</source>
-        <translation>Цвет фона списка новостей</translation>
+        <translation>Цвет фона списка статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1438"/>
         <source>Focused article text color</source>
-        <translation>Цвет нововсти в фокусе</translation>
+        <translation>Цвет текста статьи в фокусе</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1439"/>
         <source>Focused article background</source>
-        <translation>Цвет фона нововсти в фокусе</translation>
+        <translation>Цвет фона статьи в фокусе</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1440"/>
@@ -5017,37 +5017,37 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1444"/>
         <source>Article text color</source>
-        <translation>Цвет текста новости</translation>
+        <translation>Цвет текста статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1445"/>
         <source>Article title background</source>
-        <translation>Цвет фона заголовка новости</translation>
+        <translation>Цвет фона заголовка статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1446"/>
         <source>Article background</source>
-        <translation>Цвет фона новости</translation>
+        <translation>Цвет фона статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1447"/>
         <source>Feed with new articles</source>
-        <translation>Лента со свежими новостями</translation>
+        <translation>Лента с новыми статьями</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1448"/>
         <source>Unread article count in feed tree</source>
-        <translation>Количество непрочитанных новостей в дереве ленты</translation>
+        <translation>Количество непрочитанных статей в дереве лент</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1449"/>
         <source>New article text color</source>
-        <translation>Цвет текста свежей новости</translation>
+        <translation>Цвет текста новой статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1450"/>
         <source>Unread article text color</source>
-        <translation>Цвет текста непрочтённой новости</translation>
+        <translation>Цвет текста непрочитанной статьи</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1451"/>
@@ -5117,7 +5117,7 @@ Details:
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1781"/>
         <source>Automatically load images in article view</source>
-        <translation>Автоматическая загрузка изображений при просмотре новости</translation>
+        <translation>Автоматически загружать изображения при просмотре статей</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1889"/>
