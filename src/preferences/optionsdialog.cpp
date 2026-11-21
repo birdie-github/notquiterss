@@ -23,6 +23,7 @@
 #include "backup/backupsettingspage.h"
 #include <QElapsedTimer>
 #include <QScreen>
+#include <QStyle>
 #include <QWindow>
 #include "articles/rendering/articlecontent.h"
 #include <QDesktopServices>
@@ -85,8 +86,6 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->setColumnHidden(0, true);
   categoriesTree_->header()->setStretchLastSection(false);
   categoriesTree_->header()->resizeSection(2, 5);
-  categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-  categoriesTree_->setMinimumWidth(150);
 
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
@@ -104,15 +103,23 @@ OptionsDialog::OptionsDialog(QWidget *parent)
     contentStack_->addWidget(scrollArea);
   }
 
+  // Measure the translated labels with the current font and item style.
+  categoriesTree_->ensurePolished();
+  categoriesTree_->resizeColumnToContents(1);
+  const int scrollBarWidth = categoriesTree_->style()->pixelMetric(
+      QStyle::PM_ScrollBarExtent, nullptr, categoriesTree_);
+  const int categoryWidth = qMax(150, categoriesTree_->header()->length() +
+      2 * categoriesTree_->frameWidth() + scrollBarWidth);
+  categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+  categoriesTree_->setMinimumWidth(categoryWidth);
+
   QSplitter *splitter = new QSplitter();
   splitter->setChildrenCollapsible(false);
   splitter->addWidget(categoriesTree_);
   splitter->addWidget(contentStack_);
   splitter->setStretchFactor(0, 0);
   splitter->setStretchFactor(1, 1);
-  QList<int> sizes;
-  sizes << 150 << 600;
-  splitter->setSizes(sizes);
+  splitter->setSizes({categoryWidth, 600});
 
   pageLayout->addWidget(splitter, 1);
   pageLayout->setContentsMargins(10, 5, 10, 5);
