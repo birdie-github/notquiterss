@@ -47,9 +47,10 @@ private:
   static void setPragma(QSqlDatabase &db);
   static void createTables(QSqlDatabase &db);
   static void ensureIndexes(QSqlDatabase &db);
-  static void prepareDatabase();
+  static bool prepareDatabase();
+  static bool upgradeDatabase(QSqlDatabase &db, QString &error);
   static void createLabels(QSqlDatabase &db);
-  static void addColumnsToFeedsTables(QSqlDatabase &db);
+  static bool addMissingFeedColumns(QSqlQuery &q);
 
   static QStringList tablesList() {
     QStringList tables;

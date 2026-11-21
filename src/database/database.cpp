@@ -17,7 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "backup/databasebackup.h"
-#include <utility>
+#include <QSet>
 #include "database.h"
 
 #include "common/common.h"
@@ -269,7 +269,7 @@ bool Database::initialization()
     liveDatabaseName = mainApp->dbFileName();
     liveDatabaseOptions.clear();
   }
-  prepareDatabase();
+  if (!prepareDatabase()) return false;
 
   SQLiteDriver *driver = new SQLiteDriver();
   QSqlDatabase db = QSqlDatabase::addDatabase(driver);
@@ -311,16 +311,15 @@ void Database::setPragma(QSqlDatabase &db)
   q.finish();
 }
 
-void Database::prepareDatabase()
+bool Database::prepareDatabase()
 {
+  bool prepared = false;
+  QString error;
   {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "initialization");
     db.setDatabaseName(mainApp->dbFileName());
     if (!db.open()) {
-      QString message = QString("Cannot open SQLite database! \n"
-                                "Error: %1").arg(db.lastError().text());
-      qCritical() << message;
-      QMessageBox::critical(mainApp->mainWindow(), QObject::tr("Error"), message);
+      error = db.lastError().text();
     } else {
       setPragma(db);
       QSqlQuery q(db);
@@ -337,70 +336,15 @@ void Database::prepareDatabase()
         q.prepare("INSERT INTO info(name, value) VALUES('appVersion', :appVersion)");
         q.bindValue(":appVersion", QCoreApplication::applicationVersion());
         q.exec();
+        prepared = true;
       } else {
         qWarning() << "Preparation database";
 
-        // Version DB > 0.12.1
-        int dbVersion = -1;
-        q.exec("SELECT value FROM info WHERE name='version'");
-        if (q.first()) {
-          dbVersion = q.value(0).toInt();
+        prepared = upgradeDatabase(db, error);
+        if (prepared) {
+          ensureIndexes(db);
+          Settings().setValue("VersionDB", version());
         }
-
-        QString appVersion = QString();
-        q.exec("SELECT value FROM info WHERE name='appVersion'");
-        if (q.first()) {
-          appVersion = q.value(0).toString();
-        }
-
-        // Create backups for DB and Settings
-        if (appVersion != QCoreApplication::applicationVersion()) {
-          q.finish();
-          DatabaseBackup::report(DatabaseBackup::create(db, DatabaseBackup::Trigger::Upgrade), false);
-        }
-
-        addColumnsToFeedsTables(db);
-
-        if (dbVersion < 14) {
-          q.exec("ALTER TABLE feeds ADD COLUMN showNotification integer default 0");
-          q.exec("ALTER TABLE feeds ADD COLUMN disableUpdate integer default 0");
-          q.exec("ALTER TABLE feeds ADD COLUMN javaScriptEnable integer default 1");
-        }
-        if (dbVersion < 16) {
-          q.exec("ALTER TABLE feeds ADD COLUMN layoutDirection integer default 0");
-        }
-
-        if (dbVersion < 17)
-        {
-          q.exec("ALTER table feeds ADD COLUMN SingleClickAction integer default 0");
-          q.exec("ALTER table feeds ADD COLUMN DoubleClickAction integer default 0");
-          q.exec("ALTER table feeds ADD COLUMN MiddleClickAction integer default 0");
-        }
-
-        ensureIndexes(db);
-
-        // Update appVersion anyway
-        if (appVersion.isEmpty()) {
-          q.prepare("INSERT INTO info(name, value) VALUES('appVersion', :appVersion)");
-          q.bindValue(":appVersion", QCoreApplication::applicationVersion());
-          q.exec();
-        } else if (appVersion != QCoreApplication::applicationVersion()) {
-          q.prepare("UPDATE info SET value=:appVersion WHERE name='appVersion'");
-          q.bindValue(":appVersion", QCoreApplication::applicationVersion());
-          q.exec();
-        }
-
-        if (dbVersion == -1) {
-          q.prepare("INSERT INTO info(name, value) VALUES('version', :version)");
-          q.bindValue(":version", version());
-          q.exec();
-        } else if (dbVersion < version()) {
-          q.prepare("UPDATE info SET value=:version WHERE name='version'");
-          q.bindValue(":version", version());
-          q.exec();
-        }
-
-        Settings().setValue("VersionDB", version());
       }
 
       q.finish();
@@ -408,6 +352,68 @@ void Database::prepareDatabase()
     }
   }
   QSqlDatabase::removeDatabase("initialization");
+  if (prepared) return true;
+
+  const QString message = error.isEmpty() ? tr("Cannot prepare the database.")
+                                          : tr("Cannot prepare the database.\n%1").arg(error);
+  qCritical().noquote() << message;
+  QMessageBox::critical(mainApp->mainWindow(), tr("Error"), message);
+  return false;
+}
+
+bool Database::upgradeDatabase(QSqlDatabase &db, QString &error)
+{
+  QSqlQuery q(db);
+  const auto readInfo = [&](const QString &name, QVariant &value) {
+    if (!q.prepare("SELECT value FROM info WHERE name=?")) return false;
+    q.addBindValue(name);
+    if (!q.exec()) return false;
+    if (q.next()) value = q.value(0);
+    if (q.lastError().isValid()) return false;
+    q.finish();
+    return true;
+  };
+
+  QVariant schemaVersion;
+  QVariant appVersion;
+  if (!readInfo(QStringLiteral("version"), schemaVersion) ||
+      !readInfo(QStringLiteral("appVersion"), appVersion)) {
+    error = q.lastError().text();
+    return false;
+  }
+
+  const QString currentAppVersion = QCoreApplication::applicationVersion();
+  const bool appVersionChanged = appVersion.toString() != currentAppVersion;
+  if (appVersionChanged)
+    DatabaseBackup::report(DatabaseBackup::create(db, DatabaseBackup::Trigger::Upgrade), false);
+
+  if (!db.transaction()) {
+    error = db.lastError().text();
+    return false;
+  }
+
+  const auto writeInfo = [&](const QString &name, const QVariant &value, bool exists) {
+    if (!q.prepare(exists ? "UPDATE info SET value=? WHERE name=?"
+                          : "INSERT INTO info(value, name) VALUES (?, ?)")) return false;
+    q.addBindValue(value);
+    q.addBindValue(name);
+    return q.exec();
+  };
+
+  if (addMissingFeedColumns(q) &&
+      (!appVersionChanged || writeInfo(QStringLiteral("appVersion"), currentAppVersion,
+                                       appVersion.isValid())) &&
+      (schemaVersion.toInt() >= version() ||
+       writeInfo(QStringLiteral("version"), version(), schemaVersion.isValid()))) {
+    q.finish();
+    if (db.commit()) return true;
+    error = db.lastError().text();
+  } else {
+    error = q.lastError().text();
+    q.finish();
+  }
+  if (!db.rollback()) error += '\n' + tr("Rollback failed: %1").arg(db.lastError().text());
+  return false;
 }
 
 void Database::createTables(QSqlDatabase &db)
@@ -489,20 +495,39 @@ void Database::createLabels(QSqlDatabase &db)
   }
 }
 
-void Database::addColumnsToFeedsTables(QSqlDatabase &db)
+bool Database::addMissingFeedColumns(QSqlQuery &q)
 {
-    QStringList columnsList;
-    // Version > 0.18.12
-    columnsList.append(" addSingleNewsAnyDateOn integer default 1;");
-    columnsList.append(" avoidedOldSingleNewsDateOn integer default 0;");
-    columnsList.append(" avoidedOldSingleNewsDate varchar;");
-    columnsList.append(" preloadImages integer default -1;");
+  if (!q.exec("PRAGMA table_info(feeds)")) return false;
+  QSet<QString> columns;
+  while (q.next())
+    columns.insert(q.value(1).toString().toLower());
+  if (q.lastError().isValid()) return false;
+  q.finish();
 
-    db.transaction();
-    for (const QString &col : std::as_const(columnsList)) {
-        QSqlQuery(db).exec("ALTER TABLE feeds ADD COLUMN" + col);
-    }
-    db.commit();
+  // Earlier builds could record the new version after an ALTER TABLE failed.
+  // Check the actual schema even when the recorded version is current.
+  static const struct {
+    const char *name;
+    const char *definition;
+  } additions[] = {
+    {"addSingleNewsAnyDateOn", "integer default 1"},
+    {"avoidedOldSingleNewsDateOn", "integer default 0"},
+    {"avoidedOldSingleNewsDate", "varchar"},
+    {"preloadImages", "integer default -1"},
+    {"showNotification", "integer default 0"},
+    {"disableUpdate", "integer default 0"},
+    {"javaScriptEnable", "integer default 1"},
+    {"layoutDirection", "integer default 0"},
+    {"SingleClickAction", "integer default 0"},
+    {"DoubleClickAction", "integer default 0"},
+    {"MiddleClickAction", "integer default 0"}
+  };
+  for (const auto &column : additions) {
+    if (columns.contains(QString::fromLatin1(column.name).toLower())) continue;
+    if (!q.exec(QStringLiteral("ALTER TABLE feeds ADD COLUMN %1 %2")
+                  .arg(QLatin1String(column.name), QLatin1String(column.definition)))) return false;
+  }
+  return true;
 }
 
 QSqlDatabase Database::connection(const QString &connectionName)
