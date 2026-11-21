@@ -115,6 +115,16 @@
         <source>Information</source>
         <translation>Информация</translation>
     </message>
+    <message>
+        <location filename="../../../src/app/aboutdialog.cpp" line="95"/>
+        <source>Thank you to everyone who has supported NotQuiteRSS with a donation.</source>
+        <translation>Спасибо всем, кто поддержал NotQuiteRSS пожертвованием.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/app/aboutdialog.cpp" line="194"/>
+        <source>Supporters</source>
+        <translation>Поддержка проекта</translation>
+    </message>
 </context>
 <context>
     <name>AddFeedWizard</name>

@@ -279,6 +279,7 @@ win32-msvc* {
 DISTFILES += \
     COPYING \
     AUTHORS \
+    SUPPORTERS \
     CHANGELOG \
     README.md
 

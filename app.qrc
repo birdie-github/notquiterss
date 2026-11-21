@@ -112,6 +112,7 @@
     </qresource>
     <qresource prefix="/file">
         <file>AUTHORS</file>
+        <file>SUPPORTERS</file>
         <file>COPYING</file>
     </qresource>
     <qresource prefix="/html">

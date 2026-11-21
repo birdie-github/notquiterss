@@ -92,6 +92,22 @@ AboutDialog::AboutDialog(QWidget *parent) :
   QWidget *authorsWidget = new QWidget();
   authorsWidget->setLayout(authorsLayout);
 
+  QString supportersText = tr("Thank you to everyone who has supported NotQuiteRSS with a donation.");
+  supportersText += QStringLiteral("\n");
+  const auto supporterNames = Common::readAllFileContents(":/file/SUPPORTERS").split('\n');
+  for (const QString &line : supporterNames) {
+    const QString name = line.trimmed();
+    if (!name.isEmpty())
+      supportersText += QStringLiteral("\n• ") + name;
+  }
+
+  QWidget *supportersWidget = new QWidget();
+  auto *supportersLayout = new QHBoxLayout(supportersWidget);
+  auto *supportersTextEdit = new QTextEdit(supportersWidget);
+  supportersTextEdit->setReadOnly(true);
+  supportersTextEdit->setPlainText(supportersText);
+  supportersLayout->addWidget(supportersTextEdit);
+
   QTextEdit *licenseTextEdit = new QTextEdit();
   licenseTextEdit->setReadOnly(true);
   licenseTextEdit->setPlainText(Common::readAllFileContents(":/file/COPYING"));
@@ -175,6 +191,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 
   tabWidget->addTab(mainWidget, tr("Version"));
   tabWidget->addTab(authorsWidget, tr("Authors"));
+  tabWidget->addTab(supportersWidget, tr("Supporters"));
   tabWidget->addTab(licenseWidget, tr("License"));
   tabWidget->addTab(informationWidget, tr("Information"));
 
