@@ -1,3 +1,14 @@
+Version 0.95.9 BETA (2026-11-21)
+* NEW FEATURE: Feed Properties now shows the last update attempt, the last successful update, and a countdown to the next scheduled check.
+* NEW FEATURE: Add a Supporters tab under Help -> About to thank donators. The Version tab also offers the Donate button if it was included in your build, even when hidden in the main window.
+* CHANGE: Make it easier to see where a feed will land when you drag it to a new position for dark themes.
+* BUG FIX: Fix the "Parameter count mismatch" error when adding feeds in the Linux AppImage and on some other installations.
+* BUG FIX: Stop the Add Feed progress indicator when feed discovery takes over, and show "Select all" once there are results to select.
+* BUG FIX: Give the network time to reconnect after waking from sleep before starting scheduled feed updates.
+* BUG FIX: Prevent failed database upgrades from leaving the article library partly upgraded.
+* BUG FIX: Fix notification sounds that can cut off early and a possible crash when a sound fails to load.
+* BUG FIX: Address multiple minor issues.
+
 Version 0.95.8 BETA (2026-11-18)
 * CHANGE: Color the text in the Bulk Update Favicons dialog.
 * CHANGE: Improve the Bulk Update Favicons dialog.
