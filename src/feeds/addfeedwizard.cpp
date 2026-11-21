@@ -396,9 +396,12 @@ void AddFeedWizard::addFeed()
 bool AddFeedWizard::insertFeed()
 {
   QSqlQuery q;
-  q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication, disableUpdate) "
-            "SELECT ?, ?, count(*), ?, 1 FROM feeds WHERE parentId=0 "
-            "HAVING NOT EXISTS (SELECT 1 FROM feeds WHERE xmlUrl=?)");
+  if (!q.prepare("INSERT INTO feeds(xmlUrl, created, rowToParent, authentication, disableUpdate) "
+                 "SELECT ?, ?, (SELECT count(*) FROM feeds WHERE parentId=0), ?, 1 "
+                 "WHERE NOT EXISTS (SELECT 1 FROM feeds WHERE xmlUrl=?)")) {
+    failed(q.lastError().text());
+    return false;
+  }
   q.addBindValue(feedUrlString_);
   q.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
   q.addBindValue(int(authentication_->isChecked()));
