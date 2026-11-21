@@ -199,7 +199,15 @@ void MainWindow::createStatusBar()
 void MainWindow::createTray()
 {
   showWindowAct_ = new QAction(this);
-  connect(showWindowAct_, &QAction::triggered, this, [this] { showWindows(); });
+  connect(showWindowAct_, &QAction::triggered, this, [this] {
+    if (mainApp->isClosing()) return;
+    if (isVisible() && !isMinimized()) {
+      oldState = windowState();
+      slotPlaceToTray();
+    } else {
+      showWindows();
+    }
+  }, Qt::QueuedConnection);
   QFont font = showWindowAct_->font();
   font.setBold(true);
   showWindowAct_->setFont(font);
@@ -217,6 +225,11 @@ void MainWindow::createTray()
 QSystemTrayIcon *MainWindow::trayIcon() const
 {
   return trayIconController_->systemTrayIcon();
+}
+
+void MainWindow::updateTrayWindowActionText()
+{
+  showWindowAct_->setText(isVisible() && !isMinimized() ? tr("Hide") : tr("Restore"));
 }
 
 #ifdef NQRSS_ENABLE_DONATE_BUTTON
@@ -1123,7 +1136,7 @@ void MainWindow::retranslateStrings()
   updateFeedActionText();
   mainToolbar_->setWindowTitle(tr("Main Toolbar"));
   rebuildStyleMenu();
-  showWindowAct_->setText(tr("Show Window"));
+  updateTrayWindowActionText();
 
   categoriesLabel_->setText(tr("Categories"));
   if (categoriesTree_->isHidden())

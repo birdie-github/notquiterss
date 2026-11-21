@@ -519,6 +519,7 @@ private:
   void createCentralWidget();
   void loadSettingsFeeds();
   void retranslateStrings();
+  void updateTrayWindowActionText();
   void recountFeedCategories(const QList<int> &categoriesList);
   void creatFeedTab(int feedId, int feedParId);
   void initUpdateFeeds();

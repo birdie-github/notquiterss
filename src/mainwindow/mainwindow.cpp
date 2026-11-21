@@ -363,6 +363,9 @@ void MainWindow::finishQuitApp()
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
   if (obj == this) {
+    if (event->type() == QEvent::Show || event->type() == QEvent::Hide ||
+        event->type() == QEvent::WindowStateChange)
+      updateTrayWindowActionText();
     if (event->type() == QEvent::Hide ||
         (event->type() == QEvent::WindowStateChange && isMinimized()))
       returnFocusAfterLinkTimer_.stop();
