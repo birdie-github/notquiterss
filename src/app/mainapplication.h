@@ -78,6 +78,9 @@ public:
   void runUserFilter(int feedId, int filterId);
   DownloadManager *downloadManager();
   bool openExternalUrl(const QUrl &url);
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  void openDonationPage(QWidget *parent);
+#endif
 
   LanguageCatalog languageCatalog() const;
   QList<ApplicationStyle> applicationStyles() const;

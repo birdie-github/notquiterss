@@ -765,6 +765,14 @@ void MainApplication::setProxy()
     QNetworkProxy::setApplicationProxy(networkProxy_);
 }
 
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+void MainApplication::openDonationPage(QWidget *parent)
+{
+  if (!openExternalUrl(QUrl(QStringLiteral("https://paypal.me/ArtemTashkinov"))))
+    QMessageBox::warning(parent, tr("Donate"), tr("Could not open the PayPal donation page."));
+}
+#endif
+
 bool MainApplication::openExternalUrl(const QUrl &url)
 {
   if (!ArticleContent::isExternalLink(url)) return false;

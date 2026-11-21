@@ -274,8 +274,7 @@ void MainWindow::createTabBarWidget()
   setDonateButtonHidden(AppSettings::hideDonateButton.get());
 
   connect(donateButton_, &QPushButton::clicked, this, [this] {
-    if (!mainApp->openExternalUrl(QUrl(QStringLiteral("https://paypal.me/ArtemTashkinov"))))
-      QMessageBox::warning(this, tr("Donate"), tr("Could not open the PayPal donation page."));
+    mainApp->openDonationPage(this);
   });
 #endif
 

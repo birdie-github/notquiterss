@@ -2322,6 +2322,16 @@ If you saved it outside the normal database location, restore this copy to %2 be
 
 Если вы сохранили её вне стандартного расположения, восстановите эту копию в папку %2 перед повторным запуском приложения.</translation>
     </message>
+    <message>
+        <location filename="../../../src/app/mainapplication.cpp" line="772"/>
+        <source>Donate</source>
+        <translation>Донаты</translation>
+    </message>
+    <message>
+        <location filename="../../../src/app/mainapplication.cpp" line="772"/>
+        <source>Could not open the PayPal donation page.</source>
+        <translation>Не могу открыть сайт Paypal для донатов.</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -2734,16 +2744,6 @@ Details:
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="271"/>
         <source>Thank you</source>
         <translation>Спасибо</translation>
-    </message>
-    <message>
-        <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="278"/>
-        <source>Donate</source>
-        <translation>Донаты</translation>
-    </message>
-    <message>
-        <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="278"/>
-        <source>Could not open the PayPal donation page.</source>
-        <translation>Не могу открыть сайт Paypal для донатов.</translation>
     </message>
     <message>
         <location filename="../../../src/mainwindow/mainwindow_ui.cpp" line="373"/>

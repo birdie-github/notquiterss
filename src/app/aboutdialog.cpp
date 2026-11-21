@@ -19,6 +19,9 @@
 #include "common/common.h"
 #include "aboutdialog.h"
 #include "articles/rendering/articlecontent.h"
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+#include "widgets/donatebutton.h"
+#endif
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
@@ -78,10 +81,17 @@ AboutDialog::AboutDialog(QWidget *parent) :
   });
   infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
 
-  QHBoxLayout *mainLayout = new QHBoxLayout();
-  mainLayout->addWidget(infoLabel);
-  QWidget *mainWidget = new QWidget();
-  mainWidget->setLayout(mainLayout);
+  auto *mainWidget = new QWidget();
+  auto *versionLayout = new QVBoxLayout(mainWidget);
+  versionLayout->addWidget(infoLabel, 1);
+
+#ifdef NQRSS_ENABLE_DONATE_BUTTON
+  auto *donateButton = new DonateButton(mainWidget);
+  versionLayout->addWidget(donateButton, 0, Qt::AlignHCenter);
+  connect(donateButton, &QPushButton::clicked, this, [this] {
+    mainApp->openDonationPage(this);
+  });
+#endif
 
   QTextEdit *authorsTextEdit = new QTextEdit(this);
   authorsTextEdit->setReadOnly(true);
