@@ -8,12 +8,12 @@ import sys
 import tempfile
 import urllib.request
 
-VERSION = '0.11.25'
-REVISION = '9634bedb5b5a2ca38c1ee7108a9358a4e233f14d'
+VERSION = '0.11.26'
+REVISION = '877ea4a7c2601c7b0f2a44e83dfac42e6470fea6'
 BASE_URL = 'https://raw.githubusercontent.com/mackron/miniaudio/' + REVISION + '/'
 FILES = {
     'miniaudio.h': ('include/miniaudio.h',
-                   'ac7af4de748b7e26b777f37e01cee313a308a7296a3eb080e2906b320cc55c89'),
+                   '6b376c7fbb1352ba1e0e432ab66069b335ea9405e45cb6c30b97ef0f3c9c3e0e'),
     'LICENSE': ('share/licenses/miniaudio/LICENSE',
                 '457f1b500e0adf6bc059edddfa78a2f62012e7c3bb43476c20e0bd23b25ba0eb'),
 }
