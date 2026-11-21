@@ -82,6 +82,7 @@ public:
 
 public slots:
   void slotGetScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
+  void readFeedSchedule(int feedId, bool globalEnabled, int globalIntervalSeconds);
   void recordUpdateAttempt(int feedId, QString identity, QDateTime startedAt);
   void slotGetFeed(int feedId, QString feedUrl, QDateTime date, int auth, bool force);
   void slotGetFeedsFolder(QString query);
@@ -111,6 +112,8 @@ signals:
   void updateCycleStarted();
   void showProgressBar(int value);
   void scheduledFeedsChecked();
+  void feedScheduleRead(int feedId, bool available, QDateTime lastSuccess,
+                        QDateTime lastAttempt, QDateTime nextCheck, bool queued);
   void importFinished(bool updatesQueued);
   void feedProgressQueued(int feedId, QString name);
   void feedProgressStage(int feedId, QString stage);

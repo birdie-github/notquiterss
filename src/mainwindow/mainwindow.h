@@ -523,6 +523,7 @@ private:
   void recountFeedCategories(const QList<int> &categoriesList);
   void creatFeedTab(int feedId, int feedParId);
   void initUpdateFeeds();
+  int globalFeedIntervalSeconds() const;
   void reloadNotificationFeeds();
   void addDefaultFeed();
   bool defaultFeedIconsPending_ = false;
@@ -684,6 +685,7 @@ private:
   QPushButton *pushButtonNull_;
 
   QTimer *updateFeedsTimer_;
+  static constexpr int updateScheduleGraceMs_ = 60000;
   QElapsedTimer updateScheduleClock_;
   qint64 lastScheduleTickMs_ = 0;
   bool scheduledUpdatePending_ = false;

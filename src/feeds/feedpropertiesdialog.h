@@ -114,8 +114,6 @@ typedef struct {
     QString description; //!< Feed description
     QDateTime createdTime; //!< Time when feed created
     QDateTime lastDisplayed; //!< Last time that feed displayed
-    QDateTime lastUpdate; //!< Time of feed last update
-    QDateTime lastBuildDate;
     int undeleteCount; //!< Number of all news
     int newCount; //!< Number of new news
     int unreadCount; //!< Number of unread news
@@ -140,6 +138,8 @@ public:
 
   FEED_PROPERTIES getFeedProperties(); //!< Get feed properties from dialog
   void setFeedProperties(FEED_PROPERTIES properties); //!< Set feed properties into dialog
+  void setUpdateStatus(const QDateTime &lastSuccess, const QDateTime &lastAttempt,
+                       const QString &nextCheck);
   void setFolderDisabledCounts(int total, int disabled);
   bool folderDisableChanged() const;
   bool isFaviconUpdateRunning() const { return faviconUpdateRunning_; }
@@ -244,6 +244,8 @@ private:
   QTextEdit *descriptionText_;
   QLabel *createdFeed_;
   QLabel *lastUpdateFeed_;
+  QLabel *lastAttemptFeed_;
+  QLabel *nextCheckFeed_;
   QLabel *newsCount_;
   QLabel *feedsCount_;
   QWidget *createStatusTab();

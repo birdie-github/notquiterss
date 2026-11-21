@@ -650,16 +650,6 @@ void MainWindow::showFeedPropertiesDlg()
         Qt::ISODate);
   properties.status.createdTime = dt.addSecs(nTimeShift);
 
-  dt = QDateTime::fromString(
-        feedsModel_->dataField(index, "updated").toString(),
-        Qt::ISODate);
-  properties.status.lastUpdate = dt.addSecs(nTimeShift);
-
-  dt = QDateTime::fromString(
-        feedsModel_->dataField(index, "lastBuildDate").toString(),
-        Qt::ISODate);
-  properties.status.lastBuildDate = dt.addSecs(nTimeShift);
-
   properties.status.undeleteCount = feedsModel_->dataField(index, "undeleteCount").toInt();
   properties.status.newCount      = feedsModel_->dataField(index, "newCount").toInt();
   properties.status.unreadCount   = feedsModel_->dataField(index, "unread").toInt();
@@ -688,6 +678,53 @@ void MainWindow::showFeedPropertiesDlg()
     feedPropertiesDialog->setFolderDisabledCounts(counts.first, counts.second);
   }
   properties_tmp = properties;
+
+  bool statusRequestPending = false;
+  if (isFeed) {
+    auto *worker = mainApp->updateFeeds()->updateObject_;
+    auto *statusTimer = new QTimer(feedPropertiesDialog);
+    connect(worker, &UpdateObject::feedScheduleRead, feedPropertiesDialog,
+            [this, feedPropertiesDialog, feedId, &statusRequestPending](
+                int id, bool available, const QDateTime &lastSuccess, const QDateTime &lastAttempt,
+                const QDateTime &nextCheck, bool queued) {
+      if (id != feedId) return;
+      statusRequestPending = false;
+      QString text;
+      if (!available) {
+        text = QStringLiteral("—");
+      } else if (queued) {
+        text = tr("Queued or updating");
+      } else if (!nextCheck.isValid()) {
+        text = tr("Off");
+      } else {
+        const qint64 untilDueMs = QDateTime::currentDateTimeUtc().msecsTo(nextCheck);
+        const qint64 graceMs = updateScheduleGraceMs_ - updateScheduleClock_.elapsed();
+        const qint64 remainingMs = qMax(untilDueMs, graceMs);
+        if (remainingMs <= 0) {
+          text = tr("Due");
+        } else {
+          const qint64 seconds = (remainingMs + 999) / 1000;
+          const QString duration = QStringLiteral("%1:%2:%3")
+              .arg(seconds / 3600, 2, 10, QLatin1Char('0'))
+              .arg(seconds / 60 % 60, 2, 10, QLatin1Char('0'))
+              .arg(seconds % 60, 2, 10, QLatin1Char('0'));
+          text = tr("In %1").arg(duration);
+        }
+      }
+      feedPropertiesDialog->setUpdateStatus(lastSuccess, lastAttempt, text);
+    });
+    const auto refreshStatus = [this, worker, feedId, &statusRequestPending] {
+      if (statusRequestPending || mainApp->isClosing()) return;
+      const bool enabled = updateFeedsEnable_;
+      const int interval = globalFeedIntervalSeconds();
+      statusRequestPending = QMetaObject::invokeMethod(worker, [worker, feedId, enabled, interval] {
+        worker->readFeedSchedule(feedId, enabled, interval);
+      }, Qt::QueuedConnection);
+    };
+    connect(statusTimer, &QTimer::timeout, feedPropertiesDialog, refreshStatus);
+    refreshStatus();
+    statusTimer->start(1000);
+  }
 
   int result = feedPropertiesDialog->exec();
   if (result == QDialog::Rejected) {

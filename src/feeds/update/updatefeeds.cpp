@@ -51,6 +51,42 @@ QString updateIdentity(int id, const QString &url, const QString &created)
   return QString::number(id) + QLatin1Char('\n') + url + QLatin1Char('\n') + created;
 }
 
+QDateTime storedUpdateAttempt(const QString &stored, const QString &identity)
+{
+  const QJsonObject state = QJsonDocument::fromJson(stored.toUtf8()).object();
+  if (state.isEmpty())
+    return QDateTime::fromString(stored, Qt::ISODate); // Earlier scheduler metadata.
+  if (state.value("identity").toString() == identity)
+    return QDateTime::fromString(state.value("time").toString(), Qt::ISODate);
+  return {};
+}
+
+QDateTime successfulUpdate(const QString &stored)
+{
+  // Historical 'updated' values are UTC even though their text has no Z.
+  const QDateTime parsed = QDateTime::fromString(stored, Qt::ISODate);
+  return parsed.isValid() ? QDateTime(parsed.date(), parsed.time(), QTimeZone(0)) : QDateTime();
+}
+
+QDateTime scheduleAttempt(const QString &stored, const QString &identity,
+                          const QDateTime &lastSuccess)
+{
+  const QDateTime attempt = storedUpdateAttempt(stored, identity);
+  // A legacy timestamp has no identity: a newer successful update wins.
+  if (!attempt.isValid() || (lastSuccess > attempt && QDateTime::fromString(stored, Qt::ISODate).isValid()))
+    return lastSuccess;
+  return attempt;
+}
+
+int effectiveFeedInterval(const QVariant &modeValue, int amount, int unit,
+                          bool globalEnabled, int globalIntervalSeconds)
+{
+  const int mode = modeValue.isNull() ? -1 : modeValue.toInt();
+  if (mode == 1)
+    return amount * (unit == -1 ? 1 : (unit == 0 ? 60 : 3600));
+  return mode == -1 && globalEnabled ? globalIntervalSeconds : 0;
+}
+
 // Construct the connection only after this object and its SQL consumers have
 // moved to the worker. Destroy consumers before removing their connection.
 class UpdateSqlContext final : public QObject
@@ -380,31 +416,14 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
     existing.insert(identity);
     if (q.value(4).toBool()) continue;
     if (!lastUpdateAttempts_.contains(identity)) {
-      const QString stored = q.value(9).toString();
-      const QJsonObject state = QJsonDocument::fromJson(stored.toUtf8()).object();
-      QDateTime attempt;
-      if (state.value("identity").toString() == identity)
-        attempt = QDateTime::fromString(state.value("time").toString(), Qt::ISODate);
-      else if (state.isEmpty())
-        attempt = QDateTime::fromString(stored, Qt::ISODate); // Earlier scheduler metadata.
-      // Historical 'updated' values are UTC even though their text has no Z.
-      const QDateTime parsed = QDateTime::fromString(q.value(8).toString(), Qt::ISODate);
-      const QDateTime updated(parsed.date(), parsed.time(), QTimeZone(0));
-      // A legacy timestamp has no identity: a newer successful check wins.
-      if (!attempt.isValid() || (state.isEmpty() && updated > attempt)) attempt = updated;
+      const auto attempt = scheduleAttempt(q.value(9).toString(), identity,
+                                           successfulUpdate(q.value(8).toString()));
       // A clock correction or imported future timestamp must not defer forever.
-      if (attempt > now) attempt = now;
-      lastUpdateAttempts_.insert(identity, attempt);
+      lastUpdateAttempts_.insert(identity, attempt > now ? now : attempt);
     }
     if (feedIdList_.contains(id)) continue;
-    const int mode = q.value(5).isNull() ? -1 : q.value(5).toInt();
-    int interval = globalIntervalSeconds;
-    if (mode == 1) {
-      const int unit = q.value(7).toInt();
-      interval = q.value(6).toInt() * (unit == -1 ? 1 : (unit == 0 ? 60 : 3600));
-    } else if (mode != -1 || !globalEnabled) {
-      continue;
-    }
+    const int interval = effectiveFeedInterval(q.value(5), q.value(6).toInt(), q.value(7).toInt(),
+                                               globalEnabled, globalIntervalSeconds);
     if (interval <= 0) continue;
     QDateTime &attempt = lastUpdateAttempts_[identity];
     if (attempt > now) attempt = now;
@@ -422,6 +441,40 @@ void UpdateObject::checkScheduledFeeds(bool globalEnabled, int globalIntervalSec
     }
   }
   if (queued) emit showProgressBar(updateFeedsCount_);
+}
+
+void UpdateObject::readFeedSchedule(int feedId, bool globalEnabled, int globalIntervalSeconds)
+{
+  QDateTime lastSuccess, lastAttempt, nextCheck;
+  bool queued = false;
+  bool available = false;
+  if (!shutdownPrepared_) {
+    auto databaseAccess = Database::backgroundAccess();
+    QSqlQuery q(db_);
+    q.prepare("SELECT xmlUrl, created, updated, disableUpdate, updateIntervalEnable, "
+              "updateInterval, updateIntervalType, "
+              "(SELECT max(value) FROM feeds_ex WHERE feedId=feeds.id AND name='lastUpdateAttempt') "
+              "FROM feeds WHERE id=? AND xmlUrl!=''");
+    q.addBindValue(feedId);
+    if (q.exec() && q.next()) {
+      available = true;
+      const QString identity = updateIdentity(feedId, q.value(0).toString(), q.value(1).toString());
+      const QString stored = q.value(7).toString();
+      lastSuccess = successfulUpdate(q.value(2).toString());
+      lastAttempt = storedUpdateAttempt(stored, identity);
+      const int interval = effectiveFeedInterval(q.value(4), q.value(5).toInt(), q.value(6).toInt(),
+                                                 globalEnabled, globalIntervalSeconds);
+      queued = queuedUpdateIdentities_.value(feedId) == identity;
+      if (!q.value(3).toBool() && interval > 0) {
+        const QDateTime now = QDateTime::currentDateTimeUtc();
+        QDateTime attempt = lastUpdateAttempts_.value(identity);
+        if (!lastUpdateAttempts_.contains(identity))
+          attempt = scheduleAttempt(stored, identity, lastSuccess);
+        nextCheck = attempt.isValid() ? qMin(attempt, now).addSecs(interval) : now;
+      }
+    }
+  }
+  emit feedScheduleRead(feedId, available, lastSuccess, lastAttempt, nextCheck, queued);
 }
 
 void UpdateObject::recordUpdateAttempt(int feedId, QString identity, QDateTime startedAt)

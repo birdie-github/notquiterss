@@ -766,7 +766,6 @@ void MainWindow::slotScheduledFeedsChecked()
 
 void MainWindow::slotGetFeedsTimer()
 {
-  constexpr int graceSeconds = 60;
   // Wall time includes time asleep. Measure the grace period with the elapsed timer.
   const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
   const qint64 gapMs = nowMs - lastScheduleTickMs_;
@@ -774,14 +773,20 @@ void MainWindow::slotGetFeedsTimer()
   if (gapMs > 30000) {
     updateScheduleClock_.restart();
     qDebug() << "Feed scheduler inactive for" << gapMs / 1000
-             << "seconds. Delaying automatic updates for" << graceSeconds << "seconds.";
+             << "seconds. Delaying automatic updates for" << updateScheduleGraceMs_ / 1000 << "seconds.";
   }
-  if (mainApp->isClosing() || updateScheduleClock_.elapsed() < graceSeconds * 1000 || scheduledUpdatePending_)
+  if (mainApp->isClosing() || updateScheduleClock_.elapsed() < updateScheduleGraceMs_ ||
+      scheduledUpdatePending_)
     return;
+  scheduledUpdatePending_ = true;
+  emit signalGetScheduledFeeds(updateFeedsEnable_, globalFeedIntervalSeconds());
+}
+
+int MainWindow::globalFeedIntervalSeconds() const
+{
   const int multiplier = updateFeedsIntervalType_ == -1 ? 1 :
                          (updateFeedsIntervalType_ == 0 ? 60 : 3600);
-  scheduledUpdatePending_ = true;
-  emit signalGetScheduledFeeds(updateFeedsEnable_, updateFeedsInterval_ * multiplier);
+  return updateFeedsInterval_ * multiplier;
 }
 /** @brief Process update feed action
  *---------------------------------------------------------------------------*/

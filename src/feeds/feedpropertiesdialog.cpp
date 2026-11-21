@@ -434,7 +434,6 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   statusFeed_ = new QLabel();
   statusFeed_->setWordWrap(true);
   createdFeed_ = new QLabel();
-  lastUpdateFeed_ = new QLabel();
   newsCount_ = new QLabel();
 
   QLabel *feedsCountLabel = new QLabel(tr("Feed count:"));
@@ -451,14 +450,27 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   layoutGrid->addWidget(statusFeed_, 0, 1);
   layoutGrid->addWidget(new QLabel(tr("Created:")), 1, 0);
   layoutGrid->addWidget(createdFeed_, 1, 1);
-  layoutGrid->addWidget(new QLabel(tr("Last update:")), 2, 0);
-  layoutGrid->addWidget(lastUpdateFeed_, 2, 1);
-  layoutGrid->addWidget(new QLabel(tr("Article count:")), 3, 0);
-  layoutGrid->addWidget(newsCount_, 3, 1);
-  layoutGrid->addWidget(feedsCountLabel, 4, 0);
-  layoutGrid->addWidget(feedsCount_, 4, 1);
-  layoutGrid->addWidget(descriptionLabel, 5, 0, 1, 1, Qt::AlignTop);
-  layoutGrid->addWidget(descriptionText_, 5, 1, 1, 1, Qt::AlignTop);
+  if (isFeed_) {
+    lastUpdateFeed_ = new QLabel(QStringLiteral("—"));
+    lastAttemptFeed_ = new QLabel(QStringLiteral("—"));
+    nextCheckFeed_ = new QLabel(QStringLiteral("—"));
+    auto *attemptLabel = new QLabel(tr("Last attempt:"));
+    const QString attemptTip = tr("The latest recorded update attempt. This can include cancelled requests.");
+    attemptLabel->setToolTip(attemptTip);
+    lastAttemptFeed_->setToolTip(attemptTip);
+    layoutGrid->addWidget(new QLabel(tr("Last successful update:")), 2, 0);
+    layoutGrid->addWidget(lastUpdateFeed_, 2, 1);
+    layoutGrid->addWidget(attemptLabel, 3, 0);
+    layoutGrid->addWidget(lastAttemptFeed_, 3, 1);
+    layoutGrid->addWidget(new QLabel(tr("Next check:")), 4, 0);
+    layoutGrid->addWidget(nextCheckFeed_, 4, 1);
+  }
+  layoutGrid->addWidget(new QLabel(tr("Article count:")), 5, 0);
+  layoutGrid->addWidget(newsCount_, 5, 1);
+  layoutGrid->addWidget(feedsCountLabel, 6, 0);
+  layoutGrid->addWidget(feedsCount_, 6, 1);
+  layoutGrid->addWidget(descriptionLabel, 7, 0, 1, 1, Qt::AlignTop);
+  layoutGrid->addWidget(descriptionText_, 7, 1, 1, 1, Qt::AlignTop);
 
   QVBoxLayout *tabLayout = new QVBoxLayout(tab);
   tabLayout->setContentsMargins(10, 10, 10, 10);
@@ -558,12 +570,6 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   else
     createdFeed_->setText(tr("Long ago ;-)"));
 
-  QString lastBuildDate = feedProperties.status.lastBuildDate.toString("dd.MM.yy hh:mm");
-  if (!lastBuildDate.isEmpty()) lastBuildDate = QString(" (%1)").arg(lastBuildDate);
-  lastUpdateFeed_->setText(QString("%1%2").
-                           arg(feedProperties.status.lastUpdate.toString("dd.MM.yy hh:mm")).
-                           arg(lastBuildDate)
-                           );
   newsCount_->setText(QString("%1 (%2 %3, %4 %5)").
                       arg(feedProperties.status.undeleteCount).
                       arg(feedProperties.status.newCount).
@@ -573,6 +579,17 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   feedsCount_->setText(QString("%1").arg(feedProperties.status.feedsCount));
 }
 //------------------------------------------------------------------------------
+void FeedPropertiesDialog::setUpdateStatus(const QDateTime &lastSuccess, const QDateTime &lastAttempt,
+                                           const QString &nextCheck)
+{
+  const auto localDate = [](const QDateTime &date) {
+    return date.isValid() ? date.toLocalTime().toString("dd.MM.yy hh:mm") : QStringLiteral("—");
+  };
+  lastUpdateFeed_->setText(localDate(lastSuccess));
+  lastAttemptFeed_->setText(localDate(lastAttempt));
+  nextCheckFeed_->setText(nextCheck);
+}
+
 void FeedPropertiesDialog::setDefaultTitle()
 {
   editTitle->setText(feedProperties.general.title);
