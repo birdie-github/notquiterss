@@ -269,6 +269,7 @@ private:
 
   QLabel *contentLabel_;
   QTreeWidget *categoriesTree_;
+  QSplitter *splitter_;
   QStackedWidget *contentStack_;
   QVector<QWidget *> pageWidgets_;
   QVector<QScrollArea *> pageScrollAreas_;

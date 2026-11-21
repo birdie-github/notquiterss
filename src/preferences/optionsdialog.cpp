@@ -85,6 +85,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->setColumnCount(3);
   categoriesTree_->setColumnHidden(0, true);
   categoriesTree_->header()->setStretchLastSection(false);
+  categoriesTree_->header()->setMinimumSectionSize(0);
   categoriesTree_->header()->resizeSection(2, 5);
 
   contentStack_ = new QStackedWidget();
@@ -108,20 +109,19 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   categoriesTree_->resizeColumnToContents(1);
   const int scrollBarWidth = categoriesTree_->style()->pixelMetric(
       QStyle::PM_ScrollBarExtent, nullptr, categoriesTree_);
-  const int categoryWidth = qMax(150, categoriesTree_->header()->length() +
-      2 * categoriesTree_->frameWidth() + scrollBarWidth);
+  const int categoryWidth = categoriesTree_->header()->length() +
+      2 * categoriesTree_->frameWidth() + scrollBarWidth;
   categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
   categoriesTree_->setMinimumWidth(categoryWidth);
 
-  QSplitter *splitter = new QSplitter();
-  splitter->setChildrenCollapsible(false);
-  splitter->addWidget(categoriesTree_);
-  splitter->addWidget(contentStack_);
-  splitter->setStretchFactor(0, 0);
-  splitter->setStretchFactor(1, 1);
-  splitter->setSizes({categoryWidth, 600});
+  splitter_ = new QSplitter();
+  splitter_->setChildrenCollapsible(false);
+  splitter_->addWidget(categoriesTree_);
+  splitter_->addWidget(contentStack_);
+  splitter_->setStretchFactor(0, 0);
+  splitter_->setStretchFactor(1, 1);
 
-  pageLayout->addWidget(splitter, 1);
+  pageLayout->addWidget(splitter_, 1);
   pageLayout->setContentsMargins(10, 5, 10, 5);
 
   buttonBox->addButton(QDialogButtonBox::Ok);
@@ -188,6 +188,10 @@ void OptionsDialog::showEvent(QShowEvent *event)
   move(pos() + QPoint(x, y) - frame.topLeft());
 
   if (!showLogged_) {
+    // Use the laid-out width so restored wide windows give extra space to the page.
+    const int categoryWidth = categoriesTree_->minimumWidth();
+    const int paneWidth = splitter_->contentsRect().width() - splitter_->handle(1)->width();
+    splitter_->setSizes({categoryWidth, qMax(0, paneWidth - categoryWidth)});
     showLogged_ = true;
     qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::showEvent complete: %1 ms since ctor start")
         .arg(openTimer_.elapsed());
