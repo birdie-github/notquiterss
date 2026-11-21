@@ -752,6 +752,7 @@ void MainWindow::initUpdateFeeds()
   reloadNotificationFeeds();
 
   updateScheduleClock_.start();
+  lastScheduleTickMs_ = QDateTime::currentMSecsSinceEpoch();
 
   updateFeedsTimer_ = new QTimer(this);
   connect(updateFeedsTimer_, &QTimer::timeout, this, &MainWindow::slotGetFeedsTimer);
@@ -765,9 +766,17 @@ void MainWindow::slotScheduledFeedsChecked()
 
 void MainWindow::slotGetFeedsTimer()
 {
-  // Permit startup to settle, including when intervals are shorter than a minute.
-  // Explicit startup/manual updates still use their existing immediate paths.
-  if (mainApp->isClosing() || updateScheduleClock_.elapsed() < 60000 || scheduledUpdatePending_)
+  constexpr int graceSeconds = 60;
+  // Wall time includes time asleep. Measure the grace period with the elapsed timer.
+  const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+  const qint64 gapMs = nowMs - lastScheduleTickMs_;
+  lastScheduleTickMs_ = nowMs;
+  if (gapMs > 30000) {
+    updateScheduleClock_.restart();
+    qDebug() << "Feed scheduler inactive for" << gapMs / 1000
+             << "seconds. Delaying automatic updates for" << graceSeconds << "seconds.";
+  }
+  if (mainApp->isClosing() || updateScheduleClock_.elapsed() < graceSeconds * 1000 || scheduledUpdatePending_)
     return;
   const int multiplier = updateFeedsIntervalType_ == -1 ? 1 :
                          (updateFeedsIntervalType_ == 0 ? 60 : 3600);

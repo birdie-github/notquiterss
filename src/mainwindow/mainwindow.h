@@ -685,6 +685,7 @@ private:
 
   QTimer *updateFeedsTimer_;
   QElapsedTimer updateScheduleClock_;
+  qint64 lastScheduleTickMs_ = 0;
   bool scheduledUpdatePending_ = false;
   bool updateFeedsEnable_;
   int  updateFeedsInterval_;
