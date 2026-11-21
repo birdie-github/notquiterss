@@ -3,7 +3,7 @@
 [![Windows](https://github.com/birdie-github/notquiterss/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/windows.yml)
 [![MacOS](https://github.com/birdie-github/notquiterss/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/birdie-github/notquiterss/actions/workflows/macos.yml)
 
-© 2011-2020 QuiteRSS Project  
+© 2011-2020 QuiteRSS Project
 © 2026 Artem S. Tashkinov and LLMs
 
 NotQuiteRSS is a fork of QuiteRSS, an open-source, cross-platform RSS/Atom news feed reader written in C++/Qt.
@@ -36,40 +36,6 @@ Resource organization and platform deployment are documented in [resources/READM
 
 For feeds requiring browser verification, see [Website cookies](docs/COOKIES.md).
 
-## Dependencies and design choices explained
-
-NotQuiteRSS keeps QtSingleApplication because reliably enforcing a single running
-instance requires more than checking whether a local socket responds. Simultaneous
-launches, unresponsive processes, and crash recovery need careful handling—especially
-when two instances could overwrite the same user data. Removing this small dependency
-would make the application responsible for maintaining that machinery, without a clear
-benefit to users.
-
-Notification sounds use miniaudio, compiled into the application, with support for
-WAV, MP3, and FLAC. Users do not need to install or configure an external player.
-Launching system commands would introduce platform-dependent format support and require
-managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
-reader, keeping a consistent built-in audio backend is the more practical choice.
-
-## Using QuiteRSS styles
-
-**Application themes (`.qss`).** You can try a QuiteRSS theme such as
-`System2.qss` by copying it into NotQuiteRSS's installed `styles` directory
-and selecting it under **View → Application Theme**. NotQuiteRSS loads a QSS
-file without theme metadata as an overlay on the system palette. Compatibility
-with legacy QuiteRSS themes is outside the project's support scope. Their
-appearance can vary with Qt, the system palette, and changes to widget names
-or layout. For the directory on your platform and the current theme format, see the
-[theme guide](resources/external/themes/README.md).
-
-**Article stylesheets (`.css`).** Article styling is configured separately
-under **Options → Feeds → Display → Article style sheet**. If no stylesheet
-path is saved, NotQuiteRSS looks for `news.css` in the installed `styles`
-directory and falls back to its bundled stylesheet if that file cannot be
-read. Legacy article CSS may need adapting because the article pane uses Qt
-rich text, which supports a subset of browser CSS. See the
-[article view guide](docs/ARTICLE_VIEW.md).
-
 ## Migrating your data from QuiteRSS
 
 The new application is fully compatible with QuiteRSS data, but you will need to copy
@@ -88,7 +54,25 @@ On Windows:
    now `AppData\Roaming\NotQuiteRss\NotQuiteRSS.ini`.
  * Data, before: `AppData\Local\QuiteRss\QuiteRss`,
    now `AppData\Local\NotQuiteRSS`.
-   
+
+### Using QuiteRSS styles
+
+**Application themes (`.qss`).** You can try a QuiteRSS theme such as
+`System2.qss` by copying it into NotQuiteRSS's installed `styles` directory
+and selecting it under **View → Application Theme**. NotQuiteRSS loads a QSS
+file without theme metadata as an overlay on the system palette. Compatibility
+with legacy QuiteRSS themes is outside the project's support scope. Their
+appearance can vary with Qt, the system palette, and changes to widget names
+or layout. For the directory on your platform and the current theme format, see the
+[theme guide](resources/external/themes/README.md).
+
+**Article stylesheets (`.css`).** Article styling is configured separately
+under **Options → Feeds → Display → Article style sheet**. If no stylesheet
+path is saved, NotQuiteRSS looks for `news.css` in the installed `styles`
+directory and falls back to its bundled stylesheet if that file cannot be
+read. Legacy article CSS may need adapting because the article pane uses Qt
+rich text, which supports a subset of browser CSS. See the
+[article view guide](docs/ARTICLE_VIEW.md).
 
 ## Windows and CPU requirements
 
@@ -109,21 +93,17 @@ even if it runs 64-bit Windows. For example, AMD Phenom and Phenom II CPUs lack
 SSE4.1 and SSE4.2. Attempting to run the standard build on an incompatible CPU
 may cause an *Illegal Instruction* exception (`0xC000001D`).
 
-## HTTPS and certificate trust on older Windows
---------------------------------------------
-The legacy package uses Qt 5 with bundled OpenSSL for TLS 1.2 and later.
-NotQuiteRSS gets its default CA certificates from the Windows certificate
-store through Qt. Windows 7 SP1 and Vista SP2 compatibility with the complete
-package needs testing on those systems.
+## Dependencies and design choices explained
 
-If HTTPS feeds fail certificate validation, check the system clock and make
-sure Windows automatic root updates are enabled, subject to your administrator's
-policy. Restart NotQuiteRSS after updating the store.
+NotQuiteRSS keeps QtSingleApplication because reliably enforcing a single running
+instance requires more than checking whether a local socket responds. Simultaneous
+launches, unresponsive processes, and crash recovery need careful handling—especially
+when two instances could overwrite the same user data. Removing this small dependency
+would make the application responsible for maintaining that machinery, without a clear
+benefit to users.
 
-For offline systems, Microsoft KB2813430 documents how administrators can
-refresh both the trusted and disallowed certificate trust lists (CTLs) on
-Windows 7 SP1 and Vista SP2. Use an up-to-date Windows computer to download
-both lists with certutil -syncWithWU, then follow Microsoft's CTL deployment
-instructions for the legacy computer. Importing a trusted-root bundle alone
-does not refresh the disallowed list. Keep certificate verification enabled.
-https://support.microsoft.com/help/2813430
+Notification sounds use miniaudio, compiled into the application, with support for
+WAV, MP3, and FLAC. Users do not need to install or configure an external player.
+Launching system commands would introduce platform-dependent format support and require
+managing hung processes, overlapping playback, and shutdown cleanup. For a simple RSS
+reader, keeping a consistent built-in audio backend is the more practical choice.
