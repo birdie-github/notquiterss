@@ -154,7 +154,8 @@ bool readFile(const QString &path, CookieJar::Import *result,
     const QByteArray &timestamp = fields[4];
     const auto dot = timestamp.indexOf('.');
     bool ok = false;
-    const qint64 expiry = timestamp.left(dot).toLongLong(&ok);
+    const QByteArray wholeSeconds = dot >= 0 ? timestamp.left(dot) : timestamp;
+    const qint64 expiry = wholeSeconds.toLongLong(&ok);
     bool hasFraction = false;
     if (dot >= 0) {
       // Browser exporters may include fractional seconds in a Netscape file.
