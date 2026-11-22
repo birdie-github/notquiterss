@@ -127,26 +127,45 @@ bool readFile(const QString &path, CookieJar::Import *result,
     if (httpOnly) line.remove(0, 10);
     else if (line.startsWith('#')) continue;
     const QList<QByteArray> fields = line.split('\t');
-    auto invalid = [&]() {
-      *error = CookieJar::tr("Invalid Netscape cookie record on line %1.").arg(lineNumber);
+    auto invalid = [&](const QString &reason) {
+      *error = CookieJar::tr("Line %1: %2").arg(lineNumber).arg(reason);
       return false;
     };
-    if (line.size() > 65536 || fields.size() != 7 || ++records > maximumCookies) return invalid();
-    for (const auto &field : fields) if (!safeField(field)) return invalid();
-    if ((fields[1] != "TRUE" && fields[1] != "FALSE") ||
-        (fields[3] != "TRUE" && fields[3] != "FALSE")) return invalid();
+    if (line.size() > 65536)
+      return invalid(CookieJar::tr("This cookie exceeds the 64 KiB size limit."));
+    if (fields.size() != 7)
+      return invalid(CookieJar::tr("Expected 7 tab-separated fields, found %1. "
+                                   "Export the cookies in Netscape cookies.txt format.").arg(fields.size()));
+    if (++records > maximumCookies)
+      return invalid(CookieJar::tr("The file exceeds the limit of %1 cookies.").arg(maximumCookies));
+    for (int i = 0; i < fields.size(); ++i) {
+      if (!safeField(fields[i]))
+        return invalid(CookieJar::tr("Field %1 contains a control character.").arg(i + 1));
+    }
+    if (fields[1] != "TRUE" && fields[1] != "FALSE")
+      return invalid(CookieJar::tr("The subdomain flag (field 2) must be TRUE or FALSE."));
+    if (fields[3] != "TRUE" && fields[3] != "FALSE")
+      return invalid(CookieJar::tr("The secure flag (field 4) must be TRUE or FALSE."));
     QString domain = hostOf(QString::fromUtf8(fields[0]));
     if (fields[1] == "TRUE") domain.prepend(QLatin1Char('.'));
     domain = normalizedScope(domain);
     bool ok = false;
     const qint64 expiry = fields[4].toLongLong(&ok);
-    if (domain.isEmpty() || !ok || expiry < 0 || !fields[2].startsWith('/') ||
-        fields[5].isEmpty()) return invalid();
+    if (domain.isEmpty())
+      return invalid(CookieJar::tr("Field 1 must contain a valid domain name."));
+    if (!ok || expiry < 0)
+      return invalid(CookieJar::tr("The expiry time (field 5) must be a Unix timestamp in seconds, "
+                                   "or 0 for a session cookie."));
+    if (!fields[2].startsWith('/'))
+      return invalid(CookieJar::tr("The cookie path (field 3) must start with a slash."));
+    if (fields[5].isEmpty())
+      return invalid(CookieJar::tr("The cookie name (field 6) is empty."));
     // Validate name/value without interpreting the value as Set-Cookie attributes.
     const QByteArray raw = fields[5] + '=' + fields[6];
     const auto parsed = QNetworkCookie::parseCookies(raw);
     if (parsed.size() != 1 || parsed.first().name() != fields[5] ||
-        parsed.first().value() != fields[6]) return invalid();
+        parsed.first().value() != fields[6])
+      return invalid(CookieJar::tr("The cookie name or value (fields 6 and 7) could not be read exactly as written."));
     QNetworkCookie cookie(fields[5], fields[6]);
     cookie.setDomain(domain);
     cookie.setPath(QString::fromUtf8(fields[2]));
@@ -154,7 +173,8 @@ bool readFile(const QString &path, CookieJar::Import *result,
     cookie.setHttpOnly(httpOnly);
     if (expiry) {
       const auto date = QDateTime::fromSecsSinceEpoch(expiry, QTimeZone(0));
-      if (!date.isValid()) return invalid();
+      if (!date.isValid())
+        return invalid(CookieJar::tr("The expiry time (field 5) is outside the supported date range."));
       cookie.setExpirationDate(date);
       if (date <= now) { ++result->expired; continue; }
     }
