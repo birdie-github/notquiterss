@@ -1497,9 +1497,9 @@ QWidget *OptionsDialog::createShortcutWidget()
   shortcutTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
   shortcutTree_->setRootIsDecorated(false);
 
-  shortcutModel_ = new QStandardItemModel();
+  shortcutModel_ = new QStandardItemModel(this);
   shortcutModel_->setColumnCount(5);
-  shortcutProxyModel_ = new QSortFilterProxyModel();
+  shortcutProxyModel_ = new QSortFilterProxyModel(this);
   shortcutProxyModel_->setSourceModel(shortcutModel_);
   shortcutProxyModel_->setFilterKeyColumn(-1);
   shortcutProxyModel_->setFilterRole(Qt::UserRole + 1);
