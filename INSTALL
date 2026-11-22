@@ -14,7 +14,7 @@ See resources/external/translations/README.md for discovery paths, optional meta
   Qt's QSQLITE plugin (used for initialization and VACUUM)
   Qt 6 additionally requires Core5Compat for the existing QTextCodec decoders
   QtSingleApplication for the selected Qt: headers, library and qtsingleapplication.prf
-  miniaudio 0.11.25 headers (explicit preparation helper below; no shared library)
+  miniaudio 0.11.26 headers (pinned by the helper below; no shared library)
 
 Selecting Qt 5 or Qt 6
 =====================
@@ -58,13 +58,13 @@ corresponding runtime client library are still required; codec plugins are not.
 The null (silent) backend is disabled so output failures are reported.
 
 The explicit helper downloads only miniaudio.h and LICENSE from upstream commit
-9634bedb5b5a2ca38c1ee7108a9358a4e233f14d (0.11.25), verifies their SHA-256 hashes,
+877ea4a7c2601c7b0f2a44e83dfac42e6470fea6 (0.11.26), verifies their SHA-256 hashes,
 and installs them outside the source tree. It does not build or install packages:
 
   python3 scripts/prepare-miniaudio.py --prefix "$HOME/miniaudio-snapshot"
   export MINIAUDIO_INCLUDE_DIR="$HOME/miniaudio-snapshot/include"
 
-For an offline preparation, add --source-dir /path/to/miniaudio-0.11.25 with
+For an offline preparation, add --source-dir /path/to/miniaudio-0.11.26 with
 the upstream miniaudio.h and LICENSE files; the same hashes are checked.
 Alternatively, point MINIAUDIO_INCLUDE_DIR at compatible 0.11.25+ headers from
 the 0.11.x series. Version 0.12 requires a separate integration review.
