@@ -211,7 +211,8 @@ public:
   void setLanguage(const QString &langFileName);
 
   // fonts
-  QTreeWidget *fontsTree_;
+  QFont fontOptionValue(int optionId) const;
+  void setFontOptionValue(int optionId, const QFont &font);
   QString colorOptionValue(int optionId) const;
   void setColorOptionValue(int optionId, const QString &colorName);
 
@@ -375,6 +376,7 @@ private:
   bool loadLanguagesOk_ = false;
 
   // fonts
+  QTreeWidget *fontsTree_ = nullptr;
   QTreeWidget *colorsTree_ = nullptr;
   QVector<QTreeWidgetItem *> colorOptionItems_;
   QWidget *createFontsColorsWidget();

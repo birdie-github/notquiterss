@@ -1772,31 +1772,46 @@ void OptionsDialog::setLanguage(const QString &langFileName)
   }
 }
 //----------------------------------------------------------------------------
+QFont OptionsDialog::fontOptionValue(int optionId) const
+{
+  return fontsTree_->topLevelItem(optionId)->data(2, Qt::UserRole).value<QFont>();
+}
+
+void OptionsDialog::setFontOptionValue(int optionId, const QFont &font)
+{
+  auto *item = fontsTree_->topLevelItem(optionId);
+  const QString value = QString("%1, %2").arg(font.family()).arg(font.pointSize());
+  const int previewSize = qBound(9, font.pointSize(), 18);
+  item->setData(2, Qt::UserRole, QVariant::fromValue(font));
+  item->setText(2, value);
+  item->setFont(2, QFont(font.family(), previewSize));
+  item->setToolTip(2, previewSize == font.pointSize()
+                       ? value
+                       : tr("%1 (preview shown at %2 pt)").arg(value).arg(previewSize));
+}
+
 void OptionsDialog::slotFontChange()
 {
-  bool bOk;
-  QFont curFont;
-  curFont.setFamily(fontsTree_->currentItem()->text(2).section(", ", 0, 0));
-  curFont.setPointSize(fontsTree_->currentItem()->text(2).section(", ", 1).toInt());
-
-  QFont font = QFontDialog::getFont(&bOk, curFont);
-  if (bOk) {
-    QString strFont = QString("%1, %2").
-        arg(font.family()).
-        arg(font.pointSize());
-    fontsTree_->currentItem()->setText(2, strFont);
-  }
+  const auto *item = fontsTree_->currentItem();
+  if (!item) return;
+  const int optionId = item->text(0).toInt();
+  const QFont current = fontOptionValue(optionId);
+  bool accepted = false;
+  const QFont font = QFontDialog::getFont(&accepted, QFont(current.family(), current.pointSize()), this);
+  if (accepted)
+    setFontOptionValue(optionId, font);
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::resetFontOption(QTreeWidgetItem *item)
 {
-  const QFont font = MainWindow::defaultFontForOption(item->text(0).toInt());
-  item->setText(2, QString("%1, %2").arg(font.family()).arg(font.pointSize()));
+  const int optionId = item->text(0).toInt();
+  setFontOptionValue(optionId, MainWindow::defaultFontForOption(optionId));
 }
 
 void OptionsDialog::slotFontReset()
 {
-  resetFontOption(fontsTree_->currentItem());
+  if (auto *item = fontsTree_->currentItem())
+    resetFontOption(item);
 }
 
 void OptionsDialog::slotFontResetAll()
@@ -2575,8 +2590,8 @@ OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearan
   constexpr int notificationTextColorId = 21;
   constexpr int notificationBackgroundColorId = 22;
   constexpr int linkColorId = 6;
-  const QString fontText = fontsTree_->topLevelItem(notificationFontRow)->text(2);
-  return {fontText.section(", ", 0, 0), fontText.section(", ", 1).toInt(),
+  const QFont font = fontOptionValue(notificationFontRow);
+  return {font.family(), font.pointSize(),
           colorOptionValue(notificationTextColorId),
           colorOptionValue(notificationBackgroundColorId),
           colorOptionValue(linkColorId)};

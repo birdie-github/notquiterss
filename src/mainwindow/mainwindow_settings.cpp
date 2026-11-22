@@ -626,11 +626,8 @@ void MainWindow::initOptionPage(int page)
     optionsDialog_->setLanguage(mainApp->language());
     break;
   case OptionsDialog::PageFontsColors:
-    for (int row = 0; row < kFontOptionCount; ++row) {
-      const QFont f = fontForOption(row);
-      optionsDialog_->fontsTree_->topLevelItem(row)->setText(
-            2, QString("%1, %2").arg(f.family()).arg(f.pointSize()));
-    }
+    for (int row = 0; row < kFontOptionCount; ++row)
+      optionsDialog_->setFontOptionValue(row, fontForOption(row));
     for (int row = 0; row < kColorOptionCount; ++row)
       optionsDialog_->setColorOptionValue(row, colorValueForOption(row));
     break;
@@ -884,10 +881,10 @@ void MainWindow::showOptionDlg(int index)
 
   if (optionsDialog_->isPageCreated(OptionsDialog::PageFontsColors)) {
     for (int row = 0; row < kFontOptionCount; ++row) {
-      const QString text = optionsDialog_->fontsTree_->topLevelItem(row)->text(2);
+      const QFont selected = optionsDialog_->fontOptionValue(row);
       QFont font = fontForOption(row);
-      font.setFamily(text.section(", ", 0, 0));
-      font.setPointSize(text.section(", ", 1).toInt());
+      font.setFamily(selected.family());
+      font.setPointSize(selected.pointSize());
       setFontForOption(row, font);
     }
 

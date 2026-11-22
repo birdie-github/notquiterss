@@ -5276,6 +5276,11 @@ Details:
         <source>Reset all color settings to their default values?</source>
         <translation>Восстановить настройки всех цветов по умолчанию?</translation>
     </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1790"/>
+        <source>%1 (preview shown at %2 pt)</source>
+        <translation>%1 (предпросмотр в размере %2 пт)</translation>
+    </message>
 </context>
 <context>
     <name>ParseObject</name>
