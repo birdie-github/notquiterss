@@ -46,11 +46,6 @@
         <translation>Релизы</translation>
     </message>
     <message>
-        <location filename="../../../src/app/aboutdialog.cpp" line="71"/>
-        <source>Original project</source>
-        <translation>Оригинальный проект</translation>
-    </message>
-    <message>
         <location filename="../../../src/app/aboutdialog.cpp" line="118"/>
         <source>File not found. Copy %1 to %2, then edit it and restart the application.</source>
         <translation>Файл не найден. Скопируйте %1 в %2, затем отредактируйте его и перезапустите приложение.</translation>

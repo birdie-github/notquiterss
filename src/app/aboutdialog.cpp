@@ -25,6 +25,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
+#include <QStringList>
 #include <QTextCharFormat>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -45,34 +46,46 @@ AboutDialog::AboutDialog(QWidget *parent) :
 
   QTabWidget *tabWidget = new QTabWidget();
 
-  QString revisionStr;
-  if (!ProjectMetadata::revision().isEmpty()) {
-      revisionStr = "<BR>" + tr("Revision") + " " + QString("%1").arg(ProjectMetadata::revision());
-  }
-  QString appInfo =
-      "<html><style>a { color: blue; text-decoration: none; }</style><body>"
-      "<CENTER>"
-      "<IMG SRC=\":/images/application256\" WIDTH=\"128\" HEIGHT=\"128\">"
-      "<BR><B>" + QGuiApplication::applicationDisplayName().toHtmlEscaped() + "</B>"
-      "<P>"
-      + tr("Version") + " " + "<B>" + QString(QCoreApplication::applicationVersion()) + "</B>" + QString(" (%1)").arg(ProjectMetadata::releaseDate())
-      + revisionStr
-      + "</P>"
-      + "<BR>"
-      + tr("%1 is an open-source, cross-platform RSS/Atom news feed reader").arg(QGuiApplication::applicationDisplayName().toHtmlEscaped())
-      + "<P>" + tr("Uses ")
-      + QString(" Qt-%1, SQLite-%2").
-      arg(QT_VERSION_STR).arg(SQLITE_VERSION)
-      + "</P>"
-      + "<P>" + ProjectMetadata::originalCopyright().toHtmlEscaped() + "</P>"
-      + "<P>" + ProjectMetadata::copyright().toHtmlEscaped() + "</P>"
-      + QString("<P><a href=\"%1\">%2</a> · <a href=\"%3\">%4</a></P>")
-          .arg(ProjectMetadata::homepageUrl().toHtmlEscaped(), tr("Homepage"),
-               QString("mailto:") + ProjectMetadata::email().toHtmlEscaped(), tr("E-mail"))
-      + QString("<P><a href=\"%1\">%2</a> · <a href=\"%3\">%4</a></P>")
-          .arg(ProjectMetadata::releasesUrl().toHtmlEscaped(), tr("Releases"),
-               ProjectMetadata::originalProjectUrl().toHtmlEscaped(), tr("Original project"))
-      + "</CENTER></body></html>";
+  const auto link = [](const QString &url, const QString &label) {
+    return QStringLiteral(R"(<a href="%1">%2</a>)")
+        .arg(url.toHtmlEscaped(), label.toHtmlEscaped());
+  };
+  const QString appName = QGuiApplication::applicationDisplayName().toHtmlEscaped();
+  const QString version = QStringLiteral("%1 <b>%2</b> (%3)")
+      .arg(tr("Version").toHtmlEscaped(), QCoreApplication::applicationVersion().toHtmlEscaped(),
+           ProjectMetadata::releaseDate().toHtmlEscaped());
+  const QString revision = ProjectMetadata::revision();
+  const QString revisionLine = revision.isEmpty() ? QString()
+      : QStringLiteral("<br>%1 %2").arg(tr("Revision").toHtmlEscaped(), revision.toHtmlEscaped());
+  const QString dependencies = tr("Uses ").toHtmlEscaped()
+      + QStringLiteral("Qt-%1, SQLite-%2").arg(QT_VERSION_STR, SQLITE_VERSION);
+  const QStringList links{
+    link(ProjectMetadata::homepageUrl(), tr("Homepage")),
+    link(QStringLiteral("mailto:") + ProjectMetadata::email(), tr("E-mail")),
+    link(ProjectMetadata::releasesUrl(), tr("Releases"))
+  };
+
+  const QString appInfo = QStringLiteral(R"html(
+<html>
+<head><style>a { color: blue; text-decoration: none; }</style></head>
+<body>
+<center>
+  <img src=":/images/application256" width="128" height="128">
+  <br><b>%1</b>
+  <p>%2%3</p>
+  <br>%4
+  <p>%5</p>
+  <p>%6</p>
+  <p>%7</p>
+  <p>%8</p>
+</center>
+</body>
+</html>
+)html").arg(appName, version, revisionLine,
+            tr("%1 is an open-source, cross-platform RSS/Atom news feed reader")
+                .arg(QGuiApplication::applicationDisplayName()).toHtmlEscaped(),
+            dependencies, link(ProjectMetadata::originalProjectUrl(), ProjectMetadata::originalCopyright()),
+            ProjectMetadata::copyright().toHtmlEscaped(), links.join(QStringLiteral(" · ")));
   QLabel *infoLabel = new QLabel(appInfo);
   infoLabel->setOpenExternalLinks(false);
   connect(infoLabel, &QLabel::linkActivated, this, [](const QString &link) {
