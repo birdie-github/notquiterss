@@ -5253,6 +5253,11 @@ Details:
         <source>Title</source>
         <translation>Заголовок</translation>
     </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1806"/>
+        <source>None</source>
+        <translation>Нет</translation>
+    </message>
 </context>
 <context>
     <name>ParseObject</name>

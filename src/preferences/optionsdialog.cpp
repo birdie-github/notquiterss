@@ -17,11 +17,14 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "projectmetadata.h"
+#include <cmath>
 #include <utility>
 #include "common/logfile.h"
 #include "optionsdialog.h"
 #include "backup/backupsettingspage.h"
 #include <QElapsedTimer>
+#include <QPainter>
+#include <QStyledItemDelegate>
 #include <QScreen>
 #include <QStyle>
 #include <QWindow>
@@ -33,6 +36,63 @@
 #include "articles/labeldialog.h"
 #include "settings.h"
 #include "app/globals.h"
+
+namespace {
+class ColorSwatchDelegate final : public QStyledItemDelegate
+{
+public:
+  using QStyledItemDelegate::QStyledItemDelegate;
+
+  QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
+  {
+    return QStyledItemDelegate::sizeHint(option, index) + QSize(20, 8);
+  }
+
+  void paint(QPainter *painter, const QStyleOptionViewItem &option,
+             const QModelIndex &index) const override
+  {
+    QStyleOptionViewItem cell(option);
+    initStyleOption(&cell, index);
+    const QString label = cell.text;
+    cell.text.clear();
+    const QStyle *style = cell.widget ? cell.widget->style() : QApplication::style();
+    style->drawControl(QStyle::CE_ItemViewItem, &cell, painter, cell.widget);
+    if (label.isEmpty()) return;
+
+    const QRect swatch = cell.rect.adjusted(4, 3, -5, -4);
+    if (swatch.isEmpty()) return;
+
+    QColor fill = cell.palette.color(QPalette::Base);
+    QColor ink = cell.palette.color(QPalette::Text);
+    const QColor color(index.data(Qt::UserRole).toString());
+    if (color.isValid()) {
+      // Compute contrast against the visible color, including any transparency.
+      const double alpha = color.alphaF();
+      fill = QColor::fromRgbF(alpha * color.redF() + (1 - alpha) * fill.redF(),
+                             alpha * color.greenF() + (1 - alpha) * fill.greenF(),
+                             alpha * color.blueF() + (1 - alpha) * fill.blueF());
+      const auto linear = [](double channel) {
+        return channel <= 0.04045 ? channel / 12.92
+                                 : std::pow((channel + 0.055) / 1.055, 2.4);
+      };
+      const double luminance = 0.2126 * linear(fill.redF()) + 0.7152 * linear(fill.greenF())
+                             + 0.0722 * linear(fill.blueF());
+      const double blackContrast = (luminance + 0.05) / 0.05;
+      const double whiteContrast = 1.05 / (luminance + 0.05);
+      ink = blackContrast >= whiteContrast ? Qt::black : Qt::white;
+    }
+
+    painter->save();
+    painter->fillRect(swatch, fill);
+    painter->setPen(cell.palette.color(QPalette::Mid));
+    painter->drawRect(swatch.adjusted(0, 0, -1, -1));
+    painter->setFont(cell.font);
+    painter->setPen(ink);
+    painter->drawText(swatch, Qt::AlignCenter, label);
+    painter->restore();
+  }
+};
+}
 
 const OptionsDialog::PageDescriptor OptionsDialog::kPages[OptionsDialog::PageCount] = {
   { QT_TR_NOOP("General"),            &OptionsDialog::createGeneralWidget,            nullptr },
@@ -1427,8 +1487,11 @@ QWidget *OptionsDialog::createFontsColorsWidget()
   colorsTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
   colorsTree_->setRootIsDecorated(false);
   colorsTree_->setColumnCount(2);
-  colorsTree_->setColumnHidden(1, true);
   colorsTree_->setHeaderHidden(true);
+  colorsTree_->header()->setStretchLastSection(false);
+  colorsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+  colorsTree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  colorsTree_->setItemDelegateForColumn(1, new ColorSwatchDelegate(colorsTree_));
 
   // Option IDs match the theme bindings and are independent of display order.
   static const struct {
@@ -1728,16 +1791,20 @@ void OptionsDialog::slotFontReset()
 //----------------------------------------------------------------------------
 QString OptionsDialog::colorOptionValue(int optionId) const
 {
-  return colorOptionItems_.at(optionId)->text(1);
+  return colorOptionItems_.at(optionId)->data(1, Qt::UserRole).toString();
 }
 
 void OptionsDialog::setColorOptionValue(int optionId, const QString &colorName)
 {
   auto *item = colorOptionItems_.at(optionId);
-  QPixmap swatch(14, 14);
-  swatch.fill(colorName.isEmpty() ? QColor(Qt::transparent) : QColor(colorName));
-  item->setIcon(0, swatch);
-  item->setText(1, colorName);
+  const QColor color(colorName);
+  item->setData(1, Qt::UserRole, colorName);
+  if (color.isValid()) {
+    const auto format = color.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb;
+    item->setText(1, color.name(format).toUpper());
+  } else {
+    item->setText(1, colorName.isEmpty() ? tr("None") : colorName);
+  }
 }
 
 void OptionsDialog::slotColorChange()
