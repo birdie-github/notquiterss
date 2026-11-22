@@ -59,6 +59,10 @@ AboutDialog::AboutDialog(QWidget *parent) :
       : QStringLiteral("<br>%1 %2").arg(tr("Revision").toHtmlEscaped(), revision.toHtmlEscaped());
   const QString dependencies = tr("Uses ").toHtmlEscaped()
       + QStringLiteral("Qt-%1, SQLite-%2").arg(QT_VERSION_STR, SQLITE_VERSION);
+  const QString originalProjectName = QStringLiteral("QuiteRSS Project");
+  QString originalCredit = ProjectMetadata::originalCopyright().toHtmlEscaped();
+  originalCredit.replace(originalProjectName,
+                         link(ProjectMetadata::originalProjectUrl(), originalProjectName));
   const QStringList links{
     link(ProjectMetadata::homepageUrl(), tr("Homepage")),
     link(QStringLiteral("mailto:") + ProjectMetadata::email(), tr("E-mail")),
@@ -84,7 +88,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 )html").arg(appName, version, revisionLine,
             tr("%1 is an open-source, cross-platform RSS/Atom news feed reader")
                 .arg(QGuiApplication::applicationDisplayName()).toHtmlEscaped(),
-            dependencies, link(ProjectMetadata::originalProjectUrl(), ProjectMetadata::originalCopyright()),
+            dependencies, originalCredit,
             ProjectMetadata::copyright().toHtmlEscaped(), links.join(QStringLiteral(" · ")));
   QLabel *infoLabel = new QLabel(appInfo);
   infoLabel->setOpenExternalLinks(false);
