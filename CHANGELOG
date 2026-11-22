@@ -1,3 +1,10 @@
+Version 0.95.10 BETA (2026-11-22)
+* NEW FEATURE: "Reset all" individually for both Fonts and Colors in Options.
+* NEW FEATURE: Live font previews and color swatches with color hex values the Fonts & Colors dialog.
+* NEW FEATURE: Enable the import of cookies using Unix seconds with a decimal fraction.
+* BUG FIX: Fix the crash that occurs when you click on the notifications preview button (this was caused by trying to make the Options dialog open faster).
+* BUG FIX: Address multiple minor issues.
+
 Version 0.95.9 BETA (2026-11-21)
 * NEW FEATURE: Feed Properties now shows the last update attempt, the last successful update, and a countdown to the next scheduled check.
 * NEW FEATURE: Add a Supporters tab under Help -> About to thank donators. The Version tab also offers the Donate button if it was included in your build, even when hidden in the main window.
