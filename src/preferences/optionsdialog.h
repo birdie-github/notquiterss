@@ -61,6 +61,15 @@ public:
     return pageIndex >= 0 && pageIndex < pageWidgets_.size() && pageWidgets_.at(pageIndex) != nullptr;
   }
 
+  struct NotificationAppearance {
+    QString fontFamily;
+    int fontSize;
+    QString textColor;
+    QString backgroundColor;
+    QString linkColor;
+  };
+  NotificationAppearance notificationPreviewAppearance() const;
+
   // general
   QCheckBox *showSplashScreen_;
   QCheckBox *reopenFeedStartup_;

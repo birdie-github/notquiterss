@@ -2427,6 +2427,26 @@ void OptionsDialog::applyNotifier()
   db_.commit();
 }
 
+OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearance() const
+{
+  if (!isPageCreated(PageFontsColors)) {
+    const auto *mainWindow = mainApp->mainWindow();
+    return {mainWindow->notificationFontFamily_, mainWindow->notificationFontSize_,
+            mainWindow->notifierTextColor_, mainWindow->notifierBackgroundColor_,
+            mainWindow->linkColor_};
+  }
+
+  constexpr int notificationFontRow = 4;
+  constexpr int notificationTextColorRow = 21;
+  constexpr int notificationBackgroundColorRow = 22;
+  constexpr int linkColorRow = 6;
+  const QString fontText = fontsTree_->topLevelItem(notificationFontRow)->text(2);
+  return {fontText.section(", ", 0, 0), fontText.section(", ", 1).toInt(),
+          colorsTree_->topLevelItem(notificationTextColorRow)->text(1),
+          colorsTree_->topLevelItem(notificationBackgroundColorRow)->text(1),
+          colorsTree_->topLevelItem(linkColorRow)->text(1)};
+}
+
 /** @brief Show notifier test window
  *----------------------------------------------------------------------------*/
 void OptionsDialog::showNotification()

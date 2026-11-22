@@ -51,11 +51,13 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   int numberItems;
   int widthList;
   const auto *mainWindow = mainApp->mainWindow();
-  QString fontFamily = mainWindow->notificationFontFamily_;
-  int fontSize = mainWindow->notificationFontSize_;
-  QString textColor = mainWindow->notifierTextColor_;
-  QString backgroundColor = mainWindow->notifierBackgroundColor_;
-  QString linkColor = mainWindow->linkColor_;
+  const auto *options = idFeedList.isEmpty() ? qobject_cast<OptionsDialog *>(parentWidget) : nullptr;
+  const auto [fontFamily, fontSize, textColor, backgroundColor, linkColor] = options
+      ? options->notificationPreviewAppearance()
+      : OptionsDialog::NotificationAppearance{
+          mainWindow->notificationFontFamily_, mainWindow->notificationFontSize_,
+          mainWindow->notifierTextColor_, mainWindow->notifierBackgroundColor_,
+          mainWindow->linkColor_};
   bool showTitlesFeedsNotify;
   bool showIconFeedNotify;
   bool showButtonMarkAllNotify;
@@ -79,22 +81,12 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
     showButtonDeleteNotify = mainWindow->showButtonDeleteNotify_;
     closeNotify_ = mainWindow->closeNotify_;
   } else {
-    OptionsDialog *options = qobject_cast<OptionsDialog*>(parentWidget);
     screen_ = options->screenNotify_->currentIndex()-1;
     position_ = options->positionNotify_->currentIndex();
     transparency_ = options->transparencyNotify_->value();
     timeShowNews_ = options->timeShowNewsNotify_->value();
     numberItems = options->countShowNewsNotify_->value();
     widthList = options->widthTitleNewsNotify_->value();
-    // Before the Fonts & Colors page is opened there are no pending edits to preview.
-    if (options->isPageCreated(OptionsDialog::PageFontsColors)) {
-      const QString fontText = options->fontsTree_->topLevelItem(4)->text(2);
-      fontFamily = fontText.section(", ", 0, 0);
-      fontSize = fontText.section(", ", 1).toInt();
-      textColor = options->colorsTree_->topLevelItem(21)->text(1);
-      backgroundColor = options->colorsTree_->topLevelItem(22)->text(1);
-      linkColor = options->colorsTree_->topLevelItem(6)->text(1);
-    }
 
     showTitlesFeedsNotify = options->showTitlesFeedsNotify_->isChecked();
     showIconFeedNotify = options->showIconFeedNotify_->isChecked();
