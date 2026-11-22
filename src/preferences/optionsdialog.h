@@ -238,8 +238,10 @@ private slots:
   void closeDialog();
   void slotFontChange();
   void slotFontReset();
+  void slotFontResetAll();
   void slotColorChange();
   void slotColorReset();
+  void slotColorResetAll();
   void shortcutTreeClicked(const QModelIndex &index);
   void slotShortcutTreeUpDownPressed();
   void slotClearShortcut();
@@ -376,6 +378,7 @@ private:
   QTreeWidget *colorsTree_ = nullptr;
   QVector<QTreeWidgetItem *> colorOptionItems_;
   QWidget *createFontsColorsWidget();
+  void resetFontOption(QTreeWidgetItem *item);
 
   // shortcut
   QWidget *createShortcutWidget();

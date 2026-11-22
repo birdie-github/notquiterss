@@ -1472,6 +1472,9 @@ QWidget *OptionsDialog::createFontsColorsWidget()
   fontsButtonLayout->addWidget(fontChange);
   fontsButtonLayout->addWidget(fontReset);
   fontsButtonLayout->addStretch(1);
+  auto *fontResetAll = new QPushButton(tr("Reset All"));
+  connect(fontResetAll, &QAbstractButton::clicked, this, &OptionsDialog::slotFontResetAll);
+  fontsButtonLayout->addWidget(fontResetAll);
 
   QHBoxLayout *mainFontsLayout = new QHBoxLayout();
   mainFontsLayout->addWidget(fontsTree_, 1);
@@ -1566,6 +1569,9 @@ QWidget *OptionsDialog::createFontsColorsWidget()
   colorsButtonLayout->addWidget(colorChange);
   colorsButtonLayout->addWidget(colorReset);
   colorsButtonLayout->addStretch(1);
+  auto *colorResetAll = new QPushButton(tr("Reset All"));
+  connect(colorResetAll, &QAbstractButton::clicked, this, &OptionsDialog::slotColorResetAll);
+  colorsButtonLayout->addWidget(colorResetAll);
 
   QHBoxLayout *colorsLayout = new QHBoxLayout();
   colorsLayout->addWidget(colorsTree_);
@@ -1782,11 +1788,26 @@ void OptionsDialog::slotFontChange()
   }
 }
 //----------------------------------------------------------------------------
+void OptionsDialog::resetFontOption(QTreeWidgetItem *item)
+{
+  const QFont font = MainWindow::defaultFontForOption(item->text(0).toInt());
+  item->setText(2, QString("%1, %2").arg(font.family()).arg(font.pointSize()));
+}
+
 void OptionsDialog::slotFontReset()
 {
-  const QFont def = MainWindow::defaultFontForOption(fontsTree_->currentItem()->text(0).toInt());
-  fontsTree_->currentItem()->setText(
-        2, QString("%1, %2").arg(def.family()).arg(def.pointSize()));
+  resetFontOption(fontsTree_->currentItem());
+}
+
+void OptionsDialog::slotFontResetAll()
+{
+  if (QMessageBox::question(this, tr("Reset All"),
+                            tr("Reset all font settings to their default values?"),
+                            QMessageBox::Ok | QMessageBox::Cancel,
+                            QMessageBox::Cancel) != QMessageBox::Ok) return;
+
+  for (int row = 0; row < fontsTree_->topLevelItemCount(); ++row)
+    resetFontOption(fontsTree_->topLevelItem(row));
 }
 //----------------------------------------------------------------------------
 QString OptionsDialog::colorOptionValue(int optionId) const
@@ -1823,6 +1844,18 @@ void OptionsDialog::slotColorReset()
   if (!item || !item->data(0, Qt::UserRole).isValid()) return;
   const int optionId = item->data(0, Qt::UserRole).toInt();
   setColorOptionValue(optionId, mainApp->mainWindow()->defaultColorForOption(optionId));
+}
+
+void OptionsDialog::slotColorResetAll()
+{
+  if (QMessageBox::question(this, tr("Reset All"),
+                            tr("Reset all color settings to their default values?"),
+                            QMessageBox::Ok | QMessageBox::Cancel,
+                            QMessageBox::Cancel) != QMessageBox::Ok) return;
+
+  const auto *mainWindow = mainApp->mainWindow();
+  for (int optionId = 0; optionId < colorOptionItems_.size(); ++optionId)
+    setColorOptionValue(optionId, mainWindow->defaultColorForOption(optionId));
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setBehaviorIconTray(int behavior)

@@ -5258,6 +5258,24 @@ Details:
         <source>None</source>
         <translation>Нет</translation>
     </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1475"/>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1572"/>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1804"/>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1851"/>
+        <source>Reset All</source>
+        <translation>Сбросить всё</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1805"/>
+        <source>Reset all font settings to their default values?</source>
+        <translation>Восстановить настройки всех шрифтов по умолчанию?</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1852"/>
+        <source>Reset all color settings to their default values?</source>
+        <translation>Восстановить настройки всех цветов по умолчанию?</translation>
+    </message>
 </context>
 <context>
     <name>ParseObject</name>
