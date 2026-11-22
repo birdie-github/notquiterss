@@ -631,16 +631,8 @@ void MainWindow::initOptionPage(int page)
       optionsDialog_->fontsTree_->topLevelItem(row)->setText(
             2, QString("%1, %2").arg(f.family()).arg(f.pointSize()));
     }
-    for (int row = 0; row < kColorOptionCount; ++row) {
-      const QString colorName = colorValueForOption(row);
-      QPixmap pixmapColor(14, 14);
-      if (colorName.isEmpty())
-        pixmapColor.fill(QColor(0, 0, 0, 0));
-      else
-        pixmapColor.fill(colorName);
-      optionsDialog_->colorsTree_->topLevelItem(row)->setIcon(0, pixmapColor);
-      optionsDialog_->colorsTree_->topLevelItem(row)->setText(1, colorName);
-    }
+    for (int row = 0; row < kColorOptionCount; ++row)
+      optionsDialog_->setColorOptionValue(row, colorValueForOption(row));
     break;
   default:
     break;
@@ -899,8 +891,8 @@ void MainWindow::showOptionDlg(int index)
       setFontForOption(row, font);
     }
 
-    for (int row = 0; row < optionsDialog_->colorsTree_->topLevelItemCount(); ++row) {
-      setColorValueForOption(row, optionsDialog_->colorsTree_->topLevelItem(row)->text(1));
+    for (int row = 0; row < kColorOptionCount; ++row) {
+      setColorValueForOption(row, optionsDialog_->colorOptionValue(row));
       if (colorValueForOption(row) == defaultColorForOption(row))
         customColorRows_.remove(row);
       else

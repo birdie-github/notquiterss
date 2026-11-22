@@ -4823,8 +4823,8 @@ Details:
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1113"/>
-        <source>Review</source>
-        <translation>Просмотр</translation>
+        <source>Preview</source>
+        <translation>Предпросмотр</translation>
     </message>
     <message>
         <location filename="../../../src/preferences/optionsdialog.cpp" line="1117"/>
@@ -5222,6 +5222,36 @@ Details:
             <numerusform>При завершении работы будут удалены %n статьи.</numerusform>
             <numerusform>При завершении работы будет удалено %n статей.</numerusform>
         </translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1438"/>
+        <source>Article</source>
+        <translation>Статья</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1449"/>
+        <source>Date</source>
+        <translation>Дата</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1451"/>
+        <source>Feed</source>
+        <translation>Лента</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1459"/>
+        <source>Link</source>
+        <translation>Ссылка</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1464"/>
+        <source>Row</source>
+        <translation>Строка</translation>
+    </message>
+    <message>
+        <location filename="../../../src/preferences/optionsdialog.cpp" line="1466"/>
+        <source>Title</source>
+        <translation>Заголовок</translation>
     </message>
 </context>
 <context>

@@ -1110,7 +1110,7 @@ QWidget *OptionsDialog::createNotifierWidget()
   timeShowNewsNotify_ = new QSpinBox();
   timeShowNewsNotify_->setRange(0, 99999);
 
-  QPushButton *showNotifier = new QPushButton(tr("Review"));
+  QPushButton *showNotifier = new QPushButton(tr("Preview"));
   connect(showNotifier, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
 
   QHBoxLayout *notifierLayout1 = new QHBoxLayout();
@@ -1430,42 +1430,75 @@ QWidget *OptionsDialog::createFontsColorsWidget()
   colorsTree_->setColumnHidden(1, true);
   colorsTree_->setHeaderHidden(true);
 
-  static const char *const kColorLabels[] = {
-    QT_TR_NOOP("Feed list text color"),
-    QT_TR_NOOP("Feeds list background"),
-    QT_TR_NOOP("Article list text color"),
-    QT_TR_NOOP("Article list background"),
-    QT_TR_NOOP("Focused article text color"),
-    QT_TR_NOOP("Focused article background"),
-    QT_TR_NOOP("Link color"),
-    QT_TR_NOOP("Title color"),
-    QT_TR_NOOP("Date color"),
-    QT_TR_NOOP("Author color"),
-    QT_TR_NOOP("Article text color"),
-    QT_TR_NOOP("Article title background"),
-    QT_TR_NOOP("Article background"),
-    QT_TR_NOOP("Feed with new articles"),
-    QT_TR_NOOP("Unread article count in feed tree"),
-    QT_TR_NOOP("New article text color"),
-    QT_TR_NOOP("Unread article text color"),
-    QT_TR_NOOP("Focused feed color"),
-    QT_TR_NOOP("Focused feed background color"),
-    QT_TR_NOOP("Disabled feed"),
-    QT_TR_NOOP("Alternating row colors"),
-    QT_TR_NOOP("Notification text color"),
-    QT_TR_NOOP("Notification background color"),
+  // Option IDs match the theme bindings and are independent of display order.
+  static const struct {
+    int optionId;
+    const char *label;
+  } entries[] = {
+    {-1, QT_TR_NOOP("Article")},
+    {10, QT_TR_NOOP("Article text color")},
+    {12, QT_TR_NOOP("Article background")},
+    { 2, QT_TR_NOOP("Article list text color")},
+    { 3, QT_TR_NOOP("Article list background")},
+    { 4, QT_TR_NOOP("Focused article text color")},
+    { 5, QT_TR_NOOP("Focused article background")},
+    {15, QT_TR_NOOP("New article text color")},
+    {16, QT_TR_NOOP("Unread article text color")},
+    {-1, QT_TR_NOOP("Author")},
+    { 9, QT_TR_NOOP("Author color")},
+    {-1, QT_TR_NOOP("Date")},
+    { 8, QT_TR_NOOP("Date color")},
+    {-1, QT_TR_NOOP("Feed")},
+    { 0, QT_TR_NOOP("Feed list text color")},
+    { 1, QT_TR_NOOP("Feeds list background")},
+    {17, QT_TR_NOOP("Focused feed color")},
+    {18, QT_TR_NOOP("Focused feed background color")},
+    {13, QT_TR_NOOP("Feed with new articles")},
+    {14, QT_TR_NOOP("Unread article count in feed tree")},
+    {19, QT_TR_NOOP("Disabled feed")},
+    {-1, QT_TR_NOOP("Link")},
+    { 6, QT_TR_NOOP("Link color")},
+    {-1, QT_TR_NOOP("Notification")},
+    {21, QT_TR_NOOP("Notification text color")},
+    {22, QT_TR_NOOP("Notification background color")},
+    {-1, QT_TR_NOOP("Row")},
+    {20, QT_TR_NOOP("Alternating row colors")},
+    {-1, QT_TR_NOOP("Title")},
+    { 7, QT_TR_NOOP("Title color")},
+    {11, QT_TR_NOOP("Article title background")},
   };
-  for (const char *label : kColorLabels)
-    colorsTree_->addTopLevelItem(new QTreeWidgetItem(QStringList() << tr(label)));
+  colorOptionItems_.resize(MainWindow::kColorOptionCount);
+  QTreeWidgetItem *firstColor = nullptr;
+  for (const auto &entry : entries) {
+    auto *item = new QTreeWidgetItem(colorsTree_, QStringList{tr(entry.label)});
+    if (entry.optionId < 0) {
+      item->setFlags(Qt::ItemIsEnabled);
+      QFont headingFont = item->font(0);
+      headingFont.setBold(true);
+      item->setFont(0, headingFont);
+    } else {
+      item->setData(0, Qt::UserRole, entry.optionId);
+      colorOptionItems_[entry.optionId] = item;
+      if (!firstColor) firstColor = item;
+    }
+  }
 
-  colorsTree_->setCurrentItem(colorsTree_->topLevelItem(0));
+  connect(colorsTree_, &QTreeWidget::itemDoubleClicked, this,
+          [this](QTreeWidgetItem *item, int) {
+    if (item->data(0, Qt::UserRole).isValid()) slotColorChange();
+  });
 
-  connect(colorsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::slotColorChange);
-
-  QPushButton *colorChange = new QPushButton(tr("Change..."));
+  auto *colorChange = new QPushButton(tr("Change..."));
   connect(colorChange, &QAbstractButton::clicked, this, &OptionsDialog::slotColorChange);
-  QPushButton *colorReset = new QPushButton(tr("Reset"));
+  auto *colorReset = new QPushButton(tr("Reset"));
   connect(colorReset, &QAbstractButton::clicked, this, &OptionsDialog::slotColorReset);
+  connect(colorsTree_, &QTreeWidget::currentItemChanged, this,
+          [colorChange, colorReset](QTreeWidgetItem *item, QTreeWidgetItem *) {
+    const bool editable = item && item->data(0, Qt::UserRole).isValid();
+    colorChange->setEnabled(editable);
+    colorReset->setEnabled(editable);
+  });
+  colorsTree_->setCurrentItem(firstColor);
   QVBoxLayout *colorsButtonLayout = new QVBoxLayout();
   colorsButtonLayout->addWidget(colorChange);
   colorsButtonLayout->addWidget(colorReset);
@@ -1693,34 +1726,36 @@ void OptionsDialog::slotFontReset()
         2, QString("%1, %2").arg(def.family()).arg(def.pointSize()));
 }
 //----------------------------------------------------------------------------
+QString OptionsDialog::colorOptionValue(int optionId) const
+{
+  return colorOptionItems_.at(optionId)->text(1);
+}
+
+void OptionsDialog::setColorOptionValue(int optionId, const QString &colorName)
+{
+  auto *item = colorOptionItems_.at(optionId);
+  QPixmap swatch(14, 14);
+  swatch.fill(colorName.isEmpty() ? QColor(Qt::transparent) : QColor(colorName));
+  item->setIcon(0, swatch);
+  item->setText(1, colorName);
+}
+
 void OptionsDialog::slotColorChange()
 {
-  QString colorStr = colorsTree_->currentItem()->text(1);
-  QColorDialog *colorDialog = new QColorDialog(QColor(colorStr), this);
-  if (colorDialog->exec() == QDialog::Rejected) {
-    delete colorDialog;
-    return;
-  }
-  QColor color = colorDialog->selectedColor();
-  delete colorDialog;
-
-  QPixmap pixmapColor(14, 14);
-  pixmapColor.fill(color.name());
-  colorsTree_->currentItem()->setIcon(0, pixmapColor);
-  colorsTree_->currentItem()->setText(1, color.name());
+  const auto *item = colorsTree_->currentItem();
+  if (!item || !item->data(0, Qt::UserRole).isValid()) return;
+  const int optionId = item->data(0, Qt::UserRole).toInt();
+  QColorDialog colorDialog(QColor(colorOptionValue(optionId)), this);
+  if (colorDialog.exec() == QDialog::Accepted)
+    setColorOptionValue(optionId, colorDialog.selectedColor().name());
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::slotColorReset()
 {
-  const int row = colorsTree_->currentIndex().row();
-  const QString colorName = mainApp->mainWindow()->defaultColorForOption(row);
-  QPixmap pixmapColor(14, 14);
-  if (colorName.isEmpty())
-    pixmapColor.fill(QColor(0, 0, 0, 0));
-  else
-    pixmapColor.fill(colorName);
-  colorsTree_->currentItem()->setIcon(0, pixmapColor);
-  colorsTree_->currentItem()->setText(1, colorName);
+  const auto *item = colorsTree_->currentItem();
+  if (!item || !item->data(0, Qt::UserRole).isValid()) return;
+  const int optionId = item->data(0, Qt::UserRole).toInt();
+  setColorOptionValue(optionId, mainApp->mainWindow()->defaultColorForOption(optionId));
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setBehaviorIconTray(int behavior)
@@ -2437,14 +2472,14 @@ OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearan
   }
 
   constexpr int notificationFontRow = 4;
-  constexpr int notificationTextColorRow = 21;
-  constexpr int notificationBackgroundColorRow = 22;
-  constexpr int linkColorRow = 6;
+  constexpr int notificationTextColorId = 21;
+  constexpr int notificationBackgroundColorId = 22;
+  constexpr int linkColorId = 6;
   const QString fontText = fontsTree_->topLevelItem(notificationFontRow)->text(2);
   return {fontText.section(", ", 0, 0), fontText.section(", ", 1).toInt(),
-          colorsTree_->topLevelItem(notificationTextColorRow)->text(1),
-          colorsTree_->topLevelItem(notificationBackgroundColorRow)->text(1),
-          colorsTree_->topLevelItem(linkColorRow)->text(1)};
+          colorOptionValue(notificationTextColorId),
+          colorOptionValue(notificationBackgroundColorId),
+          colorOptionValue(linkColorId)};
 }
 
 /** @brief Show notifier test window

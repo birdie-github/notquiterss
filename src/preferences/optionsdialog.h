@@ -212,7 +212,8 @@ public:
 
   // fonts
   QTreeWidget *fontsTree_;
-  QTreeWidget *colorsTree_;
+  QString colorOptionValue(int optionId) const;
+  void setColorOptionValue(int optionId, const QString &colorName);
 
   // shortcut
   void loadActionShortcut(QList<QAction *> actions, const QStringList *list);
@@ -372,6 +373,8 @@ private:
   bool loadLanguagesOk_ = false;
 
   // fonts
+  QTreeWidget *colorsTree_ = nullptr;
+  QVector<QTreeWidgetItem *> colorOptionItems_;
   QWidget *createFontsColorsWidget();
 
   // shortcut
