@@ -50,11 +50,12 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
 
   int numberItems;
   int widthList;
-  QString fontFamily;
-  int fontSize;
-  QString textColor;
-  QString backgroundColor;
-  QString linkColor;
+  const auto *mainWindow = mainApp->mainWindow();
+  QString fontFamily = mainWindow->notificationFontFamily_;
+  int fontSize = mainWindow->notificationFontSize_;
+  QString textColor = mainWindow->notifierTextColor_;
+  QString backgroundColor = mainWindow->notifierBackgroundColor_;
+  QString linkColor = mainWindow->linkColor_;
   bool showTitlesFeedsNotify;
   bool showIconFeedNotify;
   bool showButtonMarkAllNotify;
@@ -63,25 +64,20 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   bool showButtonDeleteNotify;
 
   if (idFeedList.count()) {
-    screen_ = mainApp->mainWindow()->screenNotify_;
-    position_ = mainApp->mainWindow()->positionNotify_;
-    transparency_ = mainApp->mainWindow()->transparencyNotify_;
-    timeShowNews_ = mainApp->mainWindow()->timeShowNewsNotify_;
-    numberItems = mainApp->mainWindow()->countShowNewsNotify_;
-    widthList = mainApp->mainWindow()->widthTitleNewsNotify_;
-    fontFamily = mainApp->mainWindow()->notificationFontFamily_;
-    fontSize = mainApp->mainWindow()->notificationFontSize_;
-    textColor = mainApp->mainWindow()->notifierTextColor_;
-    backgroundColor = mainApp->mainWindow()->notifierBackgroundColor_;
-    linkColor = mainApp->mainWindow()->linkColor_;
+    screen_ = mainWindow->screenNotify_;
+    position_ = mainWindow->positionNotify_;
+    transparency_ = mainWindow->transparencyNotify_;
+    timeShowNews_ = mainWindow->timeShowNewsNotify_;
+    numberItems = mainWindow->countShowNewsNotify_;
+    widthList = mainWindow->widthTitleNewsNotify_;
 
-    showTitlesFeedsNotify = mainApp->mainWindow()->showTitlesFeedsNotify_;
-    showIconFeedNotify = mainApp->mainWindow()->showIconFeedNotify_;
-    showButtonMarkAllNotify = mainApp->mainWindow()->showButtonMarkAllNotify_;
-    showButtonMarkReadNotify = mainApp->mainWindow()->showButtonMarkReadNotify_;
-    showButtonExBrowserNotify = mainApp->mainWindow()->showButtonExBrowserNotify_;
-    showButtonDeleteNotify = mainApp->mainWindow()->showButtonDeleteNotify_;
-    closeNotify_ = mainApp->mainWindow()->closeNotify_;
+    showTitlesFeedsNotify = mainWindow->showTitlesFeedsNotify_;
+    showIconFeedNotify = mainWindow->showIconFeedNotify_;
+    showButtonMarkAllNotify = mainWindow->showButtonMarkAllNotify_;
+    showButtonMarkReadNotify = mainWindow->showButtonMarkReadNotify_;
+    showButtonExBrowserNotify = mainWindow->showButtonExBrowserNotify_;
+    showButtonDeleteNotify = mainWindow->showButtonDeleteNotify_;
+    closeNotify_ = mainWindow->closeNotify_;
   } else {
     OptionsDialog *options = qobject_cast<OptionsDialog*>(parentWidget);
     screen_ = options->screenNotify_->currentIndex()-1;
@@ -90,11 +86,15 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
     timeShowNews_ = options->timeShowNewsNotify_->value();
     numberItems = options->countShowNewsNotify_->value();
     widthList = options->widthTitleNewsNotify_->value();
-    fontFamily = options->fontsTree_->topLevelItem(4)->text(2).section(", ", 0, 0);
-    fontSize = options->fontsTree_->topLevelItem(4)->text(2).section(", ", 1).toInt();
-    textColor = options->colorsTree_->topLevelItem(21)->text(1);
-    backgroundColor = options->colorsTree_->topLevelItem(22)->text(1);
-    linkColor = options->colorsTree_->topLevelItem(6)->text(1);
+    // Before the Fonts & Colors page is opened there are no pending edits to preview.
+    if (options->isPageCreated(OptionsDialog::PageFontsColors)) {
+      const QString fontText = options->fontsTree_->topLevelItem(4)->text(2);
+      fontFamily = fontText.section(", ", 0, 0);
+      fontSize = fontText.section(", ", 1).toInt();
+      textColor = options->colorsTree_->topLevelItem(21)->text(1);
+      backgroundColor = options->colorsTree_->topLevelItem(22)->text(1);
+      linkColor = options->colorsTree_->topLevelItem(6)->text(1);
+    }
 
     showTitlesFeedsNotify = options->showTitlesFeedsNotify_->isChecked();
     showIconFeedNotify = options->showIconFeedNotify_->isChecked();
@@ -110,7 +110,7 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   }
 
   if (screen_ == -1) {
-    screen_ = QGuiApplication::screens().indexOf(mainApp->mainWindow()->screen());
+    screen_ = QGuiApplication::screens().indexOf(mainWindow->screen());
   }
 
   int transparency = 255*(100-transparency_)/100;
