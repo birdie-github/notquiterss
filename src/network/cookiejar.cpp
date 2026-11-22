@@ -149,10 +149,22 @@ bool readFile(const QString &path, CookieJar::Import *result,
     QString domain = hostOf(QString::fromUtf8(fields[0]));
     if (fields[1] == "TRUE") domain.prepend(QLatin1Char('.'));
     domain = normalizedScope(domain);
-    bool ok = false;
-    const qint64 expiry = fields[4].toLongLong(&ok);
     if (domain.isEmpty())
       return invalid(CookieJar::tr("Field 1 must contain a valid domain name."));
+    const QByteArray &timestamp = fields[4];
+    const auto dot = timestamp.indexOf('.');
+    bool ok = false;
+    const qint64 expiry = timestamp.left(dot).toLongLong(&ok);
+    bool hasFraction = false;
+    if (dot >= 0) {
+      // Browser exporters may include fractional seconds in a Netscape file.
+      const auto digit = [](char ch) { return ch >= '0' && ch <= '9'; };
+      const auto point = timestamp.cbegin() + dot;
+      ok = ok && dot > 0 && point + 1 != timestamp.cend() &&
+           std::all_of(timestamp.cbegin(), point, digit) &&
+           std::all_of(point + 1, timestamp.cend(), digit);
+      hasFraction = std::any_of(point + 1, timestamp.cend(), [](char ch) { return ch != '0'; });
+    }
     if (!ok || expiry < 0)
       return invalid(CookieJar::tr("The expiry time (field 5) must be a Unix timestamp in seconds, "
                                    "or 0 for a session cookie."));
@@ -171,7 +183,7 @@ bool readFile(const QString &path, CookieJar::Import *result,
     cookie.setPath(QString::fromUtf8(fields[2]));
     cookie.setSecure(fields[3] == "TRUE");
     cookie.setHttpOnly(httpOnly);
-    if (expiry) {
+    if (expiry || hasFraction) {
       const auto date = QDateTime::fromSecsSinceEpoch(expiry, QTimeZone(0));
       if (!date.isValid())
         return invalid(CookieJar::tr("The expiry time (field 5) is outside the supported date range."));
