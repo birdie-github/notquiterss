@@ -92,7 +92,7 @@ public slots:
   void getUrlDone(int result, int feedId, QString feedUrlStr,
                   QString error, QByteArray data,
                   QDateTime dtReply, QString codecName);
-  void finishUpdate(int feedId, bool changed, int newCount, QString status);
+  void finishParsedUpdate(int feedId, bool changed, int newCount, QString status);
   void slotNextUpdateFeed(bool finish);
   void slotMarkFeedRead(int id, bool isFolder, bool openFeed);
   void slotUpdateStatus(int feedId, bool changed);
@@ -140,6 +140,7 @@ private slots:
                       const QDateTime &date, int auth, bool manual = false, bool force = false);
 
 private:
+  void finishUpdate(int feedId, bool changed, int newCount, QString status, bool checkedUnchanged);
   void queueAllFeeds(bool manual);
   void checkScheduledFeeds(bool globalEnabled, int globalIntervalSeconds);
   void announceFeedProgress(int feedId);

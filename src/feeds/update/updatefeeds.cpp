@@ -224,7 +224,7 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
     connect(updateObject_, &UpdateObject::xmlReadyParse,
             parseObject_, &ParseObject::parseXml, Qt::QueuedConnection);
     connect(parseObject_, &ParseObject::signalFinishUpdate,
-            updateObject_, &UpdateObject::finishUpdate, Qt::QueuedConnection);
+            updateObject_, &UpdateObject::finishParsedUpdate, Qt::QueuedConnection);
     connect(updateObject_, &UpdateObject::feedUpdated, feedWindow, &MainWindow::slotUpdateFeed);
     connect(updateObject_, &UpdateObject::setStatusFeed, feedWindow, &MainWindow::setStatusFeed);
 
@@ -823,11 +823,18 @@ void UpdateObject::getUrlDone(int result, int feedId, QString feedUrlStr,
       qWarning() << QString("Request failed: result = %1, error - %2, url - %3").
                     arg(result).arg(error).arg(LogFile::urlForLog(QUrl(feedUrlStr)));
     }
-    finishUpdate(feedId, false, 0, status);
+    // A matching HEAD response or an HTTP 304 can complete without a body.
+    finishUpdate(feedId, false, 0, status, result >= 0);
   }
 }
 
-void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString status)
+void UpdateObject::finishParsedUpdate(int feedId, bool changed, int newCount, QString status)
+{
+  finishUpdate(feedId, changed, newCount, status, false);
+}
+
+void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString status,
+                                bool checkedUnchanged)
 {
   auto databaseAccess = Database::backgroundAccess();
   if (updateFeedsCount_ > 0) {
@@ -842,19 +849,26 @@ void UpdateObject::finishUpdate(int feedId, bool changed, int newCount, QString 
   if (feedIdIndex > -1) {
     feedIdList_.takeAt(feedIdIndex);
   }
-  queuedUpdateIdentities_.remove(feedId);
+  const QString queuedIdentity = queuedUpdateIdentities_.take(feedId);
 
   QSqlQuery q(db_);
-  q.prepare("SELECT status FROM feeds WHERE id=?");
+  q.prepare("SELECT status, xmlUrl, created FROM feeds WHERE id=?");
   q.addBindValue(feedId);
   q.exec();
-  const QString previous = q.next() ? q.value(0).toString() : QString();
+  const bool found = q.next();
+  const QString previous = found ? q.value(0).toString() : QString();
+  const bool saveCheckTime = checkedUnchanged && found &&
+      queuedIdentity == updateIdentity(feedId, q.value(1).toString(), q.value(2).toString());
   status = FeedHealth::finish(previous, status, manualFeeds_.remove(feedId) != 0);
   q.finish();
-  q.prepare("UPDATE feeds SET status=? WHERE id=?");
+  q.prepare(saveCheckTime ? "UPDATE feeds SET status=?, updated=? WHERE id=?"
+                          : "UPDATE feeds SET status=? WHERE id=?");
   q.addBindValue(status);
+  if (saveCheckTime)
+    q.addBindValue(QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss")));
   q.addBindValue(feedId);
-  q.exec();
+  if (!q.exec())
+    qWarning() << "Could not save feed update result for" << feedId << q.lastError().text();
 
   emit feedProgressFinished(feedId);
   emit feedUpdated(feedId, changed, newCount, finish);
