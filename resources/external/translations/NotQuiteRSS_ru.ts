@@ -602,8 +602,68 @@ Deleted articles may be downloaded again.</source>
     </message>
     <message>
         <location filename="../../../src/network/cookiejar.cpp" line="131"/>
-        <source>Invalid Netscape cookie record on line %1.</source>
-        <translation>Недопустимая запись файла cookie Netscape в строке %1.</translation>
+        <source>Line %1: %2</source>
+        <translation>Строка %1: %2</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="135"/>
+        <source>This cookie exceeds the 64 KiB size limit.</source>
+        <translation>Размер записи cookie превышает 64 КиБ.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="137"/>
+        <source>Expected 7 tab-separated fields, found %1. Export the cookies in Netscape cookies.txt format.</source>
+        <translation>Ожидалось 7 полей, разделённых табуляцией, найдено %1. Экспортируйте cookie в формате Netscape cookies.txt.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="140"/>
+        <source>The file exceeds the limit of %1 cookies.</source>
+        <translation>Превышено максимально допустимое количество записей cookie в файле (%1).</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="143"/>
+        <source>Field %1 contains a control character.</source>
+        <translation>Поле %1 содержит управляющий символ.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="146"/>
+        <source>The subdomain flag (field 2) must be TRUE or FALSE.</source>
+        <translation>Флаг поддоменов (поле 2) должен иметь значение TRUE или FALSE.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="148"/>
+        <source>The secure flag (field 4) must be TRUE or FALSE.</source>
+        <translation>Флаг защищённого соединения (поле 4) должен иметь значение TRUE или FALSE.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="153"/>
+        <source>Field 1 must contain a valid domain name.</source>
+        <translation>В поле 1 должно быть допустимое доменное имя.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="170"/>
+        <source>The expiry time (field 5) must be a Unix timestamp in seconds, or 0 for a session cookie.</source>
+        <translation>В поле 5 укажите срок действия в виде метки времени Unix в секундах или 0 для сеансового cookie.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="173"/>
+        <source>The cookie path (field 3) must start with a slash.</source>
+        <translation>Путь cookie (поле 3) должен начинаться с косой черты (/).</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="175"/>
+        <source>The cookie name (field 6) is empty.</source>
+        <translation>Имя cookie (поле 6) не указано.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="181"/>
+        <source>The cookie name or value (fields 6 and 7) could not be read exactly as written.</source>
+        <translation>Не удалось прочитать имя или значение cookie (поля 6 и 7) в исходном виде.</translation>
+    </message>
+    <message>
+        <location filename="../../../src/network/cookiejar.cpp" line="190"/>
+        <source>The expiry time (field 5) is outside the supported date range.</source>
+        <translation>Срок действия cookie (поле 5) выходит за допустимый диапазон дат.</translation>
     </message>
     <message>
         <location filename="../../../src/network/cookiejar.cpp" line="290"/>
