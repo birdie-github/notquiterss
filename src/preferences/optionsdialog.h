@@ -339,6 +339,7 @@ private:
   QWidget *createLabelsWidget();
   void loadLabels();
   void applyLabels();
+  int labelShortcutRow(const QString &labelId) const;
   void addIdLabelList(const QString &idLabel);
   QPushButton *newLabelButton_ = nullptr;
   QPushButton *editLabelButton_ = nullptr;

@@ -2054,7 +2054,10 @@ void OptionsDialog::newLabel()
     if (idLabel < str.toInt())
       idLabel = str.toInt();
   }
-  idLabel = idLabel + 1;
+  // Keep IDs reserved until pending deletions and their article updates are saved.
+  for (const QString &pendingId : std::as_const(idLabels_))
+    idLabel = qMax(idLabel, pendingId.toInt());
+  ++idLabel;
 
   QStringList itemStr;
   itemStr << QString::number(idLabel) << nameLabel
@@ -2092,6 +2095,7 @@ void OptionsDialog::editLabel()
 {
   loadShortcuts();
   QTreeWidgetItem *treeWidgetItem = labelsTree_->currentItem();
+  if (!treeWidgetItem) return;
 
   QString idLabelStr = treeWidgetItem->text(0);
   QString nameLabel = treeWidgetItem->text(1);
@@ -2125,12 +2129,13 @@ void OptionsDialog::editLabel()
     treeWidgetItem->setBackground(1, QColor(colorBg));
   addIdLabelList(idLabelStr);
 
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(idLabelStr, Qt::MatchFixedString, 4);
-  QStandardItem *item = treeItems.first();
-  shortcutModel_->item(item->row(), 0)->setIcon(labelDialog->icon_);
-  shortcutModel_->item(item->row(), 0)->setText(nameLabel);
-  shortcutModel_->item(item->row(), 0)->setData(nameLabel);
+  const int shortcutRow = labelShortcutRow(idLabelStr);
+  if (shortcutRow >= 0) {
+    auto *item = shortcutModel_->item(shortcutRow, 0);
+    item->setIcon(labelDialog->icon_);
+    item->setText(nameLabel);
+    item->setData(nameLabel);
+  }
 
   delete labelDialog;
 }
@@ -2139,13 +2144,12 @@ void OptionsDialog::deleteLabel()
 {
   loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
-  addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
-
-  QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(idLabelStr, Qt::MatchFixedString, 4);
-  QStandardItem *item = treeItems.first();
-  shortcutModel_->removeRow(item->row());
+  if (labelRow < 0) return;
+  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
+  addIdLabelList(idLabelStr);
+  const int shortcutRow = labelShortcutRow(idLabelStr);
+  if (shortcutRow >= 0)
+    shortcutModel_->removeRow(shortcutRow);
 
   QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow);
   delete treeItem;
@@ -2156,15 +2160,17 @@ void OptionsDialog::moveUpLabel()
   loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
 
-  addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
-  addIdLabelList(labelsTree_->topLevelItem(labelRow-1)->text(0));
+  if (labelRow <= 0) return;
 
-  QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(idLabelStr, Qt::MatchFixedString, 4);
-  int row = treeItems.first()->row();
-  treeItems = shortcutModel_->takeRow(row-1);
-  shortcutModel_->insertRow(row, treeItems);
+  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
+  const QString neighborId = labelsTree_->topLevelItem(labelRow - 1)->text(0);
+  addIdLabelList(idLabelStr);
+  addIdLabelList(neighborId);
+
+  const int shortcutRow = labelShortcutRow(idLabelStr);
+  const int neighborRow = labelShortcutRow(neighborId);
+  if (shortcutRow >= 0 && neighborRow >= 0)
+    shortcutModel_->insertRow(neighborRow, shortcutModel_->takeRow(shortcutRow));
 
   int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
   int num2 = labelsTree_->topLevelItem(labelRow-1)->text(4).toInt();
@@ -2185,15 +2191,17 @@ void OptionsDialog::moveDownLabel()
   loadShortcuts();
   int labelRow = labelsTree_->currentIndex().row();
 
-  addIdLabelList(labelsTree_->topLevelItem(labelRow)->text(0));
-  addIdLabelList(labelsTree_->topLevelItem(labelRow+1)->text(0));
+  if (labelRow < 0 || labelRow + 1 >= labelsTree_->topLevelItemCount()) return;
 
-  QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(idLabelStr, Qt::MatchFixedString, 4);
-  int row = treeItems.first()->row();
-  treeItems = shortcutModel_->takeRow(row+1);
-  shortcutModel_->insertRow(row, treeItems);
+  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
+  const QString neighborId = labelsTree_->topLevelItem(labelRow + 1)->text(0);
+  addIdLabelList(idLabelStr);
+  addIdLabelList(neighborId);
+
+  const int shortcutRow = labelShortcutRow(idLabelStr);
+  const int neighborRow = labelShortcutRow(neighborId);
+  if (shortcutRow >= 0 && neighborRow >= 0)
+    shortcutModel_->insertRow(neighborRow, shortcutModel_->takeRow(shortcutRow));
 
   int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
   int num2 = labelsTree_->topLevelItem(labelRow+1)->text(4).toInt();
@@ -2277,8 +2285,9 @@ void OptionsDialog::applyLabels()
         q.addBindValue(idLabel);
         q.exec();
       } else {
-        q.prepare("INSERT INTO labels(name, image, color_text, color_bg, num) "
-                  "VALUES (:name, :image, :color_text, :color_bg, :num)");
+        q.prepare("INSERT INTO labels(id, name, image, color_text, color_bg, num) "
+                  "VALUES (:id, :name, :image, :color_text, :color_bg, :num)");
+        q.bindValue(":id", idLabel.toInt());
         q.bindValue(":name", nameLabel);
         q.bindValue(":image", iconData);
         q.bindValue(":color_text", colorText);
@@ -2290,6 +2299,13 @@ void OptionsDialog::applyLabels()
   }
 
   db_.commit();
+}
+
+int OptionsDialog::labelShortcutRow(const QString &labelId) const
+{
+  const auto items = shortcutModel_->findItems(
+      QStringLiteral("labelAction_%1").arg(labelId), Qt::MatchExactly, 3);
+  return items.isEmpty() ? -1 : items.first()->row();
 }
 
 /** @brief Add id for editing label
