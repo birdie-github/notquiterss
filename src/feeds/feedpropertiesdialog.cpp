@@ -253,11 +253,11 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
 
     if (!isFeed_) {
       labelTitleCapt->setText(tr("Folder name:"));
-      for (QWidget *w : {static_cast<QWidget *>(updateSchedule), displayOnStartup,
-                         loadTitleButton, selectIconButton_, labelURLCapt, editURL,
-                         labelHomepageCapt, labelHomepage, starredOn_, duplicateNewsMode_,
-                         addSingleNewsAnyDateOn_, avoidedOldSingleNewsDateOn_,
-                         avoidedOldSingleNewsDate_}) {
+      for (QWidget *w : std::initializer_list<QWidget *>{
+               updateSchedule, displayOnStartup, loadTitleButton, selectIconButton_,
+               labelURLCapt, editURL, labelHomepageCapt, labelHomepage, starredOn_,
+               duplicateNewsMode_, addSingleNewsAnyDateOn_, avoidedOldSingleNewsDateOn_,
+               avoidedOldSingleNewsDate_}) {
         w->hide();
       }
     }
