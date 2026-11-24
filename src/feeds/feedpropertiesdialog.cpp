@@ -23,11 +23,26 @@
 #include "app/mainapplication.h"
 #include "feedselectiontree.h"
 #include "feedhealth.h"
+#include "preferences/optionspagebuilder.h"
 #include "widgets/reorderabletreecontroller.h"
 
 #include <QTextBlockFormat>
 #include <QTextCharFormat>
 #include <QTextDocument>
+
+namespace {
+template <typename Fn>
+QWidget *buildPropertiesTab(Fn &&fn)
+{
+  auto *tab = new QWidget();
+  auto *layout = new QVBoxLayout(tab);
+  layout->setContentsMargins(10, 10, 10, 10);
+  layout->setSpacing(5);
+  OptionsPageBuilder b(tab, layout, -1, -1, nullptr);
+  fn(b);
+  return tab;
+}
+} // namespace
 
 FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bulk)
   : Dialog(parent)
@@ -142,340 +157,268 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
 //------------------------------------------------------------------------------
 QWidget *FeedPropertiesDialog::createGeneralTab()
 {
-  QWidget *tab = new QWidget();
+  return buildPropertiesTab([this](OptionsPageBuilder &b) {
+    auto *labelTitleCapt = new QLabel(tr("Title:"));
+    auto *labelHomepageCapt = new QLabel(tr("Homepage:"));
+    auto *labelURLCapt = new QLabel(tr("Feed URL:"));
 
-  QGridLayout *layoutGeneralGrid = new QGridLayout();
-  QLabel *labelTitleCapt = new QLabel(tr("Title:"));
-  QLabel *labelHomepageCapt = new QLabel(tr("Homepage:"));
-  QLabel *labelURLCapt = new QLabel(tr("Feed URL:"));
+    editTitle = new LineEdit();
+    auto *loadTitleButton = new ToolButton();
+    loadTitleButton->setObjectName("ToolButton");
+    loadTitleButton->setIcon(QIcon(":/images/updateFeed"));
+    loadTitleButton->setIconSize(QSize(16, 16));
+    loadTitleButton->setToolTip(tr("Load Title"));
+    loadTitleButton->setFocusPolicy(Qt::NoFocus);
 
-  QHBoxLayout *layoutGeneralTitle = new QHBoxLayout();
-  editTitle = new LineEdit();
-  ToolButton *loadTitleButton = new ToolButton();
-  loadTitleButton->setObjectName("ToolButton");
-  loadTitleButton->setIcon(QIcon(":/images/updateFeed"));
-  loadTitleButton->setIconSize(QSize(16, 16));
-  loadTitleButton->setToolTip(tr("Load Title"));
-  loadTitleButton->setFocusPolicy(Qt::NoFocus);
+    selectIconButton_ = new QToolButton(this);
+    auto *selectIconMenu = new QMenu(selectIconButton_);
+    selectIconMenu->addAction(tr("Load Favicon"));
+    selectIconMenu->addSeparator();
+    selectIconMenu->addAction(tr("Select Icon..."));
+    selectIconButton_->setObjectName("ToolButton");
+    selectIconButton_->setIconSize(QSize(16, 16));
+    selectIconButton_->setToolTip(tr("Select Icon"));
+    selectIconButton_->setFocusPolicy(Qt::NoFocus);
+    selectIconButton_->setPopupMode(QToolButton::MenuButtonPopup);
+    selectIconButton_->setMenu(selectIconMenu);
 
-  QMenu *selectIconMenu = new QMenu();
-  selectIconMenu->addAction(tr("Load Favicon"));
-  selectIconMenu->addSeparator();
-  selectIconMenu->addAction(tr("Select Icon..."));
-  selectIconButton_ = new QToolButton(this);
-  selectIconButton_->setObjectName("ToolButton");
-  selectIconButton_->setIconSize(QSize(16, 16));
-  selectIconButton_->setToolTip(tr("Select Icon"));
-  selectIconButton_->setFocusPolicy(Qt::NoFocus);
-  selectIconButton_->setPopupMode(QToolButton::MenuButtonPopup);
-  selectIconButton_->setMenu(selectIconMenu);
+    auto *titleLayout = new QHBoxLayout();
+    titleLayout->addWidget(editTitle, 1);
+    titleLayout->addWidget(loadTitleButton);
+    titleLayout->addWidget(selectIconButton_);
+    editURL = new LineEdit();
 
-  layoutGeneralTitle->addWidget(editTitle, 1);
-  layoutGeneralTitle->addWidget(loadTitleButton);
-  layoutGeneralTitle->addWidget(selectIconButton_);
-  editURL = new LineEdit();
+    b.grid(std::nullopt, -1, [&](OptionsGridBuilder &g) {
+      g.addWidget(0, 0, labelTitleCapt);
+      g.addLayout(0, 1, titleLayout);
+      g.addWidget(1, 0, labelURLCapt);
+      g.addWidget(1, 1, editURL);
+    });
 
-  disableUpdate_ = new QCheckBox(tr("Disable"), this);
-  disableUpdate_->setToolTip(tr("Exclude this feed from automatic, folder, and Update All operations. You can still update it individually."));
-  disableUpdate_->setChecked(false);
+    b.row([this, labelHomepageCapt](OptionsRowBuilder &r) {
+      labelHomepage = new QLabel();
+      labelHomepage->setOpenExternalLinks(false);
+      connect(labelHomepage, &QLabel::linkActivated, this, [](const QString &link) {
+        const QUrl url(link);
+        if (ArticleContent::isExternalLink(url)) mainApp->openExternalUrl(url);
+      });
+      r.addWidget(labelHomepageCapt);
+      r.addWidget(labelHomepage, 1);
+    }, QMargins(0, 0, 0, 0), false);
 
-  QGroupBox *updateSchedule = createUpdateSchedule();
-  connect(disableUpdate_, &QCheckBox::toggled,
-          updateSchedule, &QWidget::setDisabled);
+    b.spacing(15);
+    b.check(disableUpdate_, tr("Disable"),
+            tr("Exclude this feed from automatic, folder, and Update All operations. You can still update it individually."));
+    if (!isFeed_) {
+      folderDisabledCount_ = new QLabel();
+      b.addWidget(folderDisabledCount_);
+      auto *hint = b.label(tr("Changing this option enables or disables all feeds in this folder and its subfolders, replacing their individual disabled states. Update schedules are unchanged."));
+      hint->setWordWrap(true);
+      disableUpdate_->setToolTip(hint->text());
+    }
 
-  starredOn_ = new QCheckBox(tr("Starred"));
-  displayOnStartup = new QCheckBox(tr("Display in new tab on startup"));
-  duplicateNewsMode_ = new QCheckBox(tr("Automatically delete duplicate articles"));
+    QGroupBox *updateSchedule = createUpdateSchedule();
+    b.addWidget(updateSchedule);
+    connect(disableUpdate_, &QCheckBox::toggled, updateSchedule, &QWidget::setDisabled);
 
-  QHBoxLayout *layoutGeneralHomepage = new QHBoxLayout();
-  labelHomepage = new QLabel();
-  labelHomepage->setOpenExternalLinks(false);
-  connect(labelHomepage, &QLabel::linkActivated, this, [](const QString &link) {
-    const QUrl url(link);
-    if (ArticleContent::isExternalLink(url)) mainApp->openExternalUrl(url);
+    b.spacing(15);
+    b.check(starredOn_, tr("Starred"));
+    b.check(displayOnStartup, tr("Display in new tab on startup"));
+    b.check(duplicateNewsMode_, tr("Automatically delete duplicate articles"));
+    b.spacing(15);
+    b.check(addSingleNewsAnyDateOn_, tr("Add articles regardless of publication date"));
+
+    b.group(avoidedOldSingleNewsDateOn_,
+            tr("Do not add articles published before this date to the database:"),
+            true, [this](OptionsPageBuilder &grp) {
+      avoidedOldSingleNewsDate_ = new QCalendarWidget();
+      avoidedOldSingleNewsDate_->setSelectedDate(QDate::currentDate());
+      avoidedOldSingleNewsDate_->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+      avoidedOldSingleNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
+      grp.addWidget(avoidedOldSingleNewsDate_);
+      grp.stretch();
+    }, Qt::Horizontal, QMargins(5, 5, 5, 5));
+    avoidedOldSingleNewsDateOn_->setChecked(false);
+
+    b.stretch();
+
+    connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
+            this, &FeedPropertiesDialog::setGroupBoxCheckboxState);
+    connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
+            avoidedOldSingleNewsDateOn_, &QWidget::setDisabled);
+    connect(loadTitleButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::setDefaultTitle);
+    connect(selectIconButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::selectIcon);
+    connect(selectIconMenu->actions().at(0), &QAction::triggered, this, &FeedPropertiesDialog::loadDefaultIcon);
+    connect(selectIconMenu->actions().at(2), &QAction::triggered, this, &FeedPropertiesDialog::selectIcon);
+
+    if (!isFeed_) {
+      labelTitleCapt->setText(tr("Folder name:"));
+      for (QWidget *w : {static_cast<QWidget *>(updateSchedule), displayOnStartup,
+                         loadTitleButton, selectIconButton_, labelURLCapt, editURL,
+                         labelHomepageCapt, labelHomepage, starredOn_, duplicateNewsMode_,
+                         addSingleNewsAnyDateOn_, avoidedOldSingleNewsDateOn_,
+                         avoidedOldSingleNewsDate_}) {
+        w->hide();
+      }
+    }
   });
-  layoutGeneralHomepage->addWidget(labelHomepageCapt);
-  layoutGeneralHomepage->addWidget(labelHomepage, 1);
-
-  layoutGeneralGrid->addWidget(labelTitleCapt, 0, 0);
-  layoutGeneralGrid->addLayout(layoutGeneralTitle, 0 ,1);
-  layoutGeneralGrid->addWidget(labelURLCapt, 1, 0);
-  layoutGeneralGrid->addWidget(editURL, 1, 1);
-
-  addSingleNewsAnyDateOn_ = new QCheckBox(tr("Add articles regardless of publication date"));
-  addSingleNewsAnyDateOn_->setCheckable(true);
-  addSingleNewsAnyDateOn_->setChecked(false);
-
-  avoidedOldSingleNewsDate_ = new QCalendarWidget();
-  avoidedOldSingleNewsDate_->setSelectedDate(QDate::currentDate());
-  avoidedOldSingleNewsDate_->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-  avoidedOldSingleNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
-  QHBoxLayout *avoidedOldNewsDateLayout = new QHBoxLayout();
-  avoidedOldNewsDateLayout->setContentsMargins(5, 5, 5, 5);
-  avoidedOldNewsDateLayout->addWidget(avoidedOldSingleNewsDate_);
-  avoidedOldNewsDateLayout->addStretch();
-
-  avoidedOldSingleNewsDateOn_ = new QGroupBox(tr("Do not add articles published before this date to the database:"));
-  avoidedOldSingleNewsDateOn_->setCheckable(true);
-  avoidedOldSingleNewsDateOn_->setChecked(false);
-  avoidedOldSingleNewsDateOn_->setLayout(avoidedOldNewsDateLayout);
-
-  QVBoxLayout *tabLayout = new QVBoxLayout(tab);
-  tabLayout->setContentsMargins(10, 10, 10, 10);
-  tabLayout->setSpacing(5);
-  tabLayout->addLayout(layoutGeneralGrid);
-  tabLayout->addLayout(layoutGeneralHomepage);
-  tabLayout->addSpacing(15);
-  tabLayout->addWidget(disableUpdate_);
-  if (!isFeed_) {
-    folderDisabledCount_ = new QLabel();
-    tabLayout->addWidget(folderDisabledCount_);
-    auto *hint = new QLabel(tr("Changing this option enables or disables all feeds in this folder and its subfolders, replacing their individual disabled states. Update schedules are unchanged."));
-    hint->setWordWrap(true);
-    tabLayout->addWidget(hint);
-    disableUpdate_->setToolTip(hint->text());
-  }
-  tabLayout->addWidget(updateSchedule);
-  tabLayout->addSpacing(15);
-  tabLayout->addWidget(starredOn_);
-  tabLayout->addWidget(displayOnStartup);
-  tabLayout->addWidget(duplicateNewsMode_);
-  tabLayout->addSpacing(15);
-  tabLayout->addWidget(addSingleNewsAnyDateOn_);
-  tabLayout->addWidget(avoidedOldSingleNewsDateOn_);
-  tabLayout->addStretch();
-
-  connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
-          this, &FeedPropertiesDialog::setGroupBoxCheckboxState);
-  connect(addSingleNewsAnyDateOn_, &QAbstractButton::toggled,
-          avoidedOldSingleNewsDateOn_, &QWidget::setDisabled);
-
-  connect(loadTitleButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::setDefaultTitle);
-  connect(selectIconButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::selectIcon);
-  connect(selectIconMenu->actions().at(0), &QAction::triggered, this, &FeedPropertiesDialog::loadDefaultIcon);
-  connect(selectIconMenu->actions().at(2), &QAction::triggered, this, &FeedPropertiesDialog::selectIcon);
-
-  if (!isFeed_) {
-    labelTitleCapt->setText(tr("Folder name:"));
-    updateSchedule->hide();
-    displayOnStartup->hide();
-    loadTitleButton->hide();
-    selectIconButton_->hide();
-    labelURLCapt->hide();
-    editURL->hide();
-    labelHomepageCapt->hide();
-    labelHomepage->hide();
-    starredOn_->hide();
-    duplicateNewsMode_->hide();
-    addSingleNewsAnyDateOn_->hide();
-    avoidedOldSingleNewsDateOn_->hide();
-    avoidedOldSingleNewsDate_->hide();
-  }
-
-  return tab;
 }
 //------------------------------------------------------------------------------
 QWidget *FeedPropertiesDialog::createDisplayTab()
 {
-  QWidget *tab = new QWidget();
-
-  QWidget *imageEditor = createImageEditor();
-  QGroupBox *imagePreload = createImagePreloadEditor();
-  connect(imagePolicy_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          imagePreload, [imagePreload](int index) {
-    imagePreload->setEnabled(index != 0);
+  return buildPropertiesTab([this](OptionsPageBuilder &b) {
+    if (!isFeed_) {
+      auto *hint = b.label(tr("These settings affect this folder's combined article view, not its contained feeds."));
+      hint->setWordWrap(true);
+    }
+    b.addWidget(createImageEditor());
+    QGroupBox *imagePreload = createImagePreloadEditor();
+    b.addWidget(imagePreload);
+    connect(imagePolicy_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            imagePreload, [imagePreload](int index) {
+      imagePreload->setEnabled(index != 0);
+    });
+    b.check(layoutDirection_, tr("Right-to-left layout"));
+    b.stretch();
   });
-
-  layoutDirection_ = new QCheckBox(tr("Right-to-left layout"));
-
-  QVBoxLayout *tabLayout = new QVBoxLayout(tab);
-  tabLayout->setContentsMargins(10, 10, 10, 10);
-  tabLayout->setSpacing(5);
-  if (!isFeed_) {
-    auto *hint = new QLabel(tr("These settings affect this folder's combined article view, not its contained feeds."));
-    hint->setWordWrap(true);
-    tabLayout->addWidget(hint);
-  }
-  tabLayout->addWidget(imageEditor);
-  tabLayout->addWidget(imagePreload);
-  tabLayout->addWidget(layoutDirection_);
-
-  tabLayout->addStretch();
-
-  return tab;
 }
 //------------------------------------------------------------------------------
 QWidget *FeedPropertiesDialog::createColumnsTab()
 {
-  QWidget *tab = new QWidget();
+  return buildPropertiesTab([this](OptionsPageBuilder &b) {
+    if (!isFeed_ && !bulk_) {
+      auto *hint = b.label(tr("These columns and sorting affect this folder's combined article view, not its contained feeds."));
+      hint->setWordWrap(true);
+    }
 
-  columnsTree_ = new QTreeWidget(this);
-  columnsTree_->setObjectName("columnsTree");
-  columnsTree_->setIndentation(0);
-  columnsTree_->setColumnCount(2);
-  columnsTree_->setColumnHidden(1, true);
-  columnsTree_->setSortingEnabled(false);
-  columnsTree_->setHeaderHidden(true);
-  columnsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    columnsTree_ = new QTreeWidget(this);
+    columnsTree_->setObjectName("columnsTree");
+    columnsTree_->setIndentation(0);
+    columnsTree_->setColumnCount(2);
+    columnsTree_->setColumnHidden(1, true);
+    columnsTree_->setSortingEnabled(false);
+    columnsTree_->setHeaderHidden(true);
+    columnsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    columnsTree_->setHeaderLabels({QStringLiteral("Name"), QStringLiteral("Index")});
 
-  QStringList treeItem;
-  treeItem << "Name" << "Index";
-  columnsTree_->setHeaderLabels(treeItem);
+    sortByColumnBox_ = new QComboBox(this);
+    sortOrderBox_ = new QComboBox(this);
+    sortOrderBox_->addItems({tr("Ascending"), tr("Descending")});
 
-  sortByColumnBox_ = new QComboBox(this);
+    auto *sortLayout = new QHBoxLayout();
+    sortLayout->setContentsMargins(0, 0, 0, 0);
+    sortLayout->addWidget(new QLabel(tr("Sort by:")));
+    sortLayout->addWidget(sortByColumnBox_);
+    sortLayout->addSpacing(10);
+    sortLayout->addWidget(sortOrderBox_);
+    sortLayout->addStretch();
 
-  sortOrderBox_ = new QComboBox(this);
-  treeItem.clear();
-  treeItem << tr("Ascending") << tr("Descending");
-  sortOrderBox_->addItems(treeItem);
+    auto *mainVLayout = new QVBoxLayout();
+    mainVLayout->addWidget(columnsTree_, 1);
+    mainVLayout->addLayout(sortLayout);
 
-  QHBoxLayout *styleLayout = new QHBoxLayout();
-  styleLayout->setContentsMargins(0, 0, 0, 0);
-  styleLayout->addWidget(new QLabel(tr("Sort by:")));
-  styleLayout->addWidget(sortByColumnBox_);
-  styleLayout->addSpacing(10);
-  styleLayout->addWidget(sortOrderBox_);
-  styleLayout->addStretch();
+    addButtonMenu_ = new QMenu(this);
+    addButton_ = new QPushButton(tr("Add"));
+    addButton_->setMenu(addButtonMenu_);
+    connect(addButtonMenu_, &QMenu::aboutToShow, this, &FeedPropertiesDialog::showMenuAddButton);
+    connect(addButtonMenu_, &QMenu::triggered, this, &FeedPropertiesDialog::addColumn);
 
-  QWidget *styleWidget = new QWidget(this);
-  styleWidget->setLayout(styleLayout);
+    auto *removeButton = new QPushButton(tr("Remove"));
+    auto *moveUpButton = new QPushButton(tr("Move up"));
+    auto *moveDownButton = new QPushButton(tr("Move down"));
+    auto *defaultButton = new QPushButton(tr("Default"));
+    connect(defaultButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::defaultColumns);
 
-  QVBoxLayout *mainVLayout = new QVBoxLayout();
-  mainVLayout->addWidget(columnsTree_, 1);
-  mainVLayout->addWidget(styleWidget);
+    auto *buttonsVLayout = new QVBoxLayout();
+    buttonsVLayout->addWidget(addButton_);
+    buttonsVLayout->addWidget(removeButton);
+    buttonsVLayout->addSpacing(10);
+    buttonsVLayout->addWidget(moveUpButton);
+    buttonsVLayout->addWidget(moveDownButton);
+    buttonsVLayout->addSpacing(10);
+    buttonsVLayout->addWidget(defaultButton);
+    buttonsVLayout->addStretch();
 
-  addButtonMenu_ = new QMenu(this);
-  addButton_ = new QPushButton(tr("Add"));
-  addButton_->setMenu(addButtonMenu_);
-  connect(addButtonMenu_, &QMenu::aboutToShow, this, &FeedPropertiesDialog::showMenuAddButton);
-  connect(addButtonMenu_, &QMenu::triggered, this, &FeedPropertiesDialog::addColumn);
+    auto *columnsLayout = new QHBoxLayout();
+    columnsLayout->setContentsMargins(0, 0, 0, 0);
+    columnsLayout->addLayout(mainVLayout);
+    columnsLayout->addLayout(buttonsVLayout);
+    b.addLayout(columnsLayout);
 
-  QPushButton *removeButton = new QPushButton(tr("Remove"));
-  QPushButton *moveUpButton = new QPushButton(tr("Move up"));
-  QPushButton *moveDownButton = new QPushButton(tr("Move down"));
-  QPushButton *defaultButton = new QPushButton(tr("Default"));
-  connect(defaultButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::defaultColumns);
-
-  QVBoxLayout *buttonsVLayout = new QVBoxLayout();
-  buttonsVLayout->addWidget(addButton_);
-  buttonsVLayout->addWidget(removeButton);
-  buttonsVLayout->addSpacing(10);
-  buttonsVLayout->addWidget(moveUpButton);
-  buttonsVLayout->addWidget(moveDownButton);
-  buttonsVLayout->addSpacing(10);
-  buttonsVLayout->addWidget(defaultButton);
-  buttonsVLayout->addStretch();
-
-  QWidget *columnsEditor = new QWidget();
-  auto *columnsLayout = new QHBoxLayout(columnsEditor);
-  columnsLayout->setContentsMargins(0, 0, 0, 0);
-  columnsLayout->addLayout(mainVLayout);
-  columnsLayout->addLayout(buttonsVLayout);
-  auto *tabLayout = new QVBoxLayout(tab);
-  tabLayout->setContentsMargins(10, 10, 10, 10);
-  tabLayout->setSpacing(5);
-  if (!isFeed_ && !bulk_) {
-    auto *hint = new QLabel(tr("These columns and sorting affect this folder's combined article view, not its contained feeds."));
-    hint->setWordWrap(true);
-    tabLayout->addWidget(hint);
-  }
-  tabLayout->addWidget(columnsEditor);
-
-  new ReorderableTreeController(columnsTree_, moveUpButton, moveDownButton, removeButton);
-
-  return tab;
+    new ReorderableTreeController(columnsTree_, moveUpButton, moveDownButton, removeButton);
+  });
 }
 //------------------------------------------------------------------------------
 QWidget *FeedPropertiesDialog::createAuthenticationTab()
 {
-  QWidget *tab = new QWidget();
-
-  authentication_ = new QGroupBox(this);
-  authentication_->setTitle(tr("Server requires authentication:"));
-  authentication_->setCheckable(true);
-  authentication_->setChecked(false);
-
-  user_ = new LineEdit(this);
-  pass_ = new LineEdit(this);
-  pass_->setEchoMode(QLineEdit::Password);
-
-  QGridLayout *authenticationLayout = new QGridLayout();
-  authenticationLayout->addWidget(new QLabel(tr("Username:")), 2, 0);
-  authenticationLayout->addWidget(user_, 2, 1);
-  authenticationLayout->addWidget(new QLabel(tr("Password:")), 3, 0);
-  authenticationLayout->addWidget(pass_, 3, 1);
-
-  authentication_->setLayout(authenticationLayout);
-
-  QVBoxLayout *tabLayout = new QVBoxLayout(tab);
-  tabLayout->setContentsMargins(10, 10, 10, 10);
-  tabLayout->setSpacing(5);
-  tabLayout->addWidget(authentication_);
-  tabLayout->addStretch(1);
-
-  return tab;
+  return buildPropertiesTab([this](OptionsPageBuilder &b) {
+    b.group(authentication_, tr("Server requires authentication:"), true,
+            [this](OptionsPageBuilder &grp) {
+      grp.grid(std::nullopt, -1, [this](OptionsGridBuilder &g) {
+        user_ = new LineEdit(this);
+        pass_ = new LineEdit(this);
+        pass_->setEchoMode(QLineEdit::Password);
+        g.addWidget(0, 0, new QLabel(tr("Username:")));
+        g.addWidget(0, 1, user_);
+        g.addWidget(1, 0, new QLabel(tr("Password:")));
+        g.addWidget(1, 1, pass_);
+      });
+    });
+    authentication_->setChecked(false);
+    b.stretch(1);
+  });
 }
 //------------------------------------------------------------------------------
 QWidget *FeedPropertiesDialog::createStatusTab()
 {
-  QWidget *tab = new QWidget();
+  return buildPropertiesTab([this](OptionsPageBuilder &b) {
+    statusFeed_ = new QLabel();
+    statusFeed_->setWordWrap(true);
+    createdFeed_ = new QLabel();
+    newsCount_ = new QLabel();
+    auto *feedsCountLabel = new QLabel(tr("Feed count:"));
+    feedsCount_ = new QLabel();
+    auto *descriptionLabel = new QLabel(tr("Description:"));
+    descriptionText_ = new QTextEdit();
+    descriptionText_->setReadOnly(true);
 
-  statusFeed_ = new QLabel();
-  statusFeed_->setWordWrap(true);
-  createdFeed_ = new QLabel();
-  newsCount_ = new QLabel();
+    b.grid(std::nullopt, 1, [&](OptionsGridBuilder &g) {
+      g.addWidget(0, 0, new QLabel(tr("Status:")));
+      g.addWidget(0, 1, statusFeed_);
+      g.addWidget(1, 0, new QLabel(tr("Created:")));
+      g.addWidget(1, 1, createdFeed_);
+      if (isFeed_) {
+        lastUpdateFeed_ = new QLabel(QStringLiteral("—"));
+        lastAttemptFeed_ = new QLabel(QStringLiteral("—"));
+        nextCheckFeed_ = new QLabel(QStringLiteral("—"));
+        auto *attemptLabel = new QLabel(tr("Last attempt:"));
+        const QString attemptTip = tr("The latest recorded update attempt. This can include cancelled requests.");
+        attemptLabel->setToolTip(attemptTip);
+        lastAttemptFeed_->setToolTip(attemptTip);
+        g.addWidget(2, 0, new QLabel(tr("Last successful update:")));
+        g.addWidget(2, 1, lastUpdateFeed_);
+        g.addWidget(3, 0, attemptLabel);
+        g.addWidget(3, 1, lastAttemptFeed_);
+        g.addWidget(4, 0, new QLabel(tr("Next check:")));
+        g.addWidget(4, 1, nextCheckFeed_);
+      }
+      g.addWidget(5, 0, new QLabel(tr("Article count:")));
+      g.addWidget(5, 1, newsCount_);
+      g.addWidget(6, 0, feedsCountLabel);
+      g.addWidget(6, 1, feedsCount_);
+      g.addWidget(7, 0, descriptionLabel, Qt::AlignTop);
+      g.addWidget(7, 1, descriptionText_, Qt::AlignTop);
+    });
+    b.stretch(1);
 
-  QLabel *feedsCountLabel = new QLabel(tr("Feed count:"));
-  feedsCount_ = new QLabel();
-
-  QLabel *descriptionLabel = new QLabel(tr("Description:"));
-
-  descriptionText_ = new QTextEdit();
-  descriptionText_->setReadOnly(true);
-
-  QGridLayout *layoutGrid = new QGridLayout();
-  layoutGrid->setColumnStretch(1,1);
-  layoutGrid->addWidget(new QLabel(tr("Status:")), 0, 0);
-  layoutGrid->addWidget(statusFeed_, 0, 1);
-  layoutGrid->addWidget(new QLabel(tr("Created:")), 1, 0);
-  layoutGrid->addWidget(createdFeed_, 1, 1);
-  if (isFeed_) {
-    lastUpdateFeed_ = new QLabel(QStringLiteral("—"));
-    lastAttemptFeed_ = new QLabel(QStringLiteral("—"));
-    nextCheckFeed_ = new QLabel(QStringLiteral("—"));
-    auto *attemptLabel = new QLabel(tr("Last attempt:"));
-    const QString attemptTip = tr("The latest recorded update attempt. This can include cancelled requests.");
-    attemptLabel->setToolTip(attemptTip);
-    lastAttemptFeed_->setToolTip(attemptTip);
-    layoutGrid->addWidget(new QLabel(tr("Last successful update:")), 2, 0);
-    layoutGrid->addWidget(lastUpdateFeed_, 2, 1);
-    layoutGrid->addWidget(attemptLabel, 3, 0);
-    layoutGrid->addWidget(lastAttemptFeed_, 3, 1);
-    layoutGrid->addWidget(new QLabel(tr("Next check:")), 4, 0);
-    layoutGrid->addWidget(nextCheckFeed_, 4, 1);
-  }
-  layoutGrid->addWidget(new QLabel(tr("Article count:")), 5, 0);
-  layoutGrid->addWidget(newsCount_, 5, 1);
-  layoutGrid->addWidget(feedsCountLabel, 6, 0);
-  layoutGrid->addWidget(feedsCount_, 6, 1);
-  layoutGrid->addWidget(descriptionLabel, 7, 0, 1, 1, Qt::AlignTop);
-  layoutGrid->addWidget(descriptionText_, 7, 1, 1, 1, Qt::AlignTop);
-
-  QVBoxLayout *tabLayout = new QVBoxLayout(tab);
-  tabLayout->setContentsMargins(10, 10, 10, 10);
-  tabLayout->setSpacing(5);
-  tabLayout->addLayout(layoutGrid);
-  tabLayout->addStretch(1);
-
-  if (!isFeed_) {
-    descriptionLabel->hide();
-    descriptionText_->hide();
-  } else {
-    feedsCountLabel->hide();
-    feedsCount_->hide();
-  }
-
-  return tab;
+    if (!isFeed_) {
+      descriptionLabel->hide();
+      descriptionText_->hide();
+    } else {
+      feedsCountLabel->hide();
+      feedsCount_->hide();
+    }
+  });
 }
 //------------------------------------------------------------------------------
 /*virtual*/ void FeedPropertiesDialog::showEvent(QShowEvent *)
@@ -987,72 +930,48 @@ FeedBulkSettings::Changes FeedPropertiesDialog::bulkChanges()
 
 QGroupBox *FeedPropertiesDialog::createUpdateSchedule()
 {
-  QGroupBox *updateSchedule = new QGroupBox(tr("Update schedule"));
-  useGlobalUpdate_ = new QRadioButton(updateSchedule);
-  updateEnable_ = new QRadioButton(tr("Update every"), updateSchedule);
-  noScheduledUpdates_ = new QRadioButton(tr("No scheduled updates"), updateSchedule);
+  auto *updateSchedule = new QGroupBox(tr("Update schedule"));
+  auto *scheduleLayout = new QVBoxLayout(updateSchedule);
+  OptionsPageBuilder b(updateSchedule, scheduleLayout, -1, -1, nullptr);
+
+  b.radio(useGlobalUpdate_, QString());
+  b.row([this, updateSchedule](OptionsRowBuilder &r) {
+    updateEnable_ = new QRadioButton(tr("Update every"), updateSchedule);
+    r.addWidget(updateEnable_);
+    r.spin(updateInterval_, 1, 9999);
+    r.combo(updateIntervalType_, {tr("seconds"), tr("minutes"), tr("hours")});
+    OptionsPageBuilder::bindEnabled(updateEnable_, {updateInterval_, updateIntervalType_});
+  }, QMargins(0, 0, 0, 0));
+  b.radio(noScheduledUpdates_, tr("No scheduled updates"));
   noScheduledUpdates_->setToolTip(tr("Startup updates and manual updates, including Update All, are still allowed."));
-  updateInterval_ = new QSpinBox();
-  updateInterval_->setEnabled(false);
-  updateInterval_->setRange(1, 9999);
-  connect(updateEnable_, &QAbstractButton::toggled, updateInterval_, &QWidget::setEnabled);
-
-  updateIntervalType_ = new QComboBox(this);
-  updateIntervalType_->setEnabled(false);
-  QStringList intervalTypeList;
-  intervalTypeList << tr("seconds") << tr("minutes")  << tr("hours");
-  updateIntervalType_->addItems(intervalTypeList);
-  connect(updateEnable_, &QAbstractButton::toggled, updateIntervalType_, &QWidget::setEnabled);
-
-  QHBoxLayout *updateFeedsLayout = new QHBoxLayout();
-  updateFeedsLayout->setContentsMargins(0, 0, 0, 0);
-  updateFeedsLayout->addWidget(updateEnable_);
-  updateFeedsLayout->addWidget(updateInterval_);
-  updateFeedsLayout->addWidget(updateIntervalType_);
-  updateFeedsLayout->addStretch();
-
-  QVBoxLayout *scheduleLayout = new QVBoxLayout(updateSchedule);
-  scheduleLayout->addWidget(useGlobalUpdate_);
-  scheduleLayout->addLayout(updateFeedsLayout);
-  scheduleLayout->addWidget(noScheduledUpdates_);
   return updateSchedule;
 }
 
 QWidget *FeedPropertiesDialog::createImageEditor()
 {
-  QWidget *imageEditor = new QWidget();
-  auto *imageLayout = new QHBoxLayout(imageEditor);
+  auto *imageEditor = new QWidget();
+  auto *imageLayout = new QVBoxLayout(imageEditor);
   imageLayout->setContentsMargins(0, 0, 0, 0);
-  imageLayout->addWidget(new QLabel(tr("Load images:")));
-  imagePolicy_ = new QComboBox();
-  imagePolicy_->addItems({tr("Never"), tr("Use global settings"), tr("Always")});
-  imageLayout->addWidget(imagePolicy_);
-  imageLayout->addStretch();
-
+  OptionsPageBuilder b(imageEditor, imageLayout, -1, -1, nullptr);
+  b.comboRow(imagePolicy_, tr("Load images:"),
+             {tr("Never"), tr("Use global settings"), tr("Always")});
   return imageEditor;
 }
 
 QGroupBox *FeedPropertiesDialog::createImagePreloadEditor()
 {
   imagePreloadGroup_ = new QGroupBox(tr("Article image preloading"));
-  useGlobalPreload_ = new QRadioButton(imagePreloadGroup_);
-  customPreload_ = new QRadioButton(tr("Preload up to"), imagePreloadGroup_);
-  preloadPages_ = new QSpinBox(imagePreloadGroup_);
-  preloadPages_->setRange(0, 10);
-  preloadPages_->setEnabled(false);
-  preloadPages_->setToolTip(tr("0 disables image preloading"));
-  connect(customPreload_, &QAbstractButton::toggled, preloadPages_, &QWidget::setEnabled);
-
-  auto *customLayout = new QHBoxLayout();
-  customLayout->setContentsMargins(0, 0, 0, 0);
-  customLayout->addWidget(customPreload_);
-  customLayout->addWidget(preloadPages_);
-  customLayout->addWidget(new QLabel(tr("pages"), imagePreloadGroup_));
-  customLayout->addStretch();
-
   auto *preloadLayout = new QVBoxLayout(imagePreloadGroup_);
-  preloadLayout->addWidget(useGlobalPreload_);
-  preloadLayout->addLayout(customLayout);
+  OptionsPageBuilder b(imagePreloadGroup_, preloadLayout, -1, -1, nullptr);
+
+  b.radio(useGlobalPreload_, QString());
+  b.row([this](OptionsRowBuilder &r) {
+    customPreload_ = new QRadioButton(tr("Preload up to"), imagePreloadGroup_);
+    r.addWidget(customPreload_);
+    r.spin(preloadPages_, 0, 10, QString(), tr("0 disables image preloading"));
+    r.label(tr("pages"));
+    OptionsPageBuilder::bindEnabled(customPreload_, {preloadPages_});
+  }, QMargins(0, 0, 0, 0));
   return imagePreloadGroup_;
 }
 
