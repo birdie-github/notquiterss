@@ -19,6 +19,7 @@
 #include "feeds/update/feedxml.h"
 #include "feeddiscovery.h"
 #include "feeddeletion.h"
+#include "feedselectiontree.h"
 #include "common/logfile.h"
 #include "database/database.h"
 #include "network/credentialscope.h"
@@ -32,6 +33,7 @@
 #include "widgets/toolbutton.h"
 #include "preferences/settings.h"
 
+#include <QDebug>
 #include <QDomDocument>
 #include <QRegularExpression>
 
@@ -200,53 +202,13 @@ QWizardPage *AddFeedWizard::createNameFeedPage()
   nameFeedEdit_ = new LineEdit(this);
 
   foldersTree_ = new QTreeWidget(this);
-  foldersTree_->setObjectName("foldersTree_");
-  foldersTree_->setColumnCount(2);
-  foldersTree_->setColumnHidden(1, true);
-  foldersTree_->header()->hide();
+  FeedSelectionTree::configure(foldersTree_, QStringLiteral("foldersTree_"));
 
-  QStringList treeItem;
-  treeItem << tr("Feeds") << "Id";
-  foldersTree_->setHeaderLabels(treeItem);
-
-  treeItem.clear();
-  treeItem << tr("All Feeds") << "0";
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-  treeWidgetItem->setIcon(0, QIcon(":/images/folder"));
-  foldersTree_->addTopLevelItem(treeWidgetItem);
-  foldersTree_->setCurrentItem(treeWidgetItem);
-
-  QSqlQuery q;
-  QQueue<int> parentIds;
-  parentIds.enqueue(0);
-  while (!parentIds.empty()) {
-    int parentId = parentIds.dequeue();
-    QString qStr = QString("SELECT text, id FROM feeds WHERE parentId='%1' AND (xmlUrl='' OR xmlUrl IS NULL)").
-        arg(parentId);
-    q.exec(qStr);
-    while (q.next()) {
-      QString folderText = q.value(0).toString();
-      QString folderId = q.value(1).toString();
-
-      QStringList treeItem;
-      treeItem << folderText << folderId;
-      QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-
-      treeWidgetItem->setIcon(0, QIcon(":/images/folder"));
-
-      QList<QTreeWidgetItem *> treeItems =
-            foldersTree_->findItems(QString::number(parentId),
-                                                       Qt::MatchFixedString | Qt::MatchRecursive,
-                                                       1);
-      treeItems.at(0)->addChild(treeWidgetItem);
-      if (folderId.toInt() == curFolderId_)
-        foldersTree_->setCurrentItem(treeWidgetItem);
-      parentIds.enqueue(folderId.toInt());
-    }
+  QString treeError;
+  if (!FeedSelectionTree::populateFolders(foldersTree_, QSqlDatabase::database(),
+                                          tr("All Feeds"), curFolderId_, treeError)) {
+    qWarning().noquote() << treeError;
   }
-
-  foldersTree_->expandAll();
-  foldersTree_->sortByColumn(0, Qt::AscendingOrder);
 
   ToolButton *newFolderButton = new ToolButton(this);
   newFolderButton->setIcon(QIcon(":/images/addT"));

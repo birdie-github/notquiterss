@@ -21,12 +21,17 @@
 #include "app/mainapplication.h"
 #include "database/database.h"
 #include "preferences/settings.h"
+#include "feeds/feedselectiontree.h"
 #include "feeds/update/updatefeeds.h"
+
+#include <QDebug>
+#include <QSet>
+#include <QSignalBlocker>
+#include <utility>
 
 CleanUpWizard::CleanUpWizard(QWidget *parent)
   : QWizard(parent)
   , selectedPage_(true)
-  , itemNotChecked_(false)
 {
   setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Clean Up"));
@@ -83,71 +88,31 @@ QWizardPage *CleanUpWizard::createChooseFeedsPage()
   QStringList feedsIdList = settings.value("CleanUpWizard/feedsIdList").toStringList();
 
   feedsTree_ = new QTreeWidget(this);
-  feedsTree_->setObjectName("feedsTreeFR");
-  feedsTree_->setColumnCount(3);
-  feedsTree_->setColumnHidden(1, true);
-  feedsTree_->setColumnHidden(2, true);
-  feedsTree_->setHeaderHidden(true);
+  FeedSelectionTree::configure(feedsTree_, QStringLiteral("feedsTreeFR"));
 
-  QStringList treeItem;
-  treeItem << tr("All Feeds") << "0"<< "-1";
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-  if (feedsIdList.isEmpty())
-    treeWidgetItem->setCheckState(0, Qt::Checked);
-  else
-    treeWidgetItem->setCheckState(0, Qt::Unchecked);
-  feedsTree_->addTopLevelItem(treeWidgetItem);
+  QString treeError;
+  if (!FeedSelectionTree::populate(feedsTree_, QSqlDatabase::database(),
+                                   mainApp->mainWindow()->defaultIconFeeds_,
+                                   tr("All Feeds"), -1, treeError)) {
+    qWarning().noquote() << treeError;
+  }
 
-  QSqlQuery q;
-  QQueue<int> parentIds;
-  parentIds.enqueue(0);
-  while (!parentIds.empty()) {
-    int parentId = parentIds.dequeue();
-    QString qStr = QString("SELECT text, id, image, xmlUrl FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-        arg(parentId);
-    q.exec(qStr);
-    while (q.next()) {
-      QString feedText = q.value(0).toString();
-      QString feedIdStr = q.value(1).toString();
-      QByteArray byteArray = q.value(2).toByteArray();
-      QString xmlUrl = q.value(3).toString();
-
-      treeItem.clear();
-      treeItem << feedText << feedIdStr << (xmlUrl.isEmpty() ? "0" : "1");
-      treeWidgetItem = new QTreeWidgetItem(treeItem);
-
-      if (feedsIdList.contains(feedIdStr) || feedsIdList.isEmpty())
-        treeWidgetItem->setCheckState(0, Qt::Checked);
-      else
-        treeWidgetItem->setCheckState(0, Qt::Unchecked);
-
-      QPixmap iconItem;
-      if (xmlUrl.isEmpty()) {
-        iconItem.load(":/images/folder");
-      }
-      else {
-        MainWindow *mainWindow = mainApp->mainWindow();
-        if (byteArray.isNull() || mainWindow->defaultIconFeeds_) {
-          iconItem.load(":/images/feed");
-        }
-        else {
-          iconItem.loadFromData(QByteArray::fromBase64(byteArray));
-        }
-      }
-      treeWidgetItem->setIcon(0, iconItem);
-
-      QList<QTreeWidgetItem *> treeItems =
-          feedsTree_->findItems(QString::number(parentId),
-                                Qt::MatchFixedString | Qt::MatchRecursive,
-                                1);
-      treeItems.at(0)->addChild(treeWidgetItem);
-      if (xmlUrl.isEmpty())
-        parentIds.enqueue(feedIdStr.toInt());
+  {
+    const QSignalBlocker blocker(feedsTree_);
+    QSet<QString> savedIds;
+    for (const QString &id : std::as_const(feedsIdList)) savedIds.insert(id);
+    const bool checkAll = savedIds.isEmpty();
+    QTreeWidgetItem *root = feedsTree_->topLevelItem(0);
+    for (QTreeWidgetItemIterator it(feedsTree_); *it; ++it) {
+      QTreeWidgetItem *item = *it;
+      const bool checked = (item == root) ? checkAll : (checkAll || savedIds.contains(item->text(1)));
+      item->setCheckState(0, checked ? Qt::Checked : Qt::Unchecked);
     }
   }
-  feedsTree_->expandAll();
 
-  connect(feedsTree_, &QTreeWidget::itemChanged, this, &CleanUpWizard::feedItemChanged);
+  connect(feedsTree_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem *item, int column) {
+    if (column == 0) FeedSelectionTree::cascadeChecks(feedsTree_, item);
+  });
 
   QVBoxLayout *layout = new QVBoxLayout;
   layout->addWidget(feedsTree_);
@@ -243,34 +208,6 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   return true;
 }
 
-void CleanUpWizard::feedItemChanged(QTreeWidgetItem *item, int column)
-{
-  if ((column != 0) || itemNotChecked_) return;
-
-  itemNotChecked_ = true;
-  if (item->checkState(0) == Qt::Unchecked) {
-    setCheckStateItem(item, Qt::Unchecked);
-
-    QTreeWidgetItem *parentItem = item->parent();
-    while (parentItem) {
-      parentItem->setCheckState(0, Qt::Unchecked);
-      parentItem = parentItem->parent();
-    }
-  } else {
-    setCheckStateItem(item, Qt::Checked);
-  }
-  itemNotChecked_ = false;
-}
-
-void CleanUpWizard::setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state)
-{
-  for (int i = 0; i < item->childCount(); ++i) {
-    QTreeWidgetItem *childItem = item->child(i);
-    childItem->setCheckState(0, state);
-    setCheckStateItem(childItem, state);
-  }
-}
-
 void CleanUpWizard::currentIdChanged(int idPage)
 {
   if (idPage == 1)
@@ -305,7 +242,7 @@ void CleanUpWizard::finishButtonClicked()
   while (treeItem) {
     if (treeItem->checkState(0) == Qt::Checked)
       feedsIdList << treeItem->text(1);
-    if (treeItem->text(2).toInt() == 0)
+    if (!treeItem->data(0, FeedSelectionTree::IsFeedRole).toBool())
       foldersIdList << treeItem->text(1).toInt();
     treeItem = feedsTree_->itemBelow(treeItem);
   }

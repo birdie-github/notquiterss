@@ -6,7 +6,6 @@
 
 class QSqlDatabase;
 class QTreeWidget;
-class QTreeWidgetItem;
 
 /**
  * Dialog for choosing which feeds trigger desktop notifications.
@@ -21,14 +20,8 @@ public:
   void apply(QSqlDatabase &db);
   bool isLoaded() const { return loadNotifierOk_; }
 
-private slots:
-  void itemChanged(QTreeWidgetItem *item, int column);
-
 private:
-  static void setCheckStateRecursive(QTreeWidgetItem *item, Qt::CheckState state);
-
   QTreeWidget *feedsTreeNotify_ = nullptr;
-  bool itemNotChecked_ = false;
   bool loadNotifierOk_ = false;
 };
 

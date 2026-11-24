@@ -31,11 +31,8 @@ public:
 
   LineEdit *filterName_;
   int filterId_;
-  bool itemNotChecked_;
 
 private slots:
-  void feedItemChanged(QTreeWidgetItem *item, int column);
-  void setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state);
   void closeDialog();
   void acceptDialog();
 

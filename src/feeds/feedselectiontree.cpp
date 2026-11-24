@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "feedselectiontree.h"
+#include <QHeaderView>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSignalBlocker>
@@ -7,23 +8,38 @@
 #include <QSet>
 
 namespace FeedSelectionTree {
-bool populate(QTreeWidget *tree, QSqlDatabase db, bool defaultIcons,
-              const QString &rootTitle, int precheckedFeed, QString &error)
+namespace {
+enum class PopulateMode { FeedsAndFolders, FoldersOnly };
+
+bool populateTree(QTreeWidget *tree, const QSqlDatabase &db, bool defaultIcons,
+                  const QString &rootTitle, int targetId, PopulateMode mode, QString &error)
 {
   const QSignalBlocker blocker(tree);
   tree->clear();
   error.clear();
   auto *root = new QTreeWidgetItem(tree, {rootTitle, QStringLiteral("0")});
-  root->setCheckState(0, Qt::Unchecked);
   root->setData(0, IsFeedRole, false);
+  if (mode == PopulateMode::FoldersOnly) {
+    root->setIcon(0, QIcon(QStringLiteral(":/images/folder")));
+    tree->setCurrentItem(root);
+  } else {
+    root->setCheckState(0, Qt::Unchecked);
+  }
+
   QQueue<QTreeWidgetItem *> parents;
   QSet<int> seen{0};
   parents.enqueue(root);
   QSqlQuery q(db);
-  if (!q.prepare("SELECT text, id, image, xmlUrl FROM feeds WHERE parentId = ? ORDER BY rowToParent")) {
+  const QString sql = (mode == PopulateMode::FoldersOnly)
+      ? QStringLiteral("SELECT text, id, '' AS image, '' AS xmlUrl FROM feeds "
+                       "WHERE parentId = ? AND (xmlUrl = '' OR xmlUrl IS NULL)")
+      : QStringLiteral("SELECT text, id, image, xmlUrl FROM feeds "
+                       "WHERE parentId = ? ORDER BY rowToParent");
+  if (!q.prepare(sql)) {
     error = q.lastError().text();
     return false;
   }
+
   while (!parents.isEmpty()) {
     auto *parent = parents.dequeue();
     const int parentId = parent->text(1).toInt();
@@ -36,17 +52,23 @@ bool populate(QTreeWidget *tree, QSqlDatabase db, bool defaultIcons,
       const int id = q.value(1).toInt();
       if (seen.contains(id)) continue;
       seen.insert(id);
-      const bool isFeed = !q.value(3).toString().isEmpty();
+      const bool isFeed = (mode == PopulateMode::FeedsAndFolders) && !q.value(3).toString().isEmpty();
       auto *item = new QTreeWidgetItem(parent, {q.value(0).toString(), QString::number(id)});
       item->setData(0, IsFeedRole, isFeed);
-      item->setCheckState(0, precheckedFeed != -1 &&
-          (precheckedFeed == id || precheckedFeed == parentId) ? Qt::Checked : Qt::Unchecked);
-      QPixmap icon;
-      if (!isFeed) icon.load(":/images/folder");
-      else if (q.value(2).isNull() || defaultIcons) icon.load(":/images/feed");
-      else icon.loadFromData(QByteArray::fromBase64(q.value(2).toByteArray()));
-      item->setIcon(0, icon);
-      if (!isFeed) parents.enqueue(item);
+      if (mode == PopulateMode::FoldersOnly) {
+        item->setIcon(0, QIcon(QStringLiteral(":/images/folder")));
+        if (id == targetId) tree->setCurrentItem(item);
+        parents.enqueue(item);
+      } else {
+        item->setCheckState(0, targetId != -1 && (targetId == id || targetId == parentId)
+                            ? Qt::Checked : Qt::Unchecked);
+        QPixmap icon;
+        if (!isFeed) icon.load(QStringLiteral(":/images/folder"));
+        else if (q.value(2).isNull() || defaultIcons) icon.load(QStringLiteral(":/images/feed"));
+        else icon.loadFromData(QByteArray::fromBase64(q.value(2).toByteArray()));
+        item->setIcon(0, icon);
+        if (!isFeed) parents.enqueue(item);
+      }
     }
     if (q.lastError().isValid()) {
       error = q.lastError().text();
@@ -54,8 +76,39 @@ bool populate(QTreeWidget *tree, QSqlDatabase db, bool defaultIcons,
     }
     q.finish();
   }
+
   tree->expandAll();
+  if (mode == PopulateMode::FoldersOnly)
+    tree->sortByColumn(0, Qt::AscendingOrder);
   return true;
+}
+} // namespace
+
+void configure(QTreeWidget *tree, const QString &objectName, const QStringList &headers)
+{
+  if (!objectName.isEmpty()) tree->setObjectName(objectName);
+  tree->setColumnCount(2);
+  tree->setColumnHidden(1, true);
+  if (headers.isEmpty()) {
+    tree->setHeaderHidden(true);
+  } else {
+    tree->setHeaderLabels(headers);
+    tree->header()->setSectionsMovable(false);
+  }
+}
+
+bool populate(QTreeWidget *tree, QSqlDatabase db, bool defaultIcons,
+              const QString &rootTitle, int precheckedFeed, QString &error)
+{
+  return populateTree(tree, db, defaultIcons, rootTitle, precheckedFeed,
+                      PopulateMode::FeedsAndFolders, error);
+}
+
+bool populateFolders(QTreeWidget *tree, QSqlDatabase db,
+                     const QString &rootTitle, int currentFolderId, QString &error)
+{
+  return populateTree(tree, db, false, rootTitle, currentFolderId,
+                      PopulateMode::FoldersOnly, error);
 }
 
 QList<int> checkedFeeds(QTreeWidget *tree)
@@ -101,6 +154,27 @@ void updateChecks(QTreeWidget *tree, QTreeWidgetItem *changed)
                          (checked == total ? Qt::Checked : Qt::PartiallyChecked));
     }
     counts.insert(item, qMakePair(total, checked));
+  }
+}
+
+void cascadeChecks(QTreeWidget *tree, QTreeWidgetItem *changed)
+{
+  if (!tree || !changed) return;
+  const QSignalBlocker blocker(tree);
+  const Qt::CheckState state =
+      (changed->checkState(0) == Qt::Unchecked) ? Qt::Unchecked : Qt::Checked;
+  QQueue<QTreeWidgetItem *> queue;
+  for (int i = 0; i < changed->childCount(); ++i)
+    queue.enqueue(changed->child(i));
+  while (!queue.isEmpty()) {
+    QTreeWidgetItem *item = queue.dequeue();
+    item->setCheckState(0, state);
+    for (int i = 0; i < item->childCount(); ++i)
+      queue.enqueue(item->child(i));
+  }
+  if (state == Qt::Unchecked) {
+    for (QTreeWidgetItem *parent = changed->parent(); parent; parent = parent->parent())
+      parent->setCheckState(0, Qt::Unchecked);
   }
 }
 }

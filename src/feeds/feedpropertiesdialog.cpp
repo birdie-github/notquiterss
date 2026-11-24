@@ -77,9 +77,7 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
     hint->setWordWrap(true);
     targetsLayout->addWidget(hint);
     bulkTargets_ = new QTreeWidget();
-    bulkTargets_->setColumnCount(2);
-    bulkTargets_->setColumnHidden(1, true);
-    bulkTargets_->setHeaderHidden(true);
+    FeedSelectionTree::configure(bulkTargets_);
     targetsLayout->addWidget(bulkTargets_, 1);
     splitter->addWidget(actions);
     splitter->addWidget(targets);

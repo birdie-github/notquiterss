@@ -46,15 +46,12 @@ protected:
 private slots:
   void currentIdChanged(int);
   void finishButtonClicked();
-  void feedItemChanged(QTreeWidgetItem *item, int column);
-  void setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state);
 
 private:
   QWizardPage *createChooseFeedsPage();
   QWizardPage *createCleanUpOptionsPage();
 
   bool selectedPage_;
-  bool itemNotChecked_;
   bool cleanupRunning_ = false;
   bool rollbackRecovery_ = false;
   QString finishButtonText_;
