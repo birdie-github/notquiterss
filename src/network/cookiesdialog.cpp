@@ -20,26 +20,40 @@
 #include "cookiejar.h"
 #include "app/mainapplication.h"
 
+namespace {
+QListWidget *populateSiteListDialog(Dialog &dialog, const QString &title,
+                                    const QSize &size, const QString &descriptionText,
+                                    QDialogButtonBox::StandardButtons buttons)
+{
+  dialog.setWindowTitle(title);
+  dialog.resize(size);
+  auto *description = new QLabel(descriptionText, &dialog);
+  description->setWordWrap(true);
+  dialog.pageLayout->addWidget(description);
+  auto *list = new QListWidget(&dialog);
+  dialog.pageLayout->addWidget(list);
+  dialog.buttonBox->setStandardButtons(buttons);
+  if (buttons.testFlag(QDialogButtonBox::Ok)) {
+    QObject::connect(dialog.buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+  }
+  return list;
+}
+} // namespace
+
 CookiesDialog::CookiesDialog(QWidget *parent) : Dialog(parent)
 {
-  setWindowTitle(tr("Website cookies"));
-  resize(560, 380);
-  auto *description = new QLabel(tr(
+  sites_ = populateSiteListDialog(*this, tr("Website cookies"), QSize(560, 380), tr(
       "Cookies are disabled until you import them for a website. Enabled websites "
       "may also set cookies. A leading dot includes subdomains.\n\n"
       "Persistent cookies are saved every six hours and on exit when changed. "
-      "Session cookies last only until exit. Imports and removals are saved immediately."), this);
-  description->setWordWrap(true);
-  pageLayout->addWidget(description);
-  sites_ = new QListWidget(this);
-  pageLayout->addWidget(sites_);
+      "Session cookies last only until exit. Imports and removals are saved immediately."),
+      QDialogButtonBox::Close);
   auto *import = new QPushButton(tr("Import cookies…"), this);
   remove_ = new QPushButton(tr("Remove cookies and disable"), this);
   auto *actions = new QHBoxLayout;
   actions->addWidget(import);
   actions->addWidget(remove_);
   pageLayout->addLayout(actions);
-  buttonBox->setStandardButtons(QDialogButtonBox::Close);
   connect(import, &QPushButton::clicked, this, &CookiesDialog::importCookies);
   connect(remove_, &QPushButton::clicked, this, &CookiesDialog::removeSite);
   connect(sites_, &QListWidget::currentRowChanged, this, [this](int row) {
@@ -73,23 +87,17 @@ void CookiesDialog::importCookies()
   }
 
   Dialog preview(this);
-  preview.setWindowTitle(tr("Choose websites to enable"));
-  preview.resize(520, 360);
-  auto *description = new QLabel(tr(
-      "Select only the websites needed by your feeds. Their cookies will be merged "
-      "with existing cookies. A leading dot includes subdomains. Session cookies "
-      "will be imported for this run only.\n\nExpired cookies skipped: %1.").arg(data.expired), &preview);
-  description->setWordWrap(true);
-  preview.pageLayout->addWidget(description);
-  auto *choices = new QListWidget(&preview);
+  QListWidget *choices = populateSiteListDialog(preview, tr("Choose websites to enable"),
+      QSize(520, 360), tr(
+          "Select only the websites needed by your feeds. Their cookies will be merged "
+          "with existing cookies. A leading dot includes subdomains. Session cookies "
+          "will be imported for this run only.\n\nExpired cookies skipped: %1.").arg(data.expired),
+      QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
   for (const auto &site : data.sites) {
     auto *item = new QListWidgetItem(site, choices);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
   }
-  preview.pageLayout->addWidget(choices);
-  preview.buttonBox->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-  connect(preview.buttonBox, &QDialogButtonBox::accepted, &preview, &QDialog::accept);
   if (preview.exec() != QDialog::Accepted) return;
   CookieJar::Import selected;
   for (int i = 0; i < choices->count(); ++i) {

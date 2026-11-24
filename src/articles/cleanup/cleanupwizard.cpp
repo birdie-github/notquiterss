@@ -20,6 +20,7 @@
 
 #include "app/mainapplication.h"
 #include "database/database.h"
+#include "preferences/optionspagebuilder.h"
 #include "preferences/settings.h"
 #include "feeds/feedselectiontree.h"
 #include "feeds/update/updatefeeds.h"
@@ -123,44 +124,36 @@ QWizardPage *CleanUpWizard::createChooseFeedsPage()
 
 QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
 {
-  QWizardPage *page = new QWizardPage;
+  auto *page = new QWizardPage;
   page->setTitle(tr("Clean Up Options"));
 
-  dayCleanUpOn_ = new QCheckBox(tr("Maximum article age to keep (days):"));
-  maxDayCleanUp_ = new QSpinBox();
-  maxDayCleanUp_->setEnabled(false);
-  maxDayCleanUp_->setRange(0, 9999);
-  connect(dayCleanUpOn_, &QAbstractButton::toggled, maxDayCleanUp_, &QWidget::setEnabled);
+  auto *layout = new QVBoxLayout(page);
+  OptionsPageBuilder b(page, layout, -1, -1, nullptr);
 
-  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
-  maxNewsCleanUp_ = new QSpinBox();
-  maxNewsCleanUp_->setEnabled(false);
-  maxNewsCleanUp_->setRange(0, 9999);
-  connect(newsCleanUpOn_, &QAbstractButton::toggled, maxNewsCleanUp_, &QWidget::setEnabled);
+  b.grid(std::nullopt, 1, [this, page](OptionsGridBuilder &g) {
+    const auto addToggleSpin = [&](int row, QCheckBox *&box, const QString &label, QSpinBox *&spin) {
+      g.check(row, 0, box, label);
+      spin = new QSpinBox(page);
+      spin->setRange(0, 9999);
+      g.addWidget(row, 1, spin, Qt::AlignLeft);
+      OptionsPageBuilder::bindEnabled(box, {spin});
+    };
+    addToggleSpin(0, dayCleanUpOn_, tr("Maximum article age to keep (days):"), maxDayCleanUp_);
+    addToggleSpin(1, newsCleanUpOn_, tr("Maximum number of articles to keep:"), maxNewsCleanUp_);
+    g.check(2, 0, readCleanUp_, tr("Delete read articles"));
+    g.check(3, 0, neverUnreadCleanUp_, tr("Never delete unread articles"));
+    g.check(4, 0, neverStarCleanUp_, tr("Never delete starred articles"));
+    g.check(5, 0, neverLabelCleanUp_, tr("Never delete labeled articles"));
+  });
 
-  readCleanUp_ = new QCheckBox(tr("Delete read articles"));
-  neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread articles"));
-  neverStarCleanUp_ = new QCheckBox(tr("Never delete starred articles"));
-  neverLabelCleanUp_ = new QCheckBox(tr("Never delete labeled articles"));
-
-  QGridLayout *cleanUpFeedsLayout = new QGridLayout();
-  cleanUpFeedsLayout->setColumnStretch(1, 1);
-  cleanUpFeedsLayout->addWidget(dayCleanUpOn_, 0, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(maxDayCleanUp_, 0, 1, 1, 1, Qt::AlignLeft);
-  cleanUpFeedsLayout->addWidget(newsCleanUpOn_, 1, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(maxNewsCleanUp_, 1, 1, 1, 1, Qt::AlignLeft);
-  cleanUpFeedsLayout->addWidget(readCleanUp_, 2, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverUnreadCleanUp_, 3, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverStarCleanUp_, 4, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverLabelCleanUp_, 5, 0, 1, 1);
-
-  cleanUpDeleted_ = new QCheckBox(tr("Clean up 'Deleted'"));
-  fullCleanUp_ = new QCheckBox(tr("Purge database"));
-  QVBoxLayout *fullCleanUpDescriptionLayout = new QVBoxLayout;
-  fullCleanUpDescriptionLayout->setContentsMargins(15, 0, 0, 0);
-  fullCleanUpDescriptionLayout->addWidget(
-        new QLabel(tr("Permanently remove records marked as deleted from the database.\n"
-                      "Deleted articles may be downloaded again.")));
+  b.spacing(10);
+  b.check(cleanUpDeleted_, tr("Clean up 'Deleted'"));
+  b.spacing(10);
+  b.check(fullCleanUp_, tr("Purge database"));
+  b.indented(QMargins(15, 0, 0, 0), [](OptionsPageBuilder &sub) {
+    sub.label(tr("Permanently remove records marked as deleted from the database.\n"
+                 "Deleted articles may be downloaded again."));
+  });
 
   progressBar_ = new QProgressBar(this);
   progressBar_->setObjectName("progressBar_");
@@ -186,16 +179,9 @@ QWizardPage *CleanUpWizard::createCleanUpOptionsPage()
   cleanUpDeleted_->setChecked(settings.value("cleanUpDeleted", true).toBool());
   fullCleanUp_->setChecked(settings.value("fullCleanUp", false).toBool());
 
-  QVBoxLayout *layout = new QVBoxLayout(page);
-  layout->addLayout(cleanUpFeedsLayout);
-  layout->addSpacing(10);
-  layout->addWidget(cleanUpDeleted_);
-  layout->addSpacing(10);
-  layout->addWidget(fullCleanUp_);
-  layout->addLayout(fullCleanUpDescriptionLayout);
-  layout->addStretch(1);
-  layout->addWidget(rollbackErrorLabel_);
-  layout->addWidget(progressBar_);
+  b.stretch(1);
+  b.addWidget(rollbackErrorLabel_);
+  b.addWidget(progressBar_);
 
   return page;
 }
