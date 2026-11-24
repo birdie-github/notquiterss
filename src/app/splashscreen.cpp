@@ -59,9 +59,20 @@ SplashScreen::SplashScreen(Qt::WindowFlags flag)
 
 void SplashScreen::setProgress(int value)
 {
-  qApp->processEvents();
   splashProgress_.setValue(value);
   showMessage("Loading: " % QString::number(value) % "%   " %
               QString("%1").arg(QCoreApplication::applicationVersion()),
               Qt::AlignRight | Qt::AlignTop, Qt::darkGray);
+}
+
+bool SplashScreen::event(QEvent *e)
+{
+  if (e->type() == QEvent::Show) {
+    // Qt 6.11's QSplashScreen::event(QEvent::Show) waits up to 1000 ms for
+    // windowHandle()->isVisible(), which cannot become true while
+    // QWidgetPrivate::show_helper() is still inside sendEvent(Show) before
+    // show_sys(). Forward Show directly to QWidget.
+    return QWidget::event(e);
+  }
+  return QSplashScreen::event(e);
 }

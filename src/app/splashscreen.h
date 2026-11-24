@@ -29,6 +29,9 @@ public:
 
   void setProgress(int value);
 
+protected:
+  bool event(QEvent *e) override;
+
 private:
   QProgressBar splashProgress_;
 
