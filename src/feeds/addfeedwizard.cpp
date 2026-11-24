@@ -579,12 +579,9 @@ void AddFeedWizard::finish()
 /*! \brief Adding new folder **************************************************/
 void AddFeedWizard::newFolder()
 {
-  AddFolderDialog *addFolderDialog = new AddFolderDialog(this);
-  QList<QTreeWidgetItem *> treeItems =
-      addFolderDialog->foldersTree_->findItems(foldersTree_->currentItem()->text(1),
-                                               Qt::MatchFixedString | Qt::MatchRecursive,
-                                               1);
-  addFolderDialog->foldersTree_->setCurrentItem(treeItems.at(0));
+  const int selectedFolderId =
+      foldersTree_->currentItem() ? foldersTree_->currentItem()->text(1).toInt() : 0;
+  AddFolderDialog *addFolderDialog = new AddFolderDialog(this, selectedFolderId);
 
   if (addFolderDialog->exec() == QDialog::Rejected) {
     delete addFolderDialog;
@@ -615,14 +612,17 @@ void AddFeedWizard::newFolder()
   folderId = q.lastInsertId().toInt();
   q.finish();
 
-  treeItems = foldersTree_->findItems(QString::number(parentId),
-                                      Qt::MatchFixedString | Qt::MatchRecursive,
-                                      1);
-  QStringList treeItem;
-  treeItem << folderText << QString::number(folderId);
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-  treeItems.at(0)->addChild(treeWidgetItem);
-  foldersTree_->setCurrentItem(treeWidgetItem);
+  const QList<QTreeWidgetItem *> treeItems =
+      foldersTree_->findItems(QString::number(parentId),
+                              Qt::MatchFixedString | Qt::MatchRecursive,
+                              1);
+  if (!treeItems.isEmpty()) {
+    auto *treeWidgetItem = new QTreeWidgetItem(QStringList{folderText, QString::number(folderId)});
+    treeWidgetItem->setData(0, FeedSelectionTree::IsFeedRole, false);
+    treeWidgetItem->setIcon(0, QIcon(QStringLiteral(":/images/folder")));
+    treeItems.at(0)->addChild(treeWidgetItem);
+    foldersTree_->setCurrentItem(treeWidgetItem);
+  }
 
   delete addFolderDialog;
 }
