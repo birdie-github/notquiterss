@@ -22,13 +22,20 @@
 #include <QtWidgets>
 #include <QtSql>
 #include <QNetworkProxy>
-#include <QPointer>
 
 #include "articles/cleanup/cleanuppreviewdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "widgets/dialog.h"
 #include "widgets/lineedit.h"
 #include "notifications/notificationswidget.h"
+
+class FontsColorsSettingsPage;
+class LabelsSettingsPage;
+class LanguageSettingsPage;
+class NotifierFeedsDialog;
+class OptionsSearchPanel;
+class PasswordsSettingsPage;
+class ShortcutsSettingsPage;
 
 #define STATIC_ICON_TRAY        0
 #define CHANGE_ICON_TRAY        1
@@ -178,7 +185,6 @@ public:
 
   // labels
   QStringList idLabels_;
-  QTreeWidget *labelsTree_;
 
   // notifier
   QGroupBox *soundNotifyBox_;
@@ -205,12 +211,9 @@ public:
   QCheckBox *fullscreenModeNotify_;
   QCheckBox *showNotifyInactiveApp_;
   QCheckBox *onlySelectedFeeds_;
-  QTreeWidget *feedsTreeNotify_;
-  bool itemNotChecked_;
-  Dialog *feedsNotifierDlg_;
 
   // language
-  QString language();
+  QString language() const;
   void setLanguage(const QString &langFileName);
 
   // fonts
@@ -222,11 +225,10 @@ public:
   // shortcut
   void loadActionShortcut(QList<QAction *> actions, const QStringList *list);
   void saveActionShortcut(QList<QAction *> actions, QActionGroup *labelGroup);
-  bool shortcutsLoaded() const { return loadShortcutsOk_; }
+  bool shortcutsLoaded() const;
 
 signals:
   void signalCategoriesTreeKeyUpDownPressed();
-  void signalShortcutTreeUpDownPressed();
   void signalPlaySound(const QString &soundPath);
 
 protected:
@@ -237,38 +239,15 @@ private slots:
   void slotCategoriesItemClicked(QTreeWidgetItem* item, int);
   void slotCategoriesTreeKeyUpDownPressed();
   void searchTextChanged(const QString &text);
-  void slotSearchResultActivated(QTreeWidgetItem *item, int column);
   void updateProxy();
   void applyProxy();
   void acceptDialog();
   void closeDialog();
-  void slotFontChange();
-  void slotFontReset();
-  void slotFontResetAll();
-  void slotColorChange();
-  void slotColorReset();
-  void slotColorResetAll();
-  void shortcutTreeClicked(const QModelIndex &index);
-  void slotShortcutTreeUpDownPressed();
-  void slotClearShortcut();
-  void slotResetShortcut();
-  void filterShortcutChanged(const QString &text);
   void selectionUserStyleNews();
   void selectionSoundNotifier();
   void slotPlaySoundNotifier();
-  void feedsTreeNotifyItemChanged(QTreeWidgetItem* item,int column);
-  void setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state);
   void showNotification();
   void deleteNotification();
-  void newLabel();
-  void editLabel();
-  void deleteLabel();
-  void moveUpLabel();
-  void moveDownLabel();
-  void slotCurrentLabelChanged(QTreeWidgetItem *current, QTreeWidgetItem *);
-  void slotDeletePass();
-  void slotDeleteAllPass();
-  void slotShowPass();
   void selectionDownloadLocation();
   void updateCleanUpPreview();
   void showCleanUpPreview();
@@ -286,7 +265,6 @@ private:
   QString searchEntrySection(const OptionSearchEntry &entry) const;
   QTabWidget *tabWidgetForPage(int pageIndex) const;
   void jumpToSearchEntry(int entryIndex);
-  void highlightWidget(QWidget *target, int pageIndex);
 
   QSqlDatabase db_;
 
@@ -297,10 +275,7 @@ private:
   QVector<QTreeWidgetItem *> categoryItems_;
   QSplitter *splitter_;
   QStackedWidget *contentStack_;
-  QWidget *searchResultsPage_ = nullptr;
-  QTreeWidget *searchResultsTree_ = nullptr;
-  QLabel *searchEmptyLabel_ = nullptr;
-  QPointer<QWidget> highlightOverlay_;
+  OptionsSearchPanel *searchPanel_ = nullptr;
   int lastPageIndex_ = 0;
   bool searchIndexBuilt_ = false;
   QVector<QWidget *> pageWidgets_;
@@ -312,14 +287,16 @@ private:
   QFrame *networkConnectionsWidget_ = nullptr;
   QTabWidget *browserWidget_ = nullptr;
   QTabWidget *feedsWidget_ = nullptr;
-  QWidget *labelsWidget_ = nullptr;
   QTabWidget *notifierWidget_ = nullptr;
-  QWidget *passwordsWidget_ = nullptr;
-  QWidget *languageWidget_ = nullptr;
-  QTabWidget *fontsColorsWidget_ = nullptr;
-  QWidget *shortcutWidget_ = nullptr;
   QWidget *backupWidget_ = nullptr;
-  QWidget *avoidOldNewsWidget_ = nullptr;
+
+  // extracted page controllers
+  LabelsSettingsPage *labelsPage_ = nullptr;
+  PasswordsSettingsPage *passwordsPage_ = nullptr;
+  LanguageSettingsPage *languagePage_ = nullptr;
+  FontsColorsSettingsPage *fontsColorsPage_ = nullptr;
+  ShortcutsSettingsPage *shortcutsPage_ = nullptr;
+  NotifierFeedsDialog *feedsNotifierDlg_ = nullptr;
 
   // general
   QWidget *createGeneralWidget();
@@ -361,61 +338,24 @@ private:
 
   // notifier
   QWidget *createNotifierWidget();
-  void createFeedsNotifierDlg();
   void openFeedsNotifierDlg();
-  void loadNotifier();
-  void applyNotifier();
-  bool loadNotifierOk_ = false;
   NotificationWidget *notificationWidget_ = nullptr;
 
-  // labels
+  // extracted page creation/onEnter hooks
   QWidget *createLabelsWidget();
   void loadLabels();
-  void applyLabels();
-  int labelShortcutRow(const QString &labelId) const;
-  void addIdLabelList(const QString &idLabel);
-  QPushButton *newLabelButton_ = nullptr;
-  QPushButton *editLabelButton_ = nullptr;
-  QPushButton *deleteLabelButton_ = nullptr;
-  QPushButton *moveUpLabelButton_ = nullptr;
-  QPushButton *moveDownLabelButton_ = nullptr;
-  bool loadLabelsOk_ = false;
-
-  // passwords
   QWidget *createPasswordsWidget();
   void loadPasswords();
-  void applyPass();
-  QTreeWidget *passTree_;
-  bool loadPasswordsOk_ = false;
-
-  // language
   QWidget *createLanguageWidget();
   void loadLanguages();
-  QTreeWidget *languageFileList_;
-  QString selectedLanguage_;
-  bool loadLanguagesOk_ = false;
-
-  // fonts
-  QTreeWidget *fontsTree_ = nullptr;
-  QTreeWidget *colorsTree_ = nullptr;
-  QVector<QTreeWidgetItem *> colorOptionItems_;
   QWidget *createFontsColorsWidget();
-  void resetFontOption(QTreeWidgetItem *item);
-
-  // shortcut
   QWidget *createShortcutWidget();
-  QWidget *createBackupWidget();
   void loadShortcuts();
+  QWidget *createBackupWidget();
+
   QList<QAction *> shortcutActions_;
   const QStringList *listDefaultShortcut_ = nullptr;
-  bool loadShortcutsOk_ = false;
-  LineEdit *filterShortcut_ = nullptr;
-  QTreeView *shortcutTree_ = nullptr;
-  QStandardItemModel *shortcutModel_ = nullptr;
-  QSortFilterProxyModel *shortcutProxyModel_ = nullptr;
-  LineEdit *editShortcut_ = nullptr;
-  QGroupBox *editShortcutBox = nullptr;
-  QLabel *warningShortcut_ = nullptr;
+  QString selectedLanguage_;
   QElapsedTimer openTimer_;
   bool showLogged_ = false;
   QVector<OptionSearchEntry> searchEntries_;

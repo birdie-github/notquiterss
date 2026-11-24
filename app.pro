@@ -92,6 +92,14 @@ HEADERS += \
     src/feeds/update/parseobject.h \
     src/preferences/optionsdialog.h \
     src/preferences/optionspagebuilder.h \
+    src/preferences/optionssearchpanel.h \
+    src/preferences/pages/backupsettingspage.h \
+    src/preferences/pages/fontscolorssettingspage.h \
+    src/preferences/pages/labelssettingspage.h \
+    src/preferences/pages/languagesettingspage.h \
+    src/preferences/pages/notifierfeedsdialog.h \
+    src/preferences/pages/passwordssettingspage.h \
+    src/preferences/pages/shortcutssettingspage.h \
     src/articles/newsview.h \
     src/articles/newsmodel.h \
     src/articles/newsheader.h \
@@ -126,7 +134,6 @@ HEADERS += \
     src/app/mainapplication.h \
     src/preferences/settings.h \
     src/backup/databasebackup.h \
-    src/backup/backupsettingspage.h \
     src/platform/filemanager.h \
     src/common/logfile.h \
     src/mainwindow/mainwindow.h \
@@ -161,6 +168,14 @@ SOURCES += \
     src/feeds/update/parseobject.cpp \
     src/preferences/optionsdialog.cpp \
     src/preferences/optionspagebuilder.cpp \
+    src/preferences/optionssearchpanel.cpp \
+    src/preferences/pages/backupsettingspage.cpp \
+    src/preferences/pages/fontscolorssettingspage.cpp \
+    src/preferences/pages/labelssettingspage.cpp \
+    src/preferences/pages/languagesettingspage.cpp \
+    src/preferences/pages/notifierfeedsdialog.cpp \
+    src/preferences/pages/passwordssettingspage.cpp \
+    src/preferences/pages/shortcutssettingspage.cpp \
     src/articles/newsview.cpp \
     src/articles/newsmodel.cpp \
     src/articles/newsheader.cpp \
@@ -197,7 +212,6 @@ SOURCES += \
     src/app/mainapplication.cpp \
     src/preferences/settings.cpp \
     src/backup/databasebackup.cpp \
-    src/backup/backupsettingspage.cpp \
     src/platform/filemanager.cpp \
     src/common/logfile.cpp \
     src/mainwindow/mainwindow.cpp \

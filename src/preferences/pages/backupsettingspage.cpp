@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "backupsettingspage.h"
-#include "databasebackup.h"
+#include "backup/databasebackup.h"
 #include "platform/filemanager.h"
 #include "preferences/optionspagebuilder.h"
 #include "preferences/settings.h"

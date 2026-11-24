@@ -17,132 +17,27 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "projectmetadata.h"
-#include <algorithm>
-#include <cmath>
 #include <utility>
 #include "common/logfile.h"
 #include "optionsdialog.h"
-#include "backup/backupsettingspage.h"
+#include "preferences/optionssearchpanel.h"
+#include "preferences/pages/backupsettingspage.h"
+#include "preferences/pages/fontscolorssettingspage.h"
+#include "preferences/pages/labelssettingspage.h"
+#include "preferences/pages/languagesettingspage.h"
+#include "preferences/pages/notifierfeedsdialog.h"
+#include "preferences/pages/passwordssettingspage.h"
+#include "preferences/pages/shortcutssettingspage.h"
 #include <QElapsedTimer>
-#include <QPainter>
-#include <QRegularExpression>
 #include <QShortcut>
-#include <QStyledItemDelegate>
 #include <QScreen>
-#include <QStyle>
 #include <QTimer>
-#include <QVariantAnimation>
 #include <QWindow>
-#include "articles/rendering/articlecontent.h"
-#include <QDesktopServices>
 #include <QGuiApplication>
 
 #include "app/mainapplication.h"
-#include "articles/labeldialog.h"
 #include "settings.h"
 #include "app/globals.h"
-
-namespace {
-class ColorSwatchDelegate final : public QStyledItemDelegate
-{
-public:
-  using QStyledItemDelegate::QStyledItemDelegate;
-
-  QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
-  {
-    return QStyledItemDelegate::sizeHint(option, index) + QSize(20, 8);
-  }
-
-  void paint(QPainter *painter, const QStyleOptionViewItem &option,
-             const QModelIndex &index) const override
-  {
-    QStyleOptionViewItem cell(option);
-    initStyleOption(&cell, index);
-    const QString label = cell.text;
-    cell.text.clear();
-    const QStyle *style = cell.widget ? cell.widget->style() : QApplication::style();
-    style->drawControl(QStyle::CE_ItemViewItem, &cell, painter, cell.widget);
-    if (label.isEmpty()) return;
-
-    const QRect swatch = cell.rect.adjusted(4, 3, -5, -4);
-    if (swatch.isEmpty()) return;
-
-    QColor fill = cell.palette.color(QPalette::Base);
-    QColor ink = cell.palette.color(QPalette::Text);
-    const QColor color(index.data(Qt::UserRole).toString());
-    if (color.isValid()) {
-      // Compute contrast against the visible color, including any transparency.
-      const double alpha = color.alphaF();
-      fill = QColor::fromRgbF(alpha * color.redF() + (1 - alpha) * fill.redF(),
-                             alpha * color.greenF() + (1 - alpha) * fill.greenF(),
-                             alpha * color.blueF() + (1 - alpha) * fill.blueF());
-      const auto linear = [](double channel) {
-        return channel <= 0.04045 ? channel / 12.92
-                                 : std::pow((channel + 0.055) / 1.055, 2.4);
-      };
-      const double luminance = 0.2126 * linear(fill.redF()) + 0.7152 * linear(fill.greenF())
-                             + 0.0722 * linear(fill.blueF());
-      const double blackContrast = (luminance + 0.05) / 0.05;
-      const double whiteContrast = 1.05 / (luminance + 0.05);
-      ink = blackContrast >= whiteContrast ? Qt::black : Qt::white;
-    }
-
-    painter->save();
-    painter->fillRect(swatch, fill);
-    painter->setPen(cell.palette.color(QPalette::Mid));
-    painter->drawRect(swatch.adjusted(0, 0, -1, -1));
-    painter->setFont(cell.font);
-    painter->setPen(ink);
-    painter->drawText(swatch, Qt::AlignCenter, label);
-    painter->restore();
-  }
-};
-
-class HighlightOverlay final : public QWidget
-{
-public:
-  HighlightOverlay(QWidget *parent, const QRect &rect)
-    : QWidget(parent)
-  {
-    setAttribute(Qt::WA_TransparentForMouseEvents);
-    setAttribute(Qt::WA_NoSystemBackground);
-    setGeometry(rect);
-    show();
-    raise();
-
-    auto *anim = new QVariantAnimation(this);
-    anim->setDuration(1100);
-    anim->setStartValue(1.0);
-    anim->setEndValue(0.0);
-    anim->setEasingCurve(QEasingCurve::OutCubic);
-    connect(anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &v) {
-      opacity_ = v.toReal();
-      update();
-    });
-    connect(anim, &QVariantAnimation::finished, this, &QObject::deleteLater);
-    anim->start(QAbstractAnimation::DeleteWhenStopped);
-  }
-
-protected:
-  void paintEvent(QPaintEvent *) override
-  {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    const QColor base = palette().color(QPalette::Highlight);
-    QColor fill = base;
-    fill.setAlphaF(0.18 * opacity_);
-    QColor border = base;
-    border.setAlphaF(0.85 * opacity_);
-    const QRectF r = QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0);
-    p.setBrush(fill);
-    p.setPen(QPen(border, 2.0));
-    p.drawRoundedRect(r, 4.0, 4.0);
-  }
-
-private:
-  qreal opacity_ = 1.0;
-};
-}
 
 const OptionsDialog::PageDescriptor OptionsDialog::kPages[OptionsDialog::PageCount] = {
   { QT_TR_NOOP("General"),            &OptionsDialog::createGeneralWidget,            nullptr },
@@ -233,28 +128,8 @@ OptionsDialog::OptionsDialog(QWidget *parent)
     contentStack_->addWidget(scrollArea);
   }
 
-  searchResultsTree_ = new QTreeWidget();
-  searchResultsTree_->setObjectName("searchResultsTree_");
-  searchResultsTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  searchResultsTree_->setRootIsDecorated(false);
-  searchResultsTree_->setUniformRowHeights(true);
-  searchResultsTree_->setAlternatingRowColors(true);
-  searchResultsTree_->setColumnCount(2);
-  searchResultsTree_->setHeaderHidden(true);
-  searchResultsTree_->header()->setStretchLastSection(false);
-  searchResultsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-  searchResultsTree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-
-  searchEmptyLabel_ = new QLabel(tr("No matching settings found."));
-  searchEmptyLabel_->setAlignment(Qt::AlignCenter);
-  searchEmptyLabel_->hide();
-
-  searchResultsPage_ = new QWidget();
-  auto *searchResultsLayout = new QVBoxLayout(searchResultsPage_);
-  searchResultsLayout->setContentsMargins(0, 0, 0, 0);
-  searchResultsLayout->addWidget(searchResultsTree_, 1);
-  searchResultsLayout->addWidget(searchEmptyLabel_, 1);
-  contentStack_->addWidget(searchResultsPage_);
+  searchPanel_ = new OptionsSearchPanel(this);
+  contentStack_->addWidget(searchPanel_);
 
   splitter_ = new QSplitter();
   splitter_->setChildrenCollapsible(false);
@@ -276,8 +151,8 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   connect(this, &OptionsDialog::signalCategoriesTreeKeyUpDownPressed,
           this, &OptionsDialog::slotCategoriesTreeKeyUpDownPressed, Qt::QueuedConnection);
   connect(searchEdit_, &QLineEdit::textChanged, this, &OptionsDialog::searchTextChanged);
-  connect(searchResultsTree_, &QTreeWidget::itemClicked,
-          this, &OptionsDialog::slotSearchResultActivated);
+  connect(searchPanel_, &OptionsSearchPanel::entryActivated,
+          this, &OptionsDialog::jumpToSearchEntry);
 
   auto *findShortcut = new QShortcut(QKeySequence::Find, this);
   connect(findShortcut, &QShortcut::activated, this, [this]() {
@@ -287,7 +162,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
   categoriesTree_->installEventFilter(this);
   searchEdit_->installEventFilter(this);
-  searchResultsTree_->installEventFilter(this);
+  searchPanel_->resultsTree()->installEventFilter(this);
 
   setMinimumSize(500, 400);
   Settings settings;
@@ -406,9 +281,12 @@ void OptionsDialog::acceptDialog()
 
     applyProxy();
   }
-  applyLabels();
-  applyNotifier();
-  applyPass();
+  if (labelsPage_) {
+    labelsPage_->apply(db_);
+    idLabels_ = labelsPage_->modifiedIds();
+  }
+  if (feedsNotifierDlg_) feedsNotifierDlg_->apply(db_);
+  if (passwordsPage_) passwordsPage_->apply(db_);
   accept();
 }
 
@@ -430,100 +308,39 @@ void OptionsDialog::keyPressEvent(QKeyEvent *event)
 bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 {
   if (event->type() == QEvent::KeyPress) {
-    QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+    QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
     if (obj == searchEdit_) {
-      if (keyEvent->key() == Qt::Key_Down &&
-          searchResultsTree_->isVisible() && searchResultsTree_->topLevelItemCount() > 0) {
-        searchResultsTree_->setFocus();
-        searchResultsTree_->setCurrentItem(searchResultsTree_->topLevelItem(0));
+      if (keyEvent->key() == Qt::Key_Down && searchPanel_->hasResults()) {
+        searchPanel_->focusFirstResult();
         return true;
       }
       if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
-        if (searchResultsTree_->isVisible() && searchResultsTree_->topLevelItemCount() > 0) {
-          QTreeWidgetItem *item = searchResultsTree_->currentItem()
-              ? searchResultsTree_->currentItem()
-              : searchResultsTree_->topLevelItem(0);
-          slotSearchResultActivated(item, 0);
-        }
+        const int idx = searchPanel_->currentEntryIndex();
+        if (idx >= 0) jumpToSearchEntry(idx);
         return true;
       }
       return false;
     }
-    if (obj == searchResultsTree_) {
-      if (keyEvent->key() == Qt::Key_Up && searchResultsTree_->currentIndex().row() == 0) {
+    if (obj == searchPanel_->resultsTree()) {
+      if (keyEvent->key() == Qt::Key_Up &&
+          searchPanel_->resultsTree()->currentIndex().row() == 0) {
         searchEdit_->setFocus();
         return true;
       }
       if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
-        if (QTreeWidgetItem *item = searchResultsTree_->currentItem()) {
-          slotSearchResultActivated(item, 0);
-        }
+        const int idx = searchPanel_->currentEntryIndex();
+        if (idx >= 0) jumpToSearchEntry(idx);
         return true;
       }
       return false;
     }
-    if (obj != editShortcut_) {
-      if ((keyEvent->key() == Qt::Key_Up) ||
-          (keyEvent->key() == Qt::Key_Down)) {
-        if (obj == categoriesTree_)
-          emit signalCategoriesTreeKeyUpDownPressed();
-        else if (obj == shortcutTree_)
-          emit signalShortcutTreeUpDownPressed();
-      }
-    } else {
-      if ((keyEvent->key() < Qt::Key_Shift) ||
-          (keyEvent->key() > Qt::Key_Alt)) {
-        QString str;
-        if ((keyEvent->modifiers() & Qt::ShiftModifier) ||
-            (keyEvent->modifiers() & Qt::ControlModifier) ||
-            (keyEvent->modifiers() & Qt::AltModifier))
-          str.append(QKeySequence(keyEvent->modifiers()).toString());
-        if (keyEvent->key() == Qt::Key_Backtab)
-          str.append(QKeySequence(Qt::Key_Tab).toString());
-        else
-          str.append(QKeySequence(keyEvent->key()).toString());
-        editShortcut_->setText(str);
-
-        QModelIndex index = shortcutProxyModel_->mapToSource(shortcutTree_->currentIndex());
-        int row = index.row();
-        QString shortcutStr = shortcutModel_->item(row, 2)->text();
-        QList<QStandardItem *> treeItems;
-        treeItems = shortcutModel_->findItems(shortcutStr, Qt::MatchFixedString, 2);
-          if (!shortcutStr.isEmpty()) {
-            for (int i = 0; i < treeItems.count(); i++) {
-              if ((treeItems.count() == 2) || (treeItems.at(i)->row() == row)) {
-                treeItems.at(i)->setData(shortcutModel_->item(0, 1)->data(Qt::ForegroundRole),
-                                         Qt::ForegroundRole);
-              }
-            }
-          }
-
-        shortcutModel_->item(row, 2)->setText(str);
-        shortcutModel_->item(row, 2)->setData(str);
-
-        if (!str.isEmpty()) {
-          treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
-          if (treeItems.count() > 1) {
-            for (int i = 0; i < treeItems.count(); i++) {
-              if (treeItems.at(i)->row() != row) {
-                warningShortcut_->setText(tr("Warning: key is already assigned to") +
-                                          " '" +
-                                          shortcutModel_->item(treeItems.at(i)->row(), 0)->text()
-                                          + "'");
-              }
-              treeItems.at(i)->setData(QColor(Qt::red), Qt::ForegroundRole);
-            }
-          } else {
-            warningShortcut_->clear();
-          }
-        }
-      }
-      return true;
+    if (obj == categoriesTree_ &&
+        (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down)) {
+      emit signalCategoriesTreeKeyUpDownPressed();
     }
     return false;
-  } else {
-    return QDialog::eventFilter(obj, event);
   }
+  return QDialog::eventFilter(obj, event);
 }
 
 /** @brief Create widget "General"
@@ -1080,57 +897,34 @@ void OptionsDialog::updateMaxDayCleanUpWarning()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createLabelsWidget()
 {
-  labelsTree_ = new QTreeWidget(this);
-  labelsTree_->setObjectName("labelsTree_");
-  labelsTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  labelsTree_->setColumnCount(5);
-  labelsTree_->setColumnHidden(0, true);
-  labelsTree_->setColumnHidden(2, true);
-  labelsTree_->setColumnHidden(3, true);
-  labelsTree_->setColumnHidden(4, true);
-  labelsTree_->header()->hide();
+  labelsPage_ = new LabelsSettingsPage(this, &searchEntries_, PageLabels);
+  auto ensureShortcuts = [this]() -> ShortcutsSettingsPage * {
+    ensurePageCreated(PageShortcuts);
+    shortcutsPage_->load();
+    return shortcutsPage_;
+  };
+  connect(labelsPage_, &LabelsSettingsPage::labelAdded, this,
+          [ensureShortcuts](const QString &id, const QString &name, const QIcon &icon) {
+    ensureShortcuts()->addLabelAction(id, name, icon);
+  });
+  connect(labelsPage_, &LabelsSettingsPage::labelEdited, this,
+          [ensureShortcuts](const QString &id, const QString &name, const QIcon &icon) {
+    ensureShortcuts()->updateLabelAction(id, name, icon);
+  });
+  connect(labelsPage_, &LabelsSettingsPage::labelDeleted, this,
+          [ensureShortcuts](const QString &id) {
+    ensureShortcuts()->removeLabelAction(id);
+  });
+  connect(labelsPage_, &LabelsSettingsPage::labelsSwapped, this,
+          [ensureShortcuts](const QString &idA, const QString &idB) {
+    ensureShortcuts()->swapLabelActions(idA, idB);
+  });
+  return labelsPage_;
+}
 
-  newLabelButton_ = new QPushButton(tr("Create..."), this);
-  connect(newLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::newLabel);
-  editLabelButton_ = new QPushButton(tr("Edit..."), this);
-  editLabelButton_->setEnabled(false);
-  connect(editLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::editLabel);
-  deleteLabelButton_ = new QPushButton(tr("Delete..."), this);
-  deleteLabelButton_->setEnabled(false);
-  connect(deleteLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::deleteLabel);
-
-  moveUpLabelButton_ = new QPushButton(tr("Move up"), this);
-  moveUpLabelButton_->setEnabled(false);
-  connect(moveUpLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::moveUpLabel);
-  moveDownLabelButton_ = new QPushButton(tr("Move down"), this);
-  moveDownLabelButton_->setEnabled(false);
-  connect(moveDownLabelButton_, &QAbstractButton::clicked, this, &OptionsDialog::moveDownLabel);
-
-  QVBoxLayout *buttonsLayout = new QVBoxLayout();
-  buttonsLayout->addWidget(newLabelButton_);
-  buttonsLayout->addWidget(editLabelButton_);
-  buttonsLayout->addWidget(deleteLabelButton_);
-  buttonsLayout->addSpacing(10);
-  buttonsLayout->addWidget(moveUpLabelButton_);
-  buttonsLayout->addWidget(moveDownLabelButton_);
-  buttonsLayout->addStretch();
-
-  QHBoxLayout *labelsLayout = new QHBoxLayout();
-  labelsLayout->setContentsMargins(0, 0, 0, 0);
-  labelsLayout->addWidget(labelsTree_);
-  labelsLayout->addLayout(buttonsLayout);
-
-  labelsWidget_ = new QWidget(this);
-  labelsWidget_->setLayout(labelsLayout);
-
-  connect(labelsTree_, &QTreeWidget::currentItemChanged, this, &OptionsDialog::slotCurrentLabelChanged);
-  connect(labelsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::editLabel);
-
-  loadLabelsOk_ = false;
-  searchEntries_.append({PageLabels, -1, tr("Labels"), QString(),
-                         tr("Create...") + QLatin1Char(' ') + tr("Edit...") + QStringLiteral(" tags categories"),
-                         labelsTree_});
-  return labelsWidget_;
+void OptionsDialog::loadLabels()
+{
+  if (labelsPage_) labelsPage_->load();
 }
 
 /** @brief Create widget "Notifier"
@@ -1138,9 +932,6 @@ QWidget *OptionsDialog::createLabelsWidget()
 QWidget *OptionsDialog::createNotifierWidget()
 {
   feedsNotifierDlg_ = nullptr;
-  feedsTreeNotify_ = nullptr;
-  itemNotChecked_ = false;
-  loadNotifierOk_ = false;
 
   notifierWidget_ = OptionsPageBuilder::buildTabs(PageNotifications, &searchEntries_, {
     {tr("Notification"), [this](OptionsPageBuilder &b) {
@@ -1229,410 +1020,47 @@ QWidget *OptionsDialog::createNotifierWidget()
   return notifierWidget_;
 }
 
-/** @brief Create dialog "Feeds" for Notifier
- *----------------------------------------------------------------------------*/
-void OptionsDialog::createFeedsNotifierDlg()
-{
-  feedsNotifierDlg_ = new Dialog(this);
-  feedsNotifierDlg_->setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
-  feedsNotifierDlg_->setWindowTitle(tr("Selection of feeds"));
-  feedsNotifierDlg_->setMinimumSize(300, 300);
-
-  feedsTreeNotify_ = new QTreeWidget(this);
-  feedsTreeNotify_->setObjectName("feedsTreeNotify_");
-  feedsTreeNotify_->setColumnCount(2);
-  feedsTreeNotify_->setColumnHidden(1, true);
-  feedsTreeNotify_->header()->hide();
-
-  itemNotChecked_ = false;
-
-  QStringList treeItem;
-  treeItem << "Feeds" << "Id";
-  feedsTreeNotify_->setHeaderLabels(treeItem);
-
-  treeItem.clear();
-  treeItem << tr("All Feeds") << "0";
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-  treeWidgetItem->setCheckState(0, Qt::Checked);
-  feedsTreeNotify_->addTopLevelItem(treeWidgetItem);
-
-  feedsNotifierDlg_->pageLayout->addWidget(feedsTreeNotify_);
-  feedsNotifierDlg_->buttonBox->addButton(QDialogButtonBox::Close);
-
-  connect(feedsTreeNotify_, &QTreeWidget::itemChanged, this, &OptionsDialog::feedsTreeNotifyItemChanged);
-}
-
 void OptionsDialog::openFeedsNotifierDlg()
 {
-  loadNotifier();
+  if (!feedsNotifierDlg_) feedsNotifierDlg_ = new NotifierFeedsDialog(this);
+  feedsNotifierDlg_->load(db_, mainApp->mainWindow()->defaultIconFeeds_);
   feedsNotifierDlg_->exec();
 }
 
-/** @brief Create widget "Passwords"
- *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createPasswordsWidget()
 {
-  passTree_ = new QTreeWidget(this);
-  passTree_->setObjectName("labelsTree_");
-  passTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  passTree_->setColumnCount(4);
-  passTree_->setColumnHidden(0, true);
-  passTree_->setColumnHidden(3, true);
-  passTree_->setColumnWidth(1, 250);
-  passTree_->header()->setMinimumSectionSize(22);
-
-  QStringList strTreeItem;
-  strTreeItem.clear();
-  strTreeItem << "Id" << tr("Site") << tr("User") << tr("Password");
-  passTree_->setHeaderLabels(strTreeItem);
-
-  QPushButton *deletePass = new QPushButton(tr("Delete"));
-  connect(deletePass, &QAbstractButton::clicked, this, &OptionsDialog::slotDeletePass);
-  QPushButton *deleteAllPass = new QPushButton(tr("Delete All"));
-  connect(deleteAllPass, &QAbstractButton::clicked, this, &OptionsDialog::slotDeleteAllPass);
-  QPushButton *showPass = new QPushButton(tr("Show Passwords"));
-  connect(showPass, &QAbstractButton::clicked, this, &OptionsDialog::slotShowPass);
-  QVBoxLayout *passButtonLayout = new QVBoxLayout();
-  passButtonLayout->addWidget(deletePass);
-  passButtonLayout->addWidget(deleteAllPass);
-  passButtonLayout->addSpacing(10);
-  passButtonLayout->addWidget(showPass);
-  passButtonLayout->addStretch(1);
-
-  QHBoxLayout *passLayout = new QHBoxLayout();
-  passLayout->setContentsMargins(0, 0, 0, 0);
-  passLayout->addWidget(passTree_);
-  passLayout->addLayout(passButtonLayout);
-
-  passwordsWidget_ = new QWidget();
-  passwordsWidget_->setLayout(passLayout);
-  loadPasswordsOk_ = false;
-  searchEntries_.append({PagePasswords, -1, tr("Passwords"), QString(),
-                         tr("Site") + QLatin1Char(' ') + tr("User") + QLatin1Char(' ') + tr("Show Passwords")
-                             + QStringLiteral(" credentials login auth"),
-                         passTree_});
-  return passwordsWidget_;
+  passwordsPage_ = new PasswordsSettingsPage(this, &searchEntries_, PagePasswords);
+  return passwordsPage_;
 }
 
 void OptionsDialog::loadPasswords()
 {
-  if (loadPasswordsOk_) return;
-  loadPasswordsOk_ = true;
-
-  QSqlQuery q;
-  q.exec("SELECT id, server, username, password FROM passwords");
-  while (q.next()) {
-    QString id = q.value(0).toString();
-    QString server = q.value(1).toString();
-    QString user = q.value(2).toString();
-    QString pass = QString::fromUtf8(QByteArray::fromBase64(q.value(3).toByteArray()));
-
-    QStringList strTreeItem{id, server, user, pass};
-    QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(strTreeItem);
-    passTree_->addTopLevelItem(treeWidgetItem);
-  }
+  if (passwordsPage_) passwordsPage_->load();
 }
 
-/** @brief Create widget "Language"
- *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createLanguageWidget()
 {
-  languageFileList_ = new QTreeWidget();
-  languageFileList_->setObjectName("languageFileList_");
-  languageFileList_->setColumnCount(4);
-  languageFileList_->setColumnHidden(0, true);
-  languageFileList_->setColumnWidth(1, 240);
-  languageFileList_->setColumnWidth(2, 160);
-  languageFileList_->setHeaderLabels({QStringLiteral("Id"), tr("Language"), tr("Author"), tr("Contact")});
-
-  selectedLanguage_ = mainApp->language();
-  loadLanguagesOk_ = false;
-
-  QString linkWikiStr =
-      QString("<a href=\"%1\">%2</a>").arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), tr("Translation website"));
-  QLabel *linkTranslators = new QLabel(linkWikiStr);
-  linkTranslators->setOpenExternalLinks(false);
-  connect(linkTranslators, &QLabel::linkActivated, this, [](const QString &link) {
-    const QUrl url(link);
-    if (ArticleContent::isExternalLink(url)) mainApp->openExternalUrl(url);
-  });
-
-  QVBoxLayout *languageLayout = new QVBoxLayout();
-  languageLayout->setContentsMargins(0, 0, 0, 0);
-  languageLayout->addWidget(new QLabel(tr("Choose language:")));
-  languageLayout->addWidget(languageFileList_);
-  languageLayout->addWidget(linkTranslators);
-
-  languageWidget_ = new QWidget();
-  languageWidget_->setLayout(languageLayout);
-  searchEntries_.append({PageLanguage, -1, tr("Choose language:"), QString(),
-                         tr("Language") + QStringLiteral(" locale translation ui"), languageFileList_});
-  return languageWidget_;
+  languagePage_ = new LanguageSettingsPage(this, &searchEntries_, PageLanguage);
+  if (!selectedLanguage_.isEmpty()) languagePage_->setLanguage(selectedLanguage_);
+  return languagePage_;
 }
 
 void OptionsDialog::loadLanguages()
 {
-  if (loadLanguagesOk_) return;
-  loadLanguagesOk_ = true;
-
-  const LanguageCatalog catalog = mainApp->languageCatalog();
-  for (const LanguageCatalog::Entry &entry : catalog.entries()) {
-    QString label = entry.name + QStringLiteral(" [%1]").arg(entry.id);
-    if (!entry.emoji.isEmpty()) label.prepend(entry.emoji + QLatin1Char(' '));
-    auto *item = new QTreeWidgetItem(languageFileList_, {entry.id, label, entry.author, entry.contact});
-    if (!entry.fileName.isEmpty()) item->setToolTip(1, entry.fileName);
-  }
-  setLanguage(selectedLanguage_);
+  if (languagePage_) languagePage_->load();
 }
 
-/** @brief Create widget "Fonts and Colors"
- *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createFontsColorsWidget()
 {
-  //! tab "Fonts"
-
-  fontsTree_ = new QTreeWidget();
-  fontsTree_->setObjectName("fontTree");
-  fontsTree_->setColumnCount(3);
-  fontsTree_->setColumnHidden(0, true);
-  fontsTree_->setColumnWidth(1, 260);
-
-  QStringList treeItem;
-  treeItem << "Id" << tr("Type") << tr("Font");
-  fontsTree_->setHeaderLabels(treeItem);
-
-  static const char *const kFontLabels[] = {
-    QT_TR_NOOP("Feed list font"),
-    QT_TR_NOOP("Article list font"),
-    QT_TR_NOOP("Article title font"),
-    QT_TR_NOOP("Article text font"),
-    QT_TR_NOOP("Notification font"),
-  };
-  for (int i = 0; i < int(sizeof(kFontLabels) / sizeof(kFontLabels[0])); ++i) {
-    const QString fontTitle = tr(kFontLabels[i]);
-    fontsTree_->addTopLevelItem(
-          new QTreeWidgetItem(QStringList() << QString::number(i) << fontTitle));
-    searchEntries_.append({PageFontsColors, 0, fontTitle, QString(),
-                           tr("Fonts") + QStringLiteral(" typography size family"), fontsTree_, i});
-  }
-
-  fontsTree_->setCurrentItem(fontsTree_->topLevelItem(0));
-  connect(fontsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::slotFontChange);
-
-  QPushButton *fontChange = new QPushButton(tr("Change..."));
-  connect(fontChange, &QAbstractButton::clicked, this, &OptionsDialog::slotFontChange);
-  QPushButton *fontReset = new QPushButton(tr("Reset"));
-  connect(fontReset, &QAbstractButton::clicked, this, &OptionsDialog::slotFontReset);
-  QVBoxLayout *fontsButtonLayout = new QVBoxLayout();
-  fontsButtonLayout->addWidget(fontChange);
-  fontsButtonLayout->addWidget(fontReset);
-  fontsButtonLayout->addStretch(1);
-  auto *fontResetAll = new QPushButton(tr("Reset All"));
-  connect(fontResetAll, &QAbstractButton::clicked, this, &OptionsDialog::slotFontResetAll);
-  fontsButtonLayout->addWidget(fontResetAll);
-
-  QHBoxLayout *mainFontsLayout = new QHBoxLayout();
-  mainFontsLayout->addWidget(fontsTree_, 1);
-  mainFontsLayout->addLayout(fontsButtonLayout);
-
-  QWidget *fontsWidget = new QWidget();
-  fontsWidget->setLayout(mainFontsLayout);
-
-  //! tab "Colors"
-
-  colorsTree_ = new QTreeWidget(this);
-  colorsTree_->setObjectName("colorsTree_");
-  colorsTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  colorsTree_->setRootIsDecorated(false);
-  colorsTree_->setColumnCount(2);
-  colorsTree_->setHeaderHidden(true);
-  colorsTree_->header()->setStretchLastSection(false);
-  colorsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-  colorsTree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-  colorsTree_->setItemDelegateForColumn(1, new ColorSwatchDelegate(colorsTree_));
-
-  // Option IDs match the theme bindings and are independent of display order.
-  static const struct {
-    int optionId;
-    const char *label;
-  } entries[] = {
-    {-1, QT_TR_NOOP("Article")},
-    {10, QT_TR_NOOP("Article text color")},
-    {12, QT_TR_NOOP("Article background")},
-    { 2, QT_TR_NOOP("Article list text color")},
-    { 3, QT_TR_NOOP("Article list background")},
-    { 4, QT_TR_NOOP("Focused article text color")},
-    { 5, QT_TR_NOOP("Focused article background")},
-    {15, QT_TR_NOOP("New article text color")},
-    {16, QT_TR_NOOP("Unread article text color")},
-    {-1, QT_TR_NOOP("Author")},
-    { 9, QT_TR_NOOP("Author color")},
-    {-1, QT_TR_NOOP("Date")},
-    { 8, QT_TR_NOOP("Date color")},
-    {-1, QT_TR_NOOP("Feed")},
-    { 0, QT_TR_NOOP("Feed list text color")},
-    { 1, QT_TR_NOOP("Feeds list background")},
-    {17, QT_TR_NOOP("Focused feed color")},
-    {18, QT_TR_NOOP("Focused feed background color")},
-    {13, QT_TR_NOOP("Feed with new articles")},
-    {14, QT_TR_NOOP("Unread article count in feed tree")},
-    {19, QT_TR_NOOP("Disabled feed")},
-    {-1, QT_TR_NOOP("Link")},
-    { 6, QT_TR_NOOP("Link color")},
-    {-1, QT_TR_NOOP("Notification")},
-    {21, QT_TR_NOOP("Notification text color")},
-    {22, QT_TR_NOOP("Notification background color")},
-    {-1, QT_TR_NOOP("Row")},
-    {20, QT_TR_NOOP("Alternating row colors")},
-    {-1, QT_TR_NOOP("Title")},
-    { 7, QT_TR_NOOP("Title color")},
-    {11, QT_TR_NOOP("Article title background")},
-  };
-  colorOptionItems_.resize(MainWindow::kColorOptionCount);
-  QTreeWidgetItem *firstColor = nullptr;
-  QString currentColorSection;
-  for (const auto &entry : entries) {
-    const QString label = tr(entry.label);
-    auto *item = new QTreeWidgetItem(colorsTree_, QStringList{label});
-    if (entry.optionId < 0) {
-      currentColorSection = label;
-      item->setFlags(Qt::ItemIsEnabled);
-      QFont headingFont = item->font(0);
-      headingFont.setBold(true);
-      item->setFont(0, headingFont);
-    } else {
-      item->setData(0, Qt::UserRole, entry.optionId);
-      colorOptionItems_[entry.optionId] = item;
-      if (!firstColor) firstColor = item;
-      searchEntries_.append({PageFontsColors, 1, label, QString(),
-                             tr("Colors") + QLatin1Char(' ') + currentColorSection
-                                 + QStringLiteral(" theme palette"),
-                             colorsTree_, entry.optionId});
-    }
-  }
-
-  connect(colorsTree_, &QTreeWidget::itemDoubleClicked, this,
-          [this](QTreeWidgetItem *item, int) {
-    if (item->data(0, Qt::UserRole).isValid()) slotColorChange();
-  });
-
-  auto *colorChange = new QPushButton(tr("Change..."));
-  connect(colorChange, &QAbstractButton::clicked, this, &OptionsDialog::slotColorChange);
-  auto *colorReset = new QPushButton(tr("Reset"));
-  connect(colorReset, &QAbstractButton::clicked, this, &OptionsDialog::slotColorReset);
-  connect(colorsTree_, &QTreeWidget::currentItemChanged, this,
-          [colorChange, colorReset](QTreeWidgetItem *item, QTreeWidgetItem *) {
-    const bool editable = item && item->data(0, Qt::UserRole).isValid();
-    colorChange->setEnabled(editable);
-    colorReset->setEnabled(editable);
-  });
-  colorsTree_->setCurrentItem(firstColor);
-  QVBoxLayout *colorsButtonLayout = new QVBoxLayout();
-  colorsButtonLayout->addWidget(colorChange);
-  colorsButtonLayout->addWidget(colorReset);
-  colorsButtonLayout->addStretch(1);
-  auto *colorResetAll = new QPushButton(tr("Reset All"));
-  connect(colorResetAll, &QAbstractButton::clicked, this, &OptionsDialog::slotColorResetAll);
-  colorsButtonLayout->addWidget(colorResetAll);
-
-  QHBoxLayout *colorsLayout = new QHBoxLayout();
-  colorsLayout->addWidget(colorsTree_);
-  colorsLayout->addLayout(colorsButtonLayout);
-
-  QWidget *colorsWidget_ = new QWidget(this);
-  colorsWidget_->setLayout(colorsLayout);
-
-  fontsColorsWidget_ = new QTabWidget();
-  fontsColorsWidget_->addTab(fontsWidget, tr("Fonts"));
-  fontsColorsWidget_->addTab(colorsWidget_, tr("Colors"));
-  return fontsColorsWidget_;
+  fontsColorsPage_ = new FontsColorsSettingsPage(this, &searchEntries_, PageFontsColors);
+  return fontsColorsPage_;
 }
 
-/** @brief Create widget "Shortcuts"
- *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createShortcutWidget()
 {
-  filterShortcut_ = new LineEdit(this, tr("Filter"));
-
-  shortcutTree_ = new QTreeView(this);
-  shortcutTree_->setObjectName("shortcutTree");
-  shortcutTree_->setSortingEnabled(false);
-  shortcutTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
-  shortcutTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-  shortcutTree_->setRootIsDecorated(false);
-
-  shortcutModel_ = new QStandardItemModel(this);
-  shortcutModel_->setColumnCount(5);
-  shortcutProxyModel_ = new QSortFilterProxyModel(this);
-  shortcutProxyModel_->setSourceModel(shortcutModel_);
-  shortcutProxyModel_->setFilterKeyColumn(-1);
-  shortcutProxyModel_->setFilterRole(Qt::UserRole + 1);
-  shortcutProxyModel_->setFilterCaseSensitivity(Qt::CaseInsensitive);
-  shortcutTree_->setModel(shortcutProxyModel_);
-
-  shortcutTree_->hideColumn(3);
-  shortcutTree_->hideColumn(4);
-  shortcutTree_->header()->setStretchLastSection(true);
-  shortcutTree_->setColumnWidth(0, 215);
-  shortcutTree_->setColumnWidth(1, 165);
-  shortcutTree_->setColumnWidth(2, 120);
-
-  QStringList treeItem;
-  treeItem << tr("Action") << tr("Description") << tr("Shortcut")
-           << "ObjectName" << "Data";
-  shortcutModel_->setHorizontalHeaderLabels(treeItem);
-
-  editShortcut_ = new LineEdit();
-  QPushButton *resetShortcutButton = new QPushButton(tr("Reset"));
-
-  QHBoxLayout *editShortcutLayout = new QHBoxLayout();
-  editShortcutLayout->addWidget(new QLabel(tr("Shortcut:")));
-  editShortcutLayout->addWidget(editShortcut_, 1);
-  editShortcutLayout->addWidget(resetShortcutButton);
-
-  editShortcutBox = new QGroupBox();
-  editShortcutBox->setEnabled(false);
-  editShortcutBox->setLayout(editShortcutLayout);
-
-  warningShortcut_ = new QLabel();
-
-  QVBoxLayout *shortcutLayout = new QVBoxLayout();
-  shortcutLayout->setContentsMargins(0, 0, 0, 0);
-  shortcutLayout->addWidget(filterShortcut_);
-  shortcutLayout->addWidget(shortcutTree_, 1);
-  shortcutLayout->addWidget(warningShortcut_);
-  shortcutLayout->addWidget(editShortcutBox);
-
-  shortcutWidget_ = new QWidget();
-  shortcutWidget_->setLayout(shortcutLayout);
-
-  connect(shortcutTree_, &QAbstractItemView::clicked, this, &OptionsDialog::shortcutTreeClicked);
-  connect(this, &OptionsDialog::signalShortcutTreeUpDownPressed,
-          this, &OptionsDialog::slotShortcutTreeUpDownPressed, Qt::QueuedConnection);
-  connect(editShortcut_, &LineEdit::signalClear, this, &OptionsDialog::slotClearShortcut);
-  connect(resetShortcutButton, &QAbstractButton::clicked, this, &OptionsDialog::slotResetShortcut);
-  connect(filterShortcut_, &QLineEdit::textChanged, this, &OptionsDialog::filterShortcutChanged);
-
-  editShortcut_->installEventFilter(this);
-
-  searchEntries_.append({PageShortcuts, -1, tr("Keyboard Shortcuts"), QString(),
-                         QStringLiteral("hotkeys"), shortcutTree_});
-  for (QAction *pAction : std::as_const(shortcutActions_)) {
-    if (!pAction || pAction->isSeparator()) continue;
-    const bool isAutoLoad = pAction->objectName() == QLatin1String("autoLoadImagesToggle");
-    const QString actionTitle = isAutoLoad
-        ? tr("Load images")
-        : pAction->text().remove(QLatin1Char('&'));
-    if (actionTitle.isEmpty()) continue;
-    const QString actionDesc = isAutoLoad
-        ? tr("Automatically load images in article view")
-        : pAction->toolTip();
-    searchEntries_.append({PageShortcuts, -1, actionTitle, actionDesc,
-                           pAction->shortcut().toString(),
-                           shortcutTree_, -1, pAction->objectName(), true});
-  }
-
-  return shortcutWidget_;
+  shortcutsPage_ = new ShortcutsSettingsPage(
+      shortcutActions_, listDefaultShortcut_, this, &searchEntries_, PageShortcuts);
+  return shortcutsPage_;
 }
 
 QWidget *OptionsDialog::createBackupWidget()
@@ -1653,7 +1081,7 @@ void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
   if (!item) return;
   if (item == searchCategoryItem_) {
     contentLabel_->setText(tr("Search Results"));
-    contentStack_->setCurrentWidget(searchResultsPage_);
+    contentStack_->setCurrentWidget(searchPanel_);
     return;
   }
   const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
@@ -1700,7 +1128,7 @@ QTabWidget *OptionsDialog::tabWidgetForPage(int pageIndex) const
   case PageBrowser:       return browserWidget_;
   case PageFeeds:         return feedsWidget_;
   case PageNotifications: return notifierWidget_;
-  case PageFontsColors:   return fontsColorsWidget_;
+  case PageFontsColors:   return fontsColorsPage_;
   default:                return nullptr;
   }
 }
@@ -1725,8 +1153,8 @@ void OptionsDialog::searchTextChanged(const QString &text)
   const QString query = text.trimmed();
   if (query.isEmpty()) {
     searchCategoryItem_->setHidden(true);
-    searchResultsTree_->clear();
-    if (contentStack_->currentWidget() == searchResultsPage_) {
+    searchPanel_->clear();
+    if (contentStack_->currentWidget() == searchPanel_) {
       setCurrentItem(lastPageIndex_);
     }
     return;
@@ -1737,80 +1165,11 @@ void OptionsDialog::searchTextChanged(const QString &text)
   searchCategoryItem_->setHidden(false);
   categoriesTree_->setCurrentItem(searchCategoryItem_, 1);
   contentLabel_->setText(tr("Search Results"));
-  contentStack_->setCurrentWidget(searchResultsPage_);
+  contentStack_->setCurrentWidget(searchPanel_);
 
-  const QStringList tokens = query.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-  struct RankedMatch {
-    int rank;
-    int index;
-    QString section;
-  };
-  QVector<RankedMatch> matches;
-  matches.reserve(searchEntries_.size());
-
-  for (int i = 0; i < searchEntries_.size(); ++i) {
-    const OptionSearchEntry &entry = searchEntries_.at(i);
-    const QString section = searchEntrySection(entry);
-    const QString haystack = QStringList{entry.title, section, entry.tooltip, entry.keywords}.join(QLatin1Char(' '));
-
-    bool allMatch = true;
-    for (const QString &tok : tokens) {
-      if (!haystack.contains(tok, Qt::CaseInsensitive)) {
-        allMatch = false;
-        break;
-      }
-    }
-    if (!allMatch) continue;
-
-    int rank = 2;
-    if (entry.isShortcut) {
-      rank = 3;
-    } else if (entry.title.contains(query, Qt::CaseInsensitive)) {
-      rank = 0;
-    } else {
-      bool allInTitle = true;
-      for (const QString &tok : tokens) {
-        if (!entry.title.contains(tok, Qt::CaseInsensitive)) {
-          allInTitle = false;
-          break;
-        }
-      }
-      if (allInTitle) rank = 1;
-    }
-    matches.append({rank, i, section});
-  }
-
-  std::stable_sort(matches.begin(), matches.end(), [](const RankedMatch &a, const RankedMatch &b) {
-    return a.rank < b.rank;
+  searchPanel_->updateResults(query, searchEntries_, [this](const OptionSearchEntry &entry) {
+    return searchEntrySection(entry);
   });
-
-  searchResultsTree_->clear();
-  for (const RankedMatch &m : matches) {
-    const OptionSearchEntry &entry = searchEntries_.at(m.index);
-    auto *item = new QTreeWidgetItem({entry.title, m.section});
-    item->setData(0, Qt::UserRole, m.index);
-    if (!entry.tooltip.isEmpty()) item->setToolTip(0, entry.tooltip);
-    QFont sectionFont = item->font(1);
-    sectionFont.setItalic(true);
-    item->setFont(1, sectionFont);
-    item->setForeground(1, palette().color(QPalette::Disabled, QPalette::Text));
-    searchResultsTree_->addTopLevelItem(item);
-  }
-
-  const bool hasMatches = !matches.isEmpty();
-  searchResultsTree_->setVisible(hasMatches);
-  searchEmptyLabel_->setVisible(!hasMatches);
-  if (hasMatches) {
-    searchResultsTree_->setCurrentItem(searchResultsTree_->topLevelItem(0));
-  }
-}
-
-void OptionsDialog::slotSearchResultActivated(QTreeWidgetItem *item, int)
-{
-  if (!item) return;
-  const QVariant idxVar = item->data(0, Qt::UserRole);
-  if (!idxVar.isValid()) return;
-  jumpToSearchEntry(idxVar.toInt());
 }
 
 void OptionsDialog::jumpToSearchEntry(int entryIndex)
@@ -1828,42 +1187,17 @@ void OptionsDialog::jumpToSearchEntry(int entryIndex)
   QTimer::singleShot(0, this, [this, entry]() {
     if (!entry.target) return;
 
-    if (entry.target == fontsTree_ && entry.itemId >= 0 && entry.itemId < fontsTree_->topLevelItemCount()) {
-      QTreeWidgetItem *item = fontsTree_->topLevelItem(entry.itemId);
-      fontsTree_->setCurrentItem(item);
-      fontsTree_->scrollToItem(item);
-      fontsTree_->setFocus();
-      return;
-    }
-
-    if (entry.target == colorsTree_ && entry.itemId >= 0 && entry.itemId < colorOptionItems_.size()) {
-      if (QTreeWidgetItem *item = colorOptionItems_.at(entry.itemId)) {
-        colorsTree_->setCurrentItem(item);
-        colorsTree_->scrollToItem(item);
-        colorsTree_->setFocus();
+    if (entry.target == fontsColorsPage_) {
+      if (entry.subTab == 0) {
+        fontsColorsPage_->selectFontItem(entry.itemId);
+      } else {
+        fontsColorsPage_->selectColorOption(entry.itemId);
       }
       return;
     }
 
-    if (entry.target == shortcutTree_ && entry.isShortcut) {
-      loadShortcuts();
-      if (!filterShortcut_->text().isEmpty()) filterShortcut_->clear();
-      QList<QStandardItem *> items;
-      if (!entry.itemKey.isEmpty()) {
-        items = shortcutModel_->findItems(entry.itemKey, Qt::MatchExactly, 3);
-      }
-      if (items.isEmpty()) {
-        items = shortcutModel_->findItems(entry.title, Qt::MatchExactly, 0);
-      }
-      if (!items.isEmpty()) {
-        const QModelIndex proxyIdx = shortcutProxyModel_->mapFromSource(items.first()->index());
-        if (proxyIdx.isValid()) {
-          shortcutTree_->setCurrentIndex(proxyIdx);
-          shortcutTree_->scrollTo(proxyIdx);
-          shortcutTreeClicked(proxyIdx);
-        }
-      }
-      shortcutTree_->setFocus();
+    if (entry.target == shortcutsPage_ && entry.isShortcut) {
+      shortcutsPage_->selectAction(entry.itemKey, entry.title);
       return;
     }
 
@@ -1873,25 +1207,10 @@ void OptionsDialog::jumpToSearchEntry(int entryIndex)
     if (entry.target->isEnabled() && entry.target->focusPolicy() != Qt::NoFocus) {
       entry.target->setFocus();
     }
-    highlightWidget(entry.target, entry.page);
+    if (entry.page >= 0 && entry.page < pageScrollAreas_.size()) {
+      searchPanel_->highlightWidget(entry.target, pageScrollAreas_.at(entry.page));
+    }
   });
-}
-
-void OptionsDialog::highlightWidget(QWidget *target, int pageIndex)
-{
-  if (!target || pageIndex < 0 || pageIndex >= pageScrollAreas_.size()) return;
-  if (highlightOverlay_) {
-    highlightOverlay_->deleteLater();
-    highlightOverlay_ = nullptr;
-  }
-  QWidget *viewport = pageScrollAreas_.at(pageIndex)->viewport();
-  if (!viewport || !target->isVisibleTo(viewport)) return;
-
-  QRect rect(target->mapTo(viewport, QPoint(0, 0)), target->size());
-  rect = rect.adjusted(-4, -2, 4, 2).intersected(viewport->rect());
-  if (rect.isEmpty()) return;
-
-  highlightOverlay_ = new HighlightOverlay(viewport, rect);
 }
 //----------------------------------------------------------------------------
 QNetworkProxy OptionsDialog::proxy()
@@ -1944,129 +1263,35 @@ void OptionsDialog::applyProxy()
   networkProxy_.setPassword(editPassword_->text());
 }
 //----------------------------------------------------------------------------
-QString OptionsDialog::language()
+QString OptionsDialog::language() const
 {
-  if (!loadLanguagesOk_) return selectedLanguage_;
-  const QTreeWidgetItem *item = languageFileList_->currentItem();
-  return item ? item->text(0) : QStringLiteral("en");
+  return languagePage_ ? languagePage_->language() : selectedLanguage_;
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setLanguage(const QString &langFileName)
 {
   selectedLanguage_ = langFileName;
-  if (!loadLanguagesOk_) return;
-  // Set focus on selected language-file
-  QList<QTreeWidgetItem*> list =
-      languageFileList_->findItems(langFileName, Qt::MatchFixedString, 0);
-  if (list.count()) {
-    languageFileList_->setCurrentItem(list.at(0));
-  } else {
-    // can't find file, choose English
-    QList<QTreeWidgetItem*> list =
-        languageFileList_->findItems("en", Qt::MatchFixedString, 0);
-    languageFileList_->setCurrentItem(list.at(0));
-  }
+  if (languagePage_) languagePage_->setLanguage(langFileName);
 }
 //----------------------------------------------------------------------------
 QFont OptionsDialog::fontOptionValue(int optionId) const
 {
-  return fontsTree_->topLevelItem(optionId)->data(2, Qt::UserRole).value<QFont>();
+  return fontsColorsPage_->fontOptionValue(optionId);
 }
 
 void OptionsDialog::setFontOptionValue(int optionId, const QFont &font)
 {
-  auto *item = fontsTree_->topLevelItem(optionId);
-  const QString value = QString("%1, %2").arg(font.family()).arg(font.pointSize());
-  const int previewSize = qBound(9, font.pointSize(), 18);
-  item->setData(2, Qt::UserRole, QVariant::fromValue(font));
-  item->setText(2, value);
-  item->setFont(2, QFont(font.family(), previewSize));
-  item->setToolTip(2, previewSize == font.pointSize()
-                       ? value
-                       : tr("%1 (preview shown at %2 pt)").arg(value).arg(previewSize));
+  fontsColorsPage_->setFontOptionValue(optionId, font);
 }
 
-void OptionsDialog::slotFontChange()
-{
-  const auto *item = fontsTree_->currentItem();
-  if (!item) return;
-  const int optionId = item->text(0).toInt();
-  const QFont current = fontOptionValue(optionId);
-  bool accepted = false;
-  const QFont font = QFontDialog::getFont(&accepted, QFont(current.family(), current.pointSize()), this);
-  if (accepted)
-    setFontOptionValue(optionId, font);
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::resetFontOption(QTreeWidgetItem *item)
-{
-  const int optionId = item->text(0).toInt();
-  setFontOptionValue(optionId, MainWindow::defaultFontForOption(optionId));
-}
-
-void OptionsDialog::slotFontReset()
-{
-  if (auto *item = fontsTree_->currentItem())
-    resetFontOption(item);
-}
-
-void OptionsDialog::slotFontResetAll()
-{
-  if (QMessageBox::question(this, tr("Reset All"),
-                            tr("Reset all font settings to their default values?"),
-                            QMessageBox::Ok | QMessageBox::Cancel,
-                            QMessageBox::Cancel) != QMessageBox::Ok) return;
-
-  for (int row = 0; row < fontsTree_->topLevelItemCount(); ++row)
-    resetFontOption(fontsTree_->topLevelItem(row));
-}
-//----------------------------------------------------------------------------
 QString OptionsDialog::colorOptionValue(int optionId) const
 {
-  return colorOptionItems_.at(optionId)->data(1, Qt::UserRole).toString();
+  return fontsColorsPage_->colorOptionValue(optionId);
 }
 
 void OptionsDialog::setColorOptionValue(int optionId, const QString &colorName)
 {
-  auto *item = colorOptionItems_.at(optionId);
-  const QColor color(colorName);
-  item->setData(1, Qt::UserRole, colorName);
-  if (color.isValid()) {
-    const auto format = color.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb;
-    item->setText(1, color.name(format).toUpper());
-  } else {
-    item->setText(1, colorName.isEmpty() ? tr("None") : colorName);
-  }
-}
-
-void OptionsDialog::slotColorChange()
-{
-  const auto *item = colorsTree_->currentItem();
-  if (!item || !item->data(0, Qt::UserRole).isValid()) return;
-  const int optionId = item->data(0, Qt::UserRole).toInt();
-  QColorDialog colorDialog(QColor(colorOptionValue(optionId)), this);
-  if (colorDialog.exec() == QDialog::Accepted)
-    setColorOptionValue(optionId, colorDialog.selectedColor().name());
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotColorReset()
-{
-  const auto *item = colorsTree_->currentItem();
-  if (!item || !item->data(0, Qt::UserRole).isValid()) return;
-  const int optionId = item->data(0, Qt::UserRole).toInt();
-  setColorOptionValue(optionId, mainApp->mainWindow()->defaultColorForOption(optionId));
-}
-
-void OptionsDialog::slotColorResetAll()
-{
-  if (QMessageBox::question(this, tr("Reset All"),
-                            tr("Reset all color settings to their default values?"),
-                            QMessageBox::Ok | QMessageBox::Cancel,
-                            QMessageBox::Cancel) != QMessageBox::Ok) return;
-
-  const auto *mainWindow = mainApp->mainWindow();
-  for (int optionId = 0; optionId < colorOptionItems_.size(); ++optionId)
-    setColorOptionValue(optionId, mainWindow->defaultColorForOption(optionId));
+  fontsColorsPage_->setColorOptionValue(optionId, colorName);
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setBehaviorIconTray(int behavior)
@@ -2092,171 +1317,22 @@ void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringLi
 {
   shortcutActions_ = std::move(actions);
   listDefaultShortcut_ = list;
-  loadShortcutsOk_ = false;
 }
 
 void OptionsDialog::loadShortcuts()
 {
-  if (loadShortcutsOk_) return;
   ensurePageCreated(PageShortcuts);
-  loadShortcutsOk_ = true;
-
-  QListIterator<QAction *> iter(shortcutActions_);
-  while (iter.hasNext()) {
-    QAction *pAction = iter.next();
-
-    QStringList treeItem;
-    treeItem << pAction->text().remove("&")
-             << pAction->toolTip() << pAction->shortcut().toString()
-             << pAction->objectName() << pAction->data().toString();
-
-    QList<QStandardItem *> treeItems;
-    for (int i = 0; i < treeItem.count(); i++) {
-      QStandardItem *item = new QStandardItem(treeItem.at(i));
-      if (i == 0) {
-        if (pAction->icon().isNull())
-          item->setIcon(QIcon(":/images/images/noicon.png"));
-        else {
-          if (pAction->objectName() == "autoLoadImagesToggle") {
-            item->setIcon(QIcon(":/images/imagesOn"));
-            item->setText(tr("Load images"));
-          } else item->setIcon(pAction->icon());
-        }
-      } else if (i == 1) {
-        if (pAction->objectName() == "autoLoadImagesToggle") {
-          item->setText(tr("Automatically load images in article view"));
-        }
-      }
-      if (i >= 0 && i <= 2) {
-        item->setData(treeItem.at(i));
-      }
-      treeItems.append(item);
-    }
-    shortcutModel_->appendRow(treeItems);
-
-    QString str = pAction->shortcut().toString();
-    treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
-    if ((treeItems.count() > 1) && !str.isEmpty()) {
-      for (int i = 0; i < treeItems.count(); i++) {
-        treeItems.at(i)->setData(QColor(Qt::red), Qt::ForegroundRole);
-      }
-    }
-  }
+  if (shortcutsPage_) shortcutsPage_->load();
 }
-//----------------------------------------------------------------------------
+
 void OptionsDialog::saveActionShortcut(QList<QAction *> actions, QActionGroup *labelGroup)
 {
-  if (!loadShortcutsOk_) return;
-  for (int i = 0; i < shortcutModel_->rowCount(); i++) {
-    QString objectName = shortcutModel_->item(i, 3)->text();
-    if (objectName.contains("labelAction_")) {
-      QAction *action = new QAction(parent());
-      action->setIcon(shortcutModel_->item(i, 0)->icon());
-      action->setText(shortcutModel_->item(i, 0)->text());
-      action->setShortcut(QKeySequence(shortcutModel_->item(i, 2)->text()));
-      action->setObjectName(shortcutModel_->item(i, 3)->text());
-      action->setCheckable(true);
-      action->setData(shortcutModel_->item(i, 4)->text());
-      labelGroup->addAction(action);
-      actions.append(action);
-    } else {
-      actions.at(i)->setShortcut(
-            QKeySequence(shortcutModel_->item(i, 2)->text()));
-    }
-  }
+  if (shortcutsPage_) shortcutsPage_->save(std::move(actions), labelGroup, parent());
 }
-//----------------------------------------------------------------------------
-void OptionsDialog::slotShortcutTreeUpDownPressed()
-{
-  shortcutTreeClicked(shortcutTree_->currentIndex());
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::shortcutTreeClicked(const QModelIndex &index)
-{
-  QModelIndex indexCur = shortcutProxyModel_->mapToSource(index);
-  editShortcut_->setText(shortcutModel_->item(indexCur.row(), 2)->text());
-  editShortcutBox->setEnabled(true);
-  editShortcut_->setFocus();
-  warningShortcut_->clear();
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotClearShortcut()
-{
-  QModelIndex index = shortcutProxyModel_->mapToSource(shortcutTree_->currentIndex());
-  int row = index.row();
-  QString str = shortcutModel_->item(row, 2)->text();
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
-  if ((treeItems.count() > 1) && !str.isEmpty()) {
-    for (int i = 0; i < treeItems.count(); i++) {
-      if ((treeItems.count() == 2) || (treeItems.at(i)->row() == row)) {
-        treeItems.at(i)->setData(shortcutModel_->item(0, 1)->data(Qt::ForegroundRole),
-                                 Qt::ForegroundRole);
-      }
-    }
-  }
 
-  editShortcut_->clear();
-  shortcutModel_->item(row, 2)->setText("");
-  shortcutModel_->item(row, 2)->setData("");
-  warningShortcut_->clear();
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotResetShortcut()
+bool OptionsDialog::shortcutsLoaded() const
 {
-  QModelIndex index = shortcutProxyModel_->mapToSource(shortcutTree_->currentIndex());
-  int row = index.row();
-  QString objectName = shortcutModel_->item(row, 3)->text();
-  if (objectName.contains("labelAction_"))
-    return;
-
-  QString str = shortcutModel_->item(row, 2)->text();
-  QList<QStandardItem *> treeItems;
-  treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
-  if (!str.isEmpty()) {
-    for (int i = 0; i < treeItems.count(); i++) {
-      if ((treeItems.count() == 2) || (treeItems.at(i)->row() == row)) {
-        treeItems.at(i)->setData(shortcutModel_->item(0, 1)->data(Qt::ForegroundRole),
-                                 Qt::ForegroundRole);
-      }
-    }
-  }
-
-  str = listDefaultShortcut_->at(row);
-  editShortcut_->setText(str);
-  shortcutModel_->item(row, 2)->setText(str);
-  shortcutModel_->item(row, 2)->setData(str);
-  warningShortcut_->clear();
-
-  if (!str.isEmpty()) {
-    treeItems = shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
-    for (int i = 0; i < treeItems.count(); i++) {
-      if (treeItems.at(i)->row() != row) {
-        warningShortcut_->setText(tr("Warning: key is already assigned to ") +
-                                  " '" +
-                                  shortcutModel_->item(treeItems.at(i)->row(), 0)->text() +
-                                  "'");
-      }
-      if (treeItems.count() > 1) {
-        treeItems.at(i)->setData(QColor(Qt::red), Qt::ForegroundRole);
-      }
-    }
-  }
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::filterShortcutChanged(const QString & text)
-{
-  shortcutProxyModel_->setFilterFixedString(text);
-
-  if (shortcutTree_->currentIndex().isValid()) {
-    QModelIndex indexCur = shortcutProxyModel_->mapToSource(shortcutTree_->currentIndex());
-    editShortcut_->setText(shortcutModel_->item(indexCur.row(), 2)->text());
-    editShortcutBox->setEnabled(true);
-  } else {
-    editShortcut_->setText("");
-    editShortcutBox->setEnabled(false);
-  }
-  warningShortcut_->clear();
+  return shortcutsPage_ && shortcutsPage_->isLoaded();
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setOpeningFeed(int action)
@@ -2313,466 +1389,6 @@ void OptionsDialog::slotPlaySoundNotifier()
     emit signalPlaySound(editSoundNotifier_->text());
 }
 
-//----------------------------------------------------------------------------
-void OptionsDialog::feedsTreeNotifyItemChanged(QTreeWidgetItem *item, int column)
-{
-  if ((column != 0) || itemNotChecked_) return;
-
-  itemNotChecked_ = true;
-  if (item->checkState(0) == Qt::Unchecked) {
-    setCheckStateItem(item, Qt::Unchecked);
-
-    QTreeWidgetItem *parentItem = item->parent();
-    while (parentItem) {
-      parentItem->setCheckState(0, Qt::Unchecked);
-      parentItem = parentItem->parent();
-    }
-  } else {
-    setCheckStateItem(item, Qt::Checked);
-  }
-  itemNotChecked_ = false;
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::setCheckStateItem(QTreeWidgetItem *item, Qt::CheckState state)
-{
-  for (int i = 0; i < item->childCount(); ++i) {
-    QTreeWidgetItem *childItem = item->child(i);
-    childItem->setCheckState(0, state);
-    setCheckStateItem(childItem, state);
-  }
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::loadLabels()
-{
-  if (loadLabelsOk_) return;
-  QElapsedTimer timer;
-  timer.start();
-  loadLabelsOk_ = true;
-
-  idLabels_.clear();
-
-  QSqlQuery q;
-  q.exec("SELECT id, name, image, color_text, color_bg, num FROM labels ORDER BY num");
-  while (q.next()) {
-    int idLabel = q.value(0).toInt();
-    QString nameLabel = q.value(1).toString();
-    if ((idLabel <= 6) && (MainWindow::nameLabels().at(idLabel-1) == nameLabel)) {
-      nameLabel = MainWindow::trNameLabels().at(idLabel-1);
-    }
-    QByteArray byteArray = q.value(2).toByteArray();
-    QString colorText = q.value(3).toString();
-    QString colorBg = q.value(4).toString();
-    int numLabel = q.value(5).toInt();
-    QPixmap imageLabel;
-    if (!byteArray.isNull())
-      imageLabel.loadFromData(byteArray);
-    QStringList strTreeItem;
-    strTreeItem << QString::number(idLabel) << nameLabel
-                << colorText << colorBg << QString::number(numLabel);
-    QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(strTreeItem);
-    treeWidgetItem->setIcon(1, QIcon(imageLabel));
-    if (!colorText.isEmpty())
-      treeWidgetItem->setForeground(1, QColor(colorText));
-    if (!colorBg.isEmpty())
-      treeWidgetItem->setBackground(1, QColor(colorBg));
-    labelsTree_->addTopLevelItem(treeWidgetItem);
-  }
-  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::loadLabels: %1 ms").arg(timer.elapsed());
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::newLabel()
-{
-  loadShortcuts();
-  LabelDialog *labelDialog = new LabelDialog(this);
-
-  if (labelDialog->exec() == QDialog::Rejected) {
-    delete labelDialog;
-    return;
-  }
-
-  QString nameLabel = labelDialog->nameEdit_->text();
-  QString colorText = labelDialog->colorTextStr_;
-  QString colorBg = labelDialog->colorBgStr_;
-
-  int idLabel = 0;
-  for (int i = 0; i < labelsTree_->topLevelItemCount(); i++) {
-    QString str = labelsTree_->topLevelItem(i)->text(0);
-    if (idLabel < str.toInt())
-      idLabel = str.toInt();
-  }
-  // Keep IDs reserved until pending deletions and their article updates are saved.
-  for (const QString &pendingId : std::as_const(idLabels_))
-    idLabel = qMax(idLabel, pendingId.toInt());
-  ++idLabel;
-
-  QStringList itemStr;
-  itemStr << QString::number(idLabel) << nameLabel
-              << colorText << colorBg
-              << QString::number(idLabel);
-  QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(itemStr);
-  treeWidgetItem->setIcon(1, labelDialog->icon_);
-  if (!colorText.isEmpty())
-    treeWidgetItem->setForeground(1, QColor(colorText));
-  if (!colorBg.isEmpty())
-    treeWidgetItem->setBackground(1, QColor(colorBg));
-  labelsTree_->addTopLevelItem(treeWidgetItem);
-  addIdLabelList(treeWidgetItem->text(0));
-
-  itemStr.clear();
-  itemStr << nameLabel << nameLabel << ""
-          << QString("labelAction_%1").arg(idLabel) << QString::number(idLabel);
-  QList<QStandardItem *> treeItems;
-  for (int i = 0; i < itemStr.count(); i++) {
-    QStandardItem *item = new QStandardItem(itemStr.at(i));
-    if (i == 0) {
-      item->setIcon(labelDialog->icon_);
-    }
-    if (i >= 0 && i <= 2) {
-      item->setData(itemStr.at(i));
-    }
-    treeItems.append(item);
-  }
-  shortcutModel_->appendRow(treeItems);
-
-  delete labelDialog;
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::editLabel()
-{
-  loadShortcuts();
-  QTreeWidgetItem *treeWidgetItem = labelsTree_->currentItem();
-  if (!treeWidgetItem) return;
-
-  QString idLabelStr = treeWidgetItem->text(0);
-  QString nameLabel = treeWidgetItem->text(1);
-  QString colorText = treeWidgetItem->text(2);
-  QString colorBg = treeWidgetItem->text(3);
-
-  LabelDialog *labelDialog = new LabelDialog(this);
-
-  labelDialog->nameEdit_->setText(nameLabel);
-  labelDialog->icon_ = treeWidgetItem->icon(1);
-  labelDialog->colorTextStr_ = colorText;
-  labelDialog->colorBgStr_ = colorBg;
-  labelDialog->loadData();
-
-  if (labelDialog->exec() == QDialog::Rejected) {
-    delete labelDialog;
-    return;
-  }
-
-  nameLabel = labelDialog->nameEdit_->text();
-  colorText = labelDialog->colorTextStr_;
-  colorBg = labelDialog->colorBgStr_;
-
-  treeWidgetItem->setText(1, nameLabel);
-  treeWidgetItem->setText(2, colorText);
-  treeWidgetItem->setText(3, colorBg);
-  treeWidgetItem->setIcon(1, labelDialog->icon_);
-  if (!colorText.isEmpty())
-    treeWidgetItem->setForeground(1, QColor(colorText));
-  if (!colorBg.isEmpty())
-    treeWidgetItem->setBackground(1, QColor(colorBg));
-  addIdLabelList(idLabelStr);
-
-  const int shortcutRow = labelShortcutRow(idLabelStr);
-  if (shortcutRow >= 0) {
-    auto *item = shortcutModel_->item(shortcutRow, 0);
-    item->setIcon(labelDialog->icon_);
-    item->setText(nameLabel);
-    item->setData(nameLabel);
-  }
-
-  delete labelDialog;
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::deleteLabel()
-{
-  loadShortcuts();
-  int labelRow = labelsTree_->currentIndex().row();
-  if (labelRow < 0) return;
-  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  addIdLabelList(idLabelStr);
-  const int shortcutRow = labelShortcutRow(idLabelStr);
-  if (shortcutRow >= 0)
-    shortcutModel_->removeRow(shortcutRow);
-
-  QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow);
-  delete treeItem;
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::moveUpLabel()
-{
-  loadShortcuts();
-  int labelRow = labelsTree_->currentIndex().row();
-
-  if (labelRow <= 0) return;
-
-  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  const QString neighborId = labelsTree_->topLevelItem(labelRow - 1)->text(0);
-  addIdLabelList(idLabelStr);
-  addIdLabelList(neighborId);
-
-  const int shortcutRow = labelShortcutRow(idLabelStr);
-  const int neighborRow = labelShortcutRow(neighborId);
-  if (shortcutRow >= 0 && neighborRow >= 0)
-    shortcutModel_->insertRow(neighborRow, shortcutModel_->takeRow(shortcutRow));
-
-  int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
-  int num2 = labelsTree_->topLevelItem(labelRow-1)->text(4).toInt();
-  labelsTree_->topLevelItem(labelRow-1)->setText(4, QString::number(num1));
-  labelsTree_->topLevelItem(labelRow)->setText(4, QString::number(num2));
-
-  QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow-1);
-  labelsTree_->insertTopLevelItem(labelRow, treeItem);
-
-  if (labelsTree_->currentIndex().row() == 0)
-    moveUpLabelButton_->setEnabled(false);
-  if (labelsTree_->currentIndex().row() != (labelsTree_->topLevelItemCount()-1))
-    moveDownLabelButton_->setEnabled(true);
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::moveDownLabel()
-{
-  loadShortcuts();
-  int labelRow = labelsTree_->currentIndex().row();
-
-  if (labelRow < 0 || labelRow + 1 >= labelsTree_->topLevelItemCount()) return;
-
-  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  const QString neighborId = labelsTree_->topLevelItem(labelRow + 1)->text(0);
-  addIdLabelList(idLabelStr);
-  addIdLabelList(neighborId);
-
-  const int shortcutRow = labelShortcutRow(idLabelStr);
-  const int neighborRow = labelShortcutRow(neighborId);
-  if (shortcutRow >= 0 && neighborRow >= 0)
-    shortcutModel_->insertRow(neighborRow, shortcutModel_->takeRow(shortcutRow));
-
-  int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
-  int num2 = labelsTree_->topLevelItem(labelRow+1)->text(4).toInt();
-  labelsTree_->topLevelItem(labelRow+1)->setText(4, QString::number(num1));
-  labelsTree_->topLevelItem(labelRow)->setText(4, QString::number(num2));
-
-  QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow+1);
-  labelsTree_->insertTopLevelItem(labelRow, treeItem);
-
-  if (labelsTree_->currentIndex().row() == (labelsTree_->topLevelItemCount()-1))
-    moveDownLabelButton_->setEnabled(false);
-  if (labelsTree_->currentIndex().row() != 0)
-    moveUpLabelButton_->setEnabled(true);
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotCurrentLabelChanged(QTreeWidgetItem *current,
-                                           QTreeWidgetItem *)
-{
-  if (labelsTree_->indexOfTopLevelItem(current) == 0)
-    moveUpLabelButton_->setEnabled(false);
-  else moveUpLabelButton_->setEnabled(true);
-
-  if (labelsTree_->indexOfTopLevelItem(current) == (labelsTree_->topLevelItemCount()-1))
-    moveDownLabelButton_->setEnabled(false);
-  else moveDownLabelButton_->setEnabled(true);
-
-  if (labelsTree_->indexOfTopLevelItem(current) < 0) {
-    editLabelButton_->setEnabled(false);
-    deleteLabelButton_->setEnabled(false);
-    moveUpLabelButton_->setEnabled(false);
-    moveDownLabelButton_->setEnabled(false);
-  } else {
-    editLabelButton_->setEnabled(true);
-    deleteLabelButton_->setEnabled(true);
-  }
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::applyLabels()
-{
-  if (!loadLabelsOk_ || idLabels_.isEmpty()) return;
-  db_.transaction();
-  QSqlQuery q;
-
-  for (const QString &idLabel : std::as_const(idLabels_)) {
-    QList<QTreeWidgetItem *> treeItems =
-        labelsTree_->findItems(idLabel, Qt::MatchFixedString, 0);
-    if (treeItems.count() == 0) {
-      q.exec(QString("DELETE FROM labels WHERE id=='%1'").arg(idLabel));
-      q.exec(QString("SELECT id, label FROM news WHERE label LIKE '%,%1,%'").arg(idLabel));
-      while (q.next()) {
-        QString strIdLabels = q.value(1).toString();
-        strIdLabels.replace(QString(",%1,").arg(idLabel), ",");
-        QSqlQuery q1;
-        q1.exec(QString("UPDATE news SET label='%1' WHERE id=='%2'").
-               arg(strIdLabels).arg(q.value(0).toInt()));
-      }
-    } else {
-      QString nameLabel = treeItems.at(0)->text(1);
-      if ((idLabel.toInt() <= 6) && (MainWindow::trNameLabels().at(idLabel.toInt()-1) == nameLabel)) {
-        nameLabel = MainWindow::nameLabels().at(idLabel.toInt()-1);
-      }
-      QPixmap icon = treeItems.at(0)->icon(1).pixmap(16, 16);
-      QByteArray iconData;
-      QBuffer    buffer(&iconData);
-      buffer.open(QIODevice::WriteOnly);
-      icon.save(&buffer, "PNG");
-      buffer.close();
-      QString colorText = treeItems.at(0)->text(2);
-      QString colorBg = treeItems.at(0)->text(3);
-      int numLabel = treeItems.at(0)->text(4).toInt();
-
-      q.exec(QString("SELECT * FROM labels WHERE id=='%1'").arg(idLabel));
-      if (q.next()) {
-        q.prepare("UPDATE labels SET name=?, image=?, color_text=?, color_bg=?, num=? "
-                  "WHERE id=?");
-        q.addBindValue(nameLabel);
-        q.addBindValue(iconData);
-        q.addBindValue(colorText);
-        q.addBindValue(colorBg);
-        q.addBindValue(numLabel);
-        q.addBindValue(idLabel);
-        q.exec();
-      } else {
-        q.prepare("INSERT INTO labels(id, name, image, color_text, color_bg, num) "
-                  "VALUES (:id, :name, :image, :color_text, :color_bg, :num)");
-        q.bindValue(":id", idLabel.toInt());
-        q.bindValue(":name", nameLabel);
-        q.bindValue(":image", iconData);
-        q.bindValue(":color_text", colorText);
-        q.bindValue(":color_bg", colorBg);
-        q.bindValue(":num", numLabel);
-        q.exec();
-      }
-    }
-  }
-
-  db_.commit();
-}
-
-int OptionsDialog::labelShortcutRow(const QString &labelId) const
-{
-  const auto items = shortcutModel_->findItems(
-      QStringLiteral("labelAction_%1").arg(labelId), Qt::MatchExactly, 3);
-  return items.isEmpty() ? -1 : items.first()->row();
-}
-
-/** @brief Add id for editing label
- * @param idLabel id for label
- *----------------------------------------------------------------------------*/
-void OptionsDialog::addIdLabelList(const QString &idLabel)
-{
-  if (!idLabels_.contains(idLabel)) idLabels_.append(idLabel);
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::loadNotifier()
-{
-  if (loadNotifierOk_) return;
-  QElapsedTimer timer;
-  timer.start();
-  loadNotifierOk_ = true;
-
-  if (!feedsNotifierDlg_) createFeedsNotifierDlg();
-
-  itemNotChecked_ = true;
-
-  QHash<int, int> notifyByFeed;
-  {
-    QSqlQuery qNotify;
-    qNotify.setForwardOnly(true);
-    if (qNotify.exec("SELECT feedId, value FROM feeds_ex WHERE name='showNotification'")) {
-      while (qNotify.next()) {
-        notifyByFeed.insert(qNotify.value(0).toInt(), qNotify.value(1).toInt());
-      }
-    }
-  }
-
-  QVector<int> missingFeedIds;
-  QSqlQuery q;
-  QQueue<int> parentIds;
-  parentIds.enqueue(0);
-  while (!parentIds.empty()) {
-    int parentId = parentIds.dequeue();
-    QString qStr = QString("SELECT text, id, image, xmlUrl FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-        arg(parentId);
-    q.exec(qStr);
-    while (q.next()) {
-      QString feedText = q.value(0).toString();
-      QString feedId = q.value(1).toString();
-      const int feedIdInt = feedId.toInt();
-      QByteArray byteArray = q.value(2).toByteArray();
-      QString xmlUrl = q.value(3).toString();
-
-      QStringList treeItem;
-      treeItem << feedText << feedId;
-      QTreeWidgetItem *treeWidgetItem = new QTreeWidgetItem(treeItem);
-
-      treeWidgetItem->setCheckState(0, Qt::Unchecked);
-      auto it = notifyByFeed.constFind(feedIdInt);
-      if (it != notifyByFeed.constEnd()) {
-        if (it.value() == 1)
-          treeWidgetItem->setCheckState(0, Qt::Checked);
-      } else {
-        missingFeedIds.append(feedIdInt);
-      }
-      if (treeWidgetItem->checkState(0) == Qt::Unchecked)
-        feedsTreeNotify_->topLevelItem(0)->setCheckState(0, Qt::Unchecked);
-
-      QPixmap iconItem;
-      if (xmlUrl.isEmpty()) {
-        iconItem.load(":/images/folder");
-      } else {
-        if (byteArray.isNull() || mainApp->mainWindow()->defaultIconFeeds_) {
-          iconItem.load(":/images/feed");
-        } else {
-          iconItem.loadFromData(QByteArray::fromBase64(byteArray));
-        }
-      }
-      treeWidgetItem->setIcon(0, iconItem);
-
-      QList<QTreeWidgetItem *> treeItems =
-            feedsTreeNotify_->findItems(QString::number(parentId),
-                                                       Qt::MatchFixedString | Qt::MatchRecursive,
-                                                       1);
-      treeItems.at(0)->addChild(treeWidgetItem);
-      if (xmlUrl.isEmpty())
-        parentIds.enqueue(feedIdInt);
-    }
-  }
-  if (!missingFeedIds.isEmpty()) {
-    db_.transaction();
-    QSqlQuery qInsert;
-    qInsert.prepare("INSERT INTO feeds_ex(feedId, name, value) VALUES (?, 'showNotification', '0')");
-    for (int feedIdInt : std::as_const(missingFeedIds)) {
-      qInsert.addBindValue(feedIdInt);
-      qInsert.exec();
-    }
-    db_.commit();
-  }
-  feedsTreeNotify_->expandAll();
-  itemNotChecked_ = false;
-  qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::loadNotifier: %1 ms").arg(timer.elapsed());
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::applyNotifier()
-{
-  if (!loadNotifierOk_) return;
-
-  feedsTreeNotify_->expandAll();
-  QTreeWidgetItem *treeWidgetItem =
-      feedsTreeNotify_->itemBelow(feedsTreeNotify_->topLevelItem(0));
-  db_.transaction();
-  while (treeWidgetItem) {
-    int check = 0;
-    if (treeWidgetItem->checkState(0) == Qt::Checked)
-      check = 1;
-    QSqlQuery q;
-    QString qStr = QString("UPDATE feeds_ex SET value='%1' WHERE feedId='%2' AND name='showNotification'").
-        arg(check).arg(treeWidgetItem->text(1).toInt());
-    q.exec(qStr);
-
-    treeWidgetItem = feedsTreeNotify_->itemBelow(treeWidgetItem);
-  }
-  db_.commit();
-}
-
 OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearance() const
 {
   if (!isPageCreated(PageFontsColors)) {
@@ -2818,45 +1434,6 @@ void OptionsDialog::deleteNotification()
   notificationWidget_->deleteLater();
   notificationWidget_ = nullptr;
 }
-//----------------------------------------------------------------------------
-void OptionsDialog::slotDeletePass()
-{
-  if (passTree_->topLevelItemCount())
-    passTree_->currentItem()->setHidden(true);
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotDeleteAllPass()
-{
-  for (int i = 0; i < passTree_->topLevelItemCount(); i++) {
-    passTree_->topLevelItem(i)->setHidden(true);
-  }
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::slotShowPass()
-{
-  if (passTree_->isColumnHidden(3)) {
-    passTree_->showColumn(3);
-    passTree_->setColumnWidth(1, passTree_->columnWidth(1) - passTree_->columnWidth(3));
-  }
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::applyPass()
-{
-  if (!loadPasswordsOk_) return;
-  db_.transaction();
-  QSqlQuery q;
-  for (int i = 0; i < passTree_->topLevelItemCount(); i++) {
-    if (passTree_->topLevelItem(i)->isHidden()) {
-      QString id = passTree_->topLevelItem(i)->text(0);
-      q.exec(QString("DELETE FROM passwords WHERE id=='%1'").arg(id));
-    }
-  }
-  db_.commit();
-}
-//----------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------
-
 //----------------------------------------------------------------------------
 void OptionsDialog::selectionDownloadLocation()
 {
