@@ -247,10 +247,7 @@ void OptionsDialog::acceptDialog()
 
   if (generalPage_) generalPage_->save();
   if (networkPage_) networkPage_->save();
-  if (labelsPage_) {
-    labelsPage_->apply(db_);
-    idLabels_ = labelsPage_->modifiedIds();
-  }
+  if (labelsPage_) labelsPage_->apply(db_);
   if (feedsNotifierDlg_) feedsNotifierDlg_->apply(db_);
   if (passwordsPage_) passwordsPage_->apply(db_);
   accept();
@@ -311,61 +308,22 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 
 QWidget *OptionsDialog::createGeneralWidget()
 {
-  generalPage_ = new GeneralSettingsPage(this, &searchEntries_, PageGeneral);
-  showSplashScreen_ = generalPage_->showSplashScreen_;
-  reopenFeedStartup_ = generalPage_->reopenFeedStartup_;
-  openNewTabNextToActive_ = generalPage_->openNewTabNextToActive_;
-  hideFeedsOpenTab_ = generalPage_->hideFeedsOpenTab_;
-  showCloseButtonTab_ = generalPage_->showCloseButtonTab_;
-#ifdef NQRSS_ENABLE_DONATE_BUTTON
-  hideDonateButton_ = generalPage_->hideDonateButton_;
-#endif
-  showToggleFeedsTree_ = generalPage_->showToggleFeedsTree_;
-  defaultIconFeeds_ = generalPage_->defaultIconFeeds_;
-  autocollapseFolder_ = generalPage_->autocollapseFolder_;
-  updateCheckEnabled_ = generalPage_->updateCheckEnabled_;
-  storeDBMemory_ = generalPage_->storeDBMemory_;
-  saveDBMemFileInterval_ = generalPage_->saveDBMemFileInterval_;
-  return generalPage_;
+  return (generalPage_ = new GeneralSettingsPage(this, &searchEntries_, PageGeneral));
 }
 
 QWidget *OptionsDialog::createTraySystemWidget()
 {
-  traySystemPage_ = new SystemTraySettingsPage(this, &searchEntries_, PageSystemTray);
-  showTrayIconBox_ = traySystemPage_->showTrayIconBox_;
-  startingTray_ = traySystemPage_->startingTray_;
-  minimizingTray_ = traySystemPage_->minimizingTray_;
-  closingTray_ = traySystemPage_->closingTray_;
-  singleClickTray_ = traySystemPage_->singleClickTray_;
-  clearStatusNew_ = traySystemPage_->clearStatusNew_;
-  emptyWorking_ = traySystemPage_->emptyWorking_;
-  return traySystemPage_;
+  return (traySystemPage_ = new SystemTraySettingsPage(this, &searchEntries_, PageSystemTray));
 }
 
 QWidget *OptionsDialog::createNetworkConnectionsWidget()
 {
-  networkPage_ = new NetworkSettingsPage(this, &searchEntries_, PageNetwork);
-  timeoutRequest_ = networkPage_->timeoutRequest_;
-  numberRequests_ = networkPage_->numberRequests_;
-  numberRepeats_ = networkPage_->numberRepeats_;
-  customUserAgent_ = networkPage_->customUserAgent_;
-  userAgentEdit_ = networkPage_->userAgentEdit_;
-  return networkPage_;
+  return (networkPage_ = new NetworkSettingsPage(this, &searchEntries_, PageNetwork));
 }
 
 QWidget *OptionsDialog::createBrowserWidget()
 {
-  browserPage_ = new BrowserSettingsPage(this, &searchEntries_, PageBrowser);
-  autoLoadImages_ = browserPage_->autoLoadImages_;
-  highQualityImageScaling_ = browserPage_->highQualityImageScaling_;
-  preloadNewspaperPages_ = browserPage_->preloadNewspaperPages_;
-  defaultZoomPages_ = browserPage_->defaultZoomPages_;
-  customExternalBrowser_ = browserPage_->customExternalBrowser_;
-  externalBrowser_ = browserPage_->externalBrowser_;
-  returnFocusAfterLink_ = browserPage_->returnFocusAfterLink_;
-  downloadLocationEdit_ = browserPage_->downloadLocationEdit_;
-  askDownloadLocation_ = browserPage_->askDownloadLocation_;
-  return browserPage_;
+  return (browserPage_ = new BrowserSettingsPage(this, &searchEntries_, PageBrowser));
 }
 
 QWidget *OptionsDialog::createFeedsWidget()
@@ -377,45 +335,6 @@ QWidget *OptionsDialog::createFeedsWidget()
                categoriesTree_->currentItem()->data(0, Qt::DisplayRole).toInt() == PageFeeds;
       },
       this, &searchEntries_, PageFeeds);
-  updateFeedsStartUp_ = feedsPage_->updateFeedsStartUp_;
-  updateFeedsEnable_ = feedsPage_->updateFeedsEnable_;
-  updateFeedsInterval_ = feedsPage_->updateFeedsInterval_;
-  updateIntervalType_ = feedsPage_->updateIntervalType_;
-  positionLastNews_ = feedsPage_->positionLastNews_;
-  positionFirstNews_ = feedsPage_->positionFirstNews_;
-  positionUnreadNews_ = feedsPage_->positionUnreadNews_;
-  openNewsWebViewOn_ = feedsPage_->openNewsWebViewOn_;
-  nottoOpenNews_ = feedsPage_->nottoOpenNews_;
-  markNewsReadOn_ = feedsPage_->markNewsReadOn_;
-  markCurNewsRead_ = feedsPage_->markCurNewsRead_;
-  markPrevNewsRead_ = feedsPage_->markPrevNewsRead_;
-  markNewsReadTime_ = feedsPage_->markNewsReadTime_;
-  markReadSwitchingFeed_ = feedsPage_->markReadSwitchingFeed_;
-  markReadClosingTab_ = feedsPage_->markReadClosingTab_;
-  markReadMinimize_ = feedsPage_->markReadMinimize_;
-  formatDate_ = feedsPage_->formatDate_;
-  formatTime_ = feedsPage_->formatTime_;
-  alternatingRowColorsNews_ = feedsPage_->alternatingRowColorsNews_;
-  simplifiedDateTime_ = feedsPage_->simplifiedDateTime_;
-  mainNewsFilter_ = feedsPage_->mainNewsFilter_;
-  styleSheetNewsEdit_ = feedsPage_->styleSheetNewsEdit_;
-  changeBehaviorActionNUN_ = feedsPage_->changeBehaviorActionNUN_;
-  notDeleteStarred_ = feedsPage_->notDeleteStarred_;
-  notDeleteLabeled_ = feedsPage_->notDeleteLabeled_;
-  markIdenticalNewsRead_ = feedsPage_->markIdenticalNewsRead_;
-  cleanupOnShutdownBox_ = feedsPage_->cleanupOnShutdownBox_;
-  dayCleanUpOn_ = feedsPage_->dayCleanUpOn_;
-  maxDayCleanUp_ = feedsPage_->maxDayCleanUp_;
-  newsCleanUpOn_ = feedsPage_->newsCleanUpOn_;
-  maxNewsCleanUp_ = feedsPage_->maxNewsCleanUp_;
-  readCleanUp_ = feedsPage_->readCleanUp_;
-  neverUnreadCleanUp_ = feedsPage_->neverUnreadCleanUp_;
-  neverStarCleanUp_ = feedsPage_->neverStarCleanUp_;
-  neverLabelCleanUp_ = feedsPage_->neverLabelCleanUp_;
-  cleanUpDeleted_ = feedsPage_->cleanUpDeleted_;
-  optimizeDB_ = feedsPage_->optimizeDB_;
-  avoidedOldNewsDateOn_ = feedsPage_->avoidedOldNewsDateOn_;
-  avoidedOldNewsDate_ = feedsPage_->avoidedOldNewsDate_;
   return feedsPage_;
 }
 
@@ -460,28 +379,6 @@ QWidget *OptionsDialog::createNotifierWidget()
 {
   feedsNotifierDlg_ = nullptr;
   notifierPage_ = new NotificationsSettingsPage(this, &searchEntries_, PageNotifications);
-  soundNotifyBox_ = notifierPage_->soundNotifyBox_;
-  editSoundNotifier_ = notifierPage_->editSoundNotifier_;
-  selectionSoundNotifier_ = notifierPage_->selectionSoundNotifier_;
-  playSoundNotifier_ = notifierPage_->playSoundNotifier_;
-  showNotifyOn_ = notifierPage_->showNotifyOn_;
-  screenNotify_ = notifierPage_->screenNotify_;
-  positionNotify_ = notifierPage_->positionNotify_;
-  transparencyNotify_ = notifierPage_->transparencyNotify_;
-  countShowNewsNotify_ = notifierPage_->countShowNewsNotify_;
-  timeShowNewsNotify_ = notifierPage_->timeShowNewsNotify_;
-  widthTitleNewsNotify_ = notifierPage_->widthTitleNewsNotify_;
-  showTitlesFeedsNotify_ = notifierPage_->showTitlesFeedsNotify_;
-  showIconFeedNotify_ = notifierPage_->showIconFeedNotify_;
-  showButtonMarkAllNotify_ = notifierPage_->showButtonMarkAllNotify_;
-  showButtonMarkReadNotify_ = notifierPage_->showButtonMarkReadNotify_;
-  showButtonExBrowserNotify_ = notifierPage_->showButtonExBrowserNotify_;
-  showButtonDeleteNotify_ = notifierPage_->showButtonDeleteNotify_;
-  closeNotify_ = notifierPage_->closeNotify_;
-  fullscreenModeNotify_ = notifierPage_->fullscreenModeNotify_;
-  showNotifyInactiveApp_ = notifierPage_->showNotifyInactiveApp_;
-  onlySelectedFeeds_ = notifierPage_->onlySelectedFeeds_;
-
   if (auto *mw = qobject_cast<MainWindow *>(parent())) {
     connect(notifierPage_, &NotificationsSettingsPage::playSoundRequested,
             mw, &MainWindow::slotPlaySound);
@@ -502,8 +399,7 @@ void OptionsDialog::openFeedsNotifierDlg()
 
 QWidget *OptionsDialog::createPasswordsWidget()
 {
-  passwordsPage_ = new PasswordsSettingsPage(this, &searchEntries_, PagePasswords);
-  return passwordsPage_;
+  return (passwordsPage_ = new PasswordsSettingsPage(this, &searchEntries_, PagePasswords));
 }
 
 void OptionsDialog::loadPasswords()
@@ -513,9 +409,7 @@ void OptionsDialog::loadPasswords()
 
 QWidget *OptionsDialog::createLanguageWidget()
 {
-  languagePage_ = new LanguageSettingsPage(this, &searchEntries_, PageLanguage);
-  if (!selectedLanguage_.isEmpty()) languagePage_->setLanguage(selectedLanguage_);
-  return languagePage_;
+  return (languagePage_ = new LanguageSettingsPage(this, &searchEntries_, PageLanguage));
 }
 
 void OptionsDialog::loadLanguages()
@@ -525,15 +419,19 @@ void OptionsDialog::loadLanguages()
 
 QWidget *OptionsDialog::createFontsColorsWidget()
 {
-  fontsColorsPage_ = new FontsColorsSettingsPage(this, &searchEntries_, PageFontsColors);
-  return fontsColorsPage_;
+  return (fontsColorsPage_ = new FontsColorsSettingsPage(this, &searchEntries_, PageFontsColors));
 }
 
 QWidget *OptionsDialog::createShortcutWidget()
 {
-  shortcutsPage_ = new ShortcutsSettingsPage(
-      shortcutActions_, listDefaultShortcut_, this, &searchEntries_, PageShortcuts);
-  return shortcutsPage_;
+  return (shortcutsPage_ = new ShortcutsSettingsPage(
+      shortcutActions_, listDefaultShortcut_, this, &searchEntries_, PageShortcuts));
+}
+
+void OptionsDialog::loadShortcuts()
+{
+  ensurePageCreated(PageShortcuts);
+  if (shortcutsPage_) shortcutsPage_->load();
 }
 
 QWidget *OptionsDialog::createBackupWidget()
@@ -686,87 +584,10 @@ void OptionsDialog::jumpToSearchEntry(int entryIndex)
   });
 }
 
-QNetworkProxy OptionsDialog::proxy()
-{
-  return networkPage_ ? networkPage_->proxy() : QNetworkProxy();
-}
-
-void OptionsDialog::setProxy(const QNetworkProxy proxy)
-{
-  if (networkPage_) networkPage_->setProxy(proxy);
-}
-
-QString OptionsDialog::language() const
-{
-  return languagePage_ ? languagePage_->language() : selectedLanguage_;
-}
-
-void OptionsDialog::setLanguage(const QString &langFileName)
-{
-  selectedLanguage_ = langFileName;
-  if (languagePage_) languagePage_->setLanguage(langFileName);
-}
-
-QFont OptionsDialog::fontOptionValue(int optionId) const
-{
-  return fontsColorsPage_->fontOptionValue(optionId);
-}
-
-void OptionsDialog::setFontOptionValue(int optionId, const QFont &font)
-{
-  fontsColorsPage_->setFontOptionValue(optionId, font);
-}
-
-QString OptionsDialog::colorOptionValue(int optionId) const
-{
-  return fontsColorsPage_->colorOptionValue(optionId);
-}
-
-void OptionsDialog::setColorOptionValue(int optionId, const QString &colorName)
-{
-  fontsColorsPage_->setColorOptionValue(optionId, colorName);
-}
-
-void OptionsDialog::setBehaviorIconTray(int behavior)
-{
-  if (traySystemPage_) traySystemPage_->setBehaviorIconTray(behavior);
-}
-
-int OptionsDialog::behaviorIconTray()
-{
-  return traySystemPage_ ? traySystemPage_->behaviorIconTray() : STATIC_ICON_TRAY;
-}
-
 void OptionsDialog::loadActionShortcut(QList<QAction *> actions, const QStringList *list)
 {
   shortcutActions_ = std::move(actions);
   listDefaultShortcut_ = list;
-}
-
-void OptionsDialog::loadShortcuts()
-{
-  ensurePageCreated(PageShortcuts);
-  if (shortcutsPage_) shortcutsPage_->load();
-}
-
-void OptionsDialog::saveActionShortcut(QList<QAction *> actions, QActionGroup *labelGroup)
-{
-  if (shortcutsPage_) shortcutsPage_->save(std::move(actions), labelGroup, parent());
-}
-
-bool OptionsDialog::shortcutsLoaded() const
-{
-  return shortcutsPage_ && shortcutsPage_->isLoaded();
-}
-
-void OptionsDialog::setOpeningFeed(int action)
-{
-  if (feedsPage_) feedsPage_->setOpeningFeed(action);
-}
-
-int OptionsDialog::getOpeningFeed()
-{
-  return feedsPage_ ? feedsPage_->getOpeningFeed() : 0;
 }
 
 OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearance() const
@@ -782,11 +603,11 @@ OptionsDialog::NotificationAppearance OptionsDialog::notificationPreviewAppearan
   constexpr int notificationTextColorId = 21;
   constexpr int notificationBackgroundColorId = 22;
   constexpr int linkColorId = 6;
-  const QFont font = fontOptionValue(notificationFontRow);
+  const QFont font = fontsColorsPage_->fontOptionValue(notificationFontRow);
   return {font.family(), font.pointSize(),
-          colorOptionValue(notificationTextColorId),
-          colorOptionValue(notificationBackgroundColorId),
-          colorOptionValue(linkColorId)};
+          fontsColorsPage_->colorOptionValue(notificationTextColorId),
+          fontsColorsPage_->colorOptionValue(notificationBackgroundColorId),
+          fontsColorsPage_->colorOptionValue(linkColorId)};
 }
 
 void OptionsDialog::showNotification()
