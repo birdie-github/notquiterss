@@ -72,6 +72,10 @@ void MainWindow::createFeedsWidget()
   feedsToolBar_ = new QToolBar(this);
   feedsToolBar_->setObjectName("feedsToolBar");
   feedsToolBar_->setStyleSheet("QToolBar { border: none; padding: 0px; }");
+  feedsToolBar_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(feedsToolBar_, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+    showToolbarContextMenu(feedsToolBar_, pos, feedsToolBar_);
+  });
 
   QHBoxLayout *feedsPanelLayout = new QHBoxLayout();
   feedsPanelLayout->setContentsMargins(2, 2, 2, 2);
@@ -1083,7 +1087,9 @@ void MainWindow::createToolBar()
   addToolBar(mainToolbar_);
 
   connect(mainToolbarToggle_, &QAction::toggled, mainToolbar_, &QWidget::setVisible);
-  connect(mainToolbar_, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenuToolBar);
+  connect(mainToolbar_, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+    showToolbarContextMenu(mainToolbar_, pos, mainToolbar_);
+  });
 
   connect(toolBarLockAct_, &QAction::toggled, this, &MainWindow::lockMainToolbar);
   connect(toolBarHideAct_, &QAction::triggered, this, &MainWindow::hideMainToolbar);
@@ -1266,15 +1272,29 @@ void MainWindow::setToolBarIconSize(QToolBar *toolbar, const QString &iconSizeSt
 
 /** @brief Call toolbar context menu
  *----------------------------------------------------------------------------*/
-void MainWindow::showContextMenuToolBar(const QPoint &pos)
+void MainWindow::showToolbarContextMenu(QWidget *anchor, const QPoint &pos, QToolBar *toolbar)
 {
   QMenu menu;
-  menu.addAction(customizeMainToolbarAct2_);
-  menu.addSeparator();
-  menu.addAction(toolBarLockAct_);
-  menu.addAction(toolBarHideAct_);
+  if (toolbar == mainToolbar_) {
+    menu.addAction(customizeMainToolbarAct2_);
+    menu.addSeparator();
+    menu.addAction(toolBarLockAct_);
+    menu.addAction(toolBarHideAct_);
+    menu.exec(anchor->mapToGlobal(pos));
+    return;
+  }
 
-  menu.exec(mainToolbar_->mapToGlobal(pos));
+  QAction *customizeAct = menu.addAction(customizeMainToolbarAct2_->text());
+  menu.addSeparator();
+  QAction *hideAct = menu.addAction(toolBarHideAct_->text());
+  QAction *chosen = menu.exec(anchor->mapToGlobal(pos));
+  if (chosen == customizeAct) {
+    CustomizeToolbarDialog toolbarDlg(this, toolbar);
+    toolbarDlg.exec();
+  } else if (chosen == hideAct) {
+    QAction *toggleAct = (toolbar == feedsToolBar_) ? feedsToolbarToggle_ : newsToolbarToggle_;
+    if (toggleAct) toggleAct->setChecked(false);
+  }
 }
 // ----------------------------------------------------------------------------
 void MainWindow::lockMainToolbar(bool lock)

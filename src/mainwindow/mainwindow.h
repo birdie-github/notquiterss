@@ -101,6 +101,7 @@ public:
 
   void setToolBarStyle(const QString &styleStr);
   void setToolBarIconSize(QToolBar *toolbar, const QString &iconSizeStr);
+  void showToolbarContextMenu(QWidget *anchor, const QPoint &pos, QToolBar *toolbar);
 
   static QStringList nameLabels() {
     QStringList nameLabels;
@@ -350,7 +351,6 @@ private slots:
   void slotNewsFilter();
   void slotGetFeedsTimer();
   void slotShowUpdateAppDlg();
-  void showContextMenuToolBar(const QPoint &pos);
   void showFeedPropertiesDlg();
   void slotFeedMenuShow();
   void showNewsFiltersDlg(bool newFilter = false);

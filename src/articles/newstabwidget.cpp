@@ -207,6 +207,7 @@ void NewsTabWidget::createNewsList()
   newsToolBar_ = new QToolBar(this);
   newsToolBar_->setObjectName("newsToolBar");
   newsToolBar_->setStyleSheet("QToolBar { border: none; padding: 0px; }");
+  newsToolBar_->setContextMenuPolicy(Qt::CustomContextMenu);
 
   Settings settings;
   QString actionListStr = "markNewsRead,markAllNewsRead,Separator,markStarAct,"
@@ -292,6 +293,13 @@ void NewsTabWidget::createNewsList()
   connect(findText_, &QLineEdit::returnPressed, this, &NewsTabWidget::slotSelectFind);
   connect(findText_, &FindTextContent::signalVisible, mainWindow_, &MainWindow::findText);
 
+  newsPanelWidget_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(newsToolBar_, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+    mainWindow_->showToolbarContextMenu(newsToolBar_, pos, newsToolBar_);
+  });
+  connect(newsPanelWidget_, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+    mainWindow_->showToolbarContextMenu(newsPanelWidget_, pos, newsToolBar_);
+  });
   connect(mainWindow_->newsToolbarToggle_, &QAction::toggled, newsPanelWidget_, &QWidget::setVisible);
 }
 
