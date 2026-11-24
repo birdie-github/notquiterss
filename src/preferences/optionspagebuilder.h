@@ -11,6 +11,7 @@
 #include <functional>
 #include <initializer_list>
 #include <optional>
+#include <utility>
 
 class LineEdit;
 class QAbstractButton;
@@ -31,6 +32,21 @@ class QVBoxLayout;
 class QWidget;
 
 struct OptionSearchEntry {
+  OptionSearchEntry() = default;
+  OptionSearchEntry(int p, int tab, QString t, QString tip = {},
+                    QString kw = {}, QWidget *w = nullptr,
+                    int id = -1, QString key = {}, bool shortcut = false)
+    : page(p)
+    , subTab(tab)
+    , title(std::move(t))
+    , tooltip(std::move(tip))
+    , keywords(std::move(kw))
+    , target(w)
+    , itemId(id)
+    , itemKey(std::move(key))
+    , isShortcut(shortcut)
+  {}
+
   int page = -1;
   int subTab = -1;
   QString title;
