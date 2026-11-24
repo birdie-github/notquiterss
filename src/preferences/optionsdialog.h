@@ -22,6 +22,7 @@
 #include <QtWidgets>
 #include <QtSql>
 #include <QNetworkProxy>
+#include <QPointer>
 
 #include "articles/cleanup/cleanuppreviewdialog.h"
 #include "preferences/optionspagebuilder.h"
@@ -234,6 +235,8 @@ protected:
 private slots:
   void slotCategoriesItemClicked(QTreeWidgetItem* item, int);
   void slotCategoriesTreeKeyUpDownPressed();
+  void searchTextChanged(const QString &text);
+  void slotSearchResultActivated(QTreeWidgetItem *item, int column);
   void updateProxy();
   void applyProxy();
   void acceptDialog();
@@ -278,13 +281,27 @@ private:
   static const PageDescriptor kPages[PageCount];
 
   void showEvent(QShowEvent *) override;
+  void buildSearchIndex();
+  QString searchEntrySection(const OptionSearchEntry &entry) const;
+  QTabWidget *tabWidgetForPage(int pageIndex) const;
+  void jumpToSearchEntry(int entryIndex);
+  void highlightWidget(QWidget *target, int pageIndex);
 
   QSqlDatabase db_;
 
   QLabel *contentLabel_;
+  LineEdit *searchEdit_ = nullptr;
   QTreeWidget *categoriesTree_;
+  QTreeWidgetItem *searchCategoryItem_ = nullptr;
+  QVector<QTreeWidgetItem *> categoryItems_;
   QSplitter *splitter_;
   QStackedWidget *contentStack_;
+  QWidget *searchResultsPage_ = nullptr;
+  QTreeWidget *searchResultsTree_ = nullptr;
+  QLabel *searchEmptyLabel_ = nullptr;
+  QPointer<QWidget> highlightOverlay_;
+  int lastPageIndex_ = 0;
+  bool searchIndexBuilt_ = false;
   QVector<QWidget *> pageWidgets_;
   QVector<QScrollArea *> pageScrollAreas_;
 

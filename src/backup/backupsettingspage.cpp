@@ -2,11 +2,22 @@
 #include "backupsettingspage.h"
 #include "databasebackup.h"
 #include "platform/filemanager.h"
+#include "preferences/optionspagebuilder.h"
 #include "preferences/settings.h"
 #include <QtWidgets>
 
-BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
+BackupSettingsPage::BackupSettingsPage(QWidget *parent,
+                                       QVector<OptionSearchEntry> *searchEntries,
+                                       int pageIndex)
+  : QWidget(parent)
 {
+  const auto addSearch = [searchEntries, pageIndex](QWidget *target, const QString &title,
+                                                    const QString &keywords = {}) {
+    if (searchEntries && target && !title.isEmpty()) {
+      searchEntries->append({pageIndex, -1, title, QString(), keywords, target});
+    }
+  };
+
   auto *layout = new QVBoxLayout(this);
   auto *location = new QLabel(tr("Backup directory: %1").arg(DatabaseBackup::directory()), this);
   location->setWordWrap(true);
@@ -19,6 +30,8 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
   buttons->addWidget(show);
   buttons->addStretch();
   layout->addLayout(buttons);
+  addSearch(now, tr("Back Up Now"));
+  addSearch(show, tr("Show Backups"));
   connect(show, &QPushButton::clicked, this, [this] {
     if (!QDir().mkpath(DatabaseBackup::directory())) {
       QMessageBox::warning(this, tr("Database Backup"), tr("Cannot create the backup directory: %1").arg(DatabaseBackup::directory()));
@@ -29,6 +42,7 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
   enabled_ = new QCheckBox(tr("Enable automatic backups"), this);
   enabled_->setChecked(AppSettings::backupEnabled.get());
   layout->addWidget(enabled_);
+  addSearch(enabled_, enabled_->text());
   auto *triggers = new QWidget(this);
   auto *triggerLayout = new QVBoxLayout(triggers);
   onExit_ = new QCheckBox(tr("On application exit"), triggers);
@@ -40,6 +54,9 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
   triggerLayout->addWidget(onExit_);
   triggerLayout->addWidget(subscriptions_);
   triggerLayout->addWidget(scheduled_);
+  addSearch(onExit_, onExit_->text());
+  addSearch(subscriptions_, subscriptions_->text());
+  addSearch(scheduled_, scheduled_->text());
   auto *frequencies = new QWidget(triggers);
   auto *frequencyLayout = new QVBoxLayout(frequencies);
   frequency_ = new QButtonGroup(this);
@@ -51,6 +68,7 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
     frequency_->addButton(radio, days.at(i));
     radio->setChecked(days.at(i) == saved);
     frequencyLayout->addWidget(radio);
+    addSearch(radio, names.at(i), scheduled_->text());
   }
   triggerLayout->addWidget(frequencies);
   frequencies->setEnabled(scheduled_->isChecked());
@@ -59,16 +77,19 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent) : QWidget(parent)
   connect(enabled_, &QCheckBox::toggled, triggers, &QWidget::setEnabled);
   layout->addWidget(triggers);
   auto *retention = new QHBoxLayout;
-  retention->addWidget(new QLabel(tr("Keep the most recent backup sets:"), this));
+  const QString keepLabel = tr("Keep the most recent backup sets:");
+  retention->addWidget(new QLabel(keepLabel, this));
   keep_ = new QSpinBox(this);
   keep_->setRange(1, 10000);
   keep_->setValue(AppSettings::backupKeep.get());
   retention->addWidget(keep_);
   retention->addStretch();
   layout->addLayout(retention);
+  addSearch(keep_, keepLabel);
   clean_ = new QCheckBox(tr("Keep only starred or labelled articles in backups"), this);
   clean_->setChecked(AppSettings::backupClean.get());
   layout->addWidget(clean_);
+  addSearch(clean_, clean_->text());
   connect(clean_, &QCheckBox::toggled, this, [this](bool checked) {
     if (!checked) return;
     const auto answer = QMessageBox::warning(this, tr("Backups will exclude other articles"),

@@ -37,6 +37,9 @@ struct OptionSearchEntry {
   QString tooltip;
   QString keywords;
   QWidget *target = nullptr;
+  int itemId = -1;
+  QString itemKey;
+  bool isShortcut = false;
 };
 
 class OptionsPageBuilder;

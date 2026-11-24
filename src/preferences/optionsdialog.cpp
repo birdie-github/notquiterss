@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "projectmetadata.h"
+#include <algorithm>
 #include <cmath>
 #include <utility>
 #include "common/logfile.h"
@@ -24,9 +25,13 @@
 #include "backup/backupsettingspage.h"
 #include <QElapsedTimer>
 #include <QPainter>
+#include <QRegularExpression>
+#include <QShortcut>
 #include <QStyledItemDelegate>
 #include <QScreen>
 #include <QStyle>
+#include <QTimer>
+#include <QVariantAnimation>
 #include <QWindow>
 #include "articles/rendering/articlecontent.h"
 #include <QDesktopServices>
@@ -92,6 +97,51 @@ public:
     painter->restore();
   }
 };
+
+class HighlightOverlay final : public QWidget
+{
+public:
+  HighlightOverlay(QWidget *parent, const QRect &rect)
+    : QWidget(parent)
+  {
+    setAttribute(Qt::WA_TransparentForMouseEvents);
+    setAttribute(Qt::WA_NoSystemBackground);
+    setGeometry(rect);
+    show();
+    raise();
+
+    auto *anim = new QVariantAnimation(this);
+    anim->setDuration(1100);
+    anim->setStartValue(1.0);
+    anim->setEndValue(0.0);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+    connect(anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &v) {
+      opacity_ = v.toReal();
+      update();
+    });
+    connect(anim, &QVariantAnimation::finished, this, &QObject::deleteLater);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
+  }
+
+protected:
+  void paintEvent(QPaintEvent *) override
+  {
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    const QColor base = palette().color(QPalette::Highlight);
+    QColor fill = base;
+    fill.setAlphaF(0.18 * opacity_);
+    QColor border = base;
+    border.setAlphaF(0.85 * opacity_);
+    const QRectF r = QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0);
+    p.setBrush(fill);
+    p.setPen(QPen(border, 2.0));
+    p.drawRoundedRect(r, 4.0, 4.0);
+  }
+
+private:
+  qreal opacity_ = 1.0;
+};
 }
 
 const OptionsDialog::PageDescriptor OptionsDialog::kPages[OptionsDialog::PageCount] = {
@@ -136,6 +186,14 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   contentLabel_->setFont(fontContentLabel);
   mainLayout->insertWidget(0, contentLabel_);
 
+  searchEdit_ = new LineEdit(this);
+  searchEdit_->setObjectName("optionsSearchEdit_");
+  searchEdit_->setPlaceholderText(tr("Type to search..."));
+  auto *searchLayout = new QHBoxLayout();
+  searchLayout->setContentsMargins(0, 0, 0, 0);
+  searchLayout->addWidget(new QLabel(tr("Search settings:")));
+  searchLayout->addWidget(searchEdit_, 1);
+
   categoriesTree_ = new QTreeWidget();
   categoriesTree_->setObjectName("categoriesTree");
   categoriesTree_->setStyleSheet("QTreeWidget::item { min-height: 20px; }"
@@ -150,19 +208,49 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
   contentStack_ = new QStackedWidget();
   contentStack_->setObjectName("contentStack_");
+
+  searchCategoryItem_ = new QTreeWidgetItem(QStringList{QString::number(-1), tr("Search Results")});
+  searchCategoryItem_->setHidden(true);
+  categoriesTree_->addTopLevelItem(searchCategoryItem_);
+
   // Scroll only the current page, not a stack sized for its tallest hidden page.
   // Pages themselves are created and initialized on demand in ensurePageCreated().
   pageWidgets_.fill(nullptr, PageCount);
   pageScrollAreas_.reserve(PageCount);
+  categoryItems_.reserve(PageCount);
   for (int i = 0; i < PageCount; ++i) {
-    categoriesTree_->addTopLevelItem(
-        new QTreeWidgetItem(QStringList{QString::number(i), tr(kPages[i].title)}));
+    auto *item = new QTreeWidgetItem(QStringList{QString::number(i), tr(kPages[i].title)});
+    categoriesTree_->addTopLevelItem(item);
+    categoryItems_.append(item);
     auto *scrollArea = new QScrollArea();
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameStyle(QFrame::NoFrame);
     pageScrollAreas_.append(scrollArea);
     contentStack_->addWidget(scrollArea);
   }
+
+  searchResultsTree_ = new QTreeWidget();
+  searchResultsTree_->setObjectName("searchResultsTree_");
+  searchResultsTree_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
+  searchResultsTree_->setRootIsDecorated(false);
+  searchResultsTree_->setUniformRowHeights(true);
+  searchResultsTree_->setAlternatingRowColors(true);
+  searchResultsTree_->setColumnCount(2);
+  searchResultsTree_->setHeaderHidden(true);
+  searchResultsTree_->header()->setStretchLastSection(false);
+  searchResultsTree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+  searchResultsTree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+
+  searchEmptyLabel_ = new QLabel(tr("No matching settings found."));
+  searchEmptyLabel_->setAlignment(Qt::AlignCenter);
+  searchEmptyLabel_->hide();
+
+  searchResultsPage_ = new QWidget();
+  auto *searchResultsLayout = new QVBoxLayout(searchResultsPage_);
+  searchResultsLayout->setContentsMargins(0, 0, 0, 0);
+  searchResultsLayout->addWidget(searchResultsTree_, 1);
+  searchResultsLayout->addWidget(searchEmptyLabel_, 1);
+  contentStack_->addWidget(searchResultsPage_);
 
   splitter_ = new QSplitter();
   splitter_->setChildrenCollapsible(false);
@@ -171,6 +259,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   splitter_->setStretchFactor(0, 0);
   splitter_->setStretchFactor(1, 1);
 
+  pageLayout->addLayout(searchLayout);
   pageLayout->addWidget(splitter_, 1);
   pageLayout->setContentsMargins(10, 5, 10, 5);
 
@@ -182,8 +271,19 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   connect(categoriesTree_, &QTreeWidget::itemPressed, this, &OptionsDialog::slotCategoriesItemClicked);
   connect(this, &OptionsDialog::signalCategoriesTreeKeyUpDownPressed,
           this, &OptionsDialog::slotCategoriesTreeKeyUpDownPressed, Qt::QueuedConnection);
+  connect(searchEdit_, &QLineEdit::textChanged, this, &OptionsDialog::searchTextChanged);
+  connect(searchResultsTree_, &QTreeWidget::itemClicked,
+          this, &OptionsDialog::slotSearchResultActivated);
+
+  auto *findShortcut = new QShortcut(QKeySequence::Find, this);
+  connect(findShortcut, &QShortcut::activated, this, [this]() {
+    searchEdit_->setFocus();
+    searchEdit_->selectAll();
+  });
 
   categoriesTree_->installEventFilter(this);
+  searchEdit_->installEventFilter(this);
+  searchResultsTree_->installEventFilter(this);
 
   setMinimumSize(500, 400);
   Settings settings;
@@ -315,6 +415,46 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 {
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+    if (obj == searchEdit_) {
+      if (keyEvent->key() == Qt::Key_Escape && !searchEdit_->text().isEmpty()) {
+        searchEdit_->clear();
+        return true;
+      }
+      if (keyEvent->key() == Qt::Key_Down &&
+          searchResultsTree_->isVisible() && searchResultsTree_->topLevelItemCount() > 0) {
+        searchResultsTree_->setFocus();
+        searchResultsTree_->setCurrentItem(searchResultsTree_->topLevelItem(0));
+        return true;
+      }
+      if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+        if (searchResultsTree_->isVisible() && searchResultsTree_->topLevelItemCount() > 0) {
+          QTreeWidgetItem *item = searchResultsTree_->currentItem()
+              ? searchResultsTree_->currentItem()
+              : searchResultsTree_->topLevelItem(0);
+          slotSearchResultActivated(item, 0);
+        }
+        return true;
+      }
+      return false;
+    }
+    if (obj == searchResultsTree_) {
+      if (keyEvent->key() == Qt::Key_Escape && !searchEdit_->text().isEmpty()) {
+        searchEdit_->clear();
+        searchEdit_->setFocus();
+        return true;
+      }
+      if (keyEvent->key() == Qt::Key_Up && searchResultsTree_->currentIndex().row() == 0) {
+        searchEdit_->setFocus();
+        return true;
+      }
+      if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+        if (QTreeWidgetItem *item = searchResultsTree_->currentItem()) {
+          slotSearchResultActivated(item, 0);
+        }
+        return true;
+      }
+      return false;
+    }
     if (obj != editShortcut_) {
       if ((keyEvent->key() == Qt::Key_Up) ||
           (keyEvent->key() == Qt::Key_Down)) {
@@ -490,7 +630,8 @@ QWidget *OptionsDialog::createNetworkConnectionsWidget()
   networkConnectionsWidget_ = OptionsPageBuilder::buildFrame(PageNetwork, &searchEntries_, [this](OptionsPageBuilder &b) {
     b.radio(directConnectionButton_, tr("Direct connection to the Internet"));
     b.radio(systemProxyButton_, tr("System proxy configuration (if available)"));
-    b.radio(manualProxyButton_, tr("Manual proxy configuration:"));
+    b.radio(manualProxyButton_, tr("Manual proxy configuration:"),
+            QStringLiteral("HTTP SOCKS5 host port username password"));
 
     QWidget *manualWidget = b.indented(QMargins(0, 0, 0, 0), [this](OptionsPageBuilder &sub) {
       sub.row([this](OptionsRowBuilder &r) {
@@ -744,7 +885,7 @@ QWidget *OptionsDialog::createFeedsWidget()
         g.addWidget(0, 0, styleSheetNewsEdit_);
         g.addWidget(0, 1, styleSheetNewsButton, Qt::AlignRight);
       });
-      b.registerSearch(styleSheetNewsEdit_, styleLabel);
+      b.registerSearch(styleSheetNewsEdit_, styleLabel, QString(), QStringLiteral("css"));
       b.stretch();
     }},
     {tr("Reading"), [this](OptionsPageBuilder &b) {
@@ -928,6 +1069,9 @@ QWidget *OptionsDialog::createLabelsWidget()
   connect(labelsTree_, &QAbstractItemView::doubleClicked, this, &OptionsDialog::editLabel);
 
   loadLabelsOk_ = false;
+  searchEntries_.append({PageLabels, -1, tr("Labels"), QString(),
+                         tr("Create...") + QLatin1Char(' ') + tr("Edit..."),
+                         labelsTree_});
   return labelsWidget_;
 }
 
@@ -1100,6 +1244,9 @@ QWidget *OptionsDialog::createPasswordsWidget()
   passwordsWidget_ = new QWidget();
   passwordsWidget_->setLayout(passLayout);
   loadPasswordsOk_ = false;
+  searchEntries_.append({PagePasswords, -1, tr("Passwords"), QString(),
+                         tr("Site") + QLatin1Char(' ') + tr("User") + QLatin1Char(' ') + tr("Show Passwords"),
+                         passTree_});
   return passwordsWidget_;
 }
 
@@ -1154,6 +1301,8 @@ QWidget *OptionsDialog::createLanguageWidget()
 
   languageWidget_ = new QWidget();
   languageWidget_->setLayout(languageLayout);
+  searchEntries_.append({PageLanguage, -1, tr("Choose language:"), QString(),
+                         tr("Language"), languageFileList_});
   return languageWidget_;
 }
 
@@ -1196,8 +1345,10 @@ QWidget *OptionsDialog::createFontsColorsWidget()
     QT_TR_NOOP("Notification font"),
   };
   for (int i = 0; i < int(sizeof(kFontLabels) / sizeof(kFontLabels[0])); ++i) {
+    const QString fontTitle = tr(kFontLabels[i]);
     fontsTree_->addTopLevelItem(
-          new QTreeWidgetItem(QStringList() << QString::number(i) << tr(kFontLabels[i])));
+          new QTreeWidgetItem(QStringList() << QString::number(i) << fontTitle));
+    searchEntries_.append({PageFontsColors, 0, fontTitle, QString(), tr("Fonts"), fontsTree_, i});
   }
 
   fontsTree_->setCurrentItem(fontsTree_->topLevelItem(0));
@@ -1274,9 +1425,12 @@ QWidget *OptionsDialog::createFontsColorsWidget()
   };
   colorOptionItems_.resize(MainWindow::kColorOptionCount);
   QTreeWidgetItem *firstColor = nullptr;
+  QString currentColorSection;
   for (const auto &entry : entries) {
-    auto *item = new QTreeWidgetItem(colorsTree_, QStringList{tr(entry.label)});
+    const QString label = tr(entry.label);
+    auto *item = new QTreeWidgetItem(colorsTree_, QStringList{label});
     if (entry.optionId < 0) {
+      currentColorSection = label;
       item->setFlags(Qt::ItemIsEnabled);
       QFont headingFont = item->font(0);
       headingFont.setBold(true);
@@ -1285,6 +1439,9 @@ QWidget *OptionsDialog::createFontsColorsWidget()
       item->setData(0, Qt::UserRole, entry.optionId);
       colorOptionItems_[entry.optionId] = item;
       if (!firstColor) firstColor = item;
+      searchEntries_.append({PageFontsColors, 1, label, QString(),
+                             tr("Colors") + QLatin1Char(' ') + currentColorSection,
+                             colorsTree_, entry.optionId});
     }
   }
 
@@ -1391,12 +1548,30 @@ QWidget *OptionsDialog::createShortcutWidget()
   connect(filterShortcut_, &QLineEdit::textChanged, this, &OptionsDialog::filterShortcutChanged);
 
   editShortcut_->installEventFilter(this);
+
+  searchEntries_.append({PageShortcuts, -1, tr("Keyboard Shortcuts"), QString(),
+                         QStringLiteral("hotkeys"), shortcutTree_});
+  for (QAction *pAction : std::as_const(shortcutActions_)) {
+    if (!pAction || pAction->isSeparator()) continue;
+    const bool isAutoLoad = pAction->objectName() == QLatin1String("autoLoadImagesToggle");
+    const QString actionTitle = isAutoLoad
+        ? tr("Load images")
+        : pAction->text().remove(QLatin1Char('&'));
+    if (actionTitle.isEmpty()) continue;
+    const QString actionDesc = isAutoLoad
+        ? tr("Automatically load images in article view")
+        : pAction->toolTip();
+    searchEntries_.append({PageShortcuts, -1, actionTitle, actionDesc,
+                           pAction->shortcut().toString(),
+                           shortcutTree_, -1, pAction->objectName(), true});
+  }
+
   return shortcutWidget_;
 }
 
 QWidget *OptionsDialog::createBackupWidget()
 {
-  auto *backupPage = new BackupSettingsPage(this);
+  auto *backupPage = new BackupSettingsPage(this, &searchEntries_, PageBackup);
   connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
   backupWidget_ = backupPage;
   return backupWidget_;
@@ -1409,8 +1584,15 @@ void OptionsDialog::slotCategoriesTreeKeyUpDownPressed()
 //----------------------------------------------------------------------------
 void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
 {
+  if (!item) return;
+  if (item == searchCategoryItem_) {
+    contentLabel_->setText(tr("Search Results"));
+    contentStack_->setCurrentWidget(searchResultsPage_);
+    return;
+  }
   const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
   if (pageIndex < 0 || pageIndex >= PageCount) return;
+  lastPageIndex_ = pageIndex;
   ensurePageCreated(pageIndex);
 
   contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
@@ -1423,13 +1605,227 @@ void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem* item, int)
 //----------------------------------------------------------------------------
 int OptionsDialog::currentIndex()
 {
-  return categoriesTree_->currentItem()->text(0).toInt();
+  if (QTreeWidgetItem *item = categoriesTree_->currentItem()) {
+    const int pageIndex = item->data(0, Qt::DisplayRole).toInt();
+    if (pageIndex >= 0 && pageIndex < PageCount) return pageIndex;
+  }
+  return lastPageIndex_;
 }
 //----------------------------------------------------------------------------
 void OptionsDialog::setCurrentItem(int index)
 {
-  categoriesTree_->setCurrentItem(categoriesTree_->topLevelItem(index), 1);
+  if (index < 0 || index >= categoryItems_.size()) return;
+  categoriesTree_->setCurrentItem(categoryItems_.at(index), 1);
   slotCategoriesTreeKeyUpDownPressed();
+}
+
+void OptionsDialog::buildSearchIndex()
+{
+  if (searchIndexBuilt_) return;
+  searchIndexBuilt_ = true;
+  for (int i = 0; i < PageCount; ++i) {
+    ensurePageCreated(i);
+  }
+}
+
+QTabWidget *OptionsDialog::tabWidgetForPage(int pageIndex) const
+{
+  switch (pageIndex) {
+  case PageBrowser:       return browserWidget_;
+  case PageFeeds:         return feedsWidget_;
+  case PageNotifications: return notifierWidget_;
+  case PageFontsColors:   return fontsColorsWidget_;
+  default:                return nullptr;
+  }
+}
+
+QString OptionsDialog::searchEntrySection(const OptionSearchEntry &entry) const
+{
+  if (entry.page < 0 || entry.page >= PageCount) return QString();
+  const QString pageTitle = tr(kPages[entry.page].title);
+  if (entry.subTab >= 0) {
+    if (QTabWidget *tabs = tabWidgetForPage(entry.page)) {
+      const QString subTitle = tabs->tabText(entry.subTab);
+      if (!subTitle.isEmpty()) {
+        return QStringLiteral("%1 \u203A %2").arg(pageTitle, subTitle);
+      }
+    }
+  }
+  return pageTitle;
+}
+
+void OptionsDialog::searchTextChanged(const QString &text)
+{
+  const QString query = text.trimmed();
+  if (query.isEmpty()) {
+    searchCategoryItem_->setHidden(true);
+    searchResultsTree_->clear();
+    if (contentStack_->currentWidget() == searchResultsPage_) {
+      setCurrentItem(lastPageIndex_);
+    }
+    return;
+  }
+
+  buildSearchIndex();
+
+  searchCategoryItem_->setHidden(false);
+  categoriesTree_->setCurrentItem(searchCategoryItem_, 1);
+  contentLabel_->setText(tr("Search Results"));
+  contentStack_->setCurrentWidget(searchResultsPage_);
+
+  const QStringList tokens = query.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+  struct RankedMatch {
+    int rank;
+    int index;
+    QString section;
+  };
+  QVector<RankedMatch> matches;
+  matches.reserve(searchEntries_.size());
+
+  for (int i = 0; i < searchEntries_.size(); ++i) {
+    const OptionSearchEntry &entry = searchEntries_.at(i);
+    const QString section = searchEntrySection(entry);
+    const QString haystack = QStringList{entry.title, section, entry.tooltip, entry.keywords}.join(QLatin1Char(' '));
+
+    bool allMatch = true;
+    for (const QString &tok : tokens) {
+      if (!haystack.contains(tok, Qt::CaseInsensitive)) {
+        allMatch = false;
+        break;
+      }
+    }
+    if (!allMatch) continue;
+
+    int rank = 2;
+    if (entry.isShortcut) {
+      rank = 3;
+    } else if (entry.title.contains(query, Qt::CaseInsensitive)) {
+      rank = 0;
+    } else {
+      bool allInTitle = true;
+      for (const QString &tok : tokens) {
+        if (!entry.title.contains(tok, Qt::CaseInsensitive)) {
+          allInTitle = false;
+          break;
+        }
+      }
+      if (allInTitle) rank = 1;
+    }
+    matches.append({rank, i, section});
+  }
+
+  std::stable_sort(matches.begin(), matches.end(), [](const RankedMatch &a, const RankedMatch &b) {
+    return a.rank < b.rank;
+  });
+
+  searchResultsTree_->clear();
+  for (const RankedMatch &m : matches) {
+    const OptionSearchEntry &entry = searchEntries_.at(m.index);
+    auto *item = new QTreeWidgetItem({entry.title, m.section});
+    item->setData(0, Qt::UserRole, m.index);
+    if (!entry.tooltip.isEmpty()) item->setToolTip(0, entry.tooltip);
+    QFont sectionFont = item->font(1);
+    sectionFont.setItalic(true);
+    item->setFont(1, sectionFont);
+    item->setForeground(1, palette().color(QPalette::Disabled, QPalette::Text));
+    searchResultsTree_->addTopLevelItem(item);
+  }
+
+  const bool hasMatches = !matches.isEmpty();
+  searchResultsTree_->setVisible(hasMatches);
+  searchEmptyLabel_->setVisible(!hasMatches);
+  if (hasMatches) {
+    searchResultsTree_->setCurrentItem(searchResultsTree_->topLevelItem(0));
+  }
+}
+
+void OptionsDialog::slotSearchResultActivated(QTreeWidgetItem *item, int)
+{
+  if (!item) return;
+  const QVariant idxVar = item->data(0, Qt::UserRole);
+  if (!idxVar.isValid()) return;
+  jumpToSearchEntry(idxVar.toInt());
+}
+
+void OptionsDialog::jumpToSearchEntry(int entryIndex)
+{
+  if (entryIndex < 0 || entryIndex >= searchEntries_.size()) return;
+  const OptionSearchEntry entry = searchEntries_.at(entryIndex);
+
+  setCurrentItem(entry.page);
+  if (entry.subTab >= 0) {
+    if (QTabWidget *tabs = tabWidgetForPage(entry.page)) {
+      tabs->setCurrentIndex(entry.subTab);
+    }
+  }
+
+  QTimer::singleShot(0, this, [this, entry]() {
+    if (!entry.target) return;
+
+    if (entry.target == fontsTree_ && entry.itemId >= 0 && entry.itemId < fontsTree_->topLevelItemCount()) {
+      QTreeWidgetItem *item = fontsTree_->topLevelItem(entry.itemId);
+      fontsTree_->setCurrentItem(item);
+      fontsTree_->scrollToItem(item);
+      fontsTree_->setFocus();
+      return;
+    }
+
+    if (entry.target == colorsTree_ && entry.itemId >= 0 && entry.itemId < colorOptionItems_.size()) {
+      if (QTreeWidgetItem *item = colorOptionItems_.at(entry.itemId)) {
+        colorsTree_->setCurrentItem(item);
+        colorsTree_->scrollToItem(item);
+        colorsTree_->setFocus();
+      }
+      return;
+    }
+
+    if (entry.target == shortcutTree_ && entry.isShortcut) {
+      loadShortcuts();
+      if (!filterShortcut_->text().isEmpty()) filterShortcut_->clear();
+      QList<QStandardItem *> items;
+      if (!entry.itemKey.isEmpty()) {
+        items = shortcutModel_->findItems(entry.itemKey, Qt::MatchExactly, 3);
+      }
+      if (items.isEmpty()) {
+        items = shortcutModel_->findItems(entry.title, Qt::MatchExactly, 0);
+      }
+      if (!items.isEmpty()) {
+        const QModelIndex proxyIdx = shortcutProxyModel_->mapFromSource(items.first()->index());
+        if (proxyIdx.isValid()) {
+          shortcutTree_->setCurrentIndex(proxyIdx);
+          shortcutTree_->scrollTo(proxyIdx);
+          shortcutTreeClicked(proxyIdx);
+        }
+      }
+      shortcutTree_->setFocus();
+      return;
+    }
+
+    if (entry.page >= 0 && entry.page < pageScrollAreas_.size()) {
+      pageScrollAreas_.at(entry.page)->ensureWidgetVisible(entry.target, 50, 50);
+    }
+    if (entry.target->isEnabled() && entry.target->focusPolicy() != Qt::NoFocus) {
+      entry.target->setFocus();
+    }
+    highlightWidget(entry.target, entry.page);
+  });
+}
+
+void OptionsDialog::highlightWidget(QWidget *target, int pageIndex)
+{
+  if (!target || pageIndex < 0 || pageIndex >= pageScrollAreas_.size()) return;
+  if (highlightOverlay_) {
+    highlightOverlay_->deleteLater();
+    highlightOverlay_ = nullptr;
+  }
+  QWidget *viewport = pageScrollAreas_.at(pageIndex)->viewport();
+  if (!viewport || !target->isVisibleTo(viewport)) return;
+
+  QRect rect(target->mapTo(viewport, QPoint(0, 0)), target->size());
+  rect = rect.adjusted(-4, -2, 4, 2).intersected(viewport->rect());
+  if (rect.isEmpty()) return;
+
+  highlightOverlay_ = new HighlightOverlay(viewport, rect);
 }
 //----------------------------------------------------------------------------
 QNetworkProxy OptionsDialog::proxy()
