@@ -235,6 +235,9 @@ QWidget *FeedPropertiesDialog::createGeneralTab()
       avoidedOldSingleNewsDate_->setSelectedDate(QDate::currentDate());
       avoidedOldSingleNewsDate_->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
       avoidedOldSingleNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
+      avoidedOldSingleNewsDate_->ensurePolished();
+      avoidedOldSingleNewsDate_->setMinimumHeight(avoidedOldSingleNewsDate_->sizeHint().height() + 12);
+      avoidedOldSingleNewsDate_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
       grp.addWidget(avoidedOldSingleNewsDate_);
       grp.stretch();
     }, Qt::Horizontal, QMargins(5, 5, 5, 5));
@@ -426,90 +429,11 @@ QWidget *FeedPropertiesDialog::createStatusTab()
   if (initialized_) return;
   initialized_ = true;
   if (!bulk_) {
-    editTitle->setText(feedProperties.general.text);
-    editURL->setText(feedProperties.general.url);
     editURL->selectAll();
     if (isFeed_) editURL->setFocus();
     else editTitle->setFocus();
-    labelHomepage->setText(QString("<a href='%1'>%1</a>").arg(feedProperties.general.homepage));
     selectIconButton_->setIcon(windowIcon());
   }
-
-  useGlobalUpdate_->setText(tr("Use global settings (%1)")
-                           .arg(feedProperties.general.globalUpdateDescription));
-  useGlobalUpdate_->setChecked(feedProperties.general.useGlobalUpdate);
-  updateEnable_->setChecked(!feedProperties.general.useGlobalUpdate &&
-                           feedProperties.general.updateEnable);
-  noScheduledUpdates_->setChecked(!feedProperties.general.useGlobalUpdate &&
-                                 !feedProperties.general.updateEnable);
-  updateInterval_->setValue(feedProperties.general.updateInterval);
-  updateIntervalType_->setCurrentIndex(feedProperties.general.intervalType + 1);
-  if (!bulk_) {
-    disableUpdate_->setChecked(feedProperties.general.disableUpdate);
-
-    displayOnStartup->setChecked(feedProperties.general.displayOnStartup);
-    starredOn_->setChecked(feedProperties.general.starred);
-    duplicateNewsMode_->setChecked(feedProperties.general.duplicateNewsMode);
-
-    addSingleNewsAnyDateOn_->setChecked(feedProperties.general.addSingleNewsAnyDateOn);
-    avoidedOldSingleNewsDateOn_->setChecked(feedProperties.general.avoidedOldSingleNewsDateOn);
-    avoidedOldSingleNewsDate_->setSelectedDate(feedProperties.general.avoidedOldSingleNewsDate);
-  }
-
-  imagePolicy_->setCurrentIndex(feedProperties.display.displayEmbeddedImages);
-  useGlobalPreload_->setText(tr("Use global settings (%1)")
-                             .arg(feedProperties.display.globalPreloadDescription));
-  useGlobalPreload_->setChecked(feedProperties.display.useGlobalPreload);
-  customPreload_->setChecked(!feedProperties.display.useGlobalPreload);
-  preloadPages_->setValue(feedProperties.display.preloadPages);
-  if (!bulk_)
-    imagePreloadGroup_->setEnabled(feedProperties.display.displayEmbeddedImages != 0);
-  layoutDirection_->setChecked(feedProperties.display.layoutDirection);
-
-  for (int i = 0; i < feedProperties.column.columns.count(); ++i) {
-    int index = feedProperties.column.indexList.indexOf(feedProperties.column.columns.at(i));
-    QString name = feedProperties.column.nameList.at(index);
-    QStringList treeItem;
-    treeItem << name
-             << QString::number(feedProperties.column.columns.at(i));
-    QTreeWidgetItem *item = new QTreeWidgetItem(treeItem);
-    columnsTree_->addTopLevelItem(item);
-  }
-  for (int i = 0; i < feedProperties.column.indexList.count(); ++i) {
-    sortByColumnBox_->addItem(feedProperties.column.nameList.at(i),
-                              feedProperties.column.indexList.at(i));
-    if (feedProperties.column.sortBy == feedProperties.column.indexList.at(i))
-      sortByColumnBox_->setCurrentIndex(i);
-  }
-  sortOrderBox_->setCurrentIndex(feedProperties.column.sortType);
-  columnsTree_->setCurrentIndex(QModelIndex());
-
-  if (bulk_) return;
-
-  authentication_->setChecked(feedProperties.authentication.on);
-  user_->setText(feedProperties.authentication.user);
-  pass_->setText(feedProperties.authentication.pass);
-
-  QString status = feedProperties.status.feedStatus;
-  const auto health = FeedHealth::read(status);
-  if (health.error.isEmpty())
-    statusFeed_->setText(tr("Good"));
-  else
-    statusFeed_->setText(health.error);
-
-  descriptionText_->setText(feedProperties.status.description);
-  if (feedProperties.status.createdTime.isValid())
-    createdFeed_->setText(feedProperties.status.createdTime.toString("dd.MM.yy hh:mm"));
-  else
-    createdFeed_->setText(tr("Long ago ;-)"));
-
-  newsCount_->setText(QString("%1 (%2 %3, %4 %5)").
-                      arg(feedProperties.status.undeleteCount).
-                      arg(feedProperties.status.newCount).
-                      arg(tr("new")).
-                      arg(feedProperties.status.unreadCount).
-                      arg(tr("unread")));
-  feedsCount_->setText(QString("%1").arg(feedProperties.status.feedsCount));
 }
 //------------------------------------------------------------------------------
 void FeedPropertiesDialog::setUpdateStatus(const QDateTime &lastSuccess, const QDateTime &lastAttempt,
@@ -637,6 +561,84 @@ FEED_PROPERTIES FeedPropertiesDialog::getFeedProperties()
 void FeedPropertiesDialog::setFeedProperties(FEED_PROPERTIES properties)
 {
   feedProperties = properties;
+
+  if (!bulk_) {
+    editTitle->setText(feedProperties.general.text);
+    editURL->setText(feedProperties.general.url);
+    labelHomepage->setText(QString("<a href='%1'>%1</a>").arg(feedProperties.general.homepage));
+    selectIconButton_->setIcon(windowIcon());
+  }
+
+  useGlobalUpdate_->setText(tr("Use global settings (%1)")
+                           .arg(feedProperties.general.globalUpdateDescription));
+  useGlobalUpdate_->setChecked(feedProperties.general.useGlobalUpdate);
+  updateEnable_->setChecked(!feedProperties.general.useGlobalUpdate &&
+                           feedProperties.general.updateEnable);
+  noScheduledUpdates_->setChecked(!feedProperties.general.useGlobalUpdate &&
+                                 !feedProperties.general.updateEnable);
+  updateInterval_->setValue(feedProperties.general.updateInterval);
+  updateIntervalType_->setCurrentIndex(feedProperties.general.intervalType + 1);
+  if (!bulk_) {
+    disableUpdate_->setChecked(feedProperties.general.disableUpdate);
+
+    displayOnStartup->setChecked(feedProperties.general.displayOnStartup);
+    starredOn_->setChecked(feedProperties.general.starred);
+    duplicateNewsMode_->setChecked(feedProperties.general.duplicateNewsMode);
+
+    addSingleNewsAnyDateOn_->setChecked(feedProperties.general.addSingleNewsAnyDateOn);
+    avoidedOldSingleNewsDateOn_->setChecked(feedProperties.general.avoidedOldSingleNewsDateOn);
+    avoidedOldSingleNewsDate_->setSelectedDate(feedProperties.general.avoidedOldSingleNewsDate);
+  }
+
+  imagePolicy_->setCurrentIndex(feedProperties.display.displayEmbeddedImages);
+  useGlobalPreload_->setText(tr("Use global settings (%1)")
+                             .arg(feedProperties.display.globalPreloadDescription));
+  useGlobalPreload_->setChecked(feedProperties.display.useGlobalPreload);
+  customPreload_->setChecked(!feedProperties.display.useGlobalPreload);
+  preloadPages_->setValue(feedProperties.display.preloadPages);
+  if (!bulk_)
+    imagePreloadGroup_->setEnabled(feedProperties.display.displayEmbeddedImages != 0);
+  layoutDirection_->setChecked(feedProperties.display.layoutDirection);
+
+  columnsTree_->clear();
+  for (int i = 0; i < feedProperties.column.columns.count(); ++i) {
+    int index = feedProperties.column.indexList.indexOf(feedProperties.column.columns.at(i));
+    QString name = feedProperties.column.nameList.at(index);
+    columnsTree_->addTopLevelItem(new QTreeWidgetItem(QStringList{
+        name, QString::number(feedProperties.column.columns.at(i))}));
+  }
+  sortByColumnBox_->clear();
+  for (int i = 0; i < feedProperties.column.indexList.count(); ++i) {
+    sortByColumnBox_->addItem(feedProperties.column.nameList.at(i),
+                              feedProperties.column.indexList.at(i));
+    if (feedProperties.column.sortBy == feedProperties.column.indexList.at(i))
+      sortByColumnBox_->setCurrentIndex(i);
+  }
+  sortOrderBox_->setCurrentIndex(feedProperties.column.sortType);
+  columnsTree_->setCurrentIndex(QModelIndex());
+
+  if (bulk_) return;
+
+  authentication_->setChecked(feedProperties.authentication.on);
+  user_->setText(feedProperties.authentication.user);
+  pass_->setText(feedProperties.authentication.pass);
+
+  const auto health = FeedHealth::read(feedProperties.status.feedStatus);
+  statusFeed_->setText(health.error.isEmpty() ? tr("Good") : health.error);
+
+  descriptionText_->setText(feedProperties.status.description);
+  if (feedProperties.status.createdTime.isValid())
+    createdFeed_->setText(feedProperties.status.createdTime.toString("dd.MM.yy hh:mm"));
+  else
+    createdFeed_->setText(tr("Long ago ;-)"));
+
+  newsCount_->setText(QString("%1 (%2 %3, %4 %5)").
+                      arg(feedProperties.status.undeleteCount).
+                      arg(feedProperties.status.newCount).
+                      arg(tr("new")).
+                      arg(feedProperties.status.unreadCount).
+                      arg(tr("unread")));
+  feedsCount_->setText(QString("%1").arg(feedProperties.status.feedsCount));
 }
 //------------------------------------------------------------------------------
 void FeedPropertiesDialog::showMenuAddButton()
