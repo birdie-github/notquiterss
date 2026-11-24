@@ -244,15 +244,22 @@ QWidget *OptionsPageBuilder::buildWidget(int page, int subTab,
   return widget;
 }
 
+void OptionsPageBuilder::populateTabs(
+    QTabWidget *tabWidget, int page, QVector<OptionSearchEntry> *entries,
+    const QList<QPair<QString, PageFn>> &tabs)
+{
+  for (int i = 0; i < tabs.size(); ++i) {
+    tabWidget->addTab(buildWidget(page, i, entries, tabs.at(i).second),
+                      tabs.at(i).first);
+  }
+}
+
 QTabWidget *OptionsPageBuilder::buildTabs(
     int page, QVector<OptionSearchEntry> *entries,
     const QList<QPair<QString, PageFn>> &tabs)
 {
   auto *tabWidget = new QTabWidget();
-  for (int i = 0; i < tabs.size(); ++i) {
-    tabWidget->addTab(buildWidget(page, i, entries, tabs.at(i).second),
-                      tabs.at(i).first);
-  }
+  populateTabs(tabWidget, page, entries, tabs);
   return tabWidget;
 }
 

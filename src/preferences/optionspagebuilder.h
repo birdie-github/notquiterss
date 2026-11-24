@@ -145,6 +145,9 @@ public:
   static QWidget *buildWidget(int page, int subTab,
                               QVector<OptionSearchEntry> *entries,
                               const PageFn &fn);
+  static void populateTabs(QTabWidget *tabWidget, int page,
+                           QVector<OptionSearchEntry> *entries,
+                           const QList<QPair<QString, PageFn>> &tabs);
   static QTabWidget *buildTabs(int page, QVector<OptionSearchEntry> *entries,
                                const QList<QPair<QString, PageFn>> &tabs);
 

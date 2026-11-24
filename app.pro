@@ -94,12 +94,18 @@ HEADERS += \
     src/preferences/optionspagebuilder.h \
     src/preferences/optionssearchpanel.h \
     src/preferences/pages/backupsettingspage.h \
+    src/preferences/pages/browsersettingspage.h \
+    src/preferences/pages/feedssettingspage.h \
     src/preferences/pages/fontscolorssettingspage.h \
+    src/preferences/pages/generalsettingspage.h \
     src/preferences/pages/labelssettingspage.h \
     src/preferences/pages/languagesettingspage.h \
+    src/preferences/pages/networksettingspage.h \
+    src/preferences/pages/notificationssettingspage.h \
     src/preferences/pages/notifierfeedsdialog.h \
     src/preferences/pages/passwordssettingspage.h \
     src/preferences/pages/shortcutssettingspage.h \
+    src/preferences/pages/systemtraysettingspage.h \
     src/articles/newsview.h \
     src/articles/newsmodel.h \
     src/articles/newsheader.h \
@@ -170,12 +176,18 @@ SOURCES += \
     src/preferences/optionspagebuilder.cpp \
     src/preferences/optionssearchpanel.cpp \
     src/preferences/pages/backupsettingspage.cpp \
+    src/preferences/pages/browsersettingspage.cpp \
+    src/preferences/pages/feedssettingspage.cpp \
     src/preferences/pages/fontscolorssettingspage.cpp \
+    src/preferences/pages/generalsettingspage.cpp \
     src/preferences/pages/labelssettingspage.cpp \
     src/preferences/pages/languagesettingspage.cpp \
+    src/preferences/pages/networksettingspage.cpp \
+    src/preferences/pages/notificationssettingspage.cpp \
     src/preferences/pages/notifierfeedsdialog.cpp \
     src/preferences/pages/passwordssettingspage.cpp \
     src/preferences/pages/shortcutssettingspage.cpp \
+    src/preferences/pages/systemtraysettingspage.cpp \
     src/articles/newsview.cpp \
     src/articles/newsmodel.cpp \
     src/articles/newsheader.cpp \

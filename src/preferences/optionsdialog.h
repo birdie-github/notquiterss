@@ -23,19 +23,24 @@
 #include <QtSql>
 #include <QNetworkProxy>
 
-#include "articles/cleanup/cleanuppreviewdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "widgets/dialog.h"
 #include "widgets/lineedit.h"
 #include "notifications/notificationswidget.h"
 
+class BrowserSettingsPage;
+class FeedsSettingsPage;
 class FontsColorsSettingsPage;
+class GeneralSettingsPage;
 class LabelsSettingsPage;
 class LanguageSettingsPage;
+class NetworkSettingsPage;
+class NotificationsSettingsPage;
 class NotifierFeedsDialog;
 class OptionsSearchPanel;
 class PasswordsSettingsPage;
 class ShortcutsSettingsPage;
+class SystemTraySettingsPage;
 
 #define STATIC_ICON_TRAY        0
 #define CHANGE_ICON_TRAY        1
@@ -168,7 +173,6 @@ public:
   QGroupBox *cleanupOnShutdownBox_;
   QCheckBox *dayCleanUpOn_;
   QSpinBox *maxDayCleanUp_;
-  QToolButton *maxDayCleanUpWarning_ = nullptr;
   QCheckBox *newsCleanUpOn_;
   QSpinBox *maxNewsCleanUp_;
   QCheckBox *readCleanUp_;
@@ -177,8 +181,6 @@ public:
   QCheckBox *neverLabelCleanUp_;
   QCheckBox *cleanUpDeleted_;
   QCheckBox *optimizeDB_;
-  QLabel *cleanUpPreviewLabel_;
-  QPushButton *cleanUpPreviewButton_;
 
   QGroupBox *avoidedOldNewsDateOn_;
   QCalendarWidget *avoidedOldNewsDate_;
@@ -229,7 +231,6 @@ public:
 
 signals:
   void signalCategoriesTreeKeyUpDownPressed();
-  void signalPlaySound(const QString &soundPath);
 
 protected:
   bool eventFilter(QObject *obj, QEvent *event) override;
@@ -239,18 +240,10 @@ private slots:
   void slotCategoriesItemClicked(QTreeWidgetItem* item, int);
   void slotCategoriesTreeKeyUpDownPressed();
   void searchTextChanged(const QString &text);
-  void updateProxy();
-  void applyProxy();
   void acceptDialog();
   void closeDialog();
-  void selectionUserStyleNews();
-  void selectionSoundNotifier();
-  void slotPlaySoundNotifier();
   void showNotification();
   void deleteNotification();
-  void selectionDownloadLocation();
-  void updateCleanUpPreview();
-  void showCleanUpPreview();
 
 private:
   struct PageDescriptor {
@@ -281,69 +274,31 @@ private:
   QVector<QWidget *> pageWidgets_;
   QVector<QScrollArea *> pageScrollAreas_;
 
-  //stack widgets
-  QFrame *generalWidget_ = nullptr;
-  QFrame *traySystemWidget_ = nullptr;
-  QFrame *networkConnectionsWidget_ = nullptr;
-  QTabWidget *browserWidget_ = nullptr;
-  QTabWidget *feedsWidget_ = nullptr;
-  QTabWidget *notifierWidget_ = nullptr;
-  QWidget *backupWidget_ = nullptr;
-
   // extracted page controllers
+  GeneralSettingsPage *generalPage_ = nullptr;
+  SystemTraySettingsPage *traySystemPage_ = nullptr;
+  NetworkSettingsPage *networkPage_ = nullptr;
+  BrowserSettingsPage *browserPage_ = nullptr;
+  FeedsSettingsPage *feedsPage_ = nullptr;
   LabelsSettingsPage *labelsPage_ = nullptr;
+  NotificationsSettingsPage *notifierPage_ = nullptr;
+  NotifierFeedsDialog *feedsNotifierDlg_ = nullptr;
   PasswordsSettingsPage *passwordsPage_ = nullptr;
   LanguageSettingsPage *languagePage_ = nullptr;
   FontsColorsSettingsPage *fontsColorsPage_ = nullptr;
   ShortcutsSettingsPage *shortcutsPage_ = nullptr;
-  NotifierFeedsDialog *feedsNotifierDlg_ = nullptr;
+  QWidget *backupWidget_ = nullptr;
 
-  // general
   QWidget *createGeneralWidget();
-  QCheckBox *autoRunEnabled_;
-  QSettings *autoRunSettings_;
-
-  // systemTray
   QWidget *createTraySystemWidget();
-  QRadioButton *staticIconTray_;
-  QRadioButton *changeIconTray_;
-  QRadioButton *newCountTray_;
-  QRadioButton *unreadCountTray_;
-
-  // network connection
   QWidget *createNetworkConnectionsWidget();
-  QRadioButton *systemProxyButton_;
-  QRadioButton *directConnectionButton_;
-  QRadioButton *manualProxyButton_;
-  QComboBox *typeProxy_;
-  LineEdit *editHost_;
-  LineEdit *editPort_;
-  LineEdit *editUser_;
-  LineEdit *editPassword_;
-  QNetworkProxy networkProxy_;
-  bool hadStoredCustomUserAgent_;
-  bool userAgentWarningAccepted_;
-
-  // browser
   QWidget *createBrowserWidget();
-
-  // feeds
   QWidget *createFeedsWidget();
   void onFeedsPageEntered();
-  void updateMaxDayCleanUpWarning();
-  ShutdownCleanUpConfig currentCleanUpConfig() const;
-  ShutdownCleanUpPlan cleanUpPlan_;
-  bool cleanUpPlanValid_ = false;
-  int initialMaxDayCleanUp_ = -1;
-
-  // notifier
-  QWidget *createNotifierWidget();
-  void openFeedsNotifierDlg();
-  NotificationWidget *notificationWidget_ = nullptr;
-
-  // extracted page creation/onEnter hooks
   QWidget *createLabelsWidget();
   void loadLabels();
+  QWidget *createNotifierWidget();
+  void openFeedsNotifierDlg();
   QWidget *createPasswordsWidget();
   void loadPasswords();
   QWidget *createLanguageWidget();
@@ -353,6 +308,7 @@ private:
   void loadShortcuts();
   QWidget *createBackupWidget();
 
+  NotificationWidget *notificationWidget_ = nullptr;
   QList<QAction *> shortcutActions_;
   const QStringList *listDefaultShortcut_ = nullptr;
   QString selectedLanguage_;
