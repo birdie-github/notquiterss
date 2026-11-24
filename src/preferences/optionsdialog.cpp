@@ -383,86 +383,53 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createGeneralWidget()
 {
-  showSplashScreen_ = new QCheckBox(tr("Show splash screen on startup"));
-  reopenFeedStartup_ = new QCheckBox(tr("Reopen last opened feeds on startup"));
-  openNewTabNextToActive_ = new QCheckBox(tr("Open new tab next to active"));
-  hideFeedsOpenTab_ = new QCheckBox(tr("Hide feeds tree when opening tabs"));
-  showToggleFeedsTree_ = new QCheckBox(tr("Show feeds tree toggle"));
-  defaultIconFeeds_ = new QCheckBox(tr("Show default RSS icon instead of each feed's icon"));
-  autocollapseFolder_ = new QCheckBox(tr("Automatically collapse folders"));
-  showCloseButtonTab_ = new QCheckBox(tr("Show a close button on each tab"));
-
-  updateCheckEnabled_ = new QCheckBox(tr("Automatically check for updates"));
-  storeDBMemory_ = new QCheckBox(tr("Store the database in memory (requires application restart)"));
-  storeDBMemory_->setChecked(false);
-  saveDBMemFileInterval_ = new QSpinBox();
-  saveDBMemFileInterval_->setRange(1, 999);
-
-  QHBoxLayout *saveDBMemFileLayout = new QHBoxLayout();
-  saveDBMemFileLayout->setContentsMargins(15, 0, 0, 0);
-  saveDBMemFileLayout->addWidget(new QLabel(tr("Save the in-memory database to disk every")));
-  saveDBMemFileLayout->addWidget(saveDBMemFileInterval_);
-  saveDBMemFileLayout->addWidget(new QLabel(tr("minutes")));
-  saveDBMemFileLayout->addStretch();
-
-  QWidget *saveDBMemFileWidget = new QWidget();
-  saveDBMemFileWidget->setEnabled(false);
-  saveDBMemFileWidget->setLayout(saveDBMemFileLayout);
-
-  connect(storeDBMemory_, &QAbstractButton::toggled, saveDBMemFileWidget, &QWidget::setEnabled);
-
-  QVBoxLayout *generalLayout = new QVBoxLayout();
-  generalLayout->addWidget(showSplashScreen_);
-  generalLayout->addWidget(reopenFeedStartup_);
-  generalLayout->addWidget(openNewTabNextToActive_);
-  generalLayout->addWidget(hideFeedsOpenTab_);
-  generalLayout->addWidget(showToggleFeedsTree_);
-  generalLayout->addWidget(defaultIconFeeds_);
-  generalLayout->addWidget(autocollapseFolder_);
-  generalLayout->addWidget(showCloseButtonTab_);
+  generalWidget_ = OptionsPageBuilder::buildFrame(PageGeneral, &searchEntries_, [this](OptionsPageBuilder &b) {
+    b.check(showSplashScreen_, tr("Show splash screen on startup"));
+    b.check(reopenFeedStartup_, tr("Reopen last opened feeds on startup"));
+    b.check(openNewTabNextToActive_, tr("Open new tab next to active"));
+    b.check(hideFeedsOpenTab_, tr("Hide feeds tree when opening tabs"));
+    b.check(showToggleFeedsTree_, tr("Show feeds tree toggle"));
+    b.check(defaultIconFeeds_, tr("Show default RSS icon instead of each feed's icon"));
+    b.check(autocollapseFolder_, tr("Automatically collapse folders"));
+    b.check(showCloseButtonTab_, tr("Show a close button on each tab"));
 #ifdef NQRSS_ENABLE_DONATE_BUTTON
-  hideDonateButton_ = new QCheckBox(tr("Hide the donate button"));
-  generalLayout->addWidget(hideDonateButton_);
+    b.check(hideDonateButton_, tr("Hide the donate button"));
 #endif
-  generalLayout->addSpacing(20);
+    b.spacing(20);
 
 #if defined(Q_OS_WIN)
-  autoRunEnabled_ = new QCheckBox(tr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()));
-  autoRunSettings_ = new QSettings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-                                   QSettings::NativeFormat);
-  bool isAutoRun;
-  if (mainApp->isPortableAppsCom())
-    isAutoRun = autoRunSettings_->value((QCoreApplication::applicationName() + "Portable"), false).toBool();
-  else
-    isAutoRun = autoRunSettings_->value(QCoreApplication::applicationName(), false).toBool();
-  autoRunEnabled_->setChecked(isAutoRun);
-
-  generalLayout->addWidget(autoRunEnabled_);
+    b.check(autoRunEnabled_, tr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()));
+    autoRunSettings_ = new QSettings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+                                     QSettings::NativeFormat);
+    const QString autoRunKey = mainApp->isPortableAppsCom()
+        ? (QCoreApplication::applicationName() + QStringLiteral("Portable"))
+        : QCoreApplication::applicationName();
+    autoRunEnabled_->setChecked(autoRunSettings_->value(autoRunKey, false).toBool());
 #endif
 
-  generalLayout->addWidget(updateCheckEnabled_);
-  generalLayout->addWidget(storeDBMemory_);
-  generalLayout->addWidget(saveDBMemFileWidget);
-  QGroupBox *debugGroup = new QGroupBox(tr("Debug"));
-  QHBoxLayout *debugLayout = new QHBoxLayout(debugGroup);
-  QCheckBox *fileLogging = new QCheckBox(tr("Enable file logging"));
-  fileLogging->setChecked(LogFile::fileLoggingEnabled());
-  fileLogging->setToolTip(tr("Takes effect immediately. Existing logs are kept when disabled."));
-  QPushButton *showLog = new QPushButton(tr("Show log location"));
-  debugLayout->addWidget(fileLogging);
-  debugLayout->addWidget(showLog);
-  debugLayout->addStretch();
-  connect(fileLogging, &QCheckBox::toggled, this, [](bool enabled) {
-    Settings().setValue("Settings/logFileOutput", enabled);
-    LogFile::setFileLoggingEnabled(enabled);
-  });
-  connect(showLog, &QPushButton::clicked, this, []() { LogFile::showLocation(); });
-  generalLayout->addWidget(debugGroup);
-  generalLayout->addStretch(1);
+    b.check(updateCheckEnabled_, tr("Automatically check for updates"));
+    b.check(storeDBMemory_, tr("Store the database in memory (requires application restart)"));
+    QWidget *saveDBMemFileWidget = b.indented(QMargins(15, 0, 0, 0), [this](OptionsPageBuilder &sub) {
+      sub.spinRow(saveDBMemFileInterval_,
+                  tr("Save the in-memory database to disk every"), 1, 999, tr("minutes"));
+    });
+    OptionsPageBuilder::bindEnabled(storeDBMemory_, {saveDBMemFileWidget});
 
-  generalWidget_ = new QFrame();
-  generalWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  generalWidget_->setLayout(generalLayout);
+    b.group(tr("Debug"), [this](OptionsPageBuilder &grp) {
+      grp.row([this](OptionsRowBuilder &r) {
+        QCheckBox *fileLogging = r.check(tr("Enable file logging"),
+            tr("Takes effect immediately. Existing logs are kept when disabled."));
+        fileLogging->setChecked(LogFile::fileLoggingEnabled());
+        connect(fileLogging, &QCheckBox::toggled, this, [](bool enabled) {
+          Settings().setValue("Settings/logFileOutput", enabled);
+          LogFile::setFileLoggingEnabled(enabled);
+        });
+        QPushButton *showLog = r.button(tr("Show log location"));
+        connect(showLog, &QPushButton::clicked, this, []() { LogFile::showLocation(); });
+      });
+    }, Qt::Horizontal);
+    b.stretch(1);
+  });
   return generalWidget_;
 }
 
@@ -470,56 +437,34 @@ QWidget *OptionsDialog::createGeneralWidget()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createTraySystemWidget()
 {
-  showTrayIconBox_ = new QGroupBox(tr("Show system tray icon"));
-  showTrayIconBox_->setCheckable(true);
-
-  startingTray_ = new QCheckBox(tr("starting %1").arg(QGuiApplication::applicationDisplayName()));
-  minimizingTray_ = new QCheckBox(tr("minimizing %1").arg(QGuiApplication::applicationDisplayName()));
-  closingTray_ = new QCheckBox(tr("closing %1").arg(QGuiApplication::applicationDisplayName()));
-  QVBoxLayout *moveTrayLayout = new QVBoxLayout();
-  moveTrayLayout->setContentsMargins(15, 0, 5, 10);
-  moveTrayLayout->addWidget(startingTray_);
-  moveTrayLayout->addWidget(minimizingTray_);
-  moveTrayLayout->addWidget(closingTray_);
-
-  staticIconTray_ = new QRadioButton(tr("Show a static icon"));
-  changeIconTray_ = new QRadioButton(tr("Change icon when new articles arrive"));
-  newCountTray_ = new QRadioButton(tr("Show number of new articles"));
-  unreadCountTray_ = new QRadioButton(tr("Show number of unread articles"));
-  QVBoxLayout *behaviorLayout = new QVBoxLayout();
-  behaviorLayout->setContentsMargins(15, 0, 5, 10);
-  behaviorLayout->addWidget(staticIconTray_);
-  behaviorLayout->addWidget(changeIconTray_);
-  behaviorLayout->addWidget(newCountTray_);
-  behaviorLayout->addWidget(unreadCountTray_);
-
-  singleClickTray_ = new QCheckBox(
-        tr("Use a single click instead of a double click to show the window"));
-  clearStatusNew_ = new QCheckBox(tr("Clear 'new' status when minimizing to tray"));
-  emptyWorking_ = new QCheckBox(tr("Empty working set when minimizing to tray"));
-
-  QVBoxLayout *trayLayout = new QVBoxLayout(showTrayIconBox_);
+  traySystemWidget_ = OptionsPageBuilder::buildFrame(PageSystemTray, &searchEntries_, [this](OptionsPageBuilder &b) {
+    b.group(showTrayIconBox_, tr("Show system tray icon"), true, [this](OptionsPageBuilder &grp) {
 #ifndef Q_OS_MAC
-  trayLayout->addWidget(new QLabel(tr("Move to the system tray when:")));
-  trayLayout->addLayout(moveTrayLayout);
+      grp.label(tr("Move to the system tray when:"));
+      grp.indented(QMargins(15, 0, 5, 10), [this](OptionsPageBuilder &sub) {
+        const QString appName = QGuiApplication::applicationDisplayName();
+        sub.check(startingTray_, tr("starting %1").arg(appName));
+        sub.check(minimizingTray_, tr("minimizing %1").arg(appName));
+        sub.check(closingTray_, tr("closing %1").arg(appName));
+      });
 #endif
-  trayLayout->addWidget(new QLabel(tr("Tray icon behavior:")));
-  trayLayout->addLayout(behaviorLayout);
+      grp.label(tr("Tray icon behavior:"));
+      grp.indented(QMargins(15, 0, 5, 10), [this](OptionsPageBuilder &sub) {
+        sub.radio(staticIconTray_, tr("Show a static icon"));
+        sub.radio(changeIconTray_, tr("Change icon when new articles arrive"));
+        sub.radio(newCountTray_, tr("Show number of new articles"));
+        sub.radio(unreadCountTray_, tr("Show number of unread articles"));
+      });
 #ifndef Q_OS_MAC
-  trayLayout->addWidget(singleClickTray_);
-  trayLayout->addWidget(clearStatusNew_);
+      grp.check(singleClickTray_, tr("Use a single click instead of a double click to show the window"));
+      grp.check(clearStatusNew_, tr("Clear 'new' status when minimizing to tray"));
 #endif
 #if defined(Q_OS_WIN)
-  trayLayout->addWidget(emptyWorking_);
+      grp.check(emptyWorking_, tr("Empty working set when minimizing to tray"));
 #endif
-  trayLayout->addStretch(1);
-
-  QVBoxLayout *boxTrayLayout = new QVBoxLayout();
-  boxTrayLayout->addWidget(showTrayIconBox_);
-
-  traySystemWidget_ = new QFrame();
-  traySystemWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  traySystemWidget_->setLayout(boxTrayLayout);
+      grp.stretch(1);
+    });
+  });
   return traySystemWidget_;
 }
 
@@ -527,132 +472,82 @@ QWidget *OptionsDialog::createTraySystemWidget()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createNetworkConnectionsWidget()
 {
-  directConnectionButton_ = new QRadioButton(
-        tr("Direct connection to the Internet"));
-  systemProxyButton_ = new QRadioButton(
-        tr("System proxy configuration (if available)"));
-  manualProxyButton_ = new QRadioButton(tr("Manual proxy configuration:"));
+  networkConnectionsWidget_ = OptionsPageBuilder::buildFrame(PageNetwork, &searchEntries_, [this](OptionsPageBuilder &b) {
+    b.radio(directConnectionButton_, tr("Direct connection to the Internet"));
+    b.radio(systemProxyButton_, tr("System proxy configuration (if available)"));
+    b.radio(manualProxyButton_, tr("Manual proxy configuration:"));
 
-  QVBoxLayout *networkConnectionsLayout = new QVBoxLayout();
-  networkConnectionsLayout->addWidget(directConnectionButton_);
-  networkConnectionsLayout->addWidget(systemProxyButton_);
-  networkConnectionsLayout->addWidget(manualProxyButton_);
+    QWidget *manualWidget = b.indented(QMargins(0, 0, 0, 0), [this](OptionsPageBuilder &sub) {
+      sub.row([this](OptionsRowBuilder &r) {
+        r.combo(typeProxy_, {QStringLiteral("HTTP"), QStringLiteral("SOCKS5")});
+        r.label(tr("Proxy server:"));
+        r.lineEdit(editHost_);
+        r.label(tr("Port:"));
+        r.lineEdit(editPort_);
+        editPort_->setFixedWidth(60);
+      }, QMargins(0, 0, 0, 0), false);
+      sub.row([this](OptionsRowBuilder &r) {
+        r.label(tr("Username:"));
+        r.lineEdit(editUser_);
+        r.label(tr("Password:"));
+        r.lineEdit(editPassword_);
+        editPassword_->setEchoMode(QLineEdit::Password);
+      }, QMargins(0, 0, 0, 0), false);
+      sub.stretch();
+    });
+    OptionsPageBuilder::bindEnabled(manualProxyButton_, {manualWidget});
+    b.spacing(20);
 
-  typeProxy_ = new QComboBox();
-  typeProxy_->addItems(QStringList() << "HTTP" << "SOCKS5");
-  editHost_ = new LineEdit();
-  editPort_ = new LineEdit();
-  editPort_->setFixedWidth(60);
-  editUser_ = new LineEdit();
-  editPassword_ = new LineEdit();
-  editPassword_->setEchoMode(QLineEdit::Password);
+    b.label(tr("Network options for feed updates (requires application restart):"));
+    b.grid(QMargins(15, 0, 5, 0), 1, [this](OptionsGridBuilder &g) {
+      g.addSpinRow(0, tr("Request timeout:"), timeoutRequest_, 0, 300);
+      g.addSpinRow(1, tr("Number of requests:"), numberRequests_, 1, 10);
+      g.addSpinRow(2, tr("Number of retries:"), numberRepeats_, 1, 10);
+    });
+    b.spacing(20);
 
-  QHBoxLayout *addrPortLayout = new QHBoxLayout();
-  addrPortLayout->setContentsMargins(0, 0, 0, 0);
-  addrPortLayout->addWidget(typeProxy_);
-  addrPortLayout->addWidget(new QLabel(tr("Proxy server:")));
-  addrPortLayout->addWidget(editHost_);
-  addrPortLayout->addWidget(new QLabel(tr("Port:")));
-  addrPortLayout->addWidget(editPort_);
+    b.check(customUserAgent_, tr("Use custom User-Agent"));
+    b.indented(QMargins(15, 0, 5, 0), [this](OptionsPageBuilder &sub) {
+      userAgentEdit_ = new LineEdit();
+      Settings userAgentSettings("Settings");
+      hadStoredCustomUserAgent_ = userAgentSettings.contains("userAgent");
+      const bool useCustomUserAgent = userAgentSettings.contains("useCustomUserAgent")
+          ? userAgentSettings.value("useCustomUserAgent", false).toBool()
+          : hadStoredCustomUserAgent_;
+      userAgentEdit_->setText(hadStoredCustomUserAgent_
+          ? userAgentSettings.value("userAgent").toString()
+          : QString());
+      userAgentEdit_->setPlaceholderText(tr("Enter a custom User-Agent"));
+      userAgentEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+      userAgentEdit_->setMinimumWidth(0);
+      customUserAgent_->setChecked(useCustomUserAgent);
+      userAgentEdit_->setEnabled(useCustomUserAgent);
+      sub.addWidget(userAgentEdit_);
 
-  QWidget *addrPortWidget = new QWidget();
-  addrPortWidget->setLayout(addrPortLayout);
-
-  QHBoxLayout *userPasswordLayout = new QHBoxLayout();
-  userPasswordLayout->setContentsMargins(0, 0, 0, 0);
-  userPasswordLayout->addWidget(new QLabel(tr("Username:")));
-  userPasswordLayout->addWidget(editUser_);
-  userPasswordLayout->addWidget(new QLabel(tr("Password:")));
-  userPasswordLayout->addWidget(editPassword_);
-
-  QWidget *userPasswordWidget = new QWidget();
-  userPasswordWidget->setLayout(userPasswordLayout);
-
-  QVBoxLayout *manualLayout = new QVBoxLayout();
-  manualLayout->setContentsMargins(0, 0, 0, 0);
-  manualLayout->addWidget(addrPortWidget);
-  manualLayout->addWidget(userPasswordWidget);
-  manualLayout->addStretch();
-
-  manualWidget_ = new QWidget();
-  manualWidget_->setEnabled(false);  // because proper radio-button isn't set on creation
-  manualWidget_->setLayout(manualLayout);
-
-  networkConnectionsLayout->addWidget(manualWidget_);
-  networkConnectionsLayout->addSpacing(20);
-
-  customUserAgent_ = new QCheckBox(tr("Use custom User-Agent"));
-  userAgentEdit_ = new LineEdit();
-
-  Settings userAgentSettings("Settings");
-  hadStoredCustomUserAgent_ = userAgentSettings.contains("userAgent");
-  const bool useCustomUserAgent = userAgentSettings.contains("useCustomUserAgent")
-      ? userAgentSettings.value("useCustomUserAgent", false).toBool()
-      : hadStoredCustomUserAgent_;
-  userAgentEdit_->setText(hadStoredCustomUserAgent_
-      ? userAgentSettings.value("userAgent").toString()
-      : QString());
-  userAgentEdit_->setPlaceholderText(tr("Enter a custom User-Agent"));
-  userAgentEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  userAgentEdit_->setMinimumWidth(0);
-  customUserAgent_->setChecked(useCustomUserAgent);
-  userAgentEdit_->setEnabled(useCustomUserAgent);
-
-  QVBoxLayout *userAgentLayout = new QVBoxLayout();
-  userAgentLayout->setContentsMargins(15, 0, 5, 0);
-  userAgentLayout->addWidget(userAgentEdit_);
-
-  connect(customUserAgent_, &QCheckBox::toggled, this, [this](bool checked) {
-    if (checked && !hadStoredCustomUserAgent_ && !userAgentWarningAccepted_) {
-      QMessageBox warning(QMessageBox::Warning, tr("Custom User-Agent"),
-                          tr("A custom User-Agent can make this application's requests more distinctive "
-                             "and may make them easier to identify or fingerprint. Only change it if "
-                             "you understand the implications."),
-                          QMessageBox::NoButton, this);
-      QPushButton *continueButton = warning.addButton(tr("Continue"), QMessageBox::AcceptRole);
-      warning.addButton(QMessageBox::Cancel);
-      warning.setDefaultButton(QMessageBox::Cancel);
-      warning.exec();
-      if (warning.clickedButton() != continueButton) {
-        QSignalBlocker blocker(customUserAgent_);
-        customUserAgent_->setChecked(false);
-        userAgentEdit_->setEnabled(false);
-        return;
-      }
-      userAgentWarningAccepted_ = true;
-    }
-    userAgentEdit_->setEnabled(checked);
+      connect(customUserAgent_, &QCheckBox::toggled, this, [this](bool checked) {
+        if (checked && !hadStoredCustomUserAgent_ && !userAgentWarningAccepted_) {
+          QMessageBox warning(QMessageBox::Warning, tr("Custom User-Agent"),
+                              tr("A custom User-Agent can make this application's requests more distinctive "
+                                 "and may make them easier to identify or fingerprint. Only change it if "
+                                 "you understand the implications."),
+                              QMessageBox::NoButton, this);
+          QPushButton *continueButton = warning.addButton(tr("Continue"), QMessageBox::AcceptRole);
+          warning.addButton(QMessageBox::Cancel);
+          warning.setDefaultButton(QMessageBox::Cancel);
+          warning.exec();
+          if (warning.clickedButton() != continueButton) {
+            QSignalBlocker blocker(customUserAgent_);
+            customUserAgent_->setChecked(false);
+            userAgentEdit_->setEnabled(false);
+            return;
+          }
+          userAgentWarningAccepted_ = true;
+        }
+        userAgentEdit_->setEnabled(checked);
+      });
+    });
+    b.stretch(1);
   });
-
-  timeoutRequest_ = new QSpinBox();
-  timeoutRequest_->setRange(0, 300);
-  numberRequests_ = new QSpinBox();
-  numberRequests_->setRange(1, 10);
-  numberRepeats_ = new QSpinBox();
-  numberRepeats_->setRange(1, 10);
-
-  QGridLayout *requestLayout = new QGridLayout();
-  requestLayout->setColumnStretch(1, 1);
-  requestLayout->setContentsMargins(15, 0, 5, 0);
-  requestLayout->addWidget(new QLabel(tr("Request timeout:")), 0, 0);
-  requestLayout->addWidget(timeoutRequest_, 0, 1, 1, 1, Qt::AlignLeft);
-  requestLayout->addWidget(new QLabel(tr("Number of requests:")), 1, 0);
-  requestLayout->addWidget(numberRequests_, 1, 1, 1, 1, Qt::AlignLeft);
-  requestLayout->addWidget(new QLabel(tr("Number of retries:")), 2, 0);
-  requestLayout->addWidget(numberRepeats_, 2, 1, 1, 1, Qt::AlignLeft);
-
-  networkConnectionsLayout->addWidget(new QLabel(tr("Network options for feed updates (requires application restart):")));
-  networkConnectionsLayout->addLayout(requestLayout);
-  networkConnectionsLayout->addSpacing(20);
-  networkConnectionsLayout->addWidget(customUserAgent_);
-  networkConnectionsLayout->addLayout(userAgentLayout);
-  networkConnectionsLayout->addStretch(1);
-
-  networkConnectionsWidget_ = new QFrame();
-  networkConnectionsWidget_->setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-  networkConnectionsWidget_->setLayout(networkConnectionsLayout);
-
-  connect(manualProxyButton_, &QAbstractButton::toggled, this, &OptionsDialog::manualProxyToggle);
   return networkConnectionsWidget_;
 }
 
@@ -660,102 +555,68 @@ QWidget *OptionsDialog::createNetworkConnectionsWidget()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createBrowserWidget()
 {
-  QRadioButton *systemBrowser = new QRadioButton(tr("System default web browser"));
-  customExternalBrowser_ = new QRadioButton(tr("Custom web browser"));
-  QButtonGroup *browserGroup = new QButtonGroup(this);
-  browserGroup->addButton(systemBrowser);
-  browserGroup->addButton(customExternalBrowser_);
-  systemBrowser->setChecked(true);
-  externalBrowser_ = new LineEdit();
+  browserWidget_ = OptionsPageBuilder::buildTabs(PageBrowser, &searchEntries_, {
+    {tr("Articles"), [this](OptionsPageBuilder &b) {
+      b.check(autoLoadImages_, tr("Load images"));
+      b.check(highQualityImageScaling_, tr("Use Lanczos scaling for article images"),
+              tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"));
+      b.spinRow(preloadNewspaperPages_, tr("Preload up to"), 0, 10,
+                tr("pages in newspaper mode"), tr("0 disables image preloading"));
+      OptionsPageBuilder::bindEnabled(autoLoadImages_, {highQualityImageScaling_, preloadNewspaperPages_});
+
+      b.row([this](OptionsRowBuilder &r) {
+        const QString zoomLabel = tr("Default article zoom:");
+        r.label(zoomLabel);
+        r.spin(defaultZoomPages_, 30, 300, QStringLiteral(" %"));
+        r.registerSearch(defaultZoomPages_, zoomLabel);
+      });
+      b.spacing(12);
+
+      b.label(tr("Open links in:"));
+      QRadioButton *systemBrowser = b.radio(tr("System default web browser"));
+      b.radio(customExternalBrowser_, tr("Custom web browser"));
+      auto *browserGroup = new QButtonGroup(this);
+      browserGroup->addButton(systemBrowser);
+      browserGroup->addButton(customExternalBrowser_);
+      systemBrowser->setChecked(true);
+
+      QPushButton *browseBrowser = b.pathRow(externalBrowser_, QString(), tr("Browse..."));
 #ifdef Q_OS_MAC
-  externalBrowser_->setPlaceholderText(tr("Application name or application bundle path"));
+      externalBrowser_->setPlaceholderText(tr("Application name or application bundle path"));
 #else
-  externalBrowser_->setPlaceholderText(tr("Browser command, including any arguments"));
-  externalBrowser_->setToolTip(tr("Use double quotes around paths containing spaces. The article URL is appended automatically."));
+      externalBrowser_->setPlaceholderText(tr("Browser command, including any arguments"));
+      externalBrowser_->setToolTip(tr("Use double quotes around paths containing spaces. The article URL is appended automatically."));
 #endif
-  QPushButton *browseBrowser = new QPushButton(tr("Browse..."));
-  externalBrowser_->setEnabled(false);
-  browseBrowser->setEnabled(false);
-  connect(customExternalBrowser_, &QRadioButton::toggled,
-          externalBrowser_, &QWidget::setEnabled);
-  connect(customExternalBrowser_, &QRadioButton::toggled,
-          browseBrowser, &QWidget::setEnabled);
-  connect(browseBrowser, &QPushButton::clicked, this, [this]() {
-    const QString file = QFileDialog::getOpenFileName(
-        this, tr("Select Browser"), QString(), tr("All files (*)"),
-        nullptr, QFileDialog::DontResolveSymlinks);
-    if (!file.isEmpty()) externalBrowser_->setText(QDir::toNativeSeparators(file));
+      OptionsPageBuilder::bindEnabled(customExternalBrowser_, {externalBrowser_, browseBrowser});
+      connect(browseBrowser, &QPushButton::clicked, this, [this]() {
+        const QString file = QFileDialog::getOpenFileName(
+            this, tr("Select Browser"), QString(), tr("All files (*)"),
+            nullptr, QFileDialog::DontResolveSymlinks);
+        if (!file.isEmpty()) externalBrowser_->setText(QDir::toNativeSeparators(file));
+      });
+
+      b.check(returnFocusAfterLink_,
+              tr("Return focus to %1 after opening a link").arg(ProjectMetadata::name()),
+              tr("Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.").arg(ProjectMetadata::name()));
+      // clicked, rather than toggled: loading saved settings must not show a dialog.
+      connect(returnFocusAfterLink_, &QAbstractButton::clicked, this, [this](bool checked) {
+        if (!checked || !QGuiApplication::platformName().startsWith(QLatin1String("wayland")) ||
+            AppSettings::returnFocusWaylandWarningShown.get()) return;
+        QMessageBox::warning(this, tr("Returning focus"),
+                             tr("On Wayland, returning focus to %1 after opening a link may be unreliable or may not work at all.").arg(ProjectMetadata::name()),
+                             QMessageBox::Ok);
+        // Remember the acknowledgement even if the user cancels Options afterward.
+        AppSettings::returnFocusWaylandWarningShown.set(true);
+      });
+      b.stretch();
+    }},
+    {tr("Downloads"), [this](OptionsPageBuilder &b) {
+      QPushButton *browse = b.pathRow(downloadLocationEdit_, tr("Download location:"), tr("Browse..."));
+      connect(browse, &QAbstractButton::clicked, this, &OptionsDialog::selectionDownloadLocation);
+      b.check(askDownloadLocation_, tr("Ask where to save each file before downloading"));
+      b.stretch();
+    }},
   });
-  QHBoxLayout *browserCommandLayout = new QHBoxLayout();
-  browserCommandLayout->addWidget(externalBrowser_, 1);
-  browserCommandLayout->addWidget(browseBrowser);
-
-  returnFocusAfterLink_ = new QCheckBox(tr("Return focus to %1 after opening a link").arg(ProjectMetadata::name()));
-  returnFocusAfterLink_->setToolTip(tr("Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.").arg(ProjectMetadata::name()));
-  // clicked, rather than toggled: loading saved settings must not show a dialog.
-  connect(returnFocusAfterLink_, &QAbstractButton::clicked, this, [this](bool checked) {
-    if (!checked || !QGuiApplication::platformName().startsWith(QLatin1String("wayland")) ||
-        AppSettings::returnFocusWaylandWarningShown.get()) return;
-    QMessageBox::warning(this, tr("Returning focus"),
-                         tr("On Wayland, returning focus to %1 after opening a link may be unreliable or may not work at all.").arg(ProjectMetadata::name()),
-                         QMessageBox::Ok);
-    // Remember the acknowledgement even if the user cancels Options afterward.
-    AppSettings::returnFocusWaylandWarningShown.set(true);
-  });
-
-  autoLoadImages_ = new QCheckBox(tr("Load images"));
-  highQualityImageScaling_ = new QCheckBox(tr("Use Lanczos scaling for article images"));
-  highQualityImageScaling_->setToolTip(tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"));
-  preloadNewspaperPages_ = new QSpinBox();
-  preloadNewspaperPages_->setRange(0, 10);
-  preloadNewspaperPages_->setToolTip(tr("0 disables image preloading"));
-  QHBoxLayout *preloadLayout = new QHBoxLayout();
-  preloadLayout->addWidget(new QLabel(tr("Preload up to")));
-  preloadLayout->addWidget(preloadNewspaperPages_);
-  preloadLayout->addWidget(new QLabel(tr("pages in newspaper mode")));
-  preloadLayout->addStretch();
-  connect(autoLoadImages_, &QAbstractButton::toggled, highQualityImageScaling_, &QWidget::setEnabled);
-  connect(autoLoadImages_, &QAbstractButton::toggled, preloadNewspaperPages_, &QWidget::setEnabled);
-
-  defaultZoomPages_ = new QSpinBox();
-  defaultZoomPages_->setRange(30, 300);
-  defaultZoomPages_->setSuffix(" %");
-  QHBoxLayout *zoomLayout = new QHBoxLayout();
-  zoomLayout->addWidget(new QLabel(tr("Default article zoom:")));
-  zoomLayout->addWidget(defaultZoomPages_);
-  zoomLayout->addStretch();
-  QVBoxLayout *articleLayout = new QVBoxLayout();
-  articleLayout->addWidget(autoLoadImages_);
-  articleLayout->addWidget(highQualityImageScaling_);
-  articleLayout->addLayout(preloadLayout);
-  articleLayout->addLayout(zoomLayout);
-  articleLayout->addSpacing(12);
-  articleLayout->addWidget(new QLabel(tr("Open links in:")));
-  articleLayout->addWidget(systemBrowser);
-  articleLayout->addWidget(customExternalBrowser_);
-  articleLayout->addLayout(browserCommandLayout);
-  articleLayout->addWidget(returnFocusAfterLink_);
-  articleLayout->addStretch();
-  QWidget *articleWidget = new QWidget();
-  articleWidget->setLayout(articleLayout);
-
-  downloadLocationEdit_ = new LineEdit();
-  QPushButton *browse = new QPushButton(tr("Browse..."));
-  connect(browse, &QAbstractButton::clicked, this, &OptionsDialog::selectionDownloadLocation);
-  askDownloadLocation_ = new QCheckBox(tr("Ask where to save each file before downloading"));
-  QHBoxLayout *location = new QHBoxLayout();
-  location->addWidget(downloadLocationEdit_);
-  location->addWidget(browse);
-  QVBoxLayout *downloadsLayout = new QVBoxLayout();
-  downloadsLayout->addWidget(new QLabel(tr("Download location:")));
-  downloadsLayout->addLayout(location);
-  downloadsLayout->addWidget(askDownloadLocation_);
-  downloadsLayout->addStretch();
-  QWidget *downloads = new QWidget();
-  downloads->setLayout(downloadsLayout);
-  browserWidget_ = new QTabWidget();
-  browserWidget_->addTab(articleWidget, tr("Articles"));
-  browserWidget_->addTab(downloads, tr("Downloads"));
   return browserWidget_;
 }
 
@@ -763,338 +624,222 @@ QWidget *OptionsDialog::createBrowserWidget()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createFeedsWidget()
 {
-//! tab "General"
-  updateFeedsStartUp_ = new QCheckBox(
-        tr("Automatically update feeds on startup"));
-  updateFeedsStartUp_->setToolTip(tr("Refresh enabled feeds immediately when the application starts. "
-                                    "Otherwise, overdue scheduled feeds are checked after one minute."));
-  updateFeedsEnable_ = new QCheckBox(tr("Automatically update feeds every"));
-  updateFeedsEnable_->setToolTip(tr("Time spent with the application closed counts toward the interval. "
-                                   "Overdue feeds are refreshed after a one-minute startup grace period."));
-  updateFeedsInterval_ = new QSpinBox();
-  updateFeedsInterval_->setEnabled(false);
-  updateFeedsInterval_->setRange(1, 9999);
-  connect(updateFeedsEnable_, &QAbstractButton::toggled, updateFeedsInterval_, &QWidget::setEnabled);
+  feedsWidget_ = OptionsPageBuilder::buildTabs(PageFeeds, &searchEntries_, {
+    {tr("General"), [this](OptionsPageBuilder &b) {
+      b.check(updateFeedsStartUp_, tr("Automatically update feeds on startup"),
+              tr("Refresh enabled feeds immediately when the application starts. "
+                 "Otherwise, overdue scheduled feeds are checked after one minute."));
+      b.row([this](OptionsRowBuilder &r) {
+        r.check(updateFeedsEnable_, tr("Automatically update feeds every"),
+                tr("Time spent with the application closed counts toward the interval. "
+                   "Overdue feeds are refreshed after a one-minute startup grace period."));
+        r.spin(updateFeedsInterval_, 1, 9999);
+        r.combo(updateIntervalType_, {tr("seconds"), tr("minutes"), tr("hours")});
+        OptionsPageBuilder::bindEnabled(updateFeedsEnable_, {updateFeedsInterval_, updateIntervalType_});
+      }, QMargins(0, 0, 0, 0));
+      b.spacing(10);
 
-  updateIntervalType_ = new QComboBox(this);
-  updateIntervalType_->setEnabled(false);
-  QStringList intervalList;
-  intervalList << tr("seconds") << tr("minutes")  << tr("hours");
-  updateIntervalType_->addItems(intervalList);
-  connect(updateFeedsEnable_, &QAbstractButton::toggled, updateIntervalType_, &QWidget::setEnabled);
+      b.label(tr("Action when opening a feed:"));
+      b.grid(QMargins(15, 0, 0, 10), 1, [this](OptionsGridBuilder &g) {
+        g.radio(0, 0, positionLastNews_, tr("Focus the last opened article"));
+        g.check(0, 1, openNewsWebViewOn_, tr("Open the article"));
+        g.radio(1, 0, positionFirstNews_, tr("Focus the first article in the list"));
+        g.radio(2, 0, positionUnreadNews_, tr("Focus the first unread article"));
+        g.radio(3, 0, nottoOpenNews_, tr("Do nothing"));
+        connect(nottoOpenNews_, &QAbstractButton::toggled, openNewsWebViewOn_, &QWidget::setDisabled);
+      });
 
-  QHBoxLayout *updateFeedsLayout = new QHBoxLayout();
-  updateFeedsLayout->setContentsMargins(0, 0, 0, 0);
-  updateFeedsLayout->addWidget(updateFeedsEnable_);
-  updateFeedsLayout->addWidget(updateFeedsInterval_);
-  updateFeedsLayout->addWidget(updateIntervalType_);
-  updateFeedsLayout->addStretch();
+      b.check(markIdenticalNewsRead_, tr("Automatically mark identical news as read"));
+      b.spacing(15);
 
-  positionLastNews_ = new QRadioButton(tr("Focus the last opened article"));
-  positionFirstNews_ = new QRadioButton(tr("Focus the first article in the list"));
-  positionUnreadNews_ = new QRadioButton(tr("Focus the first unread article"));
-  openNewsWebViewOn_ = new QCheckBox(tr("Open the article"));
-  nottoOpenNews_ = new QRadioButton(tr("Do nothing"));
-  connect(nottoOpenNews_, &QAbstractButton::toggled, openNewsWebViewOn_, &QWidget::setDisabled);
+      b.group(avoidedOldNewsDateOn_, tr("Do not add articles published before this date to the database:"),
+              true, [this](OptionsPageBuilder &grp) {
+        avoidedOldNewsDate_ = new QCalendarWidget();
+        avoidedOldNewsDate_->setSelectedDate(QDate::currentDate());
+        avoidedOldNewsDate_->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+        avoidedOldNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
+        grp.addWidget(avoidedOldNewsDate_);
+        grp.stretch();
+      }, Qt::Horizontal, QMargins(5, 5, 5, 5));
+      avoidedOldNewsDateOn_->setChecked(false);
+      b.stretch();
+    }},
+    {tr("Display"), [this](OptionsPageBuilder &b) {
+      b.check(alternatingRowColorsNews_, tr("Alternating row background colors"));
+      b.spacing(10);
+      b.check(simplifiedDateTime_, tr("Simplified date and time format"));
 
-  QGridLayout *openingFeedsLayout = new QGridLayout();
-  openingFeedsLayout->setContentsMargins(15, 0, 0, 10);
-  openingFeedsLayout->setColumnStretch(1, 1);
-  openingFeedsLayout->addWidget(positionLastNews_, 0, 0, 1, 1);
-  openingFeedsLayout->addWidget(openNewsWebViewOn_, 0, 1, 1, 1);
-  openingFeedsLayout->addWidget(positionFirstNews_, 1, 0, 1, 1);
-  openingFeedsLayout->addWidget(positionUnreadNews_, 2, 0, 1, 1);
-  openingFeedsLayout->addWidget(nottoOpenNews_, 3, 0, 1, 1);
+      b.row([this](OptionsRowBuilder &r) {
+        const QString dateLabel = tr("Date display format:");
+        const QString timeLabel = tr("time:");
+        r.label(dateLabel);
+        r.combo(formatDate_);
+        const QPair<QString, const char *> dateFormats[] = {
+          {QStringLiteral("31.12.99"), "dd.MM.yy"},
+          {QStringLiteral("31.12.1999"), "dd.MM.yyyy"},
+          {QStringLiteral("31. %1. 1999").arg(tr("Dec")), "dd. MMM. yyyy"},
+          {QStringLiteral("31. %1 1999").arg(tr("December")), "dd. MMMM yyyy"},
+          {QStringLiteral("99-12-31"), "yy-MM-dd"},
+          {QStringLiteral("1999-12-31"), "yyyy-MM-dd"},
+          {QStringLiteral("12/31/1999"), "MM/dd/yyyy"},
+        };
+        for (const auto &entry : dateFormats) {
+          formatDate_->addItem(entry.first, QLatin1String(entry.second));
+        }
+        r.registerSearch(formatDate_, dateLabel);
 
-  markIdenticalNewsRead_ = new QCheckBox(tr("Automatically mark identical news as read"));
+        r.spacing(10);
+        r.label(timeLabel);
+        r.combo(formatTime_);
+        const QPair<const char *, const char *> timeFormats[] = {
+          {"13:37", "hh:mm"},
+          {"13:37:09", "hh:mm:ss"},
+          {"01:37 PM", "hh:mm AP"},
+          {"01:37:09 PM", "hh:mm:ss AP"},
+        };
+        for (const auto &entry : timeFormats) {
+          formatTime_->addItem(QLatin1String(entry.first), QLatin1String(entry.second));
+        }
+        r.registerSearch(formatTime_, dateLabel + QLatin1Char(' ') + timeLabel);
+      }, QMargins(0, 0, 0, 0));
+      b.spacing(10);
 
-  avoidedOldNewsDate_ = new QCalendarWidget();
-  avoidedOldNewsDate_->setSelectedDate(QDate::currentDate());
-  avoidedOldNewsDate_->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-  avoidedOldNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
-  QHBoxLayout *avoidedOldNewsDateLayout = new QHBoxLayout();
-  avoidedOldNewsDateLayout->setContentsMargins(5, 5, 5, 5);
-  avoidedOldNewsDateLayout->addWidget(avoidedOldNewsDate_);
-  avoidedOldNewsDateLayout->addStretch();
-
-  avoidedOldNewsDateOn_ = new QGroupBox(tr("Do not add articles published before this date to the database:"));
-  avoidedOldNewsDateOn_->setCheckable(true);
-  avoidedOldNewsDateOn_->setChecked(false);
-  avoidedOldNewsDateOn_->setLayout(avoidedOldNewsDateLayout);
-
-  QVBoxLayout *generalFeedsLayout = new QVBoxLayout();
-  generalFeedsLayout->addWidget(updateFeedsStartUp_);
-  generalFeedsLayout->addLayout(updateFeedsLayout);
-  generalFeedsLayout->addSpacing(10);
-  generalFeedsLayout->addWidget(new QLabel(tr("Action when opening a feed:")));
-  generalFeedsLayout->addLayout(openingFeedsLayout);
-  generalFeedsLayout->addWidget(markIdenticalNewsRead_);
-  generalFeedsLayout->addSpacing(15);
-  generalFeedsLayout->addWidget(avoidedOldNewsDateOn_);
-  generalFeedsLayout->addStretch();
-
-  QWidget *generalFeedsWidget = new QWidget();
-  generalFeedsWidget->setLayout(generalFeedsLayout);
-
-  //! tab "Display"
-  QStringList itemList;
-  itemList << "31.12.99" << "31.12.1999"
-           << QString("31. %1. 1999").arg(tr("Dec"))
-           << QString("31. %1 1999").arg(tr("December"))
-           << "99-12-31" << "1999-12-31" << "12/31/1999";
-  formatDate_ = new QComboBox(this);
-  formatDate_->addItems(itemList);
-  formatDate_->setItemData(0, "dd.MM.yy");
-  formatDate_->setItemData(1, "dd.MM.yyyy");
-  formatDate_->setItemData(2, "dd. MMM. yyyy");
-  formatDate_->setItemData(3, "dd. MMMM yyyy");
-  formatDate_->setItemData(4, "yy-MM-dd");
-  formatDate_->setItemData(5, "yyyy-MM-dd");
-  formatDate_->setItemData(6, "MM/dd/yyyy");
-
-  itemList.clear();
-  itemList << "13:37"  << "13:37:09" << "01:37 PM"<< "01:37:09 PM";
-  formatTime_ = new QComboBox(this);
-  formatTime_->addItems(itemList);
-  formatTime_->setItemData(0, "hh:mm");
-  formatTime_->setItemData(1, "hh:mm:ss");
-  formatTime_->setItemData(2, "hh:mm AP");
-  formatTime_->setItemData(3, "hh:mm:ss AP");
-
-  QHBoxLayout *formatDateLayout = new QHBoxLayout();
-  formatDateLayout->setContentsMargins(0, 0, 0, 0);
-  formatDateLayout->addWidget(new QLabel(tr("Date display format:")));
-  formatDateLayout->addWidget(formatDate_);
-  formatDateLayout->addSpacing(10);
-  formatDateLayout->addWidget(new QLabel(tr("time:")));
-  formatDateLayout->addWidget(formatTime_);
-  formatDateLayout->addStretch();
-
-  alternatingRowColorsNews_ = new QCheckBox(tr("Alternating row background colors"));
-  simplifiedDateTime_ = new QCheckBox(tr("Simplified date and time format"));
-
-  itemList.clear();
-  itemList << tr("Show All")  << tr("Show New") << tr("Show Unread")
-           << tr("Show Starred") << tr("Show Not Starred")
-           << tr("Show Unread or Starred") << tr("Show Last Day")
-           << tr("Show Last 7 Days");
-  mainNewsFilter_ = new QComboBox(this);
-  mainNewsFilter_->addItems(itemList);
-  mainNewsFilter_->setItemData(0, "filterNewsAll_");
-  mainNewsFilter_->setItemData(1, "filterNewsNew_");
-  mainNewsFilter_->setItemData(2, "filterNewsUnread_");
-  mainNewsFilter_->setItemData(3, "filterNewsStar_");
-  mainNewsFilter_->setItemData(4, "filterNewsNotStarred_");
-  mainNewsFilter_->setItemData(5, "filterNewsUnreadStar_");
-  mainNewsFilter_->setItemData(6, "filterNewsLastDay_");
-  mainNewsFilter_->setItemData(7, "filterNewsLastWeek_");
-
-  QHBoxLayout *mainNewsFilterLayout = new QHBoxLayout();
-  mainNewsFilterLayout->setContentsMargins(0, 0, 0, 0);
-  mainNewsFilterLayout->addWidget(new QLabel(tr("Default article filter:")));
-  mainNewsFilterLayout->addWidget(mainNewsFilter_);
-  mainNewsFilterLayout->addStretch();
-
-  styleSheetNewsEdit_ = new LineEdit();
-  QPushButton *styleSheetNewsButton = new QPushButton(tr("Browse..."));
-  connect(styleSheetNewsButton, &QAbstractButton::clicked, this, &OptionsDialog::selectionUserStyleNews);
-
-  QGridLayout *styleSheetNewsLayout = new QGridLayout();
-  styleSheetNewsLayout->setContentsMargins(15, 0, 5, 10);
-  styleSheetNewsLayout->addWidget(styleSheetNewsEdit_, 0, 0);
-  styleSheetNewsLayout->addWidget(styleSheetNewsButton, 0, 1, Qt::AlignRight);
-
-  QVBoxLayout *displayFeedsLayout = new QVBoxLayout();
-  displayFeedsLayout->addWidget(alternatingRowColorsNews_);
-  displayFeedsLayout->addSpacing(10);
-  displayFeedsLayout->addWidget(simplifiedDateTime_);
-  displayFeedsLayout->addLayout(formatDateLayout);
-  displayFeedsLayout->addSpacing(10);
-  displayFeedsLayout->addLayout(mainNewsFilterLayout);
-  displayFeedsLayout->addSpacing(10);
-  displayFeedsLayout->addWidget(new QLabel(tr("Article style sheet:")));
-  displayFeedsLayout->addLayout(styleSheetNewsLayout);
-  displayFeedsLayout->addStretch();
-
-  QWidget *displayFeedsWidget = new QWidget();
-  displayFeedsWidget->setLayout(displayFeedsLayout);
-
-  //! tab "Reading"
-  QVBoxLayout* readingMainLayout = new QVBoxLayout();
-
-  {
-    markNewsReadOn_ = new QGroupBox(tr("Mark articles as read:"));
-
-    markNewsReadOn_->setCheckable(true);
-
-    {
-      QVBoxLayout* radioLayout = new QVBoxLayout();
-
-      {
-        QHBoxLayout* curLayout = new QHBoxLayout();
-
-        markCurNewsRead_ = new QRadioButton(tr("when selected, after "));
-
-        markNewsReadTime_ = new QSpinBox();
-        markNewsReadTime_->setEnabled(false);
-        markNewsReadTime_->setRange(0, 100);
-        connect(markCurNewsRead_, &QAbstractButton::toggled, markNewsReadTime_, &QWidget::setEnabled);
-
-        curLayout->setContentsMargins(0, 0, 0, 0);
-        curLayout->addWidget(markCurNewsRead_);
-        curLayout->addWidget(markNewsReadTime_);
-        curLayout->addWidget(new QLabel(tr("seconds")));
-        curLayout->addStretch();
-
-        radioLayout->addLayout(curLayout);
+      b.comboRow(mainNewsFilter_, tr("Default article filter:"), {});
+      const QPair<QString, const char *> filterItems[] = {
+        {tr("Show All"), "filterNewsAll_"},
+        {tr("Show New"), "filterNewsNew_"},
+        {tr("Show Unread"), "filterNewsUnread_"},
+        {tr("Show Starred"), "filterNewsStar_"},
+        {tr("Show Not Starred"), "filterNewsNotStarred_"},
+        {tr("Show Unread or Starred"), "filterNewsUnreadStar_"},
+        {tr("Show Last Day"), "filterNewsLastDay_"},
+        {tr("Show Last 7 Days"), "filterNewsLastWeek_"},
+      };
+      for (const auto &entry : filterItems) {
+        mainNewsFilter_->addItem(entry.first, QLatin1String(entry.second));
       }
+      b.spacing(10);
 
-      markPrevNewsRead_ = new QRadioButton(tr("after switching to another article"));
+      const QString styleLabel = tr("Article style sheet:");
+      b.label(styleLabel);
+      b.grid(QMargins(15, 0, 5, 10), -1, [this](OptionsGridBuilder &g) {
+        styleSheetNewsEdit_ = new LineEdit();
+        auto *styleSheetNewsButton = new QPushButton(tr("Browse..."));
+        connect(styleSheetNewsButton, &QAbstractButton::clicked, this, &OptionsDialog::selectionUserStyleNews);
+        g.addWidget(0, 0, styleSheetNewsEdit_);
+        g.addWidget(0, 1, styleSheetNewsButton, Qt::AlignRight);
+      });
+      b.registerSearch(styleSheetNewsEdit_, styleLabel);
+      b.stretch();
+    }},
+    {tr("Reading"), [this](OptionsPageBuilder &b) {
+      b.group(markNewsReadOn_, tr("Mark articles as read:"), true, [this](OptionsPageBuilder &grp) {
+        grp.row([this](OptionsRowBuilder &r) {
+          markCurNewsRead_ = new QRadioButton(tr("when selected, after "), grp.container());
+          r.addWidget(markCurNewsRead_);
+          r.spin(markNewsReadTime_, 0, 100);
+          r.label(tr("seconds"));
+          OptionsPageBuilder::bindEnabled(markCurNewsRead_, {markNewsReadTime_});
+          r.registerSearch(markCurNewsRead_,
+                           tr("Mark articles as read:") + QLatin1Char(' ') + tr("when selected, after "));
+        }, QMargins(0, 0, 0, 0));
+        grp.radio(markPrevNewsRead_, tr("after switching to another article"));
+      });
+      b.check(markReadSwitchingFeed_, tr("Mark displayed news as read when switching feeds"));
+      b.check(markReadClosingTab_, tr("Mark displayed news as read when closing tab"));
+      b.check(markReadMinimize_, tr("Mark displayed news as read on minimize"));
+      b.spacing(10);
 
-      radioLayout->addWidget(markPrevNewsRead_);
-      markNewsReadOn_->setLayout(radioLayout);
-    }
+      b.label(tr("Prevent accidental deletion of:"));
+      b.indented(QMargins(15, 0, 0, 10), [this](OptionsPageBuilder &sub) {
+        sub.check(notDeleteStarred_, tr("starred news"));
+        sub.check(notDeleteLabeled_, tr("labeled news"));
+      });
+      b.check(changeBehaviorActionNUN_, tr("Change behavior of the 'Next Unread Article' action"));
+      b.stretch();
+    }},
+    {tr("Clean Up"), [this](OptionsPageBuilder &b) {
+      b.group(cleanupOnShutdownBox_, tr("Enable cleanup on shutdown"), true, [this](OptionsPageBuilder &grp) {
+        grp.grid(std::nullopt, 1, [this](OptionsGridBuilder &g) {
+          g.check(0, 0, dayCleanUpOn_, tr("Maximum article age to keep (days):"), tr(
+              "Removes expired articles on shutdown and ignores expired incoming articles on later updates. "
+              "The first successful fetch of a new feed is exempt. Unread, starred and labeled articles "
+              "are preserved according to the options below. Articles without a usable publication date "
+              "use their received date for cleanup and retain a record to prevent reappearance."));
 
-    markReadSwitchingFeed_ = new QCheckBox(tr("Mark displayed news as read when switching feeds"));
-    markReadClosingTab_ = new QCheckBox(tr("Mark displayed news as read when closing tab"));
-    markReadMinimize_ = new QCheckBox(tr("Mark displayed news as read on minimize"));
+          auto *maxDayRow = new QHBoxLayout();
+          maxDayRow->setContentsMargins(0, 0, 0, 0);
+          maxDayCleanUp_ = new QSpinBox();
+          maxDayCleanUp_->setRange(0, 9999);
+          OptionsPageBuilder::bindEnabled(dayCleanUpOn_, {maxDayCleanUp_});
 
-    QGridLayout* curLayout = new QGridLayout();
+          const QString ageWarningText = tr(
+              "Raising this limit may cause old articles you have already read or deleted "
+              "to reappear as new if a feed still lists them.");
+          maxDayCleanUpWarning_ = new QToolButton();
+          maxDayCleanUpWarning_->setIcon(QIcon(QStringLiteral(":/images/warning")));
+          maxDayCleanUpWarning_->setIconSize(QSize(16, 16));
+          maxDayCleanUpWarning_->setAutoRaise(true);
+          maxDayCleanUpWarning_->setCursor(Qt::PointingHandCursor);
+          maxDayCleanUpWarning_->setToolTip(ageWarningText);
+          maxDayCleanUpWarning_->setAccessibleName(tr("Article age limit warning"));
+          maxDayCleanUpWarning_->hide();
+          connect(maxDayCleanUpWarning_, &QAbstractButton::clicked, this, [this, ageWarningText]() {
+            QMessageBox::warning(this, tr("Maximum article age to keep"), ageWarningText, QMessageBox::Ok);
+          });
+          maxDayRow->addWidget(maxDayCleanUp_);
+          maxDayRow->addWidget(maxDayCleanUpWarning_);
+          maxDayRow->addStretch();
+          g.addLayout(0, 1, maxDayRow);
 
-    notDeleteStarred_ = new QCheckBox(tr("starred news"));
-    notDeleteLabeled_ = new QCheckBox(tr("labeled news"));
+          g.check(1, 0, newsCleanUpOn_, tr("Maximum number of articles to keep:"));
+          maxNewsCleanUp_ = new QSpinBox();
+          maxNewsCleanUp_->setRange(0, 9999);
+          OptionsPageBuilder::bindEnabled(newsCleanUpOn_, {maxNewsCleanUp_});
+          g.addWidget(1, 1, maxNewsCleanUp_, Qt::AlignLeft);
 
-    curLayout->setContentsMargins(15, 0, 0, 10);
-    curLayout->addWidget(notDeleteStarred_, 0, 0, 1, 1);
-    curLayout->addWidget(notDeleteLabeled_, 1, 0, 1, 1);
+          g.check(2, 0, readCleanUp_, tr("Delete read news"));
+          g.check(3, 0, neverUnreadCleanUp_, tr("Never delete unread news"));
+          g.check(4, 0, neverStarCleanUp_, tr("Never delete starred news"));
+          g.check(5, 0, neverLabelCleanUp_, tr("Never delete labeled news"));
+        });
+        grp.spacing(10);
 
-    changeBehaviorActionNUN_ = new QCheckBox(tr("Change behavior of the 'Next Unread Article' action"));
+        grp.check(cleanUpDeleted_, tr("Clean up 'Deleted'"));
+        grp.check(optimizeDB_, tr("Optimize database on shutdown (slower shutdown)"));
+        grp.spacing(10);
 
-    readingMainLayout->addWidget(markNewsReadOn_);
-    readingMainLayout->addWidget(markReadSwitchingFeed_);
-    readingMainLayout->addWidget(markReadClosingTab_);
-    readingMainLayout->addWidget(markReadMinimize_);
-    readingMainLayout->addSpacing(10);
-    readingMainLayout->addWidget(new QLabel(tr("Prevent accidental deletion of:")));
-    readingMainLayout->addLayout(curLayout);
-    readingMainLayout->addWidget(changeBehaviorActionNUN_);
-    readingMainLayout->addStretch();
-  }
-
-  QWidget* readingFeedsWidget = new QWidget();
-  readingFeedsWidget->setLayout(readingMainLayout);
-
-//! tab "Clean Up"
-  QWidget *cleanUpFeedsWidget = new QWidget();
-
-  cleanupOnShutdownBox_ = new QGroupBox(tr("Enable cleanup on shutdown"));
-  cleanupOnShutdownBox_->setCheckable(true);
-
-  dayCleanUpOn_ = new QCheckBox(tr("Maximum article age to keep (days):"));
-  dayCleanUpOn_->setToolTip(tr(
-      "Removes expired articles on shutdown and ignores expired incoming articles on later updates. "
-      "The first successful fetch of a new feed is exempt. Unread, starred and labeled articles "
-      "are preserved according to the options below. Articles without a usable publication date "
-      "use their received date for cleanup and retain a record to prevent reappearance."));
-  maxDayCleanUp_ = new QSpinBox();
-  maxDayCleanUp_->setEnabled(false);
-  maxDayCleanUp_->setRange(0, 9999);
-  connect(dayCleanUpOn_, &QAbstractButton::toggled, maxDayCleanUp_, &QWidget::setEnabled);
-
-  const QString ageWarningText = tr(
-      "Raising this limit may cause old articles you have already read or deleted "
-      "to reappear as new if a feed still lists them.");
-  maxDayCleanUpWarning_ = new QToolButton();
-  maxDayCleanUpWarning_->setIcon(QIcon(QStringLiteral(":/images/warning")));
-  maxDayCleanUpWarning_->setIconSize(QSize(16, 16));
-  maxDayCleanUpWarning_->setAutoRaise(true);
-  maxDayCleanUpWarning_->setCursor(Qt::PointingHandCursor);
-  maxDayCleanUpWarning_->setToolTip(ageWarningText);
-  maxDayCleanUpWarning_->setAccessibleName(tr("Article age limit warning"));
-  maxDayCleanUpWarning_->hide();
-  connect(maxDayCleanUpWarning_, &QAbstractButton::clicked, this, [this, ageWarningText]() {
-    QMessageBox::warning(this, tr("Maximum article age to keep"), ageWarningText, QMessageBox::Ok);
+        grp.row([this](OptionsRowBuilder &r) {
+          cleanUpPreviewLabel_ = new QLabel();
+          r.addWidget(cleanUpPreviewLabel_);
+          cleanUpPreviewButton_ = r.button(tr("Preview"));
+          cleanUpPreviewButton_->setEnabled(false);
+          connect(cleanUpPreviewButton_, &QAbstractButton::clicked,
+                  this, &OptionsDialog::showCleanUpPreview);
+        });
+        grp.stretch();
+      });
+    }},
   });
-
-  QHBoxLayout *maxDayCleanUpLayout = new QHBoxLayout();
-  maxDayCleanUpLayout->setContentsMargins(0, 0, 0, 0);
-  maxDayCleanUpLayout->addWidget(maxDayCleanUp_);
-  maxDayCleanUpLayout->addWidget(maxDayCleanUpWarning_);
-  maxDayCleanUpLayout->addStretch();
-
-  newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
-  maxNewsCleanUp_ = new QSpinBox();
-  maxNewsCleanUp_->setEnabled(false);
-  maxNewsCleanUp_->setRange(0, 9999);
-  connect(newsCleanUpOn_, &QAbstractButton::toggled, maxNewsCleanUp_, &QWidget::setEnabled);
-
-  readCleanUp_ = new QCheckBox(tr("Delete read news"));
-  neverUnreadCleanUp_ = new QCheckBox(tr("Never delete unread news"));
-  neverStarCleanUp_ = new QCheckBox(tr("Never delete starred news"));
-  neverLabelCleanUp_ = new QCheckBox(tr("Never delete labeled news"));
-
-  cleanUpDeleted_ = new QCheckBox(tr("Clean up 'Deleted'"));
-  optimizeDB_ = new QCheckBox(tr("Optimize database on shutdown (slower shutdown)"));
-
-  QGridLayout *cleanUpFeedsLayout = new QGridLayout();
-  cleanUpFeedsLayout->setColumnStretch(1, 1);
-  cleanUpFeedsLayout->addWidget(dayCleanUpOn_, 0, 0, 1, 1);
-  cleanUpFeedsLayout->addLayout(maxDayCleanUpLayout, 0, 1, 1, 1);
-  cleanUpFeedsLayout->addWidget(newsCleanUpOn_, 1, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(maxNewsCleanUp_, 1, 1, 1, 1, Qt::AlignLeft);
-  cleanUpFeedsLayout->addWidget(readCleanUp_, 2, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverUnreadCleanUp_, 3, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverStarCleanUp_, 4, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(neverLabelCleanUp_, 5, 0, 1, 1);
-
-  QVBoxLayout *cleanUpFeedsLayout2 = new QVBoxLayout();
-  cleanUpFeedsLayout2->addWidget(cleanUpDeleted_);
-  cleanUpFeedsLayout2->addWidget(optimizeDB_);
-
-  cleanUpPreviewLabel_ = new QLabel();
-  cleanUpPreviewButton_ = new QPushButton(tr("Preview"));
-  cleanUpPreviewButton_->setEnabled(false);
-  connect(cleanUpPreviewButton_, &QAbstractButton::clicked,
-          this, &OptionsDialog::showCleanUpPreview);
-
-  QHBoxLayout *cleanUpPreviewLayout = new QHBoxLayout();
-  cleanUpPreviewLayout->addWidget(cleanUpPreviewLabel_);
-  cleanUpPreviewLayout->addWidget(cleanUpPreviewButton_);
-  cleanUpPreviewLayout->addStretch();
-
-  QVBoxLayout *cleanUpFeedsLayout3 = new QVBoxLayout(cleanupOnShutdownBox_);
-  cleanUpFeedsLayout3->addLayout(cleanUpFeedsLayout);
-  cleanUpFeedsLayout3->addSpacing(10);
-  cleanUpFeedsLayout3->addLayout(cleanUpFeedsLayout2);
-  cleanUpFeedsLayout3->addSpacing(10);
-  cleanUpFeedsLayout3->addLayout(cleanUpPreviewLayout);
-  cleanUpFeedsLayout3->addStretch();
-
-  QVBoxLayout *boxCleanUpFeedsLayout = new QVBoxLayout(cleanUpFeedsWidget);
-  boxCleanUpFeedsLayout->addWidget(cleanupOnShutdownBox_);
-
-  feedsWidget_ = new QTabWidget();
-  feedsWidget_->addTab(generalFeedsWidget, tr("General"));
-  feedsWidget_->addTab(displayFeedsWidget, tr("Display"));
-  feedsWidget_->addTab(readingFeedsWidget, tr("Reading"));
-  feedsWidget_->addTab(cleanUpFeedsWidget, tr("Clean Up"));
 
   connect(cleanupOnShutdownBox_, &QGroupBox::toggled, this, &OptionsDialog::updateCleanUpPreview);
   connect(cleanupOnShutdownBox_, &QGroupBox::toggled, this, &OptionsDialog::updateMaxDayCleanUpWarning);
-  connect(dayCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
   connect(dayCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateMaxDayCleanUpWarning);
   connect(maxDayCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
-          this, &OptionsDialog::updateCleanUpPreview);
-  connect(maxDayCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, &OptionsDialog::updateMaxDayCleanUpWarning);
-  connect(newsCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
-  connect(maxNewsCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
-          this, &OptionsDialog::updateCleanUpPreview);
-  connect(readCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
-  connect(neverUnreadCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
-  connect(neverStarCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
-  connect(neverLabelCleanUp_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
-  connect(cleanUpDeleted_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  for (QAbstractButton *btn : {static_cast<QAbstractButton *>(dayCleanUpOn_),
+                               static_cast<QAbstractButton *>(newsCleanUpOn_),
+                               static_cast<QAbstractButton *>(readCleanUp_),
+                               static_cast<QAbstractButton *>(neverUnreadCleanUp_),
+                               static_cast<QAbstractButton *>(neverStarCleanUp_),
+                               static_cast<QAbstractButton *>(neverLabelCleanUp_),
+                               static_cast<QAbstractButton *>(cleanUpDeleted_)}) {
+    connect(btn, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  }
+  for (QSpinBox *spin : {maxDayCleanUp_, maxNewsCleanUp_}) {
+    connect(spin, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &OptionsDialog::updateCleanUpPreview);
+  }
   connect(feedsWidget_, &QTabWidget::currentChanged, this, [this](int index) {
     if (index == 3) updateCleanUpPreview();
   });
@@ -1175,149 +920,88 @@ QWidget *OptionsDialog::createLabelsWidget()
  *----------------------------------------------------------------------------*/
 QWidget *OptionsDialog::createNotifierWidget()
 {
-  showNotifyOn_ = new QGroupBox(tr("Show notifications for incoming articles"));
-  showNotifyOn_->setCheckable(true);
-  showNotifyOn_->setChecked(false);
-
-  screenNotify_ = new QComboBox();
-  screenNotify_->addItem("-1");
-  for (int i = 0; i < QGuiApplication::screens().size(); ++i) {
-    screenNotify_->addItem(QString::number(i));
-  }
-  screenNotify_->setCurrentIndex(1);
-
-  positionNotify_ = new QComboBox();
-  QStringList positionList;
-  positionList << tr("Top Left") << tr("Top Right")
-               << tr("Bottom Left") << tr("Bottom Right");
-  positionNotify_->addItems(positionList);
-
-  fullscreenModeNotify_ = new QCheckBox(tr("Do not show notification in fullscreen mode"));
-#if !defined(Q_OS_WIN)
-  fullscreenModeNotify_->hide();
-#endif
-  showNotifyInactiveApp_ = new QCheckBox(tr("Show when the main window is inactive"));
-  closeNotify_ = new QCheckBox(tr("Close notification after opening an article"));
-
-  transparencyNotify_ = new QSpinBox();
-  transparencyNotify_->setRange(0, 100);
-  countShowNewsNotify_ = new QSpinBox();
-  countShowNewsNotify_->setRange(1, 30);
-  widthTitleNewsNotify_ = new QSpinBox();
-  widthTitleNewsNotify_->setRange(50, 500);
-  timeShowNewsNotify_ = new QSpinBox();
-  timeShowNewsNotify_->setRange(0, 99999);
-
-  QPushButton *showNotifier = new QPushButton(tr("Preview"));
-  connect(showNotifier, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
-
-  QHBoxLayout *notifierLayout1 = new QHBoxLayout();
-  notifierLayout1->addWidget(new QLabel(tr("Screen")));
-  notifierLayout1->addWidget(screenNotify_);
-  notifierLayout1->addSpacing(10);
-  notifierLayout1->addWidget(new QLabel(tr("Position")));
-  notifierLayout1->addWidget(positionNotify_);
-  notifierLayout1->addStretch(1);
-  notifierLayout1->addWidget(showNotifier);
-
-  QGridLayout *notifierLayout2 = new QGridLayout();
-  notifierLayout2->setColumnStretch(2, 1);
-  notifierLayout2->addWidget(new QLabel(tr("Transparency")), 0, 0);
-  notifierLayout2->addWidget(transparencyNotify_, 0, 1);
-  notifierLayout2->addWidget(new QLabel("%"), 0, 2);
-  notifierLayout2->addWidget(new QLabel(tr("Show at most")), 1, 0);
-  notifierLayout2->addWidget(countShowNewsNotify_, 1, 1);
-  notifierLayout2->addWidget(new QLabel(tr("items per notification page")), 1, 2);
-  notifierLayout2->addWidget(new QLabel(tr("List item width")), 2, 0);
-  notifierLayout2->addWidget(widthTitleNewsNotify_, 2, 1);
-  notifierLayout2->addWidget(new QLabel(tr("pixels")), 2, 2);
-  notifierLayout2->addWidget(new QLabel(tr("Close notification after")), 3, 0);
-  notifierLayout2->addWidget(timeShowNewsNotify_, 3, 1);
-  notifierLayout2->addWidget(new QLabel(tr("seconds")), 3, 2);
-
-  showTitlesFeedsNotify_ = new QCheckBox(tr("Show feed titles"));
-  showIconFeedNotify_ = new QCheckBox(tr("Show feed icons"));
-  showButtonMarkAllNotify_ = new QCheckBox(tr("Show button 'Mark All News Read'"));
-  showButtonMarkReadNotify_ = new QCheckBox(tr("Show button 'Mark Read/Unread'"));
-  showButtonExBrowserNotify_ = new QCheckBox(tr("Show button 'Open in External Browser'"));
-  showButtonDeleteNotify_ = new QCheckBox(tr("Show button 'Delete News'"));
-
-  QVBoxLayout *notifierLayout3 = new QVBoxLayout();
-  notifierLayout3->addWidget(showTitlesFeedsNotify_);
-  notifierLayout3->addWidget(showIconFeedNotify_);
-  notifierLayout3->addWidget(showButtonMarkAllNotify_);
-  notifierLayout3->addWidget(showButtonMarkReadNotify_);
-  notifierLayout3->addWidget(showButtonExBrowserNotify_);
-  notifierLayout3->addWidget(showButtonDeleteNotify_);
-
-  onlySelectedFeeds_ = new QCheckBox(tr("Only show selected feeds:"));
-  QPushButton *feedsNotifierButton = new QPushButton(tr("Feeds"));
-  feedsNotifierButton->setEnabled(false);
-
-  QHBoxLayout *onlySelectedFeedsLayout = new QHBoxLayout();
-  onlySelectedFeedsLayout->addWidget(onlySelectedFeeds_);
-  onlySelectedFeedsLayout->addWidget(feedsNotifierButton);
-  onlySelectedFeedsLayout->addStretch(1);
-
   feedsNotifierDlg_ = nullptr;
   feedsTreeNotify_ = nullptr;
   itemNotChecked_ = false;
-
-  connect(onlySelectedFeeds_, &QAbstractButton::toggled, feedsNotifierButton, &QWidget::setEnabled);
-  connect(feedsNotifierButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
-
-  QVBoxLayout *notificationLayoutV = new QVBoxLayout();
-  notificationLayoutV->setContentsMargins(10, 10, 10, 10);
-  notificationLayoutV->addLayout(notifierLayout1);
-  notificationLayoutV->addWidget(fullscreenModeNotify_);
-  notificationLayoutV->addWidget(showNotifyInactiveApp_);
-  notificationLayoutV->addWidget(closeNotify_);
-  notificationLayoutV->addSpacing(10);
-  notificationLayoutV->addLayout(notifierLayout2);
-  notificationLayoutV->addSpacing(10);
-  notificationLayoutV->addLayout(notifierLayout3);
-  notificationLayoutV->addSpacing(10);
-  notificationLayoutV->addLayout(onlySelectedFeedsLayout);
-  notificationLayoutV->addStretch(1);
-
-  showNotifyOn_->setLayout(notificationLayoutV);
-
-  QWidget *notificationWidget = new QWidget();
-  QVBoxLayout *notificationLayout = new QVBoxLayout(notificationWidget);
-  notificationLayout->addWidget(showNotifyOn_);
-
-  soundNotifyBox_ = new QGroupBox(tr("Play a sound for incoming articles"));
-  soundNotifyBox_->setCheckable(true);
-  soundNotifyBox_->setChecked(false);
-
-  editSoundNotifier_ = new LineEdit();
-  selectionSoundNotifier_ = new QPushButton(tr("Browse..."));
-  playSoundNotifier_ = new QPushButton(tr("Play"));
-
-  connect(selectionSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::selectionSoundNotifier);
-  connect(playSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::slotPlaySoundNotifier);
-  connect(this, &OptionsDialog::signalPlaySound,
-          qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
-
-  QHBoxLayout *soundNotifyLayoutH = new QHBoxLayout();
-  soundNotifyLayoutH->addWidget(editSoundNotifier_, 1);
-  soundNotifyLayoutH->addWidget(selectionSoundNotifier_);
-  soundNotifyLayoutH->addWidget(playSoundNotifier_);
-
-  QVBoxLayout *soundNotifyLayout = new QVBoxLayout(soundNotifyBox_);
-  soundNotifyLayout->setContentsMargins(10, 10, 10, 10);
-  soundNotifyLayout->addLayout(soundNotifyLayoutH);
-  soundNotifyLayout->addStretch(1);
-
-  QWidget *soundNotifyWidget = new QWidget();
-  QVBoxLayout *boxCleanUpFeedsLayout = new QVBoxLayout(soundNotifyWidget);
-  boxCleanUpFeedsLayout->addWidget(soundNotifyBox_);
-
-  notifierWidget_ = new QTabWidget();
-  notifierWidget_->addTab(notificationWidget, tr("Notification"));
-  notifierWidget_->addTab(soundNotifyWidget, tr("Sound"));
-
   loadNotifierOk_ = false;
+
+  notifierWidget_ = OptionsPageBuilder::buildTabs(PageNotifications, &searchEntries_, {
+    {tr("Notification"), [this](OptionsPageBuilder &b) {
+      b.group(showNotifyOn_, tr("Show notifications for incoming articles"), true, [this](OptionsPageBuilder &grp) {
+        grp.row([this](OptionsRowBuilder &r) {
+          const QString screenLabel = tr("Screen");
+          r.label(screenLabel);
+          QStringList screens{QStringLiteral("-1")};
+          for (int i = 0; i < QGuiApplication::screens().size(); ++i) {
+            screens << QString::number(i);
+          }
+          r.combo(screenNotify_, screens);
+          screenNotify_->setCurrentIndex(1);
+          r.registerSearch(screenNotify_, screenLabel);
+
+          r.spacing(10);
+          const QString positionLabel = tr("Position");
+          r.label(positionLabel);
+          r.combo(positionNotify_, {tr("Top Left"), tr("Top Right"), tr("Bottom Left"), tr("Bottom Right")});
+          r.registerSearch(positionNotify_, positionLabel);
+
+          r.stretch(1);
+          QPushButton *showNotifier = r.button(tr("Preview"));
+          connect(showNotifier, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
+        }, std::nullopt, false);
+
+        grp.check(fullscreenModeNotify_, tr("Do not show notification in fullscreen mode"));
+#if !defined(Q_OS_WIN)
+        fullscreenModeNotify_->hide();
+#endif
+        grp.check(showNotifyInactiveApp_, tr("Show when the main window is inactive"));
+        grp.check(closeNotify_, tr("Close notification after opening an article"));
+        grp.spacing(10);
+
+        grp.grid(std::nullopt, 2, [this](OptionsGridBuilder &g) {
+          g.addSpinRow(0, tr("Transparency"), transparencyNotify_, 0, 100, QStringLiteral("%"));
+          g.addSpinRow(1, tr("Show at most"), countShowNewsNotify_, 1, 30, tr("items per notification page"));
+          g.addSpinRow(2, tr("List item width"), widthTitleNewsNotify_, 50, 500, tr("pixels"));
+          g.addSpinRow(3, tr("Close notification after"), timeShowNewsNotify_, 0, 99999, tr("seconds"));
+        });
+        grp.spacing(10);
+
+        grp.check(showTitlesFeedsNotify_, tr("Show feed titles"));
+        grp.check(showIconFeedNotify_, tr("Show feed icons"));
+        grp.check(showButtonMarkAllNotify_, tr("Show button 'Mark All News Read'"));
+        grp.check(showButtonMarkReadNotify_, tr("Show button 'Mark Read/Unread'"));
+        grp.check(showButtonExBrowserNotify_, tr("Show button 'Open in External Browser'"));
+        grp.check(showButtonDeleteNotify_, tr("Show button 'Delete News'"));
+        grp.spacing(10);
+
+        grp.row([this](OptionsRowBuilder &r) {
+          r.check(onlySelectedFeeds_, tr("Only show selected feeds:"));
+          QPushButton *feedsNotifierButton = r.button(tr("Feeds"));
+          OptionsPageBuilder::bindEnabled(onlySelectedFeeds_, {feedsNotifierButton});
+          connect(feedsNotifierButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
+          r.stretch(1);
+        }, std::nullopt, false);
+        grp.stretch(1);
+      }, Qt::Vertical, QMargins(10, 10, 10, 10));
+      showNotifyOn_->setChecked(false);
+    }},
+    {tr("Sound"), [this](OptionsPageBuilder &b) {
+      b.group(soundNotifyBox_, tr("Play a sound for incoming articles"), true, [this](OptionsPageBuilder &grp) {
+        grp.row([this](OptionsRowBuilder &r) {
+          editSoundNotifier_ = new LineEdit();
+          r.addWidget(editSoundNotifier_, 1);
+          selectionSoundNotifier_ = r.button(tr("Browse..."));
+          playSoundNotifier_ = r.button(tr("Play"));
+          connect(selectionSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::selectionSoundNotifier);
+          connect(playSoundNotifier_, &QAbstractButton::clicked, this, &OptionsDialog::slotPlaySoundNotifier);
+          connect(this, &OptionsDialog::signalPlaySound,
+                  qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
+        }, std::nullopt, false);
+        grp.stretch(1);
+      }, Qt::Vertical, QMargins(10, 10, 10, 10));
+      soundNotifyBox_->setChecked(false);
+    }},
+  });
   return notifierWidget_;
 }
 
@@ -1729,11 +1413,6 @@ void OptionsDialog::setCurrentItem(int index)
 {
   categoriesTree_->setCurrentItem(categoriesTree_->topLevelItem(index), 1);
   slotCategoriesTreeKeyUpDownPressed();
-}
-//----------------------------------------------------------------------------
-void OptionsDialog::manualProxyToggle(bool checked)
-{
-  manualWidget_->setEnabled(checked);
 }
 //----------------------------------------------------------------------------
 QNetworkProxy OptionsDialog::proxy()

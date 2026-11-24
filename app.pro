@@ -91,6 +91,7 @@ TEMPLATE = app
 HEADERS += \
     src/feeds/update/parseobject.h \
     src/preferences/optionsdialog.h \
+    src/preferences/optionspagebuilder.h \
     src/articles/newsview.h \
     src/articles/newsmodel.h \
     src/articles/newsheader.h \
@@ -159,6 +160,7 @@ HEADERS += \
 SOURCES += \
     src/feeds/update/parseobject.cpp \
     src/preferences/optionsdialog.cpp \
+    src/preferences/optionspagebuilder.cpp \
     src/articles/newsview.cpp \
     src/articles/newsmodel.cpp \
     src/articles/newsheader.cpp \

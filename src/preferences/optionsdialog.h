@@ -24,6 +24,7 @@
 #include <QNetworkProxy>
 
 #include "articles/cleanup/cleanuppreviewdialog.h"
+#include "preferences/optionspagebuilder.h"
 #include "widgets/dialog.h"
 #include "widgets/lineedit.h"
 #include "notifications/notificationswidget.h"
@@ -233,7 +234,6 @@ protected:
 private slots:
   void slotCategoriesItemClicked(QTreeWidgetItem* item, int);
   void slotCategoriesTreeKeyUpDownPressed();
-  void manualProxyToggle(bool checked);
   void updateProxy();
   void applyProxy();
   void acceptDialog();
@@ -320,7 +320,6 @@ private:
   QRadioButton *systemProxyButton_;
   QRadioButton *directConnectionButton_;
   QRadioButton *manualProxyButton_;
-  QWidget *manualWidget_;
   QComboBox *typeProxy_;
   LineEdit *editHost_;
   LineEdit *editPort_;
@@ -401,6 +400,7 @@ private:
   QLabel *warningShortcut_ = nullptr;
   QElapsedTimer openTimer_;
   bool showLogged_ = false;
+  QVector<OptionSearchEntry> searchEntries_;
 
 };
 
