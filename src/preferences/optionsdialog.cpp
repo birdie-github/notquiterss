@@ -210,6 +210,10 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   contentStack_->setObjectName("contentStack_");
 
   searchCategoryItem_ = new QTreeWidgetItem(QStringList{QString::number(-1), tr("Search Results")});
+  QFont searchFont = searchCategoryItem_->font(1);
+  searchFont.setBold(true);
+  searchFont.setItalic(true);
+  searchCategoryItem_->setFont(1, searchFont);
   searchCategoryItem_->setHidden(true);
   categoriesTree_->addTopLevelItem(searchCategoryItem_);
 
@@ -344,7 +348,10 @@ void OptionsDialog::showEvent(QShowEvent *event)
   if (!showLogged_) {
     // Measure the visible sections directly. The hidden ID column must not
     // contribute to the navigation width.
+    const bool wasSearchHidden = searchCategoryItem_->isHidden();
+    searchCategoryItem_->setHidden(false);
     categoriesTree_->resizeColumnToContents(1);
+    searchCategoryItem_->setHidden(wasSearchHidden);
     const int categoryWidth = categoriesTree_->columnWidth(1) + categoriesTree_->columnWidth(2) +
         categoriesTree_->width() - categoriesTree_->viewport()->width();
     categoriesTree_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
@@ -411,15 +418,20 @@ void OptionsDialog::closeDialog()
   settings.setValue("options/geometry", saveGeometry());
 }
 
+void OptionsDialog::keyPressEvent(QKeyEvent *event)
+{
+  if (event->key() == Qt::Key_Escape && !searchEdit_->text().isEmpty()) {
+    searchEdit_->clear();
+    return;
+  }
+  Dialog::keyPressEvent(event);
+}
+
 bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 {
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
     if (obj == searchEdit_) {
-      if (keyEvent->key() == Qt::Key_Escape && !searchEdit_->text().isEmpty()) {
-        searchEdit_->clear();
-        return true;
-      }
       if (keyEvent->key() == Qt::Key_Down &&
           searchResultsTree_->isVisible() && searchResultsTree_->topLevelItemCount() > 0) {
         searchResultsTree_->setFocus();
@@ -438,11 +450,6 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
       return false;
     }
     if (obj == searchResultsTree_) {
-      if (keyEvent->key() == Qt::Key_Escape && !searchEdit_->text().isEmpty()) {
-        searchEdit_->clear();
-        searchEdit_->setFocus();
-        return true;
-      }
       if (keyEvent->key() == Qt::Key_Up && searchResultsTree_->currentIndex().row() == 0) {
         searchEdit_->setFocus();
         return true;
@@ -524,21 +531,31 @@ bool OptionsDialog::eventFilter(QObject *obj, QEvent *event)
 QWidget *OptionsDialog::createGeneralWidget()
 {
   generalWidget_ = OptionsPageBuilder::buildFrame(PageGeneral, &searchEntries_, [this](OptionsPageBuilder &b) {
-    b.check(showSplashScreen_, tr("Show splash screen on startup"));
-    b.check(reopenFeedStartup_, tr("Reopen last opened feeds on startup"));
-    b.check(openNewTabNextToActive_, tr("Open new tab next to active"));
-    b.check(hideFeedsOpenTab_, tr("Hide feeds tree when opening tabs"));
-    b.check(showToggleFeedsTree_, tr("Show feeds tree toggle"));
-    b.check(defaultIconFeeds_, tr("Show default RSS icon instead of each feed's icon"));
-    b.check(autocollapseFolder_, tr("Automatically collapse folders"));
-    b.check(showCloseButtonTab_, tr("Show a close button on each tab"));
+    b.check(showSplashScreen_, tr("Show splash screen on startup"), QString(),
+            QStringLiteral("launch logo boot"));
+    b.check(reopenFeedStartup_, tr("Reopen last opened feeds on startup"), QString(),
+            QStringLiteral("restore session tabs"));
+    b.check(openNewTabNextToActive_, tr("Open new tab next to active"), QString(),
+            QStringLiteral("tab position order"));
+    b.check(hideFeedsOpenTab_, tr("Hide feeds tree when opening tabs"), QString(),
+            QStringLiteral("sidebar panel collapse"));
+    b.check(showToggleFeedsTree_, tr("Show feeds tree toggle"), QString(),
+            QStringLiteral("sidebar panel button"));
+    b.check(defaultIconFeeds_, tr("Show default RSS icon instead of each feed's icon"), QString(),
+            QStringLiteral("favicon"));
+    b.check(autocollapseFolder_, tr("Automatically collapse folders"), QString(),
+            QStringLiteral("tree expand"));
+    b.check(showCloseButtonTab_, tr("Show a close button on each tab"), QString(),
+            QStringLiteral("tabs close"));
 #ifdef NQRSS_ENABLE_DONATE_BUTTON
-    b.check(hideDonateButton_, tr("Hide the donate button"));
+    b.check(hideDonateButton_, tr("Hide the donate button"), QString(),
+            QStringLiteral("support"));
 #endif
     b.spacing(20);
 
 #if defined(Q_OS_WIN)
-    b.check(autoRunEnabled_, tr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()));
+    b.check(autoRunEnabled_, tr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()),
+            QString(), QStringLiteral("autostart boot login"));
     autoRunSettings_ = new QSettings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
                                      QSettings::NativeFormat);
     const QString autoRunKey = mainApp->isPortableAppsCom()
@@ -547,18 +564,22 @@ QWidget *OptionsDialog::createGeneralWidget()
     autoRunEnabled_->setChecked(autoRunSettings_->value(autoRunKey, false).toBool());
 #endif
 
-    b.check(updateCheckEnabled_, tr("Automatically check for updates"));
-    b.check(storeDBMemory_, tr("Store the database in memory (requires application restart)"));
+    b.check(updateCheckEnabled_, tr("Automatically check for updates"), QString(),
+            QStringLiteral("version upgrade release"));
+    b.check(storeDBMemory_, tr("Store the database in memory (requires application restart)"), QString(),
+            QStringLiteral("ram sqlite performance cache"));
     QWidget *saveDBMemFileWidget = b.indented(QMargins(15, 0, 0, 0), [this](OptionsPageBuilder &sub) {
       sub.spinRow(saveDBMemFileInterval_,
-                  tr("Save the in-memory database to disk every"), 1, 999, tr("minutes"));
+                  tr("Save the in-memory database to disk every"), 1, 999, tr("minutes"),
+                  QString(), QStringLiteral("ram sqlite flush interval"));
     });
     OptionsPageBuilder::bindEnabled(storeDBMemory_, {saveDBMemFileWidget});
 
     b.group(tr("Debug"), [this](OptionsPageBuilder &grp) {
       grp.row([this](OptionsRowBuilder &r) {
         QCheckBox *fileLogging = r.check(tr("Enable file logging"),
-            tr("Takes effect immediately. Existing logs are kept when disabled."));
+            tr("Takes effect immediately. Existing logs are kept when disabled."),
+            QStringLiteral("debug log diagnostics"));
         fileLogging->setChecked(LogFile::fileLoggingEnabled());
         connect(fileLogging, &QCheckBox::toggled, this, [](bool enabled) {
           Settings().setValue("Settings/logFileOutput", enabled);
@@ -583,9 +604,12 @@ QWidget *OptionsDialog::createTraySystemWidget()
 #ifndef Q_OS_MAC
       grp.label(tr("Move to the system tray when:"));
       grp.indented(QMargins(15, 0, 5, 10), [this, appName](OptionsPageBuilder &sub) {
-        sub.check(startingTray_, tr("starting %1").arg(appName));
-        sub.check(minimizingTray_, tr("minimizing %1").arg(appName));
-        sub.check(closingTray_, tr("closing %1").arg(appName));
+        sub.check(startingTray_, tr("starting %1").arg(appName), QString(),
+                  QStringLiteral("minimized hidden launch"));
+        sub.check(minimizingTray_, tr("minimizing %1").arg(appName), QString(),
+                  QStringLiteral("minimize hide"));
+        sub.check(closingTray_, tr("closing %1").arg(appName), QString(),
+                  QStringLiteral("close quit exit"));
       });
 #else
       startingTray_ = new QCheckBox(this);
@@ -597,14 +621,16 @@ QWidget *OptionsDialog::createTraySystemWidget()
 #endif
       grp.label(tr("Tray icon behavior:"));
       grp.indented(QMargins(15, 0, 5, 10), [this](OptionsPageBuilder &sub) {
-        sub.radio(staticIconTray_, tr("Show a static icon"));
-        sub.radio(changeIconTray_, tr("Change icon when new articles arrive"));
-        sub.radio(newCountTray_, tr("Show number of new articles"));
-        sub.radio(unreadCountTray_, tr("Show number of unread articles"));
+        sub.radio(staticIconTray_, tr("Show a static icon"), QStringLiteral("tray badge"));
+        sub.radio(changeIconTray_, tr("Change icon when new articles arrive"), QStringLiteral("tray badge"));
+        sub.radio(newCountTray_, tr("Show number of new articles"), QStringLiteral("tray badge counter"));
+        sub.radio(unreadCountTray_, tr("Show number of unread articles"), QStringLiteral("tray badge counter"));
       });
 #ifndef Q_OS_MAC
-      grp.check(singleClickTray_, tr("Use a single click instead of a double click to show the window"));
-      grp.check(clearStatusNew_, tr("Clear 'new' status when minimizing to tray"));
+      grp.check(singleClickTray_, tr("Use a single click instead of a double click to show the window"),
+                QString(), QStringLiteral("click open"));
+      grp.check(clearStatusNew_, tr("Clear 'new' status when minimizing to tray"),
+                QString(), QStringLiteral("unread reset"));
 #else
       singleClickTray_ = new QCheckBox(this);
       singleClickTray_->hide();
@@ -612,13 +638,14 @@ QWidget *OptionsDialog::createTraySystemWidget()
       clearStatusNew_->hide();
 #endif
 #if defined(Q_OS_WIN)
-      grp.check(emptyWorking_, tr("Empty working set when minimizing to tray"));
+      grp.check(emptyWorking_, tr("Empty working set when minimizing to tray"),
+                QString(), QStringLiteral("ram memory trim"));
 #else
       emptyWorking_ = new QCheckBox(this);
       emptyWorking_->hide();
 #endif
       grp.stretch(1);
-    });
+    }, Qt::Vertical, std::nullopt, QStringLiteral("notification area panel"));
   });
   return traySystemWidget_;
 }
@@ -628,8 +655,10 @@ QWidget *OptionsDialog::createTraySystemWidget()
 QWidget *OptionsDialog::createNetworkConnectionsWidget()
 {
   networkConnectionsWidget_ = OptionsPageBuilder::buildFrame(PageNetwork, &searchEntries_, [this](OptionsPageBuilder &b) {
-    b.radio(directConnectionButton_, tr("Direct connection to the Internet"));
-    b.radio(systemProxyButton_, tr("System proxy configuration (if available)"));
+    b.radio(directConnectionButton_, tr("Direct connection to the Internet"),
+            QStringLiteral("proxy network"));
+    b.radio(systemProxyButton_, tr("System proxy configuration (if available)"),
+            QStringLiteral("proxy network"));
     b.radio(manualProxyButton_, tr("Manual proxy configuration:"),
             QStringLiteral("HTTP SOCKS5 host port username password"));
 
@@ -656,13 +685,17 @@ QWidget *OptionsDialog::createNetworkConnectionsWidget()
 
     b.label(tr("Network options for feed updates (requires application restart):"));
     b.grid(QMargins(15, 0, 5, 0), 1, [this](OptionsGridBuilder &g) {
-      g.addSpinRow(0, tr("Request timeout:"), timeoutRequest_, 0, 300);
-      g.addSpinRow(1, tr("Number of requests:"), numberRequests_, 1, 10);
-      g.addSpinRow(2, tr("Number of retries:"), numberRepeats_, 1, 10);
+      g.addSpinRow(0, tr("Request timeout:"), timeoutRequest_, 0, 300, QString(), QString(),
+                   QStringLiteral("connection wait seconds"));
+      g.addSpinRow(1, tr("Number of requests:"), numberRequests_, 1, 10, QString(), QString(),
+                   QStringLiteral("parallel concurrent connections threads"));
+      g.addSpinRow(2, tr("Number of retries:"), numberRepeats_, 1, 10, QString(), QString(),
+                   QStringLiteral("retry attempts"));
     });
     b.spacing(20);
 
-    b.check(customUserAgent_, tr("Use custom User-Agent"));
+    b.check(customUserAgent_, tr("Use custom User-Agent"), QString(),
+            QStringLiteral("ua header browser fingerprint"));
     b.indented(QMargins(15, 0, 5, 0), [this](OptionsPageBuilder &sub) {
       userAgentEdit_ = new LineEdit();
       Settings userAgentSettings("Settings");
@@ -713,24 +746,30 @@ QWidget *OptionsDialog::createBrowserWidget()
 {
   browserWidget_ = OptionsPageBuilder::buildTabs(PageBrowser, &searchEntries_, {
     {tr("Articles"), [this](OptionsPageBuilder &b) {
-      b.check(autoLoadImages_, tr("Load images"));
+      b.check(autoLoadImages_, tr("Load images"), QString(),
+              QStringLiteral("pictures graphics media"));
       b.check(highQualityImageScaling_, tr("Use Lanczos scaling for article images"),
-              tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"));
+              tr("Scales article images using a 2-pass Lanczos-3 filter on a background thread"),
+              QStringLiteral("pictures resize quality"));
       b.spinRow(preloadNewspaperPages_, tr("Preload up to"), 0, 10,
-                tr("pages in newspaper mode"), tr("0 disables image preloading"));
+                tr("pages in newspaper mode"), tr("0 disables image preloading"),
+                QStringLiteral("cache prefetch images"));
       OptionsPageBuilder::bindEnabled(autoLoadImages_, {highQualityImageScaling_, preloadNewspaperPages_});
 
       b.row([this](OptionsRowBuilder &r) {
         const QString zoomLabel = tr("Default article zoom:");
         r.label(zoomLabel);
         r.spin(defaultZoomPages_, 30, 300, QStringLiteral(" %"));
-        r.registerSearch(defaultZoomPages_, zoomLabel);
+        r.registerSearch(defaultZoomPages_, zoomLabel, QString(),
+                         QStringLiteral("scale magnify text size"));
       });
       b.spacing(12);
 
       b.label(tr("Open links in:"));
-      QRadioButton *systemBrowser = b.radio(tr("System default web browser"));
-      b.radio(customExternalBrowser_, tr("Custom web browser"));
+      QRadioButton *systemBrowser = b.radio(tr("System default web browser"),
+                                            QStringLiteral("url link open"));
+      b.radio(customExternalBrowser_, tr("Custom web browser"),
+              QStringLiteral("url link open"));
       auto *browserGroup = new QButtonGroup(this);
       browserGroup->addButton(systemBrowser);
       browserGroup->addButton(customExternalBrowser_);
@@ -753,7 +792,8 @@ QWidget *OptionsDialog::createBrowserWidget()
 
       b.check(returnFocusAfterLink_,
               tr("Return focus to %1 after opening a link").arg(ProjectMetadata::name()),
-              tr("Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.").arg(ProjectMetadata::name()));
+              tr("Attempts to bring %1 back to the foreground after opening an article link in your browser. Your desktop may prevent this, particularly on Wayland.").arg(ProjectMetadata::name()),
+              QStringLiteral("foreground window"));
       // clicked, rather than toggled: loading saved settings must not show a dialog.
       connect(returnFocusAfterLink_, &QAbstractButton::clicked, this, [this](bool checked) {
         if (!checked || !QGuiApplication::platformName().startsWith(QLatin1String("wayland")) ||
@@ -767,9 +807,11 @@ QWidget *OptionsDialog::createBrowserWidget()
       b.stretch();
     }},
     {tr("Downloads"), [this](OptionsPageBuilder &b) {
-      QPushButton *browse = b.pathRow(downloadLocationEdit_, tr("Download location:"), tr("Browse..."));
+      QPushButton *browse = b.pathRow(downloadLocationEdit_, tr("Download location:"), tr("Browse..."),
+                                      QStringLiteral("save folder directory path"));
       connect(browse, &QAbstractButton::clicked, this, &OptionsDialog::selectionDownloadLocation);
-      b.check(askDownloadLocation_, tr("Ask where to save each file before downloading"));
+      b.check(askDownloadLocation_, tr("Ask where to save each file before downloading"),
+              QString(), QStringLiteral("prompt save as dialog"));
       b.stretch();
     }},
   });
@@ -784,11 +826,13 @@ QWidget *OptionsDialog::createFeedsWidget()
     {tr("General"), [this](OptionsPageBuilder &b) {
       b.check(updateFeedsStartUp_, tr("Automatically update feeds on startup"),
               tr("Refresh enabled feeds immediately when the application starts. "
-                 "Otherwise, overdue scheduled feeds are checked after one minute."));
+                 "Otherwise, overdue scheduled feeds are checked after one minute."),
+              QStringLiteral("refresh sync fetch launch"));
       b.row([this](OptionsRowBuilder &r) {
         r.check(updateFeedsEnable_, tr("Automatically update feeds every"),
                 tr("Time spent with the application closed counts toward the interval. "
-                   "Overdue feeds are refreshed after a one-minute startup grace period."));
+                   "Overdue feeds are refreshed after a one-minute startup grace period."),
+                QStringLiteral("refresh sync fetch interval timer schedule"));
         r.spin(updateFeedsInterval_, 1, 9999);
         r.combo(updateIntervalType_, {tr("seconds"), tr("minutes"), tr("hours")});
         OptionsPageBuilder::bindEnabled(updateFeedsEnable_, {updateFeedsInterval_, updateIntervalType_});
@@ -797,15 +841,16 @@ QWidget *OptionsDialog::createFeedsWidget()
 
       b.label(tr("Action when opening a feed:"));
       b.grid(QMargins(15, 0, 0, 10), 1, [this](OptionsGridBuilder &g) {
-        g.radio(0, 0, positionLastNews_, tr("Focus the last opened article"));
-        g.check(0, 1, openNewsWebViewOn_, tr("Open the article"));
-        g.radio(1, 0, positionFirstNews_, tr("Focus the first article in the list"));
-        g.radio(2, 0, positionUnreadNews_, tr("Focus the first unread article"));
-        g.radio(3, 0, nottoOpenNews_, tr("Do nothing"));
+        g.radio(0, 0, positionLastNews_, tr("Focus the last opened article"), QStringLiteral("open feed select"));
+        g.check(0, 1, openNewsWebViewOn_, tr("Open the article"), QString(), QStringLiteral("open feed"));
+        g.radio(1, 0, positionFirstNews_, tr("Focus the first article in the list"), QStringLiteral("open feed select"));
+        g.radio(2, 0, positionUnreadNews_, tr("Focus the first unread article"), QStringLiteral("open feed select"));
+        g.radio(3, 0, nottoOpenNews_, tr("Do nothing"), QStringLiteral("open feed"));
         connect(nottoOpenNews_, &QAbstractButton::toggled, openNewsWebViewOn_, &QWidget::setDisabled);
       });
 
-      b.check(markIdenticalNewsRead_, tr("Automatically mark identical news as read"));
+      b.check(markIdenticalNewsRead_, tr("Automatically mark identical news as read"), QString(),
+              QStringLiteral("duplicate dedup crosspost"));
       b.spacing(15);
 
       b.group(avoidedOldNewsDateOn_, tr("Do not add articles published before this date to the database:"),
@@ -816,14 +861,16 @@ QWidget *OptionsDialog::createFeedsWidget()
         avoidedOldNewsDate_->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
         grp.addWidget(avoidedOldNewsDate_);
         grp.stretch();
-      }, Qt::Horizontal, QMargins(5, 5, 5, 5));
+      }, Qt::Horizontal, QMargins(5, 5, 5, 5), QStringLiteral("date cutoff filter ignore old"));
       avoidedOldNewsDateOn_->setChecked(false);
       b.stretch();
     }},
     {tr("Display"), [this](OptionsPageBuilder &b) {
-      b.check(alternatingRowColorsNews_, tr("Alternating row background colors"));
+      b.check(alternatingRowColorsNews_, tr("Alternating row background colors"), QString(),
+              QStringLiteral("zebra striping"));
       b.spacing(10);
-      b.check(simplifiedDateTime_, tr("Simplified date and time format"));
+      b.check(simplifiedDateTime_, tr("Simplified date and time format"), QString(),
+              QStringLiteral("today yesterday relative"));
 
       b.row([this](OptionsRowBuilder &r) {
         const QString dateLabel = tr("Date display format:");
@@ -842,7 +889,7 @@ QWidget *OptionsDialog::createFeedsWidget()
         for (const auto &entry : dateFormats) {
           formatDate_->addItem(entry.first, QLatin1String(entry.second));
         }
-        r.registerSearch(formatDate_, dateLabel);
+        r.registerSearch(formatDate_, dateLabel, QString(), QStringLiteral("timestamp"));
 
         r.spacing(10);
         r.label(timeLabel);
@@ -856,11 +903,13 @@ QWidget *OptionsDialog::createFeedsWidget()
         for (const auto &entry : timeFormats) {
           formatTime_->addItem(QLatin1String(entry.first), QLatin1String(entry.second));
         }
-        r.registerSearch(formatTime_, dateLabel + QLatin1Char(' ') + timeLabel);
+        r.registerSearch(formatTime_, dateLabel + QLatin1Char(' ') + timeLabel, QString(),
+                         QStringLiteral("clock hour timestamp"));
       }, QMargins(0, 0, 0, 0));
       b.spacing(10);
 
-      b.comboRow(mainNewsFilter_, tr("Default article filter:"), {});
+      b.comboRow(mainNewsFilter_, tr("Default article filter:"), {},
+                 QStringLiteral("unread starred"));
       const QPair<QString, const char *> filterItems[] = {
         {tr("Show All"), "filterNewsAll_"},
         {tr("Show New"), "filterNewsNew_"},
@@ -885,7 +934,7 @@ QWidget *OptionsDialog::createFeedsWidget()
         g.addWidget(0, 0, styleSheetNewsEdit_);
         g.addWidget(0, 1, styleSheetNewsButton, Qt::AlignRight);
       });
-      b.registerSearch(styleSheetNewsEdit_, styleLabel, QString(), QStringLiteral("css"));
+      b.registerSearch(styleSheetNewsEdit_, styleLabel, QString(), QStringLiteral("css theme custom style"));
       b.stretch();
     }},
     {tr("Reading"), [this](OptionsPageBuilder &b) {
@@ -897,21 +946,27 @@ QWidget *OptionsDialog::createFeedsWidget()
           r.label(tr("seconds"));
           OptionsPageBuilder::bindEnabled(markCurNewsRead_, {markNewsReadTime_});
           r.registerSearch(markCurNewsRead_,
-                           tr("Mark articles as read:") + QLatin1Char(' ') + tr("when selected, after "));
+                           tr("Mark articles as read:") + QLatin1Char(' ') + tr("when selected, after "),
+                           QString(), QStringLiteral("auto read timer delay"));
         }, QMargins(0, 0, 0, 0));
-        grp.radio(markPrevNewsRead_, tr("after switching to another article"));
-      });
-      b.check(markReadSwitchingFeed_, tr("Mark displayed news as read when switching feeds"));
-      b.check(markReadClosingTab_, tr("Mark displayed news as read when closing tab"));
-      b.check(markReadMinimize_, tr("Mark displayed news as read on minimize"));
+        grp.radio(markPrevNewsRead_, tr("after switching to another article"),
+                  QStringLiteral("auto read"));
+      }, Qt::Vertical, std::nullopt, QStringLiteral("auto read"));
+      b.check(markReadSwitchingFeed_, tr("Mark displayed news as read when switching feeds"), QString(),
+              QStringLiteral("auto read"));
+      b.check(markReadClosingTab_, tr("Mark displayed news as read when closing tab"), QString(),
+              QStringLiteral("auto read"));
+      b.check(markReadMinimize_, tr("Mark displayed news as read on minimize"), QString(),
+              QStringLiteral("auto read"));
       b.spacing(10);
 
       b.label(tr("Prevent accidental deletion of:"));
       b.indented(QMargins(15, 0, 0, 10), [this](OptionsPageBuilder &sub) {
-        sub.check(notDeleteStarred_, tr("starred news"));
-        sub.check(notDeleteLabeled_, tr("labeled news"));
+        sub.check(notDeleteStarred_, tr("starred news"), QString(), QStringLiteral("protect keep"));
+        sub.check(notDeleteLabeled_, tr("labeled news"), QString(), QStringLiteral("protect keep"));
       });
-      b.check(changeBehaviorActionNUN_, tr("Change behavior of the 'Next Unread Article' action"));
+      b.check(changeBehaviorActionNUN_, tr("Change behavior of the 'Next Unread Article' action"), QString(),
+              QStringLiteral("next unread navigation"));
       b.stretch();
     }},
     {tr("Clean Up"), [this](OptionsPageBuilder &b) {
@@ -921,7 +976,8 @@ QWidget *OptionsDialog::createFeedsWidget()
               "Removes expired articles on shutdown and ignores expired incoming articles on later updates. "
               "The first successful fetch of a new feed is exempt. Unread, starred and labeled articles "
               "are preserved according to the options below. Articles without a usable publication date "
-              "use their received date for cleanup and retain a record to prevent reappearance."));
+              "use their received date for cleanup and retain a record to prevent reappearance."),
+              QStringLiteral("retention expire prune"));
 
           auto *maxDayRow = new QHBoxLayout();
           maxDayRow->setContentsMargins(0, 0, 0, 0);
@@ -948,21 +1004,23 @@ QWidget *OptionsDialog::createFeedsWidget()
           maxDayRow->addStretch();
           g.addLayout(0, 1, maxDayRow);
 
-          g.check(1, 0, newsCleanUpOn_, tr("Maximum number of articles to keep:"));
+          g.check(1, 0, newsCleanUpOn_, tr("Maximum number of articles to keep:"), QString(),
+                  QStringLiteral("limit count cap retention"));
           maxNewsCleanUp_ = new QSpinBox();
           maxNewsCleanUp_->setRange(0, 9999);
           OptionsPageBuilder::bindEnabled(newsCleanUpOn_, {maxNewsCleanUp_});
           g.addWidget(1, 1, maxNewsCleanUp_, Qt::AlignLeft);
 
-          g.check(2, 0, readCleanUp_, tr("Delete read news"));
-          g.check(3, 0, neverUnreadCleanUp_, tr("Never delete unread news"));
-          g.check(4, 0, neverStarCleanUp_, tr("Never delete starred news"));
-          g.check(5, 0, neverLabelCleanUp_, tr("Never delete labeled news"));
+          g.check(2, 0, readCleanUp_, tr("Delete read news"), QString(), QStringLiteral("purge prune"));
+          g.check(3, 0, neverUnreadCleanUp_, tr("Never delete unread news"), QString(), QStringLiteral("preserve keep"));
+          g.check(4, 0, neverStarCleanUp_, tr("Never delete starred news"), QString(), QStringLiteral("preserve keep"));
+          g.check(5, 0, neverLabelCleanUp_, tr("Never delete labeled news"), QString(), QStringLiteral("preserve keep"));
         });
         grp.spacing(10);
 
-        grp.check(cleanUpDeleted_, tr("Clean up 'Deleted'"));
-        grp.check(optimizeDB_, tr("Optimize database on shutdown (slower shutdown)"));
+        grp.check(cleanUpDeleted_, tr("Clean up 'Deleted'"), QString(), QStringLiteral("trash empty purge"));
+        grp.check(optimizeDB_, tr("Optimize database on shutdown (slower shutdown)"), QString(),
+                  QStringLiteral("vacuum sqlite compact defragment"));
         grp.spacing(10);
 
         grp.row([this](OptionsRowBuilder &r) {
@@ -974,7 +1032,7 @@ QWidget *OptionsDialog::createFeedsWidget()
                   this, &OptionsDialog::showCleanUpPreview);
         });
         grp.stretch();
-      });
+      }, Qt::Vertical, std::nullopt, QStringLiteral("prune purge expire retention exit"));
     }},
   });
 
@@ -1070,7 +1128,7 @@ QWidget *OptionsDialog::createLabelsWidget()
 
   loadLabelsOk_ = false;
   searchEntries_.append({PageLabels, -1, tr("Labels"), QString(),
-                         tr("Create...") + QLatin1Char(' ') + tr("Edit..."),
+                         tr("Create...") + QLatin1Char(' ') + tr("Edit...") + QStringLiteral(" tags categories"),
                          labelsTree_});
   return labelsWidget_;
 }
@@ -1096,13 +1154,13 @@ QWidget *OptionsDialog::createNotifierWidget()
           }
           r.combo(screenNotify_, screens);
           screenNotify_->setCurrentIndex(1);
-          r.registerSearch(screenNotify_, screenLabel);
+          r.registerSearch(screenNotify_, screenLabel, QString(), QStringLiteral("monitor display"));
 
           r.spacing(10);
           const QString positionLabel = tr("Position");
           r.label(positionLabel);
           r.combo(positionNotify_, {tr("Top Left"), tr("Top Right"), tr("Bottom Left"), tr("Bottom Right")});
-          r.registerSearch(positionNotify_, positionLabel);
+          r.registerSearch(positionNotify_, positionLabel, QString(), QStringLiteral("corner location"));
 
           r.stretch(1);
           QPushButton *showNotifier = r.button(tr("Preview"));
@@ -1120,10 +1178,14 @@ QWidget *OptionsDialog::createNotifierWidget()
         grp.spacing(10);
 
         grp.grid(std::nullopt, 2, [this](OptionsGridBuilder &g) {
-          g.addSpinRow(0, tr("Transparency"), transparencyNotify_, 0, 100, QStringLiteral("%"));
-          g.addSpinRow(1, tr("Show at most"), countShowNewsNotify_, 1, 30, tr("items per notification page"));
-          g.addSpinRow(2, tr("List item width"), widthTitleNewsNotify_, 50, 500, tr("pixels"));
-          g.addSpinRow(3, tr("Close notification after"), timeShowNewsNotify_, 0, 99999, tr("seconds"));
+          g.addSpinRow(0, tr("Transparency"), transparencyNotify_, 0, 100, QStringLiteral("%"),
+                       QString(), QStringLiteral("opacity alpha"));
+          g.addSpinRow(1, tr("Show at most"), countShowNewsNotify_, 1, 30, tr("items per notification page"),
+                       QString(), QStringLiteral("limit alerts"));
+          g.addSpinRow(2, tr("List item width"), widthTitleNewsNotify_, 50, 500, tr("pixels"),
+                       QString(), QStringLiteral("size"));
+          g.addSpinRow(3, tr("Close notification after"), timeShowNewsNotify_, 0, 99999, tr("seconds"),
+                       QString(), QStringLiteral("duration timeout delay"));
         });
         grp.spacing(10);
 
@@ -1136,14 +1198,15 @@ QWidget *OptionsDialog::createNotifierWidget()
         grp.spacing(10);
 
         grp.row([this](OptionsRowBuilder &r) {
-          r.check(onlySelectedFeeds_, tr("Only show selected feeds:"));
+          r.check(onlySelectedFeeds_, tr("Only show selected feeds:"), QString(),
+                  QStringLiteral("filter feeds alert"));
           QPushButton *feedsNotifierButton = r.button(tr("Feeds"));
           OptionsPageBuilder::bindEnabled(onlySelectedFeeds_, {feedsNotifierButton});
           connect(feedsNotifierButton, &QAbstractButton::clicked, this, &OptionsDialog::openFeedsNotifierDlg);
           r.stretch(1);
         }, std::nullopt, false);
         grp.stretch(1);
-      }, Qt::Vertical, QMargins(10, 10, 10, 10));
+      }, Qt::Vertical, QMargins(10, 10, 10, 10), QStringLiteral("popup toast alert banner"));
       showNotifyOn_->setChecked(false);
     }},
     {tr("Sound"), [this](OptionsPageBuilder &b) {
@@ -1159,7 +1222,7 @@ QWidget *OptionsDialog::createNotifierWidget()
                   qobject_cast<MainWindow *>(parent()), &MainWindow::slotPlaySound);
         }, std::nullopt, false);
         grp.stretch(1);
-      }, Qt::Vertical, QMargins(10, 10, 10, 10));
+      }, Qt::Vertical, QMargins(10, 10, 10, 10), QStringLiteral("audio wav mp3 flac alert chime"));
       soundNotifyBox_->setChecked(false);
     }},
   });
@@ -1245,7 +1308,8 @@ QWidget *OptionsDialog::createPasswordsWidget()
   passwordsWidget_->setLayout(passLayout);
   loadPasswordsOk_ = false;
   searchEntries_.append({PagePasswords, -1, tr("Passwords"), QString(),
-                         tr("Site") + QLatin1Char(' ') + tr("User") + QLatin1Char(' ') + tr("Show Passwords"),
+                         tr("Site") + QLatin1Char(' ') + tr("User") + QLatin1Char(' ') + tr("Show Passwords")
+                             + QStringLiteral(" credentials login auth"),
                          passTree_});
   return passwordsWidget_;
 }
@@ -1302,7 +1366,7 @@ QWidget *OptionsDialog::createLanguageWidget()
   languageWidget_ = new QWidget();
   languageWidget_->setLayout(languageLayout);
   searchEntries_.append({PageLanguage, -1, tr("Choose language:"), QString(),
-                         tr("Language"), languageFileList_});
+                         tr("Language") + QStringLiteral(" locale translation ui"), languageFileList_});
   return languageWidget_;
 }
 
@@ -1348,7 +1412,8 @@ QWidget *OptionsDialog::createFontsColorsWidget()
     const QString fontTitle = tr(kFontLabels[i]);
     fontsTree_->addTopLevelItem(
           new QTreeWidgetItem(QStringList() << QString::number(i) << fontTitle));
-    searchEntries_.append({PageFontsColors, 0, fontTitle, QString(), tr("Fonts"), fontsTree_, i});
+    searchEntries_.append({PageFontsColors, 0, fontTitle, QString(),
+                           tr("Fonts") + QStringLiteral(" typography size family"), fontsTree_, i});
   }
 
   fontsTree_->setCurrentItem(fontsTree_->topLevelItem(0));
@@ -1440,7 +1505,8 @@ QWidget *OptionsDialog::createFontsColorsWidget()
       colorOptionItems_[entry.optionId] = item;
       if (!firstColor) firstColor = item;
       searchEntries_.append({PageFontsColors, 1, label, QString(),
-                             tr("Colors") + QLatin1Char(' ') + currentColorSection,
+                             tr("Colors") + QLatin1Char(' ') + currentColorSection
+                                 + QStringLiteral(" theme palette"),
                              colorsTree_, entry.optionId});
     }
   }

@@ -30,8 +30,8 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent,
   buttons->addWidget(show);
   buttons->addStretch();
   layout->addLayout(buttons);
-  addSearch(now, tr("Back Up Now"));
-  addSearch(show, tr("Show Backups"));
+  addSearch(now, tr("Back Up Now"), QStringLiteral("export archive snapshot"));
+  addSearch(show, tr("Show Backups"), QStringLiteral("folder directory"));
   connect(show, &QPushButton::clicked, this, [this] {
     if (!QDir().mkpath(DatabaseBackup::directory())) {
       QMessageBox::warning(this, tr("Database Backup"), tr("Cannot create the backup directory: %1").arg(DatabaseBackup::directory()));
@@ -42,7 +42,7 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent,
   enabled_ = new QCheckBox(tr("Enable automatic backups"), this);
   enabled_->setChecked(AppSettings::backupEnabled.get());
   layout->addWidget(enabled_);
-  addSearch(enabled_, enabled_->text());
+  addSearch(enabled_, enabled_->text(), QStringLiteral("export restore archive snapshot"));
   auto *triggers = new QWidget(this);
   auto *triggerLayout = new QVBoxLayout(triggers);
   onExit_ = new QCheckBox(tr("On application exit"), triggers);
@@ -54,9 +54,9 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent,
   triggerLayout->addWidget(onExit_);
   triggerLayout->addWidget(subscriptions_);
   triggerLayout->addWidget(scheduled_);
-  addSearch(onExit_, onExit_->text());
+  addSearch(onExit_, onExit_->text(), QStringLiteral("quit close"));
   addSearch(subscriptions_, subscriptions_->text());
-  addSearch(scheduled_, scheduled_->text());
+  addSearch(scheduled_, scheduled_->text(), QStringLiteral("interval timer"));
   auto *frequencies = new QWidget(triggers);
   auto *frequencyLayout = new QVBoxLayout(frequencies);
   frequency_ = new QButtonGroup(this);
@@ -85,11 +85,11 @@ BackupSettingsPage::BackupSettingsPage(QWidget *parent,
   retention->addWidget(keep_);
   retention->addStretch();
   layout->addLayout(retention);
-  addSearch(keep_, keepLabel);
+  addSearch(keep_, keepLabel, QStringLiteral("retention limit count"));
   clean_ = new QCheckBox(tr("Keep only starred or labelled articles in backups"), this);
   clean_->setChecked(AppSettings::backupClean.get());
   layout->addWidget(clean_);
-  addSearch(clean_, clean_->text());
+  addSearch(clean_, clean_->text(), QStringLiteral("starred labeled filter"));
   connect(clean_, &QCheckBox::toggled, this, [this](bool checked) {
     if (!checked) return;
     const auto answer = QMessageBox::warning(this, tr("Backups will exclude other articles"),
