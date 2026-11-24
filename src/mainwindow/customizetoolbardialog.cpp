@@ -26,11 +26,9 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   : Dialog(parent),
     toolbar_(toolbar)
 {
-  setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setMinimumWidth(400);
   setMinimumHeight(400);
 
-  Settings settings;
   QString iconStr;
   if (toolbar_->objectName() == "ToolBar_General") {
     setWindowTitle(tr("Customize Main Toolbar"));
@@ -182,13 +180,12 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
 
   shortcutTree_->setCurrentIndex(QModelIndex());
   new ReorderableTreeController(shortcutTree_, moveUpButton, moveDownButton, removeButton);
-  connect(this, &QDialog::finished, this, &CustomizeToolbarDialog::closeDialog);
 
   // Respect translated text, font metrics and theme sizing even when restoring
   // geometry saved with a smaller font or a different display scale.
   ensurePolished();
   setMinimumSize(minimumSizeHint().expandedTo(QSize(400, 400)));
-  restoreGeometry(settings.value("customizeToolbarDlg/geometry").toByteArray());
+  bindGeometrySetting(QStringLiteral("customizeToolbarDlg/geometry"));
 }
 
 void CustomizeToolbarDialog::acceptDialog()
@@ -323,12 +320,6 @@ void CustomizeToolbarDialog::acceptDialog()
   }
 
   accept();
-}
-
-void CustomizeToolbarDialog::closeDialog()
-{
-  Settings settings;
-  settings.setValue("customizeToolbarDlg/geometry", saveGeometry());
 }
 
 void CustomizeToolbarDialog::showMenuAddButton()

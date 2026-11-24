@@ -252,7 +252,6 @@ CleanUpPreviewDialog::CleanUpPreviewDialog(const ShutdownCleanUpPlan &plan, QWid
   : Dialog(parent)
   , plan_(plan)
 {
-  setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Clean Up Preview"));
   setSizeGripEnabled(true);
 
@@ -343,8 +342,8 @@ CleanUpPreviewDialog::CleanUpPreviewDialog(const ShutdownCleanUpPlan &plan, QWid
   populateFeedsTree();
 
   resize(880, 520);
+  bindGeometrySetting(QStringLiteral("CleanUpPreviewDialog/geometry"));
   Settings settings;
-  restoreGeometry(settings.value("CleanUpPreviewDialog/geometry").toByteArray());
   const QByteArray splitterState = settings.value("CleanUpPreviewDialog/splitter").toByteArray();
   if (!splitterState.isEmpty()) {
     splitter_->restoreState(splitterState);
@@ -354,7 +353,6 @@ CleanUpPreviewDialog::CleanUpPreviewDialog(const ShutdownCleanUpPlan &plan, QWid
 CleanUpPreviewDialog::~CleanUpPreviewDialog()
 {
   Settings settings;
-  settings.setValue("CleanUpPreviewDialog/geometry", saveGeometry());
   settings.setValue("CleanUpPreviewDialog/splitter", splitter_->saveState());
 }
 

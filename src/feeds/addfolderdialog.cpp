@@ -24,7 +24,6 @@
 AddFolderDialog::AddFolderDialog(QWidget *parent, int curFolderId)
   : Dialog(parent, Qt::MSWindowsFixedSizeDialogHint)
 {
-  setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Add Folder"));
   setMinimumWidth(400);
   setMinimumHeight(300);

@@ -127,16 +127,7 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
       });
   connect(filtersTree_, &QAbstractItemView::doubleClicked, this, &NewsFiltersDialog::editFilter);
   connect(filtersTree_, &QTreeWidget::itemChanged, this, &NewsFiltersDialog::slotItemChanged);
-  connect(this, &QDialog::finished, this, &NewsFiltersDialog::closeDialog);
-
-  Settings settings;
-  restoreGeometry(settings.value("newsFiltersDlg/geometry").toByteArray());
-}
-
-void NewsFiltersDialog::closeDialog()
-{
-  Settings settings;
-  settings.setValue("newsFiltersDlg/geometry", saveGeometry());
+  bindGeometrySetting(QStringLiteral("newsFiltersDlg/geometry"));
 }
 
 void NewsFiltersDialog::newFilter()

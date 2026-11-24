@@ -33,7 +33,6 @@ public:
   int filterId_;
 
 private slots:
-  void closeDialog();
   void acceptDialog();
 
   void filterNameChanged(const QString &text);

@@ -37,7 +37,6 @@ UpdateAppDialog::UpdateAppDialog(QWidget *parent, bool show)
 
   if (showDialog_) {
     setWindowTitle(tr("Check for Updates"));
-    setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setObjectName("UpdateAppDialog");
     resize(450, 350);
 
@@ -67,9 +66,10 @@ UpdateAppDialog::UpdateAppDialog(QWidget *parent, bool show)
 
     buttonBox->addButton(QDialogButtonBox::Close);
 
-    connect(this, &QDialog::finished, this, &UpdateAppDialog::closeDialog);
-
-    restoreGeometry(settings.value("updateAppDlg/geometry").toByteArray());
+    bindGeometrySetting(QStringLiteral("updateAppDlg/geometry"));
+    connect(this, &QDialog::finished, this, [this] {
+      Settings().setValue("remindAboutVersion", remindAboutVersion_->isChecked());
+    });
   }
   // Let the caller connect the background completion signal before any outcome.
   QTimer::singleShot(0, this, &UpdateAppDialog::renderStatistics);
@@ -88,13 +88,6 @@ void UpdateAppDialog::disconnectObjects()
 
   delete networkManagerProxy_;
   networkManagerProxy_ = nullptr;
-}
-
-void UpdateAppDialog::closeDialog()
-{
-  Settings settings;
-  settings.setValue("remindAboutVersion", remindAboutVersion_->isChecked());
-  settings.setValue("updateAppDlg/geometry", saveGeometry());
 }
 
 void UpdateAppDialog::finishUpdatesChecking()

@@ -37,7 +37,6 @@ signals:
   void signalNewVersion(const QString &newVersion = QString());
 
 private slots:
-  void closeDialog();
   void finishUpdatesChecking();
   void renderStatistics();
 

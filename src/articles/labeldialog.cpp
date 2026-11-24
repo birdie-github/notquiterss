@@ -22,7 +22,6 @@
 LabelDialog::LabelDialog(QWidget *parent)
   : Dialog(parent, Qt::MSWindowsFixedSizeDialogHint)
 {
-  setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("New Label"));
 
   nameEdit_ = new LineEdit(this);

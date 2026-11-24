@@ -182,11 +182,9 @@ FilterRulesDialog::FilterRulesDialog(QWidget *parent, int filterId, int feedId)
   filterName_->setFocus();
   filterName_->selectAll();
 
-  Settings settings;
-  restoreGeometry(settings.value("filterRulesDlg/geometry").toByteArray());
+  bindGeometrySetting(QStringLiteral("filterRulesDlg/geometry"));
 
   connect(filterName_, &QLineEdit::textChanged, this, &FilterRulesDialog::filterNameChanged);
-  connect(this, &QDialog::finished, this, &FilterRulesDialog::closeDialog);
 }
 
 void FilterRulesDialog::setData()
@@ -257,12 +255,6 @@ void FilterRulesDialog::setData()
     if (actionsLayout_->count() == 0)
       addAction();
   }
-}
-
-void FilterRulesDialog::closeDialog()
-{
-  Settings settings;
-  settings.setValue("filterRulesDlg/geometry", saveGeometry());
 }
 
 void FilterRulesDialog::acceptDialog()

@@ -54,7 +54,6 @@ AuthenticationDialog::AuthenticationDialog(const QString &server, const QString 
     auth_->setPassword(QString::fromUtf8(QByteArray::fromBase64(q.value(1).toByteArray())));
     save_->setChecked(true);
   } else {
-    setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWindowTitle(tr("Authorization required"));
     setMinimumWidth(400);
 

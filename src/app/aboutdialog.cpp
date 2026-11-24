@@ -40,7 +40,6 @@ AboutDialog::AboutDialog(QWidget *parent) :
   Dialog(parent, Qt::MSWindowsFixedSizeDialogHint)
 {
   setWindowTitle(tr("About"));
-  setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setObjectName("AboutDialog");
   setMinimumWidth(480);
 

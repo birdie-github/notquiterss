@@ -16,7 +16,6 @@
 NotifierFeedsDialog::NotifierFeedsDialog(QWidget *parent)
   : Dialog(parent)
 {
-  setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(optTr("Selection of feeds"));
   setMinimumSize(300, 300);
 

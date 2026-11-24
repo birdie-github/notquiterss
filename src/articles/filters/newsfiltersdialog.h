@@ -31,7 +31,6 @@ public:
   QTreeWidget *filtersTree_;
 
 private slots:
-  void closeDialog();
   void newFilter();
   void editFilter();
   void deleteFilter();

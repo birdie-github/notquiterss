@@ -29,7 +29,6 @@ public:
 
 private slots:
   void acceptDialog();
-  void closeDialog();
 
   void showMenuAddButton();
   void addShortcut(QAction *action);

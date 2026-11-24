@@ -63,7 +63,6 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   : Dialog(parent)
 {
   openTimer_.start();
-  setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Options"));
   setSizeGripEnabled(true);
 

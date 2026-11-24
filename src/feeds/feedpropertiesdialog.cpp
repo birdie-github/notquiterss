@@ -34,7 +34,6 @@ FeedPropertiesDialog::FeedPropertiesDialog(bool isFeed, QWidget *parent, bool bu
   , isFeed_(isFeed)
   , bulk_(bulk)
 {
-  setWindowFlags (windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(bulk_ ? tr("Bulk configure feeds") : tr("Properties"));
   setMinimumWidth(500);
   setMinimumHeight(400);

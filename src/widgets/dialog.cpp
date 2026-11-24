@@ -17,10 +17,12 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "dialog.h"
+#include "preferences/settings.h"
 
 Dialog::Dialog(QWidget *parent, Qt::WindowFlags flag)
   : QDialog(parent, flag)
 {
+  setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   pageLayout = new QVBoxLayout();
   pageLayout->setContentsMargins(10, 10, 10, 5);
   pageLayout->setSpacing(5);
@@ -43,4 +45,15 @@ Dialog::Dialog(QWidget *parent, Qt::WindowFlags flag)
   setLayout(mainLayout);
 
   connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+void Dialog::bindGeometrySetting(const QString &key)
+{
+  Settings settings;
+  const QByteArray saved = settings.value(key).toByteArray();
+  if (!saved.isEmpty()) restoreGeometry(saved);
+  connect(this, &QDialog::finished, this, [this, key] {
+    Settings out;
+    out.setValue(key, saveGeometry());
+  });
 }

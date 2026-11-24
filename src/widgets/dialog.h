@@ -26,6 +26,7 @@ class Dialog : public QDialog
   Q_OBJECT
 public:
   explicit Dialog(QWidget *parent, Qt::WindowFlags flag = Qt::WindowFlags());
+  void bindGeometrySetting(const QString &key);
 
   QVBoxLayout *mainLayout;
   QVBoxLayout *pageLayout;
