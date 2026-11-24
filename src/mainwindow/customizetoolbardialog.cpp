@@ -180,6 +180,7 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   buttonBox->addButton(QDialogButtonBox::Cancel);
   connect(buttonBox, &QDialogButtonBox::accepted, this, &CustomizeToolbarDialog::acceptDialog);
 
+  shortcutTree_->setCurrentIndex(QModelIndex());
   new ReorderableTreeController(shortcutTree_, moveUpButton, moveDownButton, removeButton);
   connect(this, &QDialog::finished, this, &CustomizeToolbarDialog::closeDialog);
 

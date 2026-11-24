@@ -118,6 +118,7 @@ void LabelsSettingsPage::load()
     if (!colorBg.isEmpty()) treeWidgetItem->setBackground(1, QColor(colorBg));
     labelsTree_->addTopLevelItem(treeWidgetItem);
   }
+  labelsTree_->setCurrentIndex(QModelIndex());
   qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::loadLabels: %1 ms").arg(timer.elapsed());
 }
 

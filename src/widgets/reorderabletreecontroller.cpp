@@ -3,6 +3,7 @@
 
 #include <QAbstractButton>
 #include <QAbstractItemModel>
+#include <QItemSelectionModel>
 #include <QTreeWidget>
 #include <utility>
 
@@ -67,12 +68,17 @@ void ReorderableTreeController::moveCurrent(int delta)
   const int target = row + delta;
   if (row < 0 || target < 0 || target >= tree_->topLevelItemCount()) return;
 
+  QTreeWidgetItem *moved = tree_->topLevelItem(row);
+  QTreeWidgetItem *other = tree_->topLevelItem(target);
   if (onSwapped_) {
-    onSwapped_(tree_->topLevelItem(row), tree_->topLevelItem(target));
+    onSwapped_(moved, other);
   }
+  const int col = qMax(0, tree_->currentColumn());
   // Removing and reinserting the neighbor preserves currentItem() and focus.
   QTreeWidgetItem *neighbor = tree_->takeTopLevelItem(target);
   tree_->insertTopLevelItem(row, neighbor);
+  // Keep the moved item visibly selected even if focus left the tree for the button.
+  tree_->setCurrentItem(moved, col, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
   updateButtons();
 }
 
@@ -81,6 +87,10 @@ void ReorderableTreeController::removeCurrent()
   if (!tree_) return;
   const int row = tree_->indexOfTopLevelItem(tree_->currentItem());
   if (row < 0) return;
+  const int col = qMax(0, tree_->currentColumn());
   delete tree_->takeTopLevelItem(row);
+  if (QTreeWidgetItem *next = tree_->currentItem()) {
+    tree_->setCurrentItem(next, col, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+  }
   updateButtons();
 }

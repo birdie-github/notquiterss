@@ -540,6 +540,7 @@ QWidget *FeedPropertiesDialog::createStatusTab()
       sortByColumnBox_->setCurrentIndex(i);
   }
   sortOrderBox_->setCurrentIndex(feedProperties.column.sortType);
+  columnsTree_->setCurrentIndex(QModelIndex());
 
   if (bulk_) return;
 
