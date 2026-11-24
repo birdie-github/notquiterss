@@ -159,6 +159,7 @@ public:
   QGroupBox *cleanupOnShutdownBox_;
   QCheckBox *dayCleanUpOn_;
   QSpinBox *maxDayCleanUp_;
+  QToolButton *maxDayCleanUpWarning_ = nullptr;
   QCheckBox *newsCleanUpOn_;
   QSpinBox *maxNewsCleanUp_;
   QCheckBox *readCleanUp_;
@@ -335,9 +336,11 @@ private:
   // feeds
   QWidget *createFeedsWidget();
   void onFeedsPageEntered();
+  void updateMaxDayCleanUpWarning();
   ShutdownCleanUpConfig currentCleanUpConfig() const;
   ShutdownCleanUpPlan cleanUpPlan_;
   bool cleanUpPlanValid_ = false;
+  int initialMaxDayCleanUp_ = -1;
 
   // notifier
   QWidget *createNotifierWidget();

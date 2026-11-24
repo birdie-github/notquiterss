@@ -210,6 +210,10 @@ void OptionsDialog::ensurePageCreated(int pageIndex)
   if (MainWindow *mw = qobject_cast<MainWindow *>(parent())) {
     mw->initOptionPage(pageIndex);
   }
+  if (pageIndex == PageFeeds) {
+    initialMaxDayCleanUp_ = maxDayCleanUp_->value();
+    updateMaxDayCleanUpWarning();
+  }
   pageScrollAreas_.at(pageIndex)->setWidget(page);
   qInfo().noquote() << QStringLiteral("[perf] OptionsDialog::ensurePageCreated(%1): %2 ms")
       .arg(pageIndex)
@@ -997,6 +1001,27 @@ QWidget *OptionsDialog::createFeedsWidget()
   maxDayCleanUp_->setRange(0, 9999);
   connect(dayCleanUpOn_, &QAbstractButton::toggled, maxDayCleanUp_, &QWidget::setEnabled);
 
+  const QString ageWarningText = tr(
+      "Raising this limit may cause old articles you have already read or deleted "
+      "to reappear as new if a feed still lists them.");
+  maxDayCleanUpWarning_ = new QToolButton();
+  maxDayCleanUpWarning_->setIcon(QIcon(QStringLiteral(":/images/warning")));
+  maxDayCleanUpWarning_->setIconSize(QSize(16, 16));
+  maxDayCleanUpWarning_->setAutoRaise(true);
+  maxDayCleanUpWarning_->setCursor(Qt::PointingHandCursor);
+  maxDayCleanUpWarning_->setToolTip(ageWarningText);
+  maxDayCleanUpWarning_->setAccessibleName(tr("Article age limit warning"));
+  maxDayCleanUpWarning_->hide();
+  connect(maxDayCleanUpWarning_, &QAbstractButton::clicked, this, [this, ageWarningText]() {
+    QMessageBox::warning(this, tr("Maximum article age to keep"), ageWarningText, QMessageBox::Ok);
+  });
+
+  QHBoxLayout *maxDayCleanUpLayout = new QHBoxLayout();
+  maxDayCleanUpLayout->setContentsMargins(0, 0, 0, 0);
+  maxDayCleanUpLayout->addWidget(maxDayCleanUp_);
+  maxDayCleanUpLayout->addWidget(maxDayCleanUpWarning_);
+  maxDayCleanUpLayout->addStretch();
+
   newsCleanUpOn_ = new QCheckBox(tr("Maximum number of articles to keep:"));
   maxNewsCleanUp_ = new QSpinBox();
   maxNewsCleanUp_->setEnabled(false);
@@ -1014,7 +1039,7 @@ QWidget *OptionsDialog::createFeedsWidget()
   QGridLayout *cleanUpFeedsLayout = new QGridLayout();
   cleanUpFeedsLayout->setColumnStretch(1, 1);
   cleanUpFeedsLayout->addWidget(dayCleanUpOn_, 0, 0, 1, 1);
-  cleanUpFeedsLayout->addWidget(maxDayCleanUp_, 0, 1, 1, 1, Qt::AlignLeft);
+  cleanUpFeedsLayout->addLayout(maxDayCleanUpLayout, 0, 1, 1, 1);
   cleanUpFeedsLayout->addWidget(newsCleanUpOn_, 1, 0, 1, 1);
   cleanUpFeedsLayout->addWidget(maxNewsCleanUp_, 1, 1, 1, 1, Qt::AlignLeft);
   cleanUpFeedsLayout->addWidget(readCleanUp_, 2, 0, 1, 1);
@@ -1055,9 +1080,13 @@ QWidget *OptionsDialog::createFeedsWidget()
   feedsWidget_->addTab(cleanUpFeedsWidget, tr("Clean Up"));
 
   connect(cleanupOnShutdownBox_, &QGroupBox::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(cleanupOnShutdownBox_, &QGroupBox::toggled, this, &OptionsDialog::updateMaxDayCleanUpWarning);
   connect(dayCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
+  connect(dayCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateMaxDayCleanUpWarning);
   connect(maxDayCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, &OptionsDialog::updateCleanUpPreview);
+  connect(maxDayCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, &OptionsDialog::updateMaxDayCleanUpWarning);
   connect(newsCleanUpOn_, &QAbstractButton::toggled, this, &OptionsDialog::updateCleanUpPreview);
   connect(maxNewsCleanUp_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, &OptionsDialog::updateCleanUpPreview);
@@ -1077,6 +1106,15 @@ void OptionsDialog::onFeedsPageEntered()
   if (feedsWidget_ && feedsWidget_->currentIndex() == 3) {
     updateCleanUpPreview();
   }
+}
+
+void OptionsDialog::updateMaxDayCleanUpWarning()
+{
+  if (!maxDayCleanUpWarning_ || initialMaxDayCleanUp_ < 0) return;
+  const bool raised = cleanupOnShutdownBox_->isChecked() &&
+      dayCleanUpOn_->isChecked() &&
+      maxDayCleanUp_->value() > initialMaxDayCleanUp_;
+  maxDayCleanUpWarning_->setVisible(raised);
 }
 
 /** @brief Create widget "Labels"
