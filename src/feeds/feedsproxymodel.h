@@ -20,6 +20,7 @@ public:
 
 private:
   bool filterAcceptsRow(int source_row, const QModelIndex &sourceParent) const;
+  bool acceptRowSearch(int sourceRow, const QModelIndex &sourceParent) const;
   bool acceptFolder(const QModelIndex &indexFolder) const;
   QString filterAct_;
   QList<int> idList_;

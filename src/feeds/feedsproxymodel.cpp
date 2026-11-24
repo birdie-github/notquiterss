@@ -64,17 +64,7 @@ bool FeedsProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
   }
 
   if (accept && !findText_.isEmpty()) {
-    index = sourceModel()->index(sourceRow, static_cast<FeedsModel *>(sourceModel())->indexColumnOf("xmlUrl"), sourceParent);
-    if (!sourceModel()->data(index, Qt::EditRole).toString().isEmpty()) {
-      if (findAct_ == "findLinkAct") {
-        accept = sourceModel()->data(index, Qt::EditRole).toString().contains(findText_, Qt::CaseInsensitive);
-      } else {
-        index = sourceModel()->index(sourceRow, static_cast<FeedsModel *>(sourceModel())->indexColumnOf("text"), sourceParent);
-        accept = sourceModel()->data(index, Qt::EditRole).toString().contains(findText_, Qt::CaseInsensitive);
-      }
-    } else {
-      accept = acceptFolder(index);
-    }
+    accept = acceptRowSearch(sourceRow, sourceParent);
   }
 
   return accept;
@@ -101,22 +91,26 @@ QModelIndex FeedsProxyModel::index(int row, const QString& fieldName, const QMod
   return QSortFilterProxyModel::index(row, column, parent);
 }
 
+bool FeedsProxyModel::acceptRowSearch(int sourceRow, const QModelIndex &sourceParent) const
+{
+  const auto *model = static_cast<const FeedsModel *>(sourceModel());
+  const QModelIndex urlIdx = model->index(sourceRow, model->indexColumnOf("xmlUrl"), sourceParent);
+  const QString xmlUrl = model->data(urlIdx, Qt::EditRole).toString();
+  if (!xmlUrl.isEmpty()) {
+    if (findAct_ == QLatin1String("findLinkAct")) {
+      return xmlUrl.contains(findText_, Qt::CaseInsensitive);
+    }
+    const QModelIndex textIdx = model->index(sourceRow, model->indexColumnOf("text"), sourceParent);
+    return model->data(textIdx, Qt::EditRole).toString().contains(findText_, Qt::CaseInsensitive);
+  }
+  return acceptFolder(model->index(sourceRow, 0, sourceParent));
+}
+
 bool FeedsProxyModel::acceptFolder(const QModelIndex &indexFolder) const
 {
-  QModelIndex index;
-  bool accept = false;
-
   for (int i = 0; i < sourceModel()->rowCount(indexFolder); ++i) {
-    index = sourceModel()->index(i, static_cast<FeedsModel *>(sourceModel())->indexColumnOf("xmlUrl"), indexFolder);
-    if (!sourceModel()->data(index, Qt::EditRole).toString().isEmpty()) {
-      index = sourceModel()->index(i, static_cast<FeedsModel *>(sourceModel())->indexColumnOf("text"), indexFolder);
-      accept = sourceModel()->data(index, Qt::EditRole).toString().contains(findText_, Qt::CaseInsensitive);
-    } else {
-      accept = acceptFolder(index);
-    }
-    if (accept)
-      break;
+    if (acceptRowSearch(i, indexFolder))
+      return true;
   }
-
-  return accept;
+  return false;
 }
