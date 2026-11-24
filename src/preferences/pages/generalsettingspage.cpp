@@ -16,13 +16,6 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
-
 GeneralSettingsPage::GeneralSettingsPage(QWidget *parent,
                                          QVector<OptionSearchEntry> *searchEntries,
                                          int pageIndex)

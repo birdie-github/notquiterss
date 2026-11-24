@@ -4,7 +4,6 @@
 #include "preferences/optionspagebuilder.h"
 
 #include <QByteArray>
-#include <QCoreApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QPushButton>
@@ -12,13 +11,6 @@
 #include <QSqlQuery>
 #include <QTreeWidget>
 #include <QVBoxLayout>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 PasswordsSettingsPage::PasswordsSettingsPage(QWidget *parent,
                                              QVector<OptionSearchEntry> *searchEntries,

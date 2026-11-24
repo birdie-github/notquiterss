@@ -6,7 +6,6 @@
 
 #include <QAction>
 #include <QActionGroup>
-#include <QCoreApplication>
 #include <QEvent>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -20,13 +19,6 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 #include <utility>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 ShortcutsSettingsPage::ShortcutsSettingsPage(const QList<QAction *> &actions,
                                              const QStringList *defaultShortcuts,

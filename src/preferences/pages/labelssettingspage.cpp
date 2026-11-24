@@ -7,7 +7,6 @@
 #include "widgets/reorderabletreecontroller.h"
 
 #include <QBuffer>
-#include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -17,13 +16,6 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <utility>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 LabelsSettingsPage::LabelsSettingsPage(QWidget *parent,
                                        QVector<OptionSearchEntry> *searchEntries,

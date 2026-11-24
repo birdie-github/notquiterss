@@ -7,7 +7,6 @@
 
 #include <QApplication>
 #include <QColorDialog>
-#include <QCoreApplication>
 #include <QFontDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -20,11 +19,6 @@
 #include <cmath>
 
 namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-
 class ColorSwatchDelegate final : public QStyledItemDelegate
 {
 public:

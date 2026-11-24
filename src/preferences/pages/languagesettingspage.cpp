@@ -7,18 +7,10 @@
 #include "preferences/optionspagebuilder.h"
 #include "projectmetadata.h"
 
-#include <QCoreApplication>
 #include <QLabel>
 #include <QTreeWidget>
 #include <QUrl>
 #include <QVBoxLayout>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 LanguageSettingsPage::LanguageSettingsPage(QWidget *parent,
                                            QVector<OptionSearchEntry> *searchEntries,

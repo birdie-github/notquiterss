@@ -5,18 +5,10 @@
 #include "preferences/optionspagebuilder.h"
 
 #include <QCheckBox>
-#include <QCoreApplication>
 #include <QGroupBox>
 #include <QGuiApplication>
 #include <QRadioButton>
 #include <QVBoxLayout>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 SystemTraySettingsPage::SystemTraySettingsPage(QWidget *parent,
                                                QVector<OptionSearchEntry> *searchEntries,

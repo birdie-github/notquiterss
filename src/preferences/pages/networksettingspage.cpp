@@ -8,20 +8,12 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QCoreApplication>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QVBoxLayout>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget *parent,
                                          QVector<OptionSearchEntry> *searchEntries,

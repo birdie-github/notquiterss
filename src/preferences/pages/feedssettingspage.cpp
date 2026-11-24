@@ -9,7 +9,6 @@
 #include <QCalendarWidget>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QCoreApplication>
 #include <QDate>
 #include <QElapsedTimer>
 #include <QFileDialog>
@@ -22,13 +21,6 @@
 #include <QSpinBox>
 #include <QToolButton>
 #include <utility>
-
-namespace {
-QString optTr(const char *text, const char *disambiguation = nullptr, int n = -1)
-{
-  return QCoreApplication::translate("OptionsDialog", text, disambiguation, n);
-}
-} // namespace
 
 FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
                                      std::function<bool()> isPageActive,

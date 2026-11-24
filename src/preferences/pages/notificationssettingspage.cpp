@@ -6,20 +6,12 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QCoreApplication>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGroupBox>
 #include <QGuiApplication>
 #include <QPushButton>
 #include <QSpinBox>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 NotificationsSettingsPage::NotificationsSettingsPage(QWidget *parent,
                                                      QVector<OptionSearchEntry> *searchEntries,

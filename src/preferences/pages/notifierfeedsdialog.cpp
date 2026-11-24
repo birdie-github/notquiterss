@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "notifierfeedsdialog.h"
 #include "feeds/feedselectiontree.h"
+#include "preferences/optionspagebuilder.h"
 
-#include <QCoreApplication>
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QHash>
@@ -12,13 +12,6 @@
 #include <QTreeWidget>
 #include <QVector>
 #include <utility>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 NotifierFeedsDialog::NotifierFeedsDialog(QWidget *parent)
   : Dialog(parent)

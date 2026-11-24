@@ -8,7 +8,6 @@
 
 #include <QButtonGroup>
 #include <QCheckBox>
-#include <QCoreApplication>
 #include <QDir>
 #include <QFileDialog>
 #include <QGuiApplication>
@@ -16,13 +15,6 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSpinBox>
-
-namespace {
-QString optTr(const char *text)
-{
-  return QCoreApplication::translate("OptionsDialog", text);
-}
-} // namespace
 
 BrowserSettingsPage::BrowserSettingsPage(QWidget *parent,
                                          QVector<OptionSearchEntry> *searchEntries,
