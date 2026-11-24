@@ -24,6 +24,7 @@
 #include "notificationsfeeditem.h"
 #include "notificationsnewsitem.h"
 #include "preferences/optionsdialog.h"
+#include "preferences/pages/notificationssettingspage.h"
 
 NotificationWidget::NotificationWidget(QList<int> idFeedList,
                                        QList<int> cntNewNewsList,
@@ -58,6 +59,7 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
           mainWindow->notificationFontFamily_, mainWindow->notificationFontSize_,
           mainWindow->notifierTextColor_, mainWindow->notifierBackgroundColor_,
           mainWindow->linkColor_};
+  const auto *notifier = options ? options->notifierPage() : nullptr;
   bool showTitlesFeedsNotify;
   bool showIconFeedNotify;
   bool showButtonMarkAllNotify;
@@ -65,7 +67,7 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
   bool showButtonExBrowserNotify;
   bool showButtonDeleteNotify;
 
-  if (idFeedList.count()) {
+  if (idFeedList.count() || !notifier) {
     screen_ = mainWindow->screenNotify_;
     position_ = mainWindow->positionNotify_;
     transparency_ = mainWindow->transparencyNotify_;
@@ -81,20 +83,20 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
     showButtonDeleteNotify = mainWindow->showButtonDeleteNotify_;
     closeNotify_ = mainWindow->closeNotify_;
   } else {
-    screen_ = options->screenNotify_->currentIndex()-1;
-    position_ = options->positionNotify_->currentIndex();
-    transparency_ = options->transparencyNotify_->value();
-    timeShowNews_ = options->timeShowNewsNotify_->value();
-    numberItems = options->countShowNewsNotify_->value();
-    widthList = options->widthTitleNewsNotify_->value();
+    screen_ = notifier->screenNotify_->currentIndex()-1;
+    position_ = notifier->positionNotify_->currentIndex();
+    transparency_ = notifier->transparencyNotify_->value();
+    timeShowNews_ = notifier->timeShowNewsNotify_->value();
+    numberItems = notifier->countShowNewsNotify_->value();
+    widthList = notifier->widthTitleNewsNotify_->value();
 
-    showTitlesFeedsNotify = options->showTitlesFeedsNotify_->isChecked();
-    showIconFeedNotify = options->showIconFeedNotify_->isChecked();
-    showButtonMarkAllNotify = options->showButtonMarkAllNotify_->isChecked();
-    showButtonMarkReadNotify = options->showButtonMarkReadNotify_->isChecked();
-    showButtonExBrowserNotify = options->showButtonExBrowserNotify_->isChecked();
-    showButtonDeleteNotify = options->showButtonDeleteNotify_->isChecked();
-    closeNotify_ = options->closeNotify_->isChecked();
+    showTitlesFeedsNotify = notifier->showTitlesFeedsNotify_->isChecked();
+    showIconFeedNotify = notifier->showIconFeedNotify_->isChecked();
+    showButtonMarkAllNotify = notifier->showButtonMarkAllNotify_->isChecked();
+    showButtonMarkReadNotify = notifier->showButtonMarkReadNotify_->isChecked();
+    showButtonExBrowserNotify = notifier->showButtonExBrowserNotify_->isChecked();
+    showButtonDeleteNotify = notifier->showButtonDeleteNotify_->isChecked();
+    closeNotify_ = notifier->closeNotify_->isChecked();
 
     for (int i = 0; i < 10; i++) {
       cntNewNewsList << 9;
