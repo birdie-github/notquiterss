@@ -33,12 +33,7 @@ private slots:
 
   void showMenuAddButton();
   void addShortcut(QAction *action);
-  void removeShortcut();
-  void moveUpShortcut();
-  void moveDownShortcut();
   void defaultShortcut();
-
-  void slotCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *);
 
 private:
   QToolBar *toolbar_;
@@ -50,9 +45,6 @@ private:
   QMenu *addButtonMenu_;
 
   QPushButton *addButton_;
-  QPushButton *removeButton_;
-  QPushButton *moveUpButton_;
-  QPushButton *moveDownButton_;
 
 };
 

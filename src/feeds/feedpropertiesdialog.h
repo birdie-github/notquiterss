@@ -172,12 +172,8 @@ private slots:
   void setDefaultTitle();
   void loadDefaultIcon();
   void selectIcon();
-  void slotCurrentColumnChanged(QTreeWidgetItem *current, QTreeWidgetItem *);
   void showMenuAddButton();
   void addColumn(QAction *action);
-  void removeColumn();
-  void moveUpColumn();
-  void moveDownColumn();
   void defaultColumns();
   void setGroupBoxCheckboxState(bool _on);
 
@@ -228,9 +224,6 @@ private:
   QMenu *addButtonMenu_;
 
   QPushButton *addButton_;
-  QPushButton *removeButton_;
-  QPushButton *moveUpButton_;
-  QPushButton *moveDownButton_;
   QWidget *createColumnsTab();
 
   // Tab "Authentication"

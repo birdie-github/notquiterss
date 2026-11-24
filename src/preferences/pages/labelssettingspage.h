@@ -39,19 +39,11 @@ private slots:
   void newLabel();
   void editLabel();
   void deleteLabel();
-  void moveUpLabel();
-  void moveDownLabel();
-  void currentLabelChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
 private:
   void markModified(const QString &idLabel);
 
   QTreeWidget *labelsTree_ = nullptr;
-  QPushButton *newLabelButton_ = nullptr;
-  QPushButton *editLabelButton_ = nullptr;
-  QPushButton *deleteLabelButton_ = nullptr;
-  QPushButton *moveUpLabelButton_ = nullptr;
-  QPushButton *moveDownLabelButton_ = nullptr;
   QStringList idLabels_;
   bool loadLabelsOk_ = false;
 };

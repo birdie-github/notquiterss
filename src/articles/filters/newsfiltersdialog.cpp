@@ -23,6 +23,7 @@
 #include "filterrulesdialog.h"
 #include "feeds/update/parseobject.h"
 #include "preferences/settings.h"
+#include "widgets/reorderabletreecontroller.h"
 
 NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
   : Dialog(parent, Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
@@ -76,34 +77,27 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
 
   QPushButton *newButton = new QPushButton(tr("Create..."), this);
   connect(newButton, &QAbstractButton::clicked, this, &NewsFiltersDialog::newFilter);
-  editButton_ = new QPushButton(tr("Edit..."), this);
-  editButton_->setEnabled(false);
-  connect(editButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::editFilter);
-  deleteButton_ = new QPushButton(tr("Delete..."), this);
-  deleteButton_->setEnabled(false);
-  connect(deleteButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::deleteFilter);
+  QPushButton *editButton = new QPushButton(tr("Edit..."), this);
+  connect(editButton, &QAbstractButton::clicked, this, &NewsFiltersDialog::editFilter);
+  QPushButton *deleteButton = new QPushButton(tr("Delete..."), this);
+  connect(deleteButton, &QAbstractButton::clicked, this, &NewsFiltersDialog::deleteFilter);
 
-  moveUpButton_ = new QPushButton(tr("Move up"), this);
-  moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::moveUpFilter);
-  moveDownButton_ = new QPushButton(tr("Move down"), this);
-  moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::moveDownFilter);
+  QPushButton *moveUpButton = new QPushButton(tr("Move up"), this);
+  QPushButton *moveDownButton = new QPushButton(tr("Move down"), this);
 
-  runFilterButton_ = new QPushButton(tr("Apply Filter"), this);
-  runFilterButton_->setEnabled(false);
-  buttonsLayout->insertWidget(0, runFilterButton_);
-  connect(runFilterButton_, &QAbstractButton::clicked, this, &NewsFiltersDialog::applyFilter);
+  QPushButton *runFilterButton = new QPushButton(tr("Apply Filter"), this);
+  buttonsLayout->insertWidget(0, runFilterButton);
+  connect(runFilterButton, &QAbstractButton::clicked, this, &NewsFiltersDialog::applyFilter);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(newButton);
-  buttonsVLayout->addWidget(editButton_);
-  buttonsVLayout->addWidget(deleteButton_);
+  buttonsVLayout->addWidget(editButton);
+  buttonsVLayout->addWidget(deleteButton);
   buttonsVLayout->addSpacing(10);
-  buttonsVLayout->addWidget(moveUpButton_);
-  buttonsVLayout->addWidget(moveDownButton_);
+  buttonsVLayout->addWidget(moveUpButton);
+  buttonsVLayout->addWidget(moveDownButton);
   buttonsVLayout->addStretch();
-  buttonsVLayout->addWidget(runFilterButton_);
+  buttonsVLayout->addWidget(runFilterButton);
 
   QHBoxLayout *mainlayout = new QHBoxLayout();
   mainlayout->setContentsMargins(0, 0, 0, 0);
@@ -116,7 +110,21 @@ NewsFiltersDialog::NewsFiltersDialog(QWidget *parent)
 
   filtersTree_->setCurrentIndex(QModelIndex());
 
-  connect(filtersTree_, &QTreeWidget::currentItemChanged, this, &NewsFiltersDialog::slotCurrentItemChanged);
+  new ReorderableTreeController(
+      filtersTree_, moveUpButton, moveDownButton, nullptr,
+      {editButton, deleteButton, runFilterButton},
+      [](QTreeWidgetItem *moved, QTreeWidgetItem *other) {
+        const QString numMoved = moved->text(3);
+        moved->setText(3, other->text(3));
+        other->setText(3, numMoved);
+        QSqlQuery q;
+        q.prepare(QStringLiteral("UPDATE filters SET num=? WHERE id=?"));
+        for (QTreeWidgetItem *item : {moved, other}) {
+          q.bindValue(0, item->text(3).toInt());
+          q.bindValue(1, item->text(0).toInt());
+          q.exec();
+        }
+      });
   connect(filtersTree_, &QAbstractItemView::doubleClicked, this, &NewsFiltersDialog::editFilter);
   connect(filtersTree_, &QTreeWidget::itemChanged, this, &NewsFiltersDialog::slotItemChanged);
   connect(this, &QDialog::finished, this, &NewsFiltersDialog::closeDialog);
@@ -168,10 +176,6 @@ void NewsFiltersDialog::newFilter()
 
     treeWidgetItem->setText(3, q.value(0).toString());
   }
-
-  if (((filtersTree_->currentIndex().row() != (filtersTree_->topLevelItemCount()-1))) &&
-      filtersTree_->currentIndex().isValid())
-    moveDownButton_->setEnabled(true);
 
   filtersTree_->setCurrentItem(
         filtersTree_->topLevelItem(filtersTree_->topLevelItemCount()-1));
@@ -233,98 +237,7 @@ void NewsFiltersDialog::deleteFilter()
   q.exec(QString("DELETE FROM filterActions WHERE idFilter='%1'").arg(filterId));
   q.finish();
 
-  filtersTree_->takeTopLevelItem(filterRow);
-
-  if (filtersTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (filtersTree_->currentIndex().row() == (filtersTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-}
-
-void NewsFiltersDialog::moveUpFilter()
-{
-  int filterRow = filtersTree_->currentIndex().row();
-
-  int num1 = filtersTree_->topLevelItem(filterRow)->text(3).toInt();
-  int num2 = filtersTree_->topLevelItem(filterRow-1)->text(3).toInt();
-  filtersTree_->topLevelItem(filterRow-1)->setText(3, QString::number(num1));
-  filtersTree_->topLevelItem(filterRow)->setText(3, QString::number(num2));
-
-  QTreeWidgetItem *treeWidgetItem = filtersTree_->takeTopLevelItem(filterRow-1);
-  filtersTree_->insertTopLevelItem(filterRow, treeWidgetItem);
-
-  if (filtersTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (filtersTree_->currentIndex().row() != (filtersTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(true);
-
-  QSqlQuery q;
-  int filterId = filtersTree_->topLevelItem(filterRow)->text(0).toInt();
-  int filterNum = filtersTree_->topLevelItem(filterRow)->text(3).toInt();
-  QString qStr = QString("UPDATE filters SET num='%1' WHERE id=='%2'").
-      arg(filterNum).arg(filterId);
-  q.exec(qStr);
-
-  filterId = filtersTree_->topLevelItem(filterRow-1)->text(0).toInt();
-  filterNum = filtersTree_->topLevelItem(filterRow-1)->text(3).toInt();
-  qStr = QString("UPDATE filters SET num='%1' WHERE id=='%2'").
-      arg(filterNum).arg(filterId);
-  q.exec(qStr);
-}
-
-void NewsFiltersDialog::moveDownFilter()
-{
-  int filterRow = filtersTree_->currentIndex().row();
-
-  int num1 = filtersTree_->topLevelItem(filterRow)->text(3).toInt();
-  int num2 = filtersTree_->topLevelItem(filterRow+1)->text(3).toInt();
-  filtersTree_->topLevelItem(filterRow+1)->setText(3, QString::number(num1));
-  filtersTree_->topLevelItem(filterRow)->setText(3, QString::number(num2));
-
-  QTreeWidgetItem *treeWidgetItem = filtersTree_->takeTopLevelItem(filterRow+1);
-  filtersTree_->insertTopLevelItem(filterRow, treeWidgetItem);
-
-  if (filtersTree_->currentIndex().row() == (filtersTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-  if (filtersTree_->currentIndex().row() != 0)
-    moveUpButton_->setEnabled(true);
-
-  QSqlQuery q;
-  int filterId = filtersTree_->topLevelItem(filterRow)->text(0).toInt();
-  int filterNum = filtersTree_->topLevelItem(filterRow)->text(3).toInt();
-  QString qStr = QString("UPDATE filters SET num='%1' WHERE id=='%2'").
-      arg(filterNum).arg(filterId);
-  q.exec(qStr);
-
-  filterId = filtersTree_->topLevelItem(filterRow+1)->text(0).toInt();
-  filterNum = filtersTree_->topLevelItem(filterRow+1)->text(3).toInt();
-  qStr = QString("UPDATE filters SET num='%1' WHERE id=='%2'").
-      arg(filterNum).arg(filterId);
-  q.exec(qStr);
-}
-
-void NewsFiltersDialog::slotCurrentItemChanged(QTreeWidgetItem *current,
-                                               QTreeWidgetItem *)
-{
-  if (filtersTree_->indexOfTopLevelItem(current) == 0)
-    moveUpButton_->setEnabled(false);
-  else moveUpButton_->setEnabled(true);
-
-  if (filtersTree_->indexOfTopLevelItem(current) == (filtersTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-  else moveDownButton_->setEnabled(true);
-
-  if (filtersTree_->indexOfTopLevelItem(current) < 0) {
-    editButton_->setEnabled(false);
-    deleteButton_->setEnabled(false);
-    moveUpButton_->setEnabled(false);
-    moveDownButton_->setEnabled(false);
-    runFilterButton_->setEnabled(false);
-  } else {
-    editButton_->setEnabled(true);
-    deleteButton_->setEnabled(true);
-    runFilterButton_->setEnabled(true);
-  }
+  delete filtersTree_->takeTopLevelItem(filterRow);
 }
 
 void NewsFiltersDialog::applyFilter()

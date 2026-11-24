@@ -161,6 +161,7 @@ HEADERS += \
     src/widgets/delegatewithoutfocus.h \
     src/widgets/dialog.h \
     src/widgets/lineedit.h \
+    src/widgets/reorderabletreecontroller.h \
     src/widgets/toolbutton.h \
     src/articles/filters/filterrulesdialog.h \
     src/articles/filters/newsfiltersdialog.h \
@@ -252,6 +253,7 @@ SOURCES += \
     src/widgets/delegatewithoutfocus.cpp \
     src/widgets/dialog.cpp \
     src/widgets/lineedit.cpp \
+    src/widgets/reorderabletreecontroller.cpp \
     src/widgets/toolbutton.cpp \
     src/articles/filters/filterrulesdialog.cpp \
     src/articles/filters/newsfiltersdialog.cpp \

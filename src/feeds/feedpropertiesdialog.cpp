@@ -23,6 +23,7 @@
 #include "app/mainapplication.h"
 #include "feedselectiontree.h"
 #include "feedhealth.h"
+#include "widgets/reorderabletreecontroller.h"
 
 #include <QTextBlockFormat>
 #include <QTextCharFormat>
@@ -350,26 +351,18 @@ QWidget *FeedPropertiesDialog::createColumnsTab()
   connect(addButtonMenu_, &QMenu::aboutToShow, this, &FeedPropertiesDialog::showMenuAddButton);
   connect(addButtonMenu_, &QMenu::triggered, this, &FeedPropertiesDialog::addColumn);
 
-  removeButton_ = new QPushButton(tr("Remove"));
-  removeButton_->setEnabled(false);
-  connect(removeButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::removeColumn);
-
-  moveUpButton_ = new QPushButton(tr("Move up"));
-  moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::moveUpColumn);
-  moveDownButton_ = new QPushButton(tr("Move down"));
-  moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, &QAbstractButton::clicked, this, &FeedPropertiesDialog::moveDownColumn);
-
+  QPushButton *removeButton = new QPushButton(tr("Remove"));
+  QPushButton *moveUpButton = new QPushButton(tr("Move up"));
+  QPushButton *moveDownButton = new QPushButton(tr("Move down"));
   QPushButton *defaultButton = new QPushButton(tr("Default"));
   connect(defaultButton, &QAbstractButton::clicked, this, &FeedPropertiesDialog::defaultColumns);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(addButton_);
-  buttonsVLayout->addWidget(removeButton_);
+  buttonsVLayout->addWidget(removeButton);
   buttonsVLayout->addSpacing(10);
-  buttonsVLayout->addWidget(moveUpButton_);
-  buttonsVLayout->addWidget(moveDownButton_);
+  buttonsVLayout->addWidget(moveUpButton);
+  buttonsVLayout->addWidget(moveDownButton);
   buttonsVLayout->addSpacing(10);
   buttonsVLayout->addWidget(defaultButton);
   buttonsVLayout->addStretch();
@@ -389,8 +382,7 @@ QWidget *FeedPropertiesDialog::createColumnsTab()
   }
   tabLayout->addWidget(columnsEditor);
 
-  connect(columnsTree_, &QTreeWidget::currentItemChanged,
-          this, &FeedPropertiesDialog::slotCurrentColumnChanged);
+  new ReorderableTreeController(columnsTree_, moveUpButton, moveDownButton, removeButton);
 
   return tab;
 }
@@ -704,26 +696,6 @@ void FeedPropertiesDialog::setFeedProperties(FEED_PROPERTIES properties)
   feedProperties = properties;
 }
 //------------------------------------------------------------------------------
-void FeedPropertiesDialog::slotCurrentColumnChanged(QTreeWidgetItem *current,
-                                                    QTreeWidgetItem *)
-{
-  if (columnsTree_->indexOfTopLevelItem(current) == 0)
-    moveUpButton_->setEnabled(false);
-  else moveUpButton_->setEnabled(true);
-
-  if (columnsTree_->indexOfTopLevelItem(current) == (columnsTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-  else moveDownButton_->setEnabled(true);
-
-  if (columnsTree_->indexOfTopLevelItem(current) < 0) {
-    removeButton_->setEnabled(false);
-    moveUpButton_->setEnabled(false);
-    moveDownButton_->setEnabled(false);
-  } else {
-    removeButton_->setEnabled(true);
-  }
-}
-//------------------------------------------------------------------------------
 void FeedPropertiesDialog::showMenuAddButton()
 {
   QListIterator<QAction *> iter(addButtonMenu_->actions());
@@ -750,41 +722,6 @@ void FeedPropertiesDialog::addColumn(QAction *action)
   treeItem << action->text() << action->data().toString();
   QTreeWidgetItem *item = new QTreeWidgetItem(treeItem);
   columnsTree_->addTopLevelItem(item);
-}
-//------------------------------------------------------------------------------
-void FeedPropertiesDialog::removeColumn()
-{
-  int row = columnsTree_->currentIndex().row();
-  columnsTree_->takeTopLevelItem(row);
-
-  if (columnsTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (columnsTree_->currentIndex().row() == (columnsTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-}
-//------------------------------------------------------------------------------
-void FeedPropertiesDialog::moveUpColumn()
-{
-  int row = columnsTree_->currentIndex().row();
-  QTreeWidgetItem *treeWidgetItem = columnsTree_->takeTopLevelItem(row-1);
-  columnsTree_->insertTopLevelItem(row, treeWidgetItem);
-
-  if (columnsTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (columnsTree_->currentIndex().row() != (columnsTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(true);
-}
-//------------------------------------------------------------------------------
-void FeedPropertiesDialog::moveDownColumn()
-{
-  int row = columnsTree_->currentIndex().row();
-  QTreeWidgetItem *treeWidgetItem = columnsTree_->takeTopLevelItem(row+1);
-  columnsTree_->insertTopLevelItem(row, treeWidgetItem);
-
-  if (columnsTree_->currentIndex().row() != 0)
-    moveUpButton_->setEnabled(true);
-  if (columnsTree_->currentIndex().row() == (columnsTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
 }
 //------------------------------------------------------------------------------
 void FeedPropertiesDialog::defaultColumns()

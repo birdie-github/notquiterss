@@ -36,21 +36,12 @@ private slots:
   void editFilter();
   void deleteFilter();
 
-  void moveUpFilter();
-  void moveDownFilter();
-
-  void slotCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *);
   void slotItemChanged(QTreeWidgetItem *item,int column);
 
   void applyFilter();
 
 private:
   QString feedScopeText(const QString &scope) const;
-  QPushButton *editButton_;
-  QPushButton *deleteButton_;
-  QPushButton *moveUpButton_;
-  QPushButton *moveDownButton_;
-  QPushButton *runFilterButton_;
 
 };
 

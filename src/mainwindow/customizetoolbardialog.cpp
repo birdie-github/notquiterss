@@ -20,6 +20,7 @@
 
 #include "app/mainapplication.h"
 #include "preferences/settings.h"
+#include "widgets/reorderabletreecontroller.h"
 
 CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolbar)
   : Dialog(parent),
@@ -150,26 +151,18 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   connect(addButtonMenu_, &QMenu::aboutToShow, this, &CustomizeToolbarDialog::showMenuAddButton);
   connect(addButtonMenu_, &QMenu::triggered, this, &CustomizeToolbarDialog::addShortcut);
 
-  removeButton_ = new QPushButton(tr("Remove"));
-  removeButton_->setEnabled(false);
-  connect(removeButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::removeShortcut);
-
-  moveUpButton_ = new QPushButton(tr("Move up"));
-  moveUpButton_->setEnabled(false);
-  connect(moveUpButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::moveUpShortcut);
-  moveDownButton_ = new QPushButton(tr("Move down"));
-  moveDownButton_->setEnabled(false);
-  connect(moveDownButton_, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::moveDownShortcut);
-
+  QPushButton *removeButton = new QPushButton(tr("Remove"));
+  QPushButton *moveUpButton = new QPushButton(tr("Move up"));
+  QPushButton *moveDownButton = new QPushButton(tr("Move down"));
   QPushButton *defaultButton = new QPushButton(tr("Restore Defaults"));
   connect(defaultButton, &QAbstractButton::clicked, this, &CustomizeToolbarDialog::defaultShortcut);
 
   QVBoxLayout *buttonsVLayout = new QVBoxLayout();
   buttonsVLayout->addWidget(addButton_);
-  buttonsVLayout->addWidget(removeButton_);
+  buttonsVLayout->addWidget(removeButton);
   buttonsVLayout->addSpacing(10);
-  buttonsVLayout->addWidget(moveUpButton_);
-  buttonsVLayout->addWidget(moveDownButton_);
+  buttonsVLayout->addWidget(moveUpButton);
+  buttonsVLayout->addWidget(moveDownButton);
   buttonsVLayout->addStretch();
 
   QHBoxLayout *mainlayout = new QHBoxLayout();
@@ -187,8 +180,7 @@ CustomizeToolbarDialog::CustomizeToolbarDialog(QWidget *parent, QToolBar *toolba
   buttonBox->addButton(QDialogButtonBox::Cancel);
   connect(buttonBox, &QDialogButtonBox::accepted, this, &CustomizeToolbarDialog::acceptDialog);
 
-  connect(shortcutTree_, &QTreeWidget::currentItemChanged,
-          this, &CustomizeToolbarDialog::slotCurrentItemChanged);
+  new ReorderableTreeController(shortcutTree_, moveUpButton, moveDownButton, removeButton);
   connect(this, &QDialog::finished, this, &CustomizeToolbarDialog::closeDialog);
 
   // Respect translated text, font metrics and theme sizing even when restoring
@@ -338,26 +330,6 @@ void CustomizeToolbarDialog::closeDialog()
   settings.setValue("customizeToolbarDlg/geometry", saveGeometry());
 }
 
-void CustomizeToolbarDialog::slotCurrentItemChanged(QTreeWidgetItem *current,
-                                               QTreeWidgetItem *)
-{
-  if (shortcutTree_->indexOfTopLevelItem(current) == 0)
-    moveUpButton_->setEnabled(false);
-  else moveUpButton_->setEnabled(true);
-
-  if (shortcutTree_->indexOfTopLevelItem(current) == (shortcutTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-  else moveDownButton_->setEnabled(true);
-
-  if (shortcutTree_->indexOfTopLevelItem(current) < 0) {
-    removeButton_->setEnabled(false);
-    moveUpButton_->setEnabled(false);
-    moveDownButton_->setEnabled(false);
-  } else {
-    removeButton_->setEnabled(true);
-  }
-}
-
 void CustomizeToolbarDialog::showMenuAddButton()
 {
   addButtonMenu_->clear();
@@ -403,41 +375,6 @@ void CustomizeToolbarDialog::addShortcut(QAction *action)
     item->setBackground(0, qApp->palette().brush(QPalette::Midlight));
 
   shortcutTree_->addTopLevelItem(item);
-}
-
-void CustomizeToolbarDialog::removeShortcut()
-{
-  int row = shortcutTree_->currentIndex().row();
-  shortcutTree_->takeTopLevelItem(row);
-
-  if (shortcutTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (shortcutTree_->currentIndex().row() == (shortcutTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
-}
-
-void CustomizeToolbarDialog::moveUpShortcut()
-{
-  int row = shortcutTree_->currentIndex().row();
-  QTreeWidgetItem *treeWidgetItem = shortcutTree_->takeTopLevelItem(row-1);
-  shortcutTree_->insertTopLevelItem(row, treeWidgetItem);
-
-  if (shortcutTree_->currentIndex().row() == 0)
-    moveUpButton_->setEnabled(false);
-  if (shortcutTree_->currentIndex().row() != (shortcutTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(true);
-}
-
-void CustomizeToolbarDialog::moveDownShortcut()
-{
-  int row = shortcutTree_->currentIndex().row();
-  QTreeWidgetItem *treeWidgetItem = shortcutTree_->takeTopLevelItem(row+1);
-  shortcutTree_->insertTopLevelItem(row, treeWidgetItem);
-
-  if (shortcutTree_->currentIndex().row() != 0)
-    moveUpButton_->setEnabled(true);
-  if (shortcutTree_->currentIndex().row() == (shortcutTree_->topLevelItemCount()-1))
-    moveDownButton_->setEnabled(false);
 }
 
 void CustomizeToolbarDialog::defaultShortcut()

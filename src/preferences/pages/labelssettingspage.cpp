@@ -4,6 +4,7 @@
 #include "articles/labeldialog.h"
 #include "mainwindow/mainwindow.h"
 #include "preferences/optionspagebuilder.h"
+#include "widgets/reorderabletreecontroller.h"
 
 #include <QBuffer>
 #include <QCoreApplication>
@@ -39,29 +40,23 @@ LabelsSettingsPage::LabelsSettingsPage(QWidget *parent,
   labelsTree_->setColumnHidden(4, true);
   labelsTree_->header()->hide();
 
-  newLabelButton_ = new QPushButton(optTr("Create..."), this);
-  connect(newLabelButton_, &QAbstractButton::clicked, this, &LabelsSettingsPage::newLabel);
-  editLabelButton_ = new QPushButton(optTr("Edit..."), this);
-  editLabelButton_->setEnabled(false);
-  connect(editLabelButton_, &QAbstractButton::clicked, this, &LabelsSettingsPage::editLabel);
-  deleteLabelButton_ = new QPushButton(optTr("Delete..."), this);
-  deleteLabelButton_->setEnabled(false);
-  connect(deleteLabelButton_, &QAbstractButton::clicked, this, &LabelsSettingsPage::deleteLabel);
+  auto *newLabelButton = new QPushButton(optTr("Create..."), this);
+  connect(newLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::newLabel);
+  auto *editLabelButton = new QPushButton(optTr("Edit..."), this);
+  connect(editLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::editLabel);
+  auto *deleteLabelButton = new QPushButton(optTr("Delete..."), this);
+  connect(deleteLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::deleteLabel);
 
-  moveUpLabelButton_ = new QPushButton(optTr("Move up"), this);
-  moveUpLabelButton_->setEnabled(false);
-  connect(moveUpLabelButton_, &QAbstractButton::clicked, this, &LabelsSettingsPage::moveUpLabel);
-  moveDownLabelButton_ = new QPushButton(optTr("Move down"), this);
-  moveDownLabelButton_->setEnabled(false);
-  connect(moveDownLabelButton_, &QAbstractButton::clicked, this, &LabelsSettingsPage::moveDownLabel);
+  auto *moveUpLabelButton = new QPushButton(optTr("Move up"), this);
+  auto *moveDownLabelButton = new QPushButton(optTr("Move down"), this);
 
   auto *buttonsLayout = new QVBoxLayout();
-  buttonsLayout->addWidget(newLabelButton_);
-  buttonsLayout->addWidget(editLabelButton_);
-  buttonsLayout->addWidget(deleteLabelButton_);
+  buttonsLayout->addWidget(newLabelButton);
+  buttonsLayout->addWidget(editLabelButton);
+  buttonsLayout->addWidget(deleteLabelButton);
   buttonsLayout->addSpacing(10);
-  buttonsLayout->addWidget(moveUpLabelButton_);
-  buttonsLayout->addWidget(moveDownLabelButton_);
+  buttonsLayout->addWidget(moveUpLabelButton);
+  buttonsLayout->addWidget(moveDownLabelButton);
   buttonsLayout->addStretch();
 
   auto *labelsLayout = new QHBoxLayout(this);
@@ -69,8 +64,19 @@ LabelsSettingsPage::LabelsSettingsPage(QWidget *parent,
   labelsLayout->addWidget(labelsTree_);
   labelsLayout->addLayout(buttonsLayout);
 
-  connect(labelsTree_, &QTreeWidget::currentItemChanged,
-          this, &LabelsSettingsPage::currentLabelChanged);
+  new ReorderableTreeController(
+      labelsTree_, moveUpLabelButton, moveDownLabelButton, nullptr,
+      {editLabelButton, deleteLabelButton},
+      [this](QTreeWidgetItem *moved, QTreeWidgetItem *other) {
+        const QString movedId = moved->text(0);
+        const QString otherId = other->text(0);
+        markModified(movedId);
+        markModified(otherId);
+        emit labelsSwapped(movedId, otherId);
+        const QString numMoved = moved->text(4);
+        moved->setText(4, other->text(4));
+        other->setText(4, numMoved);
+      });
   connect(labelsTree_, &QAbstractItemView::doubleClicked,
           this, &LabelsSettingsPage::editLabel);
 
@@ -184,69 +190,6 @@ void LabelsSettingsPage::deleteLabel()
   markModified(idLabelStr);
   emit labelDeleted(idLabelStr);
   delete labelsTree_->takeTopLevelItem(labelRow);
-}
-
-void LabelsSettingsPage::moveUpLabel()
-{
-  const int labelRow = labelsTree_->currentIndex().row();
-  if (labelRow <= 0) return;
-
-  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  const QString neighborId = labelsTree_->topLevelItem(labelRow - 1)->text(0);
-  markModified(idLabelStr);
-  markModified(neighborId);
-  emit labelsSwapped(idLabelStr, neighborId);
-
-  const int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
-  const int num2 = labelsTree_->topLevelItem(labelRow - 1)->text(4).toInt();
-  labelsTree_->topLevelItem(labelRow - 1)->setText(4, QString::number(num1));
-  labelsTree_->topLevelItem(labelRow)->setText(4, QString::number(num2));
-
-  QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow - 1);
-  labelsTree_->insertTopLevelItem(labelRow, treeItem);
-
-  if (labelsTree_->currentIndex().row() == 0) {
-    moveUpLabelButton_->setEnabled(false);
-  }
-  if (labelsTree_->currentIndex().row() != labelsTree_->topLevelItemCount() - 1) {
-    moveDownLabelButton_->setEnabled(true);
-  }
-}
-
-void LabelsSettingsPage::moveDownLabel()
-{
-  const int labelRow = labelsTree_->currentIndex().row();
-  if (labelRow < 0 || labelRow + 1 >= labelsTree_->topLevelItemCount()) return;
-
-  const QString idLabelStr = labelsTree_->topLevelItem(labelRow)->text(0);
-  const QString neighborId = labelsTree_->topLevelItem(labelRow + 1)->text(0);
-  markModified(idLabelStr);
-  markModified(neighborId);
-  emit labelsSwapped(idLabelStr, neighborId);
-
-  const int num1 = labelsTree_->topLevelItem(labelRow)->text(4).toInt();
-  const int num2 = labelsTree_->topLevelItem(labelRow + 1)->text(4).toInt();
-  labelsTree_->topLevelItem(labelRow + 1)->setText(4, QString::number(num1));
-  labelsTree_->topLevelItem(labelRow)->setText(4, QString::number(num2));
-
-  QTreeWidgetItem *treeItem = labelsTree_->takeTopLevelItem(labelRow + 1);
-  labelsTree_->insertTopLevelItem(labelRow, treeItem);
-
-  if (labelsTree_->currentIndex().row() == labelsTree_->topLevelItemCount() - 1) {
-    moveDownLabelButton_->setEnabled(false);
-  }
-  if (labelsTree_->currentIndex().row() != 0) {
-    moveUpLabelButton_->setEnabled(true);
-  }
-}
-
-void LabelsSettingsPage::currentLabelChanged(QTreeWidgetItem *current, QTreeWidgetItem *)
-{
-  const int idx = labelsTree_->indexOfTopLevelItem(current);
-  moveUpLabelButton_->setEnabled(idx > 0);
-  moveDownLabelButton_->setEnabled(idx >= 0 && idx < labelsTree_->topLevelItemCount() - 1);
-  editLabelButton_->setEnabled(idx >= 0);
-  deleteLabelButton_->setEnabled(idx >= 0);
 }
 
 void LabelsSettingsPage::apply(QSqlDatabase &db)
