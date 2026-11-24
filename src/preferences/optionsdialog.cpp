@@ -439,14 +439,21 @@ QWidget *OptionsDialog::createTraySystemWidget()
 {
   traySystemWidget_ = OptionsPageBuilder::buildFrame(PageSystemTray, &searchEntries_, [this](OptionsPageBuilder &b) {
     b.group(showTrayIconBox_, tr("Show system tray icon"), true, [this](OptionsPageBuilder &grp) {
+      const QString appName = QGuiApplication::applicationDisplayName();
 #ifndef Q_OS_MAC
       grp.label(tr("Move to the system tray when:"));
-      grp.indented(QMargins(15, 0, 5, 10), [this](OptionsPageBuilder &sub) {
-        const QString appName = QGuiApplication::applicationDisplayName();
+      grp.indented(QMargins(15, 0, 5, 10), [this, appName](OptionsPageBuilder &sub) {
         sub.check(startingTray_, tr("starting %1").arg(appName));
         sub.check(minimizingTray_, tr("minimizing %1").arg(appName));
         sub.check(closingTray_, tr("closing %1").arg(appName));
       });
+#else
+      startingTray_ = new QCheckBox(this);
+      startingTray_->hide();
+      minimizingTray_ = new QCheckBox(this);
+      minimizingTray_->hide();
+      closingTray_ = new QCheckBox(this);
+      closingTray_->hide();
 #endif
       grp.label(tr("Tray icon behavior:"));
       grp.indented(QMargins(15, 0, 5, 10), [this](OptionsPageBuilder &sub) {
@@ -458,9 +465,17 @@ QWidget *OptionsDialog::createTraySystemWidget()
 #ifndef Q_OS_MAC
       grp.check(singleClickTray_, tr("Use a single click instead of a double click to show the window"));
       grp.check(clearStatusNew_, tr("Clear 'new' status when minimizing to tray"));
+#else
+      singleClickTray_ = new QCheckBox(this);
+      singleClickTray_->hide();
+      clearStatusNew_ = new QCheckBox(this);
+      clearStatusNew_->hide();
 #endif
 #if defined(Q_OS_WIN)
       grp.check(emptyWorking_, tr("Empty working set when minimizing to tray"));
+#else
+      emptyWorking_ = new QCheckBox(this);
+      emptyWorking_->hide();
 #endif
       grp.stretch(1);
     });
@@ -950,8 +965,10 @@ QWidget *OptionsDialog::createNotifierWidget()
           connect(showNotifier, &QAbstractButton::clicked, this, &OptionsDialog::showNotification);
         }, std::nullopt, false);
 
+#if defined(Q_OS_WIN)
         grp.check(fullscreenModeNotify_, tr("Do not show notification in fullscreen mode"));
-#if !defined(Q_OS_WIN)
+#else
+        fullscreenModeNotify_ = new QCheckBox(this);
         fullscreenModeNotify_->hide();
 #endif
         grp.check(showNotifyInactiveApp_, tr("Show when the main window is inactive"));
