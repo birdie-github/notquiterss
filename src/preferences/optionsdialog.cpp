@@ -214,8 +214,8 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   searchFont.setBold(true);
   searchFont.setItalic(true);
   searchCategoryItem_->setFont(1, searchFont);
-  searchCategoryItem_->setHidden(true);
   categoriesTree_->addTopLevelItem(searchCategoryItem_);
+  searchCategoryItem_->setHidden(true);
 
   // Scroll only the current page, not a stack sized for its tallest hidden page.
   // Pages themselves are created and initialized on demand in ensurePageCreated().
