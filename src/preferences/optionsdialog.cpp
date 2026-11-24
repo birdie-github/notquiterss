@@ -734,7 +734,7 @@ QWidget *OptionsDialog::createFeedsWidget()
     }},
     {tr("Reading"), [this](OptionsPageBuilder &b) {
       b.group(markNewsReadOn_, tr("Mark articles as read:"), true, [this](OptionsPageBuilder &grp) {
-        grp.row([this](OptionsRowBuilder &r) {
+        grp.row([this, &grp](OptionsRowBuilder &r) {
           markCurNewsRead_ = new QRadioButton(tr("when selected, after "), grp.container());
           r.addWidget(markCurNewsRead_);
           r.spin(markNewsReadTime_, 0, 100);
