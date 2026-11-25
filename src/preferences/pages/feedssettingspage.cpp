@@ -2,6 +2,7 @@
 #include "feedssettingspage.h"
 
 #include "app/mainapplication.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "projectmetadata.h"
 #include "widgets/lineedit.h"
@@ -32,37 +33,37 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
   , isPageActive_(std::move(isPageActive))
 {
   OptionsPageBuilder::populateTabs(this, pageIndex, searchEntries, {
-    {optTr("General"), [this](OptionsPageBuilder &b) {
-      b.check(updateFeedsStartUp_, optTr("Automatically update feeds on startup"),
-              optTr("Refresh enabled feeds immediately when the application starts. "
+    {OptionsDialog::tr("General"), [this](OptionsPageBuilder &b) {
+      b.check(updateFeedsStartUp_, OptionsDialog::tr("Automatically update feeds on startup"),
+              OptionsDialog::tr("Refresh enabled feeds immediately when the application starts. "
                     "Otherwise, overdue scheduled feeds are checked after one minute."),
               QStringLiteral("refresh sync fetch launch"));
       b.row([this](OptionsRowBuilder &r) {
-        r.check(updateFeedsEnable_, optTr("Automatically update feeds every"),
-                optTr("Time spent with the application closed counts toward the interval. "
+        r.check(updateFeedsEnable_, OptionsDialog::tr("Automatically update feeds every"),
+                OptionsDialog::tr("Time spent with the application closed counts toward the interval. "
                       "Overdue feeds are refreshed after a one-minute startup grace period."),
                 QStringLiteral("refresh sync fetch interval timer schedule"));
         r.spin(updateFeedsInterval_, 1, 9999);
-        r.combo(updateIntervalType_, {optTr("seconds"), optTr("minutes"), optTr("hours")});
+        r.combo(updateIntervalType_, {OptionsDialog::tr("seconds"), OptionsDialog::tr("minutes"), OptionsDialog::tr("hours")});
         OptionsPageBuilder::bindEnabled(updateFeedsEnable_, {updateFeedsInterval_, updateIntervalType_});
       }, QMargins(0, 0, 0, 0));
       b.spacing(10);
 
-      b.label(optTr("Action when opening a feed:"));
+      b.label(OptionsDialog::tr("Action when opening a feed:"));
       b.grid(QMargins(15, 0, 0, 10), 1, [this](OptionsGridBuilder &g) {
-        g.radio(0, 0, positionLastNews_, optTr("Focus the last opened article"), QStringLiteral("open feed select"));
-        g.check(0, 1, openNewsWebViewOn_, optTr("Open the article"), QString(), QStringLiteral("open feed"));
-        g.radio(1, 0, positionFirstNews_, optTr("Focus the first article in the list"), QStringLiteral("open feed select"));
-        g.radio(2, 0, positionUnreadNews_, optTr("Focus the first unread article"), QStringLiteral("open feed select"));
-        g.radio(3, 0, nottoOpenNews_, optTr("Do nothing"), QStringLiteral("open feed"));
+        g.radio(0, 0, positionLastNews_, OptionsDialog::tr("Focus the last opened article"), QStringLiteral("open feed select"));
+        g.check(0, 1, openNewsWebViewOn_, OptionsDialog::tr("Open the article"), QString(), QStringLiteral("open feed"));
+        g.radio(1, 0, positionFirstNews_, OptionsDialog::tr("Focus the first article in the list"), QStringLiteral("open feed select"));
+        g.radio(2, 0, positionUnreadNews_, OptionsDialog::tr("Focus the first unread article"), QStringLiteral("open feed select"));
+        g.radio(3, 0, nottoOpenNews_, OptionsDialog::tr("Do nothing"), QStringLiteral("open feed"));
         connect(nottoOpenNews_, &QAbstractButton::toggled, openNewsWebViewOn_, &QWidget::setDisabled);
       });
 
-      b.check(markIdenticalNewsRead_, optTr("Automatically mark identical news as read"), QString(),
+      b.check(markIdenticalNewsRead_, OptionsDialog::tr("Automatically mark identical news as read"), QString(),
               QStringLiteral("duplicate dedup crosspost"));
       b.spacing(15);
 
-      b.group(avoidedOldNewsDateOn_, optTr("Do not add articles published before this date to the database:"),
+      b.group(avoidedOldNewsDateOn_, OptionsDialog::tr("Do not add articles published before this date to the database:"),
               true, [this](OptionsPageBuilder &grp) {
         avoidedOldNewsDate_ = new QCalendarWidget();
         avoidedOldNewsDate_->setSelectedDate(QDate::currentDate());
@@ -74,23 +75,23 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
       avoidedOldNewsDateOn_->setChecked(false);
       b.stretch();
     }},
-    {optTr("Display"), [this](OptionsPageBuilder &b) {
-      b.check(alternatingRowColorsNews_, optTr("Alternating row background colors"), QString(),
+    {OptionsDialog::tr("Display"), [this](OptionsPageBuilder &b) {
+      b.check(alternatingRowColorsNews_, OptionsDialog::tr("Alternating row background colors"), QString(),
               QStringLiteral("zebra striping"));
       b.spacing(10);
-      b.check(simplifiedDateTime_, optTr("Simplified date and time format"), QString(),
+      b.check(simplifiedDateTime_, OptionsDialog::tr("Simplified date and time format"), QString(),
               QStringLiteral("today yesterday relative"));
 
       b.row([this](OptionsRowBuilder &r) {
-        const QString dateLabel = optTr("Date display format:");
-        const QString timeLabel = optTr("time:");
+        const QString dateLabel = OptionsDialog::tr("Date display format:");
+        const QString timeLabel = OptionsDialog::tr("time:");
         r.label(dateLabel);
         r.combo(formatDate_);
         const QPair<QString, const char *> dateFormats[] = {
           {QStringLiteral("31.12.99"), "dd.MM.yy"},
           {QStringLiteral("31.12.1999"), "dd.MM.yyyy"},
-          {QStringLiteral("31. %1. 1999").arg(optTr("Dec")), "dd. MMM. yyyy"},
-          {QStringLiteral("31. %1 1999").arg(optTr("December")), "dd. MMMM yyyy"},
+          {QStringLiteral("31. %1. 1999").arg(OptionsDialog::tr("Dec")), "dd. MMM. yyyy"},
+          {QStringLiteral("31. %1 1999").arg(OptionsDialog::tr("December")), "dd. MMMM yyyy"},
           {QStringLiteral("99-12-31"), "yy-MM-dd"},
           {QStringLiteral("1999-12-31"), "yyyy-MM-dd"},
           {QStringLiteral("12/31/1999"), "MM/dd/yyyy"},
@@ -117,28 +118,28 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
       }, QMargins(0, 0, 0, 0));
       b.spacing(10);
 
-      b.comboRow(mainNewsFilter_, optTr("Default article filter:"), {},
+      b.comboRow(mainNewsFilter_, OptionsDialog::tr("Default article filter:"), {},
                  QStringLiteral("unread starred"));
       const QPair<QString, const char *> filterItems[] = {
-        {optTr("Show All"), "filterNewsAll_"},
-        {optTr("Show New"), "filterNewsNew_"},
-        {optTr("Show Unread"), "filterNewsUnread_"},
-        {optTr("Show Starred"), "filterNewsStar_"},
-        {optTr("Show Not Starred"), "filterNewsNotStarred_"},
-        {optTr("Show Unread or Starred"), "filterNewsUnreadStar_"},
-        {optTr("Show Last Day"), "filterNewsLastDay_"},
-        {optTr("Show Last 7 Days"), "filterNewsLastWeek_"},
+        {OptionsDialog::tr("Show All"), "filterNewsAll_"},
+        {OptionsDialog::tr("Show New"), "filterNewsNew_"},
+        {OptionsDialog::tr("Show Unread"), "filterNewsUnread_"},
+        {OptionsDialog::tr("Show Starred"), "filterNewsStar_"},
+        {OptionsDialog::tr("Show Not Starred"), "filterNewsNotStarred_"},
+        {OptionsDialog::tr("Show Unread or Starred"), "filterNewsUnreadStar_"},
+        {OptionsDialog::tr("Show Last Day"), "filterNewsLastDay_"},
+        {OptionsDialog::tr("Show Last 7 Days"), "filterNewsLastWeek_"},
       };
       for (const auto &entry : filterItems) {
         mainNewsFilter_->addItem(entry.first, QLatin1String(entry.second));
       }
       b.spacing(10);
 
-      const QString styleLabel = optTr("Article style sheet:");
+      const QString styleLabel = OptionsDialog::tr("Article style sheet:");
       b.label(styleLabel);
       b.grid(QMargins(15, 0, 5, 10), -1, [this](OptionsGridBuilder &g) {
         styleSheetNewsEdit_ = new LineEdit();
-        auto *styleSheetNewsButton = new QPushButton(optTr("Browse..."));
+        auto *styleSheetNewsButton = new QPushButton(OptionsDialog::tr("Browse..."));
         connect(styleSheetNewsButton, &QAbstractButton::clicked,
                 this, &FeedsSettingsPage::selectionUserStyleNews);
         g.addWidget(0, 0, styleSheetNewsEdit_);
@@ -148,42 +149,42 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
                        QStringLiteral("css theme custom style"));
       b.stretch();
     }},
-    {optTr("Reading"), [this](OptionsPageBuilder &b) {
-      b.group(markNewsReadOn_, optTr("Mark articles as read:"), true, [this](OptionsPageBuilder &grp) {
+    {OptionsDialog::tr("Reading"), [this](OptionsPageBuilder &b) {
+      b.group(markNewsReadOn_, OptionsDialog::tr("Mark articles as read:"), true, [this](OptionsPageBuilder &grp) {
         grp.row([this, &grp](OptionsRowBuilder &r) {
-          markCurNewsRead_ = new QRadioButton(optTr("when selected, after "), grp.container());
+          markCurNewsRead_ = new QRadioButton(OptionsDialog::tr("when selected, after "), grp.container());
           r.addWidget(markCurNewsRead_);
           r.spin(markNewsReadTime_, 0, 100);
-          r.label(optTr("seconds"));
+          r.label(OptionsDialog::tr("seconds"));
           OptionsPageBuilder::bindEnabled(markCurNewsRead_, {markNewsReadTime_});
           r.registerSearch(markCurNewsRead_,
-                           optTr("Mark articles as read:") + QLatin1Char(' ') + optTr("when selected, after "),
+                           OptionsDialog::tr("Mark articles as read:") + QLatin1Char(' ') + OptionsDialog::tr("when selected, after "),
                            QString(), QStringLiteral("auto read timer delay"));
         }, QMargins(0, 0, 0, 0));
-        grp.radio(markPrevNewsRead_, optTr("after switching to another article"),
+        grp.radio(markPrevNewsRead_, OptionsDialog::tr("after switching to another article"),
                   QStringLiteral("auto read"));
       }, Qt::Vertical, std::nullopt, QStringLiteral("auto read"));
-      b.check(markReadSwitchingFeed_, optTr("Mark displayed news as read when switching feeds"), QString(),
+      b.check(markReadSwitchingFeed_, OptionsDialog::tr("Mark displayed news as read when switching feeds"), QString(),
               QStringLiteral("auto read"));
-      b.check(markReadClosingTab_, optTr("Mark displayed news as read when closing tab"), QString(),
+      b.check(markReadClosingTab_, OptionsDialog::tr("Mark displayed news as read when closing tab"), QString(),
               QStringLiteral("auto read"));
-      b.check(markReadMinimize_, optTr("Mark displayed news as read on minimize"), QString(),
+      b.check(markReadMinimize_, OptionsDialog::tr("Mark displayed news as read on minimize"), QString(),
               QStringLiteral("auto read"));
       b.spacing(10);
 
-      b.label(optTr("Prevent accidental deletion of:"));
+      b.label(OptionsDialog::tr("Prevent accidental deletion of:"));
       b.indented(QMargins(15, 0, 0, 10), [this](OptionsPageBuilder &sub) {
-        sub.check(notDeleteStarred_, optTr("starred news"), QString(), QStringLiteral("protect keep"));
-        sub.check(notDeleteLabeled_, optTr("labeled news"), QString(), QStringLiteral("protect keep"));
+        sub.check(notDeleteStarred_, OptionsDialog::tr("starred news"), QString(), QStringLiteral("protect keep"));
+        sub.check(notDeleteLabeled_, OptionsDialog::tr("labeled news"), QString(), QStringLiteral("protect keep"));
       });
-      b.check(changeBehaviorActionNUN_, optTr("Change behavior of the 'Next Unread Article' action"), QString(),
+      b.check(changeBehaviorActionNUN_, OptionsDialog::tr("Change behavior of the 'Next Unread Article' action"), QString(),
               QStringLiteral("next unread navigation"));
       b.stretch();
     }},
-    {optTr("Clean Up"), [this](OptionsPageBuilder &b) {
-      b.group(cleanupOnShutdownBox_, optTr("Enable cleanup on shutdown"), true, [this](OptionsPageBuilder &grp) {
+    {OptionsDialog::tr("Clean Up"), [this](OptionsPageBuilder &b) {
+      b.group(cleanupOnShutdownBox_, OptionsDialog::tr("Enable cleanup on shutdown"), true, [this](OptionsPageBuilder &grp) {
         grp.grid(std::nullopt, 1, [this](OptionsGridBuilder &g) {
-          g.check(0, 0, dayCleanUpOn_, optTr("Maximum article age to keep (days):"), optTr(
+          g.check(0, 0, dayCleanUpOn_, OptionsDialog::tr("Maximum article age to keep (days):"), OptionsDialog::tr(
               "Removes expired articles on shutdown and ignores expired incoming articles on later updates. "
               "The first successful fetch of a new feed is exempt. Unread, starred and labeled articles "
               "are preserved according to the options below. Articles without a usable publication date "
@@ -196,7 +197,7 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
           maxDayCleanUp_->setRange(0, 9999);
           OptionsPageBuilder::bindEnabled(dayCleanUpOn_, {maxDayCleanUp_});
 
-          const QString ageWarningText = optTr(
+          const QString ageWarningText = OptionsDialog::tr(
               "Raising this limit may cause old articles you have already read or deleted "
               "to reappear as new if a feed still lists them.");
           maxDayCleanUpWarning_ = new QToolButton();
@@ -205,39 +206,39 @@ FeedsSettingsPage::FeedsSettingsPage(QSqlDatabase db,
           maxDayCleanUpWarning_->setAutoRaise(true);
           maxDayCleanUpWarning_->setCursor(Qt::PointingHandCursor);
           maxDayCleanUpWarning_->setToolTip(ageWarningText);
-          maxDayCleanUpWarning_->setAccessibleName(optTr("Article age limit warning"));
+          maxDayCleanUpWarning_->setAccessibleName(OptionsDialog::tr("Article age limit warning"));
           maxDayCleanUpWarning_->hide();
           connect(maxDayCleanUpWarning_, &QAbstractButton::clicked, this, [this, ageWarningText]() {
-            QMessageBox::warning(this, optTr("Maximum article age to keep"), ageWarningText, QMessageBox::Ok);
+            QMessageBox::warning(this, OptionsDialog::tr("Maximum article age to keep"), ageWarningText, QMessageBox::Ok);
           });
           maxDayRow->addWidget(maxDayCleanUp_);
           maxDayRow->addWidget(maxDayCleanUpWarning_);
           maxDayRow->addStretch();
           g.addLayout(0, 1, maxDayRow);
 
-          g.check(1, 0, newsCleanUpOn_, optTr("Maximum number of articles to keep:"), QString(),
+          g.check(1, 0, newsCleanUpOn_, OptionsDialog::tr("Maximum number of articles to keep:"), QString(),
                   QStringLiteral("limit count cap retention"));
           maxNewsCleanUp_ = new QSpinBox();
           maxNewsCleanUp_->setRange(0, 9999);
           OptionsPageBuilder::bindEnabled(newsCleanUpOn_, {maxNewsCleanUp_});
           g.addWidget(1, 1, maxNewsCleanUp_, Qt::AlignLeft);
 
-          g.check(2, 0, readCleanUp_, optTr("Delete read news"), QString(), QStringLiteral("purge prune"));
-          g.check(3, 0, neverUnreadCleanUp_, optTr("Never delete unread news"), QString(), QStringLiteral("preserve keep"));
-          g.check(4, 0, neverStarCleanUp_, optTr("Never delete starred news"), QString(), QStringLiteral("preserve keep"));
-          g.check(5, 0, neverLabelCleanUp_, optTr("Never delete labeled news"), QString(), QStringLiteral("preserve keep"));
+          g.check(2, 0, readCleanUp_, OptionsDialog::tr("Delete read news"), QString(), QStringLiteral("purge prune"));
+          g.check(3, 0, neverUnreadCleanUp_, OptionsDialog::tr("Never delete unread news"), QString(), QStringLiteral("preserve keep"));
+          g.check(4, 0, neverStarCleanUp_, OptionsDialog::tr("Never delete starred news"), QString(), QStringLiteral("preserve keep"));
+          g.check(5, 0, neverLabelCleanUp_, OptionsDialog::tr("Never delete labeled news"), QString(), QStringLiteral("preserve keep"));
         });
         grp.spacing(10);
 
-        grp.check(cleanUpDeleted_, optTr("Clean up 'Deleted'"), QString(), QStringLiteral("trash empty purge"));
-        grp.check(optimizeDB_, optTr("Optimize database on shutdown (slower shutdown)"), QString(),
+        grp.check(cleanUpDeleted_, OptionsDialog::tr("Clean up 'Deleted'"), QString(), QStringLiteral("trash empty purge"));
+        grp.check(optimizeDB_, OptionsDialog::tr("Optimize database on shutdown (slower shutdown)"), QString(),
                   QStringLiteral("vacuum sqlite compact defragment"));
         grp.spacing(10);
 
         grp.row([this](OptionsRowBuilder &r) {
           cleanUpPreviewLabel_ = new QLabel();
           r.addWidget(cleanUpPreviewLabel_);
-          cleanUpPreviewButton_ = r.button(optTr("Preview"));
+          cleanUpPreviewButton_ = r.button(OptionsDialog::tr("Preview"));
           cleanUpPreviewButton_->setEnabled(false);
           connect(cleanUpPreviewButton_, &QAbstractButton::clicked,
                   this, &FeedsSettingsPage::showCleanUpPreview);
@@ -306,7 +307,7 @@ void FeedsSettingsPage::selectionUserStyleNews()
 {
   const QString path = mainApp->resourcesDir() + QLatin1Char('/') + ProjectMetadata::styles();
   const QString fileName = QFileDialog::getOpenFileName(
-      this, optTr("Select Style Sheet File"), path, QStringLiteral("*.css"));
+      this, OptionsDialog::tr("Select Style Sheet File"), path, QStringLiteral("*.css"));
   if (!fileName.isEmpty()) styleSheetNewsEdit_->setText(fileName);
 }
 
@@ -350,14 +351,14 @@ void FeedsSettingsPage::updateCleanUpPreview()
       .arg(cleanUpPlanValid_)
       .arg(cleanUpPlan_.totalArticles());
   if (!cleanUpPlanValid_) {
-    cleanUpPreviewLabel_->setText(optTr("Cannot calculate shutdown cleanup preview: %1").arg(error));
+    cleanUpPreviewLabel_->setText(OptionsDialog::tr("Cannot calculate shutdown cleanup preview: %1").arg(error));
     cleanUpPreviewButton_->setEnabled(false);
     return;
   }
 
   const int total = cleanUpPlan_.totalArticles();
   cleanUpPreviewLabel_->setText(
-      optTr("On shutdown %n article(s) will be deleted.", nullptr, total));
+      OptionsDialog::tr("On shutdown %n article(s) will be deleted.", nullptr, total));
   cleanUpPreviewButton_->setEnabled(cleanupOnShutdownBox_->isChecked() && total > 0);
 }
 

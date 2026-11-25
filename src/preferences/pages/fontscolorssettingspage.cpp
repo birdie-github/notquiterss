@@ -3,6 +3,7 @@
 
 #include "app/mainapplication.h"
 #include "mainwindow/mainwindow.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 
 #include <QApplication>
@@ -86,7 +87,7 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
   fontsTree_->setColumnCount(3);
   fontsTree_->setColumnHidden(0, true);
   fontsTree_->setColumnWidth(1, 260);
-  fontsTree_->setHeaderLabels({QStringLiteral("Id"), optTr("Type"), optTr("Font")});
+  fontsTree_->setHeaderLabels({QStringLiteral("Id"), OptionsDialog::tr("Type"), OptionsDialog::tr("Font")});
 
   static const char *const kFontLabels[] = {
     QT_TRANSLATE_NOOP("OptionsDialog", "Feed list font"),
@@ -96,13 +97,13 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
     QT_TRANSLATE_NOOP("OptionsDialog", "Notification font"),
   };
   for (int i = 0; i < int(sizeof(kFontLabels) / sizeof(kFontLabels[0])); ++i) {
-    const QString fontTitle = optTr(kFontLabels[i]);
+    const QString fontTitle = OptionsDialog::tr(kFontLabels[i]);
     fontsTree_->addTopLevelItem(
         new QTreeWidgetItem(QStringList{QString::number(i), fontTitle}));
     if (searchEntries && pageIndex >= 0) {
       searchEntries->append({
           pageIndex, 0, fontTitle, QString(),
-          optTr("Fonts") + QStringLiteral(" typography size family"),
+          OptionsDialog::tr("Fonts") + QStringLiteral(" typography size family"),
           this, i});
     }
   }
@@ -111,17 +112,17 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
   connect(fontsTree_, &QAbstractItemView::doubleClicked,
           this, &FontsColorsSettingsPage::slotFontChange);
 
-  auto *fontChange = new QPushButton(optTr("Change..."), this);
+  auto *fontChange = new QPushButton(OptionsDialog::tr("Change..."), this);
   connect(fontChange, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotFontChange);
-  auto *fontReset = new QPushButton(optTr("Reset"), this);
+  auto *fontReset = new QPushButton(OptionsDialog::tr("Reset"), this);
   connect(fontReset, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotFontReset);
   auto *fontsButtonLayout = new QVBoxLayout();
   fontsButtonLayout->addWidget(fontChange);
   fontsButtonLayout->addWidget(fontReset);
   fontsButtonLayout->addStretch(1);
-  auto *fontResetAll = new QPushButton(optTr("Reset All"), this);
+  auto *fontResetAll = new QPushButton(OptionsDialog::tr("Reset All"), this);
   connect(fontResetAll, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotFontResetAll);
   fontsButtonLayout->addWidget(fontResetAll);
@@ -184,7 +185,7 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
   QTreeWidgetItem *firstColor = nullptr;
   QString currentColorSection;
   for (const auto &entry : entries) {
-    const QString label = optTr(entry.label);
+    const QString label = OptionsDialog::tr(entry.label);
     auto *item = new QTreeWidgetItem(colorsTree_, QStringList{label});
     if (entry.optionId < 0) {
       currentColorSection = label;
@@ -199,7 +200,7 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
       if (searchEntries && pageIndex >= 0) {
         searchEntries->append({
             pageIndex, 1, label, QString(),
-            optTr("Colors") + QLatin1Char(' ') + currentColorSection
+            OptionsDialog::tr("Colors") + QLatin1Char(' ') + currentColorSection
                 + QStringLiteral(" theme palette"),
             this, entry.optionId});
       }
@@ -211,10 +212,10 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
     if (item->data(0, Qt::UserRole).isValid()) slotColorChange();
   });
 
-  auto *colorChange = new QPushButton(optTr("Change..."), this);
+  auto *colorChange = new QPushButton(OptionsDialog::tr("Change..."), this);
   connect(colorChange, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotColorChange);
-  auto *colorReset = new QPushButton(optTr("Reset"), this);
+  auto *colorReset = new QPushButton(OptionsDialog::tr("Reset"), this);
   connect(colorReset, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotColorReset);
   connect(colorsTree_, &QTreeWidget::currentItemChanged, this,
@@ -229,7 +230,7 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
   colorsButtonLayout->addWidget(colorChange);
   colorsButtonLayout->addWidget(colorReset);
   colorsButtonLayout->addStretch(1);
-  auto *colorResetAll = new QPushButton(optTr("Reset All"), this);
+  auto *colorResetAll = new QPushButton(OptionsDialog::tr("Reset All"), this);
   connect(colorResetAll, &QAbstractButton::clicked,
           this, &FontsColorsSettingsPage::slotColorResetAll);
   colorsButtonLayout->addWidget(colorResetAll);
@@ -239,8 +240,8 @@ FontsColorsSettingsPage::FontsColorsSettingsPage(QWidget *parent,
   colorsLayout->addWidget(colorsTree_);
   colorsLayout->addLayout(colorsButtonLayout);
 
-  addTab(fontsWidget, optTr("Fonts"));
-  addTab(colorsWidget, optTr("Colors"));
+  addTab(fontsWidget, OptionsDialog::tr("Fonts"));
+  addTab(colorsWidget, OptionsDialog::tr("Colors"));
 }
 
 QFont FontsColorsSettingsPage::fontOptionValue(int optionId) const
@@ -258,7 +259,7 @@ void FontsColorsSettingsPage::setFontOptionValue(int optionId, const QFont &font
   item->setFont(2, QFont(font.family(), previewSize));
   item->setToolTip(2, previewSize == font.pointSize()
                        ? value
-                       : optTr("%1 (preview shown at %2 pt)").arg(value).arg(previewSize));
+                       : OptionsDialog::tr("%1 (preview shown at %2 pt)").arg(value).arg(previewSize));
 }
 
 QString FontsColorsSettingsPage::colorOptionValue(int optionId) const
@@ -275,7 +276,7 @@ void FontsColorsSettingsPage::setColorOptionValue(int optionId, const QString &c
     const auto format = color.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb;
     item->setText(1, color.name(format).toUpper());
   } else {
-    item->setText(1, colorName.isEmpty() ? optTr("None") : colorName);
+    item->setText(1, colorName.isEmpty() ? OptionsDialog::tr("None") : colorName);
   }
 }
 
@@ -324,8 +325,8 @@ void FontsColorsSettingsPage::slotFontReset()
 
 void FontsColorsSettingsPage::slotFontResetAll()
 {
-  if (QMessageBox::question(this, optTr("Reset All"),
-                            optTr("Reset all font settings to their default values?"),
+  if (QMessageBox::question(this, OptionsDialog::tr("Reset All"),
+                            OptionsDialog::tr("Reset all font settings to their default values?"),
                             QMessageBox::Ok | QMessageBox::Cancel,
                             QMessageBox::Cancel) != QMessageBox::Ok) return;
 
@@ -355,8 +356,8 @@ void FontsColorsSettingsPage::slotColorReset()
 
 void FontsColorsSettingsPage::slotColorResetAll()
 {
-  if (QMessageBox::question(this, optTr("Reset All"),
-                            optTr("Reset all color settings to their default values?"),
+  if (QMessageBox::question(this, OptionsDialog::tr("Reset All"),
+                            OptionsDialog::tr("Reset all color settings to their default values?"),
                             QMessageBox::Ok | QMessageBox::Cancel,
                             QMessageBox::Cancel) != QMessageBox::Ok) return;
 

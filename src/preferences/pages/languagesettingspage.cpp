@@ -4,6 +4,7 @@
 #include "app/mainapplication.h"
 #include "articles/rendering/articlecontent.h"
 #include "preferences/languagecatalog.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "projectmetadata.h"
 
@@ -24,11 +25,11 @@ LanguageSettingsPage::LanguageSettingsPage(QWidget *parent,
   languageFileList_->setColumnHidden(0, true);
   languageFileList_->setColumnWidth(1, 240);
   languageFileList_->setColumnWidth(2, 160);
-  languageFileList_->setHeaderLabels({QStringLiteral("Id"), optTr("Language"),
-                                      optTr("Author"), optTr("Contact")});
+  languageFileList_->setHeaderLabels({QStringLiteral("Id"), OptionsDialog::tr("Language"),
+                                      OptionsDialog::tr("Author"), OptionsDialog::tr("Contact")});
 
   const QString linkWikiStr = QStringLiteral("<a href=\"%1\">%2</a>")
-      .arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), optTr("Translation website"));
+      .arg(ProjectMetadata::translationsUrl().toHtmlEscaped(), OptionsDialog::tr("Translation website"));
   auto *linkTranslators = new QLabel(linkWikiStr, this);
   linkTranslators->setOpenExternalLinks(false);
   connect(linkTranslators, &QLabel::linkActivated, this, [](const QString &link) {
@@ -38,14 +39,14 @@ LanguageSettingsPage::LanguageSettingsPage(QWidget *parent,
 
   auto *languageLayout = new QVBoxLayout(this);
   languageLayout->setContentsMargins(0, 0, 0, 0);
-  languageLayout->addWidget(new QLabel(optTr("Choose language:"), this));
+  languageLayout->addWidget(new QLabel(OptionsDialog::tr("Choose language:"), this));
   languageLayout->addWidget(languageFileList_);
   languageLayout->addWidget(linkTranslators);
 
   if (searchEntries && pageIndex >= 0) {
     searchEntries->append({
-        pageIndex, -1, optTr("Choose language:"), QString(),
-        optTr("Language") + QStringLiteral(" locale translation ui"),
+        pageIndex, -1, OptionsDialog::tr("Choose language:"), QString(),
+        OptionsDialog::tr("Language") + QStringLiteral(" locale translation ui"),
         languageFileList_});
   }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "shortcutssettingspage.h"
 
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "widgets/lineedit.h"
 
@@ -29,7 +30,7 @@ ShortcutsSettingsPage::ShortcutsSettingsPage(const QList<QAction *> &actions,
   , shortcutActions_(actions)
   , listDefaultShortcut_(defaultShortcuts)
 {
-  filterShortcut_ = new LineEdit(this, optTr("Filter"));
+  filterShortcut_ = new LineEdit(this, OptionsDialog::tr("Filter"));
 
   shortcutTree_ = new QTreeView(this);
   shortcutTree_->setObjectName(QStringLiteral("shortcutTree"));
@@ -54,14 +55,14 @@ ShortcutsSettingsPage::ShortcutsSettingsPage(const QList<QAction *> &actions,
   shortcutTree_->setColumnWidth(1, 165);
   shortcutTree_->setColumnWidth(2, 120);
   shortcutModel_->setHorizontalHeaderLabels({
-      optTr("Action"), optTr("Description"), optTr("Shortcut"),
+      OptionsDialog::tr("Action"), OptionsDialog::tr("Description"), OptionsDialog::tr("Shortcut"),
       QStringLiteral("ObjectName"), QStringLiteral("Data")});
 
   editShortcut_ = new LineEdit(this);
-  auto *resetShortcutButton = new QPushButton(optTr("Reset"), this);
+  auto *resetShortcutButton = new QPushButton(OptionsDialog::tr("Reset"), this);
 
   auto *editShortcutLayout = new QHBoxLayout();
-  editShortcutLayout->addWidget(new QLabel(optTr("Shortcut:"), this));
+  editShortcutLayout->addWidget(new QLabel(OptionsDialog::tr("Shortcut:"), this));
   editShortcutLayout->addWidget(editShortcut_, 1);
   editShortcutLayout->addWidget(resetShortcutButton);
 
@@ -94,17 +95,17 @@ ShortcutsSettingsPage::ShortcutsSettingsPage(const QList<QAction *> &actions,
 
   if (searchEntries && pageIndex >= 0) {
     searchEntries->append({
-        pageIndex, -1, optTr("Keyboard Shortcuts"), QString(),
+        pageIndex, -1, OptionsDialog::tr("Keyboard Shortcuts"), QString(),
         QStringLiteral("hotkeys keybindings"), this});
     for (QAction *pAction : std::as_const(shortcutActions_)) {
       if (!pAction || pAction->isSeparator()) continue;
       const bool isAutoLoad = pAction->objectName() == QLatin1String("autoLoadImagesToggle");
       const QString actionTitle = isAutoLoad
-          ? optTr("Load images")
+          ? OptionsDialog::tr("Load images")
           : pAction->text().remove(QLatin1Char('&'));
       if (actionTitle.isEmpty()) continue;
       const QString actionDesc = isAutoLoad
-          ? optTr("Automatically load images in article view")
+          ? OptionsDialog::tr("Automatically load images in article view")
           : pAction->toolTip();
       searchEntries->append({
           pageIndex, -1, actionTitle, actionDesc,
@@ -155,7 +156,7 @@ bool ShortcutsSettingsPage::eventFilter(QObject *obj, QEvent *event)
         if (treeItems.count() > 1) {
           for (QStandardItem *item : treeItems) {
             if (item->row() != row) {
-              warningShortcut_->setText(optTr("Warning: key is already assigned to") +
+              warningShortcut_->setText(OptionsDialog::tr("Warning: key is already assigned to") +
                                         QStringLiteral(" '") +
                                         shortcutModel_->item(item->row(), 0)->text() +
                                         QStringLiteral("'"));
@@ -193,12 +194,12 @@ void ShortcutsSettingsPage::load()
           item->setIcon(QIcon(QStringLiteral(":/images/images/noicon.png")));
         } else if (pAction->objectName() == QLatin1String("autoLoadImagesToggle")) {
           item->setIcon(QIcon(QStringLiteral(":/images/imagesOn")));
-          item->setText(optTr("Load images"));
+          item->setText(OptionsDialog::tr("Load images"));
         } else {
           item->setIcon(pAction->icon());
         }
       } else if (i == 1 && pAction->objectName() == QLatin1String("autoLoadImagesToggle")) {
-        item->setText(optTr("Automatically load images in article view"));
+        item->setText(OptionsDialog::tr("Automatically load images in article view"));
       }
       if (i >= 0 && i <= 2) {
         item->setData(treeItem.at(i));
@@ -371,7 +372,7 @@ void ShortcutsSettingsPage::slotResetShortcut()
         shortcutModel_->findItems(str, Qt::MatchFixedString, 2);
     for (QStandardItem *item : treeItems) {
       if (item->row() != row) {
-        warningShortcut_->setText(optTr("Warning: key is already assigned to ") +
+        warningShortcut_->setText(OptionsDialog::tr("Warning: key is already assigned to ") +
                                   QStringLiteral(" '") +
                                   shortcutModel_->item(item->row(), 0)->text() +
                                   QStringLiteral("'"));

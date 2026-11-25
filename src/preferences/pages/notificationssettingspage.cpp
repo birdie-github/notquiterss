@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "notificationssettingspage.h"
 
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "widgets/lineedit.h"
 
@@ -19,10 +20,10 @@ NotificationsSettingsPage::NotificationsSettingsPage(QWidget *parent,
   : QTabWidget(parent)
 {
   OptionsPageBuilder::populateTabs(this, pageIndex, searchEntries, {
-    {optTr("Notification"), [this](OptionsPageBuilder &b) {
-      b.group(showNotifyOn_, optTr("Show notifications for incoming articles"), true, [this](OptionsPageBuilder &grp) {
+    {OptionsDialog::tr("Notification"), [this](OptionsPageBuilder &b) {
+      b.group(showNotifyOn_, OptionsDialog::tr("Show notifications for incoming articles"), true, [this](OptionsPageBuilder &grp) {
         grp.row([this](OptionsRowBuilder &r) {
-          const QString screenLabel = optTr("Screen");
+          const QString screenLabel = OptionsDialog::tr("Screen");
           r.label(screenLabel);
           QStringList screens{QStringLiteral("-1")};
           for (int i = 0; i < QGuiApplication::screens().size(); ++i) {
@@ -33,52 +34,52 @@ NotificationsSettingsPage::NotificationsSettingsPage(QWidget *parent,
           r.registerSearch(screenNotify_, screenLabel, QString(), QStringLiteral("monitor display"));
 
           r.spacing(10);
-          const QString positionLabel = optTr("Position");
+          const QString positionLabel = OptionsDialog::tr("Position");
           r.label(positionLabel);
-          r.combo(positionNotify_, {optTr("Top Left"), optTr("Top Right"),
-                                    optTr("Bottom Left"), optTr("Bottom Right")});
+          r.combo(positionNotify_, {OptionsDialog::tr("Top Left"), OptionsDialog::tr("Top Right"),
+                                    OptionsDialog::tr("Bottom Left"), OptionsDialog::tr("Bottom Right")});
           r.registerSearch(positionNotify_, positionLabel, QString(), QStringLiteral("corner location"));
 
           r.stretch(1);
-          QPushButton *showNotifier = r.button(optTr("Preview"));
+          QPushButton *showNotifier = r.button(OptionsDialog::tr("Preview"));
           connect(showNotifier, &QAbstractButton::clicked,
                   this, &NotificationsSettingsPage::previewNotificationRequested);
         }, std::nullopt, false);
 
 #if defined(Q_OS_WIN)
-        grp.check(fullscreenModeNotify_, optTr("Do not show notification in fullscreen mode"));
+        grp.check(fullscreenModeNotify_, OptionsDialog::tr("Do not show notification in fullscreen mode"));
 #else
         fullscreenModeNotify_ = new QCheckBox(this);
         fullscreenModeNotify_->hide();
 #endif
-        grp.check(showNotifyInactiveApp_, optTr("Show when the main window is inactive"));
-        grp.check(closeNotify_, optTr("Close notification after opening an article"));
+        grp.check(showNotifyInactiveApp_, OptionsDialog::tr("Show when the main window is inactive"));
+        grp.check(closeNotify_, OptionsDialog::tr("Close notification after opening an article"));
         grp.spacing(10);
 
         grp.grid(std::nullopt, 2, [this](OptionsGridBuilder &g) {
-          g.addSpinRow(0, optTr("Transparency"), transparencyNotify_, 0, 100, QStringLiteral("%"),
+          g.addSpinRow(0, OptionsDialog::tr("Transparency"), transparencyNotify_, 0, 100, QStringLiteral("%"),
                        QString(), QStringLiteral("opacity alpha"));
-          g.addSpinRow(1, optTr("Show at most"), countShowNewsNotify_, 1, 30,
-                       optTr("items per notification page"), QString(), QStringLiteral("limit alerts"));
-          g.addSpinRow(2, optTr("List item width"), widthTitleNewsNotify_, 50, 500, optTr("pixels"),
+          g.addSpinRow(1, OptionsDialog::tr("Show at most"), countShowNewsNotify_, 1, 30,
+                       OptionsDialog::tr("items per notification page"), QString(), QStringLiteral("limit alerts"));
+          g.addSpinRow(2, OptionsDialog::tr("List item width"), widthTitleNewsNotify_, 50, 500, OptionsDialog::tr("pixels"),
                        QString(), QStringLiteral("size"));
-          g.addSpinRow(3, optTr("Close notification after"), timeShowNewsNotify_, 0, 99999,
-                       optTr("seconds"), QString(), QStringLiteral("duration timeout delay"));
+          g.addSpinRow(3, OptionsDialog::tr("Close notification after"), timeShowNewsNotify_, 0, 99999,
+                       OptionsDialog::tr("seconds"), QString(), QStringLiteral("duration timeout delay"));
         });
         grp.spacing(10);
 
-        grp.check(showTitlesFeedsNotify_, optTr("Show feed titles"));
-        grp.check(showIconFeedNotify_, optTr("Show feed icons"));
-        grp.check(showButtonMarkAllNotify_, optTr("Show button 'Mark All News Read'"));
-        grp.check(showButtonMarkReadNotify_, optTr("Show button 'Mark Read/Unread'"));
-        grp.check(showButtonExBrowserNotify_, optTr("Show button 'Open in External Browser'"));
-        grp.check(showButtonDeleteNotify_, optTr("Show button 'Delete News'"));
+        grp.check(showTitlesFeedsNotify_, OptionsDialog::tr("Show feed titles"));
+        grp.check(showIconFeedNotify_, OptionsDialog::tr("Show feed icons"));
+        grp.check(showButtonMarkAllNotify_, OptionsDialog::tr("Show button 'Mark All News Read'"));
+        grp.check(showButtonMarkReadNotify_, OptionsDialog::tr("Show button 'Mark Read/Unread'"));
+        grp.check(showButtonExBrowserNotify_, OptionsDialog::tr("Show button 'Open in External Browser'"));
+        grp.check(showButtonDeleteNotify_, OptionsDialog::tr("Show button 'Delete News'"));
         grp.spacing(10);
 
         grp.row([this](OptionsRowBuilder &r) {
-          r.check(onlySelectedFeeds_, optTr("Only show selected feeds:"), QString(),
+          r.check(onlySelectedFeeds_, OptionsDialog::tr("Only show selected feeds:"), QString(),
                   QStringLiteral("filter feeds alert"));
-          QPushButton *feedsNotifierButton = r.button(optTr("Feeds"));
+          QPushButton *feedsNotifierButton = r.button(OptionsDialog::tr("Feeds"));
           OptionsPageBuilder::bindEnabled(onlySelectedFeeds_, {feedsNotifierButton});
           connect(feedsNotifierButton, &QAbstractButton::clicked,
                   this, &NotificationsSettingsPage::selectFeedsRequested);
@@ -88,13 +89,13 @@ NotificationsSettingsPage::NotificationsSettingsPage(QWidget *parent,
       }, Qt::Vertical, QMargins(10, 10, 10, 10), QStringLiteral("popup toast alert banner"));
       showNotifyOn_->setChecked(false);
     }},
-    {optTr("Sound"), [this](OptionsPageBuilder &b) {
-      b.group(soundNotifyBox_, optTr("Play a sound for incoming articles"), true, [this](OptionsPageBuilder &grp) {
+    {OptionsDialog::tr("Sound"), [this](OptionsPageBuilder &b) {
+      b.group(soundNotifyBox_, OptionsDialog::tr("Play a sound for incoming articles"), true, [this](OptionsPageBuilder &grp) {
         grp.row([this](OptionsRowBuilder &r) {
           editSoundNotifier_ = new LineEdit();
           r.addWidget(editSoundNotifier_, 1);
-          selectionSoundNotifier_ = r.button(optTr("Browse..."));
-          playSoundNotifier_ = r.button(optTr("Play"));
+          selectionSoundNotifier_ = r.button(OptionsDialog::tr("Browse..."));
+          playSoundNotifier_ = r.button(OptionsDialog::tr("Play"));
           connect(selectionSoundNotifier_, &QAbstractButton::clicked,
                   this, &NotificationsSettingsPage::selectionSoundNotifier);
           connect(playSoundNotifier_, &QAbstractButton::clicked,
@@ -113,8 +114,8 @@ void NotificationsSettingsPage::selectionSoundNotifier()
   const QString path = file.isFile() ? editSoundNotifier_->text() : file.path();
 
   const QString fileName = QFileDialog::getOpenFileName(
-      this, optTr("Open File..."), path,
-      optTr("Audio Files (*.wav *.flac *.mp3);;All Files (*)"));
+      this, OptionsDialog::tr("Open File..."), path,
+      OptionsDialog::tr("Audio Files (*.wav *.flac *.mp3);;All Files (*)"));
   if (!fileName.isEmpty()) editSoundNotifier_->setText(fileName);
 }
 

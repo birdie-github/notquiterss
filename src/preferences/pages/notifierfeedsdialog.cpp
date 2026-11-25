@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "notifierfeedsdialog.h"
 #include "feeds/feedselectiontree.h"
-#include "preferences/optionspagebuilder.h"
+#include "preferences/optionsdialog.h"
 
 #include <QDebug>
 #include <QElapsedTimer>
@@ -16,7 +16,7 @@
 NotifierFeedsDialog::NotifierFeedsDialog(QWidget *parent)
   : Dialog(parent)
 {
-  setWindowTitle(optTr("Selection of feeds"));
+  setWindowTitle(OptionsDialog::tr("Selection of feeds"));
   setMinimumSize(300, 300);
 
   feedsTreeNotify_ = new QTreeWidget(this);
@@ -51,7 +51,7 @@ void NotifierFeedsDialog::load(QSqlDatabase &db, bool defaultIconFeeds)
 
   QString treeError;
   if (!FeedSelectionTree::populate(feedsTreeNotify_, db, defaultIconFeeds,
-                                   optTr("All Feeds"), -1, treeError)) {
+                                   OptionsDialog::tr("All Feeds"), -1, treeError)) {
     qWarning().noquote() << treeError;
   }
 

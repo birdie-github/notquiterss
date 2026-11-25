@@ -3,6 +3,7 @@
 
 #include "articles/labeldialog.h"
 #include "mainwindow/mainwindow.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "widgets/reorderabletreecontroller.h"
 
@@ -32,15 +33,15 @@ LabelsSettingsPage::LabelsSettingsPage(QWidget *parent,
   labelsTree_->setColumnHidden(4, true);
   labelsTree_->header()->hide();
 
-  auto *newLabelButton = new QPushButton(optTr("Create..."), this);
+  auto *newLabelButton = new QPushButton(OptionsDialog::tr("Create..."), this);
   connect(newLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::newLabel);
-  auto *editLabelButton = new QPushButton(optTr("Edit..."), this);
+  auto *editLabelButton = new QPushButton(OptionsDialog::tr("Edit..."), this);
   connect(editLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::editLabel);
-  auto *deleteLabelButton = new QPushButton(optTr("Delete..."), this);
+  auto *deleteLabelButton = new QPushButton(OptionsDialog::tr("Delete..."), this);
   connect(deleteLabelButton, &QAbstractButton::clicked, this, &LabelsSettingsPage::deleteLabel);
 
-  auto *moveUpLabelButton = new QPushButton(optTr("Move up"), this);
-  auto *moveDownLabelButton = new QPushButton(optTr("Move down"), this);
+  auto *moveUpLabelButton = new QPushButton(OptionsDialog::tr("Move up"), this);
+  auto *moveDownLabelButton = new QPushButton(OptionsDialog::tr("Move down"), this);
 
   auto *buttonsLayout = new QVBoxLayout();
   buttonsLayout->addWidget(newLabelButton);
@@ -74,8 +75,8 @@ LabelsSettingsPage::LabelsSettingsPage(QWidget *parent,
 
   if (searchEntries && pageIndex >= 0) {
     searchEntries->append({
-        pageIndex, -1, optTr("Labels"), QString(),
-        optTr("Create...") + QLatin1Char(' ') + optTr("Edit...") + QStringLiteral(" tags categories"),
+        pageIndex, -1, OptionsDialog::tr("Labels"), QString(),
+        OptionsDialog::tr("Create...") + QLatin1Char(' ') + OptionsDialog::tr("Edit...") + QStringLiteral(" tags categories"),
         labelsTree_});
   }
 }

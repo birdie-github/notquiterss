@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "passwordssettingspage.h"
 
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 
 #include <QByteArray>
@@ -25,13 +26,13 @@ PasswordsSettingsPage::PasswordsSettingsPage(QWidget *parent,
   passTree_->setColumnHidden(3, true);
   passTree_->setColumnWidth(1, 250);
   passTree_->header()->setMinimumSectionSize(22);
-  passTree_->setHeaderLabels({QStringLiteral("Id"), optTr("Site"), optTr("User"), optTr("Password")});
+  passTree_->setHeaderLabels({QStringLiteral("Id"), OptionsDialog::tr("Site"), OptionsDialog::tr("User"), OptionsDialog::tr("Password")});
 
-  auto *deletePass = new QPushButton(optTr("Delete"), this);
+  auto *deletePass = new QPushButton(OptionsDialog::tr("Delete"), this);
   connect(deletePass, &QAbstractButton::clicked, this, &PasswordsSettingsPage::deleteSelected);
-  auto *deleteAllPass = new QPushButton(optTr("Delete All"), this);
+  auto *deleteAllPass = new QPushButton(OptionsDialog::tr("Delete All"), this);
   connect(deleteAllPass, &QAbstractButton::clicked, this, &PasswordsSettingsPage::deleteAll);
-  auto *showPass = new QPushButton(optTr("Show Passwords"), this);
+  auto *showPass = new QPushButton(OptionsDialog::tr("Show Passwords"), this);
   connect(showPass, &QAbstractButton::clicked, this, &PasswordsSettingsPage::showPasswords);
 
   auto *passButtonLayout = new QVBoxLayout();
@@ -48,8 +49,8 @@ PasswordsSettingsPage::PasswordsSettingsPage(QWidget *parent,
 
   if (searchEntries && pageIndex >= 0) {
     searchEntries->append({
-        pageIndex, -1, optTr("Passwords"), QString(),
-        optTr("Site") + QLatin1Char(' ') + optTr("User") + QLatin1Char(' ') + optTr("Show Passwords")
+        pageIndex, -1, OptionsDialog::tr("Passwords"), QString(),
+        OptionsDialog::tr("Site") + QLatin1Char(' ') + OptionsDialog::tr("User") + QLatin1Char(' ') + OptionsDialog::tr("Show Passwords")
             + QStringLiteral(" credentials login auth"),
         passTree_});
   }

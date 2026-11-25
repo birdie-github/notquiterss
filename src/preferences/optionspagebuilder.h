@@ -2,7 +2,6 @@
 #ifndef OPTIONSPAGEBUILDER_H
 #define OPTIONSPAGEBUILDER_H
 
-#include <QCoreApplication>
 #include <QMargins>
 #include <QPair>
 #include <QString>
@@ -31,15 +30,6 @@ class QSpinBox;
 class QTabWidget;
 class QVBoxLayout;
 class QWidget;
-
-/**
- * Shared translation helper for pages/dialogs whose strings live in the
- * OptionsDialog translation context.
- */
-inline QString optTr(const char *text, const char *disambiguation = nullptr, int n = -1)
-{
-  return QCoreApplication::translate("OptionsDialog", text, disambiguation, n);
-}
 
 struct OptionSearchEntry {
   OptionSearchEntry() = default;

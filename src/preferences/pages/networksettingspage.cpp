@@ -2,6 +2,7 @@
 #include "networksettingspage.h"
 
 #include "app/globals.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "preferences/settings.h"
 #include "widgets/lineedit.h"
@@ -24,26 +25,26 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget *parent,
   auto *layout = new QVBoxLayout(this);
   OptionsPageBuilder b(this, layout, pageIndex, -1, searchEntries);
 
-  b.radio(directConnectionButton_, optTr("Direct connection to the Internet"),
+  b.radio(directConnectionButton_, OptionsDialog::tr("Direct connection to the Internet"),
           QStringLiteral("proxy network"));
-  b.radio(systemProxyButton_, optTr("System proxy configuration (if available)"),
+  b.radio(systemProxyButton_, OptionsDialog::tr("System proxy configuration (if available)"),
           QStringLiteral("proxy network"));
-  b.radio(manualProxyButton_, optTr("Manual proxy configuration:"),
+  b.radio(manualProxyButton_, OptionsDialog::tr("Manual proxy configuration:"),
           QStringLiteral("HTTP SOCKS5 host port username password"));
 
   QWidget *manualWidget = b.indented(QMargins(0, 0, 0, 0), [this](OptionsPageBuilder &sub) {
     sub.row([this](OptionsRowBuilder &r) {
       r.combo(typeProxy_, {QStringLiteral("HTTP"), QStringLiteral("SOCKS5")});
-      r.label(optTr("Proxy server:"));
+      r.label(OptionsDialog::tr("Proxy server:"));
       r.lineEdit(editHost_);
-      r.label(optTr("Port:"));
+      r.label(OptionsDialog::tr("Port:"));
       r.lineEdit(editPort_);
       editPort_->setFixedWidth(60);
     }, QMargins(0, 0, 0, 0), false);
     sub.row([this](OptionsRowBuilder &r) {
-      r.label(optTr("Username:"));
+      r.label(OptionsDialog::tr("Username:"));
       r.lineEdit(editUser_);
-      r.label(optTr("Password:"));
+      r.label(OptionsDialog::tr("Password:"));
       r.lineEdit(editPassword_);
       editPassword_->setEchoMode(QLineEdit::Password);
     }, QMargins(0, 0, 0, 0), false);
@@ -52,18 +53,18 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget *parent,
   OptionsPageBuilder::bindEnabled(manualProxyButton_, {manualWidget});
   b.spacing(20);
 
-  b.label(optTr("Network options for feed updates (requires application restart):"));
+  b.label(OptionsDialog::tr("Network options for feed updates (requires application restart):"));
   b.grid(QMargins(15, 0, 5, 0), 1, [this](OptionsGridBuilder &g) {
-    g.addSpinRow(0, optTr("Request timeout:"), timeoutRequest_, 0, 300, QString(), QString(),
+    g.addSpinRow(0, OptionsDialog::tr("Request timeout:"), timeoutRequest_, 0, 300, QString(), QString(),
                  QStringLiteral("connection wait seconds"));
-    g.addSpinRow(1, optTr("Number of requests:"), numberRequests_, 1, 10, QString(), QString(),
+    g.addSpinRow(1, OptionsDialog::tr("Number of requests:"), numberRequests_, 1, 10, QString(), QString(),
                  QStringLiteral("parallel concurrent connections threads"));
-    g.addSpinRow(2, optTr("Number of retries:"), numberRepeats_, 1, 10, QString(), QString(),
+    g.addSpinRow(2, OptionsDialog::tr("Number of retries:"), numberRepeats_, 1, 10, QString(), QString(),
                  QStringLiteral("retry attempts"));
   });
   b.spacing(20);
 
-  b.check(customUserAgent_, optTr("Use custom User-Agent"), QString(),
+  b.check(customUserAgent_, OptionsDialog::tr("Use custom User-Agent"), QString(),
           QStringLiteral("ua header browser fingerprint"));
   b.indented(QMargins(15, 0, 5, 0), [this](OptionsPageBuilder &sub) {
     userAgentEdit_ = new LineEdit();
@@ -75,7 +76,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget *parent,
     userAgentEdit_->setText(hadStoredCustomUserAgent_
         ? userAgentSettings.value(QStringLiteral("userAgent")).toString()
         : QString());
-    userAgentEdit_->setPlaceholderText(optTr("Enter a custom User-Agent"));
+    userAgentEdit_->setPlaceholderText(OptionsDialog::tr("Enter a custom User-Agent"));
     userAgentEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     userAgentEdit_->setMinimumWidth(0);
     customUserAgent_->setChecked(useCustomUserAgent);
@@ -84,12 +85,12 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget *parent,
 
     connect(customUserAgent_, &QCheckBox::toggled, this, [this](bool checked) {
       if (checked && !hadStoredCustomUserAgent_ && !userAgentWarningAccepted_) {
-        QMessageBox warning(QMessageBox::Warning, optTr("Custom User-Agent"),
-                            optTr("A custom User-Agent can make this application's requests more distinctive "
+        QMessageBox warning(QMessageBox::Warning, OptionsDialog::tr("Custom User-Agent"),
+                            OptionsDialog::tr("A custom User-Agent can make this application's requests more distinctive "
                                   "and may make them easier to identify or fingerprint. Only change it if "
                                   "you understand the implications."),
                             QMessageBox::NoButton, this);
-        QPushButton *continueButton = warning.addButton(optTr("Continue"), QMessageBox::AcceptRole);
+        QPushButton *continueButton = warning.addButton(OptionsDialog::tr("Continue"), QMessageBox::AcceptRole);
         warning.addButton(QMessageBox::Cancel);
         warning.setDefaultButton(QMessageBox::Cancel);
         warning.exec();
@@ -155,8 +156,8 @@ void NetworkSettingsPage::applyProxy()
 bool NetworkSettingsPage::validate()
 {
   if (customUserAgent_->isChecked() && userAgentEdit_->text().trimmed().isEmpty()) {
-    QMessageBox::warning(this, optTr("Custom User-Agent"),
-                         optTr("Enter a custom User-Agent or disable the custom User-Agent option."));
+    QMessageBox::warning(this, OptionsDialog::tr("Custom User-Agent"),
+                         OptionsDialog::tr("Enter a custom User-Agent or disable the custom User-Agent option."));
     return false;
   }
   return true;

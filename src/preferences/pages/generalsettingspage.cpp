@@ -3,6 +3,7 @@
 
 #include "app/mainapplication.h"
 #include "common/logfile.h"
+#include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 #include "preferences/settings.h"
 
@@ -25,30 +26,30 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget *parent,
   auto *layout = new QVBoxLayout(this);
   OptionsPageBuilder b(this, layout, pageIndex, -1, searchEntries);
 
-  b.check(showSplashScreen_, optTr("Show splash screen on startup"), QString(),
+  b.check(showSplashScreen_, OptionsDialog::tr("Show splash screen on startup"), QString(),
           QStringLiteral("launch logo boot"));
-  b.check(reopenFeedStartup_, optTr("Reopen last opened feeds on startup"), QString(),
+  b.check(reopenFeedStartup_, OptionsDialog::tr("Reopen last opened feeds on startup"), QString(),
           QStringLiteral("restore session tabs"));
-  b.check(openNewTabNextToActive_, optTr("Open new tab next to active"), QString(),
+  b.check(openNewTabNextToActive_, OptionsDialog::tr("Open new tab next to active"), QString(),
           QStringLiteral("tab position order"));
-  b.check(hideFeedsOpenTab_, optTr("Hide feeds tree when opening tabs"), QString(),
+  b.check(hideFeedsOpenTab_, OptionsDialog::tr("Hide feeds tree when opening tabs"), QString(),
           QStringLiteral("sidebar panel collapse"));
-  b.check(showToggleFeedsTree_, optTr("Show feeds tree toggle"), QString(),
+  b.check(showToggleFeedsTree_, OptionsDialog::tr("Show feeds tree toggle"), QString(),
           QStringLiteral("sidebar panel button"));
-  b.check(defaultIconFeeds_, optTr("Show default RSS icon instead of each feed's icon"), QString(),
+  b.check(defaultIconFeeds_, OptionsDialog::tr("Show default RSS icon instead of each feed's icon"), QString(),
           QStringLiteral("favicon"));
-  b.check(autocollapseFolder_, optTr("Automatically collapse folders"), QString(),
+  b.check(autocollapseFolder_, OptionsDialog::tr("Automatically collapse folders"), QString(),
           QStringLiteral("tree expand"));
-  b.check(showCloseButtonTab_, optTr("Show a close button on each tab"), QString(),
+  b.check(showCloseButtonTab_, OptionsDialog::tr("Show a close button on each tab"), QString(),
           QStringLiteral("tabs close"));
 #ifdef NQRSS_ENABLE_DONATE_BUTTON
-  b.check(hideDonateButton_, optTr("Hide the donate button"), QString(),
+  b.check(hideDonateButton_, OptionsDialog::tr("Hide the donate button"), QString(),
           QStringLiteral("support"));
 #endif
   b.spacing(20);
 
 #if defined(Q_OS_WIN)
-  b.check(autoRunEnabled_, optTr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()),
+  b.check(autoRunEnabled_, OptionsDialog::tr("Run %1 at Windows startup").arg(QGuiApplication::applicationDisplayName()),
           QString(), QStringLiteral("autostart boot login"));
   autoRunSettings_ = new QSettings(
       QStringLiteral("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"),
@@ -59,28 +60,28 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget *parent,
   autoRunEnabled_->setChecked(autoRunSettings_->value(autoRunKey, false).toBool());
 #endif
 
-  b.check(updateCheckEnabled_, optTr("Automatically check for updates"), QString(),
+  b.check(updateCheckEnabled_, OptionsDialog::tr("Automatically check for updates"), QString(),
           QStringLiteral("version upgrade release"));
-  b.check(storeDBMemory_, optTr("Store the database in memory (requires application restart)"), QString(),
+  b.check(storeDBMemory_, OptionsDialog::tr("Store the database in memory (requires application restart)"), QString(),
           QStringLiteral("ram sqlite performance cache"));
   QWidget *saveDBMemFileWidget = b.indented(QMargins(15, 0, 0, 0), [this](OptionsPageBuilder &sub) {
     sub.spinRow(saveDBMemFileInterval_,
-                optTr("Save the in-memory database to disk every"), 1, 999, optTr("minutes"),
+                OptionsDialog::tr("Save the in-memory database to disk every"), 1, 999, OptionsDialog::tr("minutes"),
                 QString(), QStringLiteral("ram sqlite flush interval"));
   });
   OptionsPageBuilder::bindEnabled(storeDBMemory_, {saveDBMemFileWidget});
 
-  b.group(optTr("Debug"), [this](OptionsPageBuilder &grp) {
+  b.group(OptionsDialog::tr("Debug"), [this](OptionsPageBuilder &grp) {
     grp.row([this](OptionsRowBuilder &r) {
-      QCheckBox *fileLogging = r.check(optTr("Enable file logging"),
-          optTr("Takes effect immediately. Existing logs are kept when disabled."),
+      QCheckBox *fileLogging = r.check(OptionsDialog::tr("Enable file logging"),
+          OptionsDialog::tr("Takes effect immediately. Existing logs are kept when disabled."),
           QStringLiteral("debug log diagnostics"));
       fileLogging->setChecked(LogFile::fileLoggingEnabled());
       connect(fileLogging, &QCheckBox::toggled, this, [](bool enabled) {
         Settings().setValue("Settings/logFileOutput", enabled);
         LogFile::setFileLoggingEnabled(enabled);
       });
-      QPushButton *showLog = r.button(optTr("Show log location"));
+      QPushButton *showLog = r.button(OptionsDialog::tr("Show log location"));
       connect(showLog, &QPushButton::clicked, this, []() { LogFile::showLocation(); });
     });
   }, Qt::Horizontal);
