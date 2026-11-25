@@ -19,6 +19,8 @@
 #include "common/logfile.h"
 #include "faviconobject.h"
 #include <utility>
+#include "network/httprequestqueue.h"
+#include "network/networkmanager.h"
 #include "network/networkpolicy.h"
 #include "network/credentialscope.h"
 #include "app/mainapplication.h"
@@ -100,44 +102,23 @@ QUrl faviconUrl(const QByteArray &data, const QUrl &pageUrl)
 
 FaviconObject::FaviconObject(QObject *parent)
   : QObject(parent)
-  , networkManager_(nullptr)
+  , queue_(new HttpRequestQueue(20, REPLY_MAX_COUNT, REQUEST_TIMEOUT, this))
 {
   setObjectName("faviconObject_");
-
-  timeout_ = new QTimer(this);
-  timeout_->setInterval(1000);
-  connect(timeout_, &QTimer::timeout, this, &FaviconObject::slotRequestTimeout);
-
-  getUrlTimer_ = new QTimer(this);
-  getUrlTimer_->setSingleShot(true);
-  getUrlTimer_->setInterval(20);
-  connect(getUrlTimer_, &QTimer::timeout, this, &FaviconObject::getQueuedUrl);
 }
 
 void FaviconObject::disconnectObjects()
 {
-  shuttingDown_ = true;
+  queue_->setShuttingDown(true);
   stopRequest();
   disconnect(this);
-  if (networkManager_)
-    networkManager_->disconnect(networkManager_);
+  queue_->disconnectManager(nullptr);
 }
 
 void FaviconObject::stopRequest()
 {
-  if (getUrlTimer_)
-    getUrlTimer_->stop();
-  if (timeout_)
-    timeout_->stop();
-  requestQueue_.clear();
-  pendingRetries_.clear();
-  const QList<ActiveRequest> active = std::exchange(activeRequests_, {});
-  for (const ActiveRequest &req : active) {
-    if (req.reply) {
-      req.reply->abort();
-      req.reply->deleteLater();
-    }
-  }
+  queue_->stop(true);
+  activeMeta_.clear();
 }
 
 /** @brief Put requested URL in request queue
@@ -157,78 +138,32 @@ void FaviconObject::requestUrl(QString urlString, QString feedUrl)
 
 void FaviconObject::requestUrlWithKey(QString urlString, QString feedUrl, QString resultKey)
 {
-  if (shuttingDown_) return;
+  if (queue_->isShuttingDown()) return;
 
-  if (!networkManager_) {
-    networkManager_ = new NetworkManager(true, this);
-    connect(networkManager_, &QNetworkAccessManager::finished, this, &FaviconObject::finished);
+  if (!queue_->networkManager()) {
+    NetworkManager *nm = queue_->ensureNetworkManager();
+    connect(nm, &QNetworkAccessManager::finished, this, &FaviconObject::finished);
   }
 
-  if (!timeout_->isActive())
-    timeout_->start();
-
-  requestQueue_.enqueue({initialPageUrl(urlString, feedUrl), {QUrl(feedUrl).host(), resultKey}});
-
-  if (!getUrlTimer_->isActive())
-    getUrlTimer_->start();
-}
-
-/** @brief Process request queue by timer
- *----------------------------------------------------------------------------*/
-void FaviconObject::getQueuedUrl()
-{
-  if (shuttingDown_) return;
-
-  if ((activeRequests_.count() + pendingRetries_.count()) >= REPLY_MAX_COUNT) {
-    getUrlTimer_->start();
-    return;
-  }
-
-  if (!requestQueue_.isEmpty()) {
-    getUrlTimer_->start();
-
-    const QString candidateHost = requestQueue_.head().identity.feedHost;
-
-    if (hostList_.contains(candidateHost)) {
-      for (const ActiveRequest &req : std::as_const(activeRequests_)) {
-        if (req.identity.feedHost == candidateHost) {
-          return;
-        }
-      }
-      for (const PendingRetry &retry : std::as_const(pendingRetries_)) {
-        if (retry.identity.feedHost == candidateHost) {
-          return;
-        }
-      }
-    }
-
-    const QueuedRequest queued = requestQueue_.dequeue();
-
-    if (queued.pageUrl.isEmpty()) {
-      emit signalIconFailed(queued.identity.resultKey);
+  const QUrl pageUrl = initialPageUrl(urlString, feedUrl);
+  const RequestIdentity identity{QUrl(feedUrl).host(), resultKey};
+  queue_->enqueue(identity.feedHost, [this, pageUrl, identity] {
+    if (pageUrl.isEmpty()) {
+      emit signalIconFailed(identity.resultKey);
       return;
     }
-    requestResource(queued.pageUrl, queued.identity, 0, false);
-  }
+    requestResource(pageUrl, identity, 0, false);
+  });
 }
 
 void FaviconObject::requestResource(const QUrl &getUrl, const RequestIdentity &identity,
                                    int count, bool isIcon)
 {
-  if (shuttingDown_) return;
+  if (queue_->isShuttingDown()) return;
 
   if (count > 0) {
-    const quint64 token = ++nextRetryToken_;
-    pendingRetries_.append({token, getUrl, identity, count, isIcon});
-    QTimer::singleShot(30, this, [this, token] {
-      if (shuttingDown_) return;
-      for (int i = 0; i < pendingRetries_.size(); ++i) {
-        if (pendingRetries_.at(i).token == token) {
-          const PendingRetry retry = pendingRetries_.takeAt(i);
-          dispatchResource(retry.getUrl, retry.identity, retry.count, retry.isIcon);
-          return;
-        }
-      }
+    queue_->scheduleRetry(identity.feedHost, 30, [this, getUrl, identity, count, isIcon] {
+      dispatchResource(getUrl, identity, count, isIcon);
     });
     return;
   }
@@ -239,41 +174,45 @@ void FaviconObject::requestResource(const QUrl &getUrl, const RequestIdentity &i
 void FaviconObject::dispatchResource(const QUrl &getUrl, const RequestIdentity &identity,
                                      int count, bool isIcon)
 {
-  if (shuttingDown_) return;
+  if (queue_->isShuttingDown()) return;
 
   QNetworkRequest request(getUrl);
 
-  QNetworkReply *reply = networkManager_->get(request);
+  QNetworkReply *reply = queue_->networkManager()->get(request);
   emit signalConnecting(identity.resultKey, REQUEST_TIMEOUT);
   connect(reply, &QNetworkReply::metaDataChanged, this, [this, reply, resultKey = identity.resultKey] {
-    if (indexOfReply(reply) < 0 || reply->property("faviconConnected").toBool())
+    if (!queue_->containsReply(reply) || reply->property("faviconConnected").toBool())
       return;
     reply->setProperty("faviconConnected", true);
     emit signalConnected(resultKey);
   });
   reply->setProperty("feedReply", QVariant(true));
   reply->setProperty("faviconImage", isIcon);
-  activeRequests_.append({identity, count, REQUEST_TIMEOUT, reply});
+  activeMeta_.insert(reply, {identity, count});
+  queue_->trackReply(
+      identity.feedHost, reply,
+      [this, reply](const QUrl &url) {
+        const ActiveRequestMeta meta = activeMeta_.take(reply);
+        if (meta.count == 0) {
+          requestResource(url, meta.identity, 2, false);
+        } else {
+          emit signalIconFailed(meta.identity.resultKey, true);
+        }
+      },
+      [this, reply, resultKey = identity.resultKey](int secondsLeft) {
+        if (!reply->property("faviconConnected").toBool())
+          emit signalConnecting(resultKey, secondsLeft);
+      });
   NetworkPolicy::limitReplySize(reply, isIcon ? FaviconImageLimit : FaviconPageLimit);
-}
-
-int FaviconObject::indexOfReply(QNetworkReply *reply) const
-{
-  for (int i = 0; i < activeRequests_.size(); ++i) {
-    if (activeRequests_.at(i).reply == reply)
-      return i;
-  }
-  return -1;
 }
 
 /** @brief Finish network request processing
  *----------------------------------------------------------------------------*/
 void FaviconObject::finished(QNetworkReply *reply)
 {
-  const int currentReplyIndex = indexOfReply(reply);
-  if (currentReplyIndex >= 0) {
+  if (queue_->takeReply(reply)) {
     // Retries dispatch directly here, so retire the old reply first.
-    const ActiveRequest active = activeRequests_.takeAt(currentReplyIndex);
+    const ActiveRequestMeta active = activeMeta_.take(reply);
     const QUrl url = reply->url();
     const RequestIdentity &identity = active.identity;
     int cntRequests = active.count;
@@ -327,10 +266,7 @@ void FaviconObject::finished(QNetworkReply *reply)
         }
       }
     } else {
-      if (reply->errorString().contains("Service Temporarily Unavailable")) {
-        if (!hostList_.contains(identity.feedHost))
-          hostList_.append(identity.feedHost);
-      }
+      queue_->markHostIfRateLimited(identity.feedHost, reply);
 
       if ((cntRequests == 0) || (cntRequests == 1)) {
         requestResource(siteRoot(url), identity, 2, false);
@@ -348,38 +284,4 @@ void FaviconObject::finished(QNetworkReply *reply)
 
   reply->abort();
   reply->deleteLater();
-}
-
-/** @brief Timeout to delete requests without answer from server
- *----------------------------------------------------------------------------*/
-void FaviconObject::slotRequestTimeout()
-{
-  if (shuttingDown_) return;
-
-  for (int i = activeRequests_.count() - 1; i >= 0; i--) {
-    int time = activeRequests_.at(i).timeLeft - 1;
-    if (time <= 0) {
-      const ActiveRequest active = activeRequests_.takeAt(i);
-      QNetworkReply *reply = active.reply;
-      const QUrl url = reply->url();
-      const bool connected = reply->property("faviconConnected").toBool();
-
-      if (!connected)
-        emit signalConnecting(active.identity.resultKey, 0);
-
-      // abort() can invoke finished() before returning. The request is retired.
-      reply->abort();
-      reply->deleteLater();
-
-      if (active.count == 0) {
-        requestResource(url, active.identity, 2, false);
-      } else {
-        emit signalIconFailed(active.identity.resultKey, true);
-      }
-    } else {
-      activeRequests_[i].timeLeft = time;
-      if (!activeRequests_.at(i).reply->property("faviconConnected").toBool())
-        emit signalConnecting(activeRequests_.at(i).identity.resultKey, time);
-    }
-  }
 }

@@ -20,13 +20,12 @@
 #define FAVICONOBJECT_H
 
 #include <QDateTime>
+#include <QHash>
 #include <QObject>
-#include <QQueue>
 #include <QNetworkReply>
-#include <QTimer>
 #include <QUrl>
 
-#include "network/networkmanager.h"
+class HttpRequestQueue;
 
 class FaviconObject : public QObject
 {
@@ -51,9 +50,7 @@ signals:
   void signalIconFailed(QString resultKey, bool timedOut = false);
 
 private slots:
-  void getQueuedUrl();
   void finished(QNetworkReply *reply);
-  void slotRequestTimeout();
 
 private:
   struct RequestIdentity {
@@ -62,41 +59,16 @@ private:
     QString resultKey;
   };
 
-  struct QueuedRequest {
-    QUrl pageUrl;
+  struct ActiveRequestMeta {
     RequestIdentity identity;
-  };
-
-  struct ActiveRequest {
-    RequestIdentity identity;
-    int count;
-    int timeLeft;
-    QNetworkReply *reply;
-  };
-
-  struct PendingRetry {
-    quint64 token;
-    QUrl getUrl;
-    RequestIdentity identity;
-    int count;
-    bool isIcon;
+    int count = 0;
   };
 
   void requestResource(const QUrl &url, const RequestIdentity &identity, int count, bool isIcon);
   void dispatchResource(const QUrl &url, const RequestIdentity &identity, int count, bool isIcon);
-  int indexOfReply(QNetworkReply *reply) const;
 
-  NetworkManager *networkManager_;
-  bool shuttingDown_ = false;
-  quint64 nextRetryToken_ = 0;
-
-  QQueue<QueuedRequest> requestQueue_;
-
-  QTimer *timeout_;
-  QTimer *getUrlTimer_;
-  QList<ActiveRequest> activeRequests_;
-  QList<PendingRetry> pendingRetries_;
-  QList<QString> hostList_;
+  HttpRequestQueue *queue_;
+  QHash<QNetworkReply *, ActiveRequestMeta> activeMeta_;
 
 };
 

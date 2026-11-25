@@ -20,13 +20,12 @@
 #define REQUESTFEED_H
 
 #include <QDateTime>
+#include <QHash>
 #include <QObject>
-#include <QQueue>
 #include <QNetworkReply>
-#include <QTimer>
-#include <QElapsedTimer>
+#include <QUrl>
 
-#include "network/networkmanager.h"
+class HttpRequestQueue;
 
 class RequestFeed : public QObject
 {
@@ -63,59 +62,29 @@ signals:
   void feedProgressStage(int feedId, QString stage);
 
 private slots:
-  void getQueuedUrl();
   void finished(QNetworkReply *reply);
-  void slotRequestTimeout();
 
 private:
-  struct QueuedRequest {
-    int id;
+  struct ActiveRequestMeta {
+    int id = 0;
     QString feedUrl;
     QDateTime date;
-    QString userInfo;
-    QString identity;
+    int count = 0;
+    bool isHead = false;
   };
 
-  struct ActiveRequest {
-    int id;
-    QString feedUrl;
-    QDateTime date;
-    int count;
-    bool isHead;
-    int timeLeft;
-    QNetworkReply *reply;
-  };
-
-  struct PendingRetry {
-    quint64 token;
-    QUrl getUrl;
-    int id;
-    QString feedUrl;
-    QDateTime date;
-    int count;
-    bool isHead;
-  };
-
+  void scheduleOrDispatch(bool isHead, const QUrl &getUrl, int id,
+                          const QString &feedUrl, const QDateTime &date, int count);
   void dispatchHead(const QUrl &getUrl, int id, const QString &feedUrl,
                     const QDateTime &date, int count);
   void dispatchGet(const QUrl &getUrl, int id, const QString &feedUrl,
                    const QDateTime &date, int count);
-  int indexOfReply(QNetworkReply *reply) const;
+  void trackActiveReply(QNetworkReply *reply, int id, const QString &feedUrl,
+                        const QDateTime &date, int count, bool isHead);
 
-  NetworkManager *networkManager_;
-  bool shuttingDown_ = false;
-  quint64 nextRetryToken_ = 0;
-
-  int timeoutRequest_;
-  int numberRequests_;
+  HttpRequestQueue *queue_;
   int numberRepeats_;
-  QTimer *timeout_;
-  QTimer *getUrlTimer_;
-
-  QQueue<QueuedRequest> requestQueue_;
-  QList<ActiveRequest> activeRequests_;
-  QList<PendingRetry> pendingRetries_;
-  QList<QString> hostList_;
+  QHash<QNetworkReply *, ActiveRequestMeta> activeMeta_;
 
 };
 

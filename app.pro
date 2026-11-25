@@ -149,6 +149,7 @@ HEADERS += \
     src/network/authenticationdialog.h \
     src/network/cookiejar.h \
     src/network/cookiesdialog.h \
+    src/network/httprequestqueue.h \
     src/network/networkmanager.h \
     src/articles/rendering/articleview.h \
     src/database/credentialstore.h \
@@ -245,6 +246,7 @@ SOURCES += \
     src/network/authenticationdialog.cpp \
     src/network/cookiejar.cpp \
     src/network/cookiesdialog.cpp \
+    src/network/httprequestqueue.cpp \
     src/network/networkmanager.cpp \
     src/articles/rendering/articleview.cpp \
     src/database/credentialstore.cpp \
