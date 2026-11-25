@@ -520,6 +520,8 @@ private:
   void retranslateStrings();
   void updateTrayWindowActionText();
   void recountFeedCategories(const QList<int> &categoriesList);
+  QString buildFeedNewsFilter(int feedId, const QAction *filterAction) const;
+  int selectArticleOnOpen(NewsTabWidget *tab, int currentNewsId);
   void creatFeedTab(int feedId, int feedParId);
   void initUpdateFeeds();
   int globalFeedIntervalSeconds() const;

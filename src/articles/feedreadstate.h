@@ -27,8 +27,8 @@ class FeedReadState : public QObject
 public:
   explicit FeedReadState(QObject *parent = nullptr);
   void setDatabase(const QSqlDatabase &database);
-  static QList<int> getIdFeedsInList(QSqlDatabase &db, int idFolder);
-  static QString getIdFeedsString(QSqlDatabase &db, int idFolder, int idException = -1);
+  static QList<int> getIdFeedsInList(const QSqlDatabase &db, int idFolder);
+  static QString getIdFeedsString(const QSqlDatabase &db, int idFolder, int idException = -1);
 
 public slots:
   void slotRecountCategoryCounts();

@@ -33,6 +33,33 @@
 #include <QTextCodec>
 #include <utility>
 
+namespace {
+QString newsFilterCondition(const QAction *action)
+{
+  if (!action) return {};
+  static const struct {
+    const char *actionName;
+    const char *sql;
+  } kNewsFilters[] = {
+    {"filterNewsAll_",        "deleted = 0"},
+    {"filterNewsNew_",        "new = 1 AND deleted = 0"},
+    {"filterNewsUnread_",     "read < 2 AND deleted = 0"},
+    {"filterNewsStar_",       "starred = 1 AND deleted = 0"},
+    {"filterNewsNotStarred_", "starred = 0 AND deleted = 0"},
+    {"filterNewsUnreadStar_", "(read < 2 OR starred = 1) AND deleted = 0"},
+    {"filterNewsLastDay_",    "(published >= datetime('now', '-1 day')) AND deleted = 0"},
+    {"filterNewsLastWeek_",   "(published >= datetime('now', '-7 day')) AND deleted = 0"},
+  };
+  const QString name = action->objectName();
+  for (const auto &entry : kNewsFilters) {
+    if (name == QLatin1String(entry.actionName)) {
+      return QLatin1String(entry.sql);
+    }
+  }
+  return {};
+}
+} // namespace
+
 // ---------------------------------------------------------------------------
 void MainWindow::createNewsTab(int index)
 {
@@ -130,31 +157,8 @@ void MainWindow::setNewsFilter(QAction* pAct, bool clicked)
     mainApp->sqlQueryExec(qStr);
   }
 
-  // Create filter for category or for feed
-  if (feedsModel_->isFolder(feedsModel_->indexById(feedId))) {
-    newsFilterStr = QString("(%1) AND ").arg(FeedReadState::getIdFeedsString(db_, feedId));
-  } else {
-    newsFilterStr = QString("feedId=%1 AND ").arg(feedId);
-  }
-
-  // ... add filter from "filter"
-  if (pAct->objectName() == "filterNewsAll_") {
-    newsFilterStr.append("deleted = 0");
-  } else if (pAct->objectName() == "filterNewsNew_") {
-    newsFilterStr.append(QString("new = 1 AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsUnread_") {
-    newsFilterStr.append(QString("read < 2 AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsStar_") {
-    newsFilterStr.append(QString("starred = 1 AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsNotStarred_") {
-    newsFilterStr.append(QString("starred = 0 AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsUnreadStar_") {
-    newsFilterStr.append(QString("(read < 2 OR starred = 1) AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsLastDay_") {
-    newsFilterStr.append(QString("(published >= datetime('now', '-1 day')) AND deleted = 0"));
-  } else if (pAct->objectName() == "filterNewsLastWeek_") {
-    newsFilterStr.append(QString("(published >= datetime('now', '-7 day')) AND deleted = 0"));
-  }
+  // Create filter for category or for feed and apply selected news filter
+  newsFilterStr = buildFeedNewsFilter(feedId, pAct);
 
   // ... add filter from "search"
   QString filterStr = newsFilterStr;
@@ -307,11 +311,7 @@ void MainWindow::slotOpenFeedNewTab()
     settings.setValue("NewsTabSplitterState", currentNewsTab->newsTabWidgetSplitter_->saveState());
   }
 
-  QModelIndexList indexList = feedsView_->selectionModel()->selectedRows(0);
-  if (indexList.count() <= 1) {
-    indexList.clear();
-    indexList.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
-  }
+  QModelIndexList indexList = selectedFeedIndexes();
   QModelIndex index = indexList.takeFirst();
   feedsView_->selectIdEn_ = false;
   feedsView_->setCurrentIndex(index);
@@ -503,6 +503,51 @@ void MainWindow::setBrowserPosition(QAction *action)
 }
 
 // ----------------------------------------------------------------------------
+QString MainWindow::buildFeedNewsFilter(int feedId, const QAction *filterAction) const
+{
+  QString filter;
+  if (feedsModel_->isFolder(feedsModel_->indexById(feedId))) {
+    filter = QStringLiteral("(%1) AND ").arg(FeedReadState::getIdFeedsString(db_, feedId));
+  } else {
+    filter = QStringLiteral("feedId=%1 AND ").arg(feedId);
+  }
+  filter.append(newsFilterCondition(filterAction));
+  return filter;
+}
+
+int MainWindow::selectArticleOnOpen(NewsTabWidget *tab, int currentNewsId)
+{
+  if (!tab) return -1;
+  NewsModel *model = tab->newsModel_;
+  NewsView *view = tab->newsView_;
+
+  int newsRow = -1;
+  if (openingFeedAction_ == 0) {
+    const QModelIndex index = model->index(0, model->fieldIndex(QStringLiteral("id")));
+    const QModelIndexList indexList = model->match(index, Qt::EditRole, currentNewsId);
+    if (!indexList.isEmpty()) newsRow = indexList.first().row();
+  } else if (openingFeedAction_ == 1) {
+    newsRow = 0;
+  } else if ((openingFeedAction_ == 3) || (openingFeedAction_ == 4)) {
+    const QModelIndex index = model->index(0, model->fieldIndex(QStringLiteral("read")));
+    const int hits = ((view->header()->sortIndicatorOrder() == Qt::DescendingOrder) &&
+                      (openingFeedAction_ != 4)) ? -1 : 1;
+    const QModelIndexList indexList = model->match(index, Qt::EditRole, 0, hits);
+    if (!indexList.isEmpty()) newsRow = indexList.last().row();
+  }
+
+  const int titleCol = model->fieldIndex(QStringLiteral("title"));
+  view->setCurrentIndex(model->index(newsRow, titleCol));
+  if (newsRow == -1) view->verticalScrollBar()->setValue(newsRow);
+
+  if ((openingFeedAction_ != 2) && openNewsWebViewOn_) {
+    tab->slotNewsViewSelected(model->index(newsRow, titleCol));
+  } else {
+    tab->slotNewsViewSelected(model->index(-1, titleCol));
+  }
+  return newsRow;
+}
+
 void MainWindow::creatFeedTab(int feedId, int feedParId)
 {
   QSqlQuery q;
@@ -510,6 +555,7 @@ void MainWindow::creatFeedTab(int feedId, int feedParId)
          arg(feedId));
 
   if (q.next()) {
+    const int newsIdCur = q.value(2).toInt();
     NewsTabWidget *widget = new NewsTabWidget(this, NewsTabWidget::TabTypeFeed, feedId, feedParId);
     addTab(widget);
     widget->setSettings();
@@ -535,31 +581,7 @@ void MainWindow::creatFeedTab(int feedId, int feedParId)
     widget->newsIconTitle_->setPixmap(iconTab);
     widget->setTextTab(q.value(0).toString());
 
-    QString feedIdFilter;
-    if (feedsModel_->isFolder(feedsModel_->indexById(feedId))) {
-      feedIdFilter = QString("(%1) AND ").arg(FeedReadState::getIdFeedsString(db_, feedId));
-    } else {
-      feedIdFilter = QString("feedId=%1 AND ").arg(feedId);
-    }
-
-    if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsAll_") {
-      feedIdFilter.append("deleted = 0");
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsNew_") {
-      feedIdFilter.append(QString("new = 1 AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsUnread_") {
-      feedIdFilter.append(QString("read < 2 AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsStar_") {
-      feedIdFilter.append(QString("starred = 1 AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsNotStarred_") {
-      feedIdFilter.append(QString("starred = 0 AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsUnreadStar_") {
-      feedIdFilter.append(QString("(read < 2 OR starred = 1) AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsLastDay_") {
-      feedIdFilter.append(QString("(published >= datetime('now', '-1 day')) AND deleted = 0"));
-    } else if (newsFilterGroup_->checkedAction()->objectName() == "filterNewsLastWeek_") {
-      feedIdFilter.append(QString("(published >= datetime('now', '-7 day')) AND deleted = 0"));
-    }
-    widget->newsModel_->setFilter(feedIdFilter);
+    widget->newsModel_->setFilter(buildFeedNewsFilter(feedId, newsFilterGroup_->checkedAction()));
 
     if (widget->newsModel_->rowCount() != 0) {
       while (widget->newsModel_->canFetchMore())
@@ -569,21 +591,10 @@ void MainWindow::creatFeedTab(int feedId, int feedParId)
     currentNewsTab->loadNewspaper();
 
     // focus feed has displayed before
-    int newsRow = -1;
-    int newsId = widget->newsModel_->index(newsRow, widget->newsModel_->fieldIndex("id")).data(Qt::EditRole).toInt();
-    if (openingFeedAction_ == 0) {
-      QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("id"));
-      QModelIndexList indexList = newsModel_->match(index, Qt::EditRole, newsId);
-      if (indexList.count()) newsRow = indexList.first().row();
-    } else if (openingFeedAction_ == 1) newsRow = 0;
+    const int newsRow = selectArticleOnOpen(widget, newsIdCur);
 
-    widget->newsView_->setCurrentIndex(widget->newsModel_->index(newsRow, widget->newsModel_->fieldIndex("title")));
-    if (newsRow == -1) widget->newsView_->verticalScrollBar()->setValue(newsRow);
-
-    if ((openingFeedAction_ < 2) && openNewsWebViewOn_) {
-      widget->slotNewsViewSelected(widget->newsModel_->index(newsRow, widget->newsModel_->fieldIndex("title")));
-    } else {
-      widget->slotNewsViewSelected(widget->newsModel_->index(-1, widget->newsModel_->fieldIndex("title")));
+    if ((openingFeedAction_ >= 2) || !openNewsWebViewOn_) {
+      const int newsId = widget->newsModel_->index(newsRow, widget->newsModel_->fieldIndex("id")).data(Qt::EditRole).toInt();
       QSqlQuery q;
       QString qStr = QString("UPDATE feeds SET currentNews='%1' WHERE id=='%2'").
           arg(newsId).arg(feedId);
@@ -982,23 +993,7 @@ void MainWindow::nextUnreadNews()
       slotFeedClicked(indexPrevUnread);
 
       if (tabBar_->currentIndex() != TAB_WIDGET_PERMANENT) {
-        QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("read"));
-        QModelIndexList indexList;
-        if ((newsView_->header()->sortIndicatorOrder() == Qt::DescendingOrder) &&
-            (openingFeedAction_ != 4))
-          indexList = newsModel_->match(index, Qt::EditRole, 0, -1);
-        else
-          indexList = newsModel_->match(index, Qt::EditRole, 0);
-
-        if (!indexList.isEmpty()) newsRow = indexList.last().row();
-
-        // Focus feed news that displayed before
-        newsView_->setCurrentIndex(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-        if (newsRow == -1) newsView_->verticalScrollBar()->setValue(newsRow);
-
-        if (openNewsWebViewOn_) {
-          currentNewsTab->slotNewsViewSelected(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-        }
+        selectArticleOnOpen(currentNewsTab, 0);
       }
 
       openingFeedAction_ = AppSettings::openingFeedAction.get();

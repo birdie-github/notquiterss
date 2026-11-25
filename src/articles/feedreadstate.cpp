@@ -260,7 +260,7 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
   if (updateViewport) emit signalFeedsViewportUpdate();
 }
 
-QString FeedReadState::getIdFeedsString(QSqlDatabase &db, int idFolder, int idException)
+QString FeedReadState::getIdFeedsString(const QSqlDatabase &db, int idFolder, int idException)
 {
   const QList<int> idList = getIdFeedsInList(db, idFolder);
   QString str;
@@ -277,7 +277,7 @@ QString FeedReadState::getIdFeedsString(int idFolder, int idException)
   return getIdFeedsString(db_, idFolder, idException);
 }
 
-QList<int> FeedReadState::getIdFeedsInList(QSqlDatabase &db, int idFolder)
+QList<int> FeedReadState::getIdFeedsInList(const QSqlDatabase &db, int idFolder)
 {
   QList<int> idList;
   if (idFolder <= 0) return idList;

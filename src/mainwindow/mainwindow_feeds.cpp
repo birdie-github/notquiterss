@@ -146,11 +146,7 @@ void MainWindow::deleteItemFeedsTree()
 
   QModelIndex currentIndex = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
   const int feedIdCur = feedsModel_->idByIndex(currentIndex);
-  QModelIndexList indexes = feedsView_->selectionModel()->selectedRows(0);
-  if (indexes.count() <= 1) {
-    indexes.clear();
-    indexes.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
-  }
+  const QModelIndexList indexes = selectedFeedIndexes();
   // Capture the confirmed IDs before the modal dialog's event loop can reload
   // the model. Never replay a destructive action against a later selection.
   QList<int> ids;
@@ -651,37 +647,11 @@ void MainWindow::slotFeedSelected(QModelIndex index, bool createTab)
   setNewsFilter(newsFilterGroup_->checkedAction(), false);
 
   // Search feed news that displayed before
-  int newsRow = -1;
-  if (openingFeedAction_ == 0) {
-    QModelIndex feedIndex = feedsModel_->indexById(feedId);
-    int newsIdCur = feedsModel_->dataField(feedIndex, "currentNews").toInt();
-    QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("id"));
-    QModelIndexList indexList = newsModel_->match(index, Qt::EditRole, newsIdCur);
+  const int newsIdCur = feedsModel_->dataField(feedsModel_->indexById(feedId), "currentNews").toInt();
+  const int newsRow = selectArticleOnOpen(currentNewsTab, newsIdCur);
 
-    if (!indexList.isEmpty()) newsRow = indexList.first().row();
-  } else if (openingFeedAction_ == 1) {
-    newsRow = 0;
-  } else if ((openingFeedAction_ == 3) || (openingFeedAction_ == 4)) {
-    QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("read"));
-    QModelIndexList indexList;
-    if ((newsView_->header()->sortIndicatorOrder() == Qt::DescendingOrder) &&
-        (openingFeedAction_ != 4))
-      indexList = newsModel_->match(index, Qt::EditRole, 0, -1);
-    else
-      indexList = newsModel_->match(index, Qt::EditRole, 0);
-
-    if (!indexList.isEmpty()) newsRow = indexList.last().row();
-  }
-
-  // Focus feed news that displayed before
-  newsView_->setCurrentIndex(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-  if (newsRow == -1) newsView_->verticalScrollBar()->setValue(newsRow);
-
-  if ((openingFeedAction_ != 2) && openNewsWebViewOn_) {
-    currentNewsTab->slotNewsViewSelected(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-  } else {
-    currentNewsTab->slotNewsViewSelected(newsModel_->index(-1, newsModel_->fieldIndex("title")));
-    int newsId = newsModel_->index(newsRow, newsModel_->fieldIndex("id")).data(Qt::EditRole).toInt();
+  if ((openingFeedAction_ == 2) || !openNewsWebViewOn_) {
+    const int newsId = newsModel_->index(newsRow, newsModel_->fieldIndex("id")).data(Qt::EditRole).toInt();
     QString qStr = QString("UPDATE feeds SET currentNews='%1' WHERE id=='%2'").arg(newsId).arg(feedId);
     mainApp->sqlQueryExec(qStr);
     QModelIndex feedIndex = feedsModel_->indexById(feedId);
@@ -934,77 +904,44 @@ void MainWindow::setFeedsFilter(bool clicked)
   if (setFilter) return;
   setFilter = true;
 
-  QAction* filterAct = feedsFilterGroup_->checkedAction();
+  QAction *filterAct = feedsFilterGroup_->checkedAction();
+  const QString filterName = filterAct->objectName();
 
-  if (filterAct->objectName() == "filterFeedsNew_") {
-    QModelIndex index = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
-    int newCount = feedsModel_->dataField(index, "newCount").toInt();
-    if (!(clicked && !newCount)) {
-      while (index.isValid()) {
-        idList << feedsModel_->idByIndex(index);
-        index = index.parent();
-      }
+  QSet<int> seenIds;
+  auto appendWithAncestors = [&](QModelIndex index) {
+    while (index.isValid()) {
+      const int id = feedsModel_->idByIndex(index);
+      if (seenIds.contains(id)) break;
+      seenIds.insert(id);
+      idList.append(id);
+      index = index.parent();
     }
-  } else if (filterAct->objectName() == "filterFeedsUnread_") {
-    QModelIndex index = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
-    int unRead = feedsModel_->dataField(index, "unread").toInt();
-    if (!(clicked && !unRead)) {
-      while (index.isValid()) {
-        idList << feedsModel_->idByIndex(index);
-        index = index.parent();
-      }
-    }
-  } else if (filterAct->objectName() == "filterFeedsStarred_") {
-    QSqlQuery q;
-    q.exec(QString("SELECT id, parentId FROM feeds WHERE label LIKE '%starred%'"));
-    while (q.next()) {
-      idList.append(q.value(0).toInt());
-      int parentId = q.value(1).toInt();
-      if (!idList.contains(parentId)) {
-        while (parentId) {
-          if (!idList.contains(parentId))
-            idList.append(parentId);
-          else break;
-          QSqlQuery q1;
-          q1.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(parentId));
-          if (q1.next()) parentId = q1.value(0).toInt();
-        }
-      }
-    }
-  } else if (filterAct->objectName() == "filterFeedsError_") {
-    QSqlQuery q;
-    q.exec(QString("SELECT id, parentId FROM feeds WHERE status!=0 AND status!=''"));
-    while (q.next()) {
-      idList.append(q.value(0).toInt());
-      int parentId = q.value(1).toInt();
-      if (!idList.contains(parentId)) {
-        while (parentId) {
-          if (!idList.contains(parentId))
-            idList.append(parentId);
-          else break;
-          QSqlQuery q1;
-          q1.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(parentId));
-          if (q1.next()) parentId = q1.value(0).toInt();
-        }
-      }
-    }
-  }
+  };
 
-  if ((filterAct->objectName() == "filterFeedsNew_") ||
-      (filterAct->objectName() == "filterFeedsUnread_")) {
-    for (int i = 0; i < stackedWidget_->count(); i++) {
+  if ((filterName == QLatin1String("filterFeedsNew_")) ||
+      (filterName == QLatin1String("filterFeedsUnread_"))) {
+    const QModelIndex index = feedsProxyModel_->mapToSource(feedsView_->currentIndex());
+    const QString countField = (filterName == QLatin1String("filterFeedsNew_"))
+        ? QStringLiteral("newCount") : QStringLiteral("unread");
+    if (!(clicked && !feedsModel_->dataField(index, countField).toInt())) {
+      appendWithAncestors(index);
+    }
+
+    for (int i = 0; i < stackedWidget_->count(); ++i) {
       if ((i == 0) && clicked && (stackedWidget_->currentIndex() == 0)) continue;
       NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
-      if (!idList.contains(widget->feedId_)) {
-        idList.append(widget->feedId_);
-        QModelIndex index = feedsModel_->indexById(widget->feedId_).parent();
-        while (index.isValid()) {
-          int id = feedsModel_->idByIndex(index);
-          if (!idList.contains(id))
-            idList.append(id);
-          index = index.parent();
-        }
-      }
+      appendWithAncestors(feedsModel_->indexById(widget->feedId_));
+    }
+  } else if ((filterName == QLatin1String("filterFeedsStarred_")) ||
+             (filterName == QLatin1String("filterFeedsError_"))) {
+    const QString predicate = (filterName == QLatin1String("filterFeedsStarred_"))
+        ? QStringLiteral("label LIKE '%starred%'")
+        : QStringLiteral("status!=0 AND status!=''");
+    QSqlQuery q(db_);
+    q.setForwardOnly(true);
+    q.exec(QStringLiteral("SELECT id FROM feeds WHERE ") + predicate);
+    while (q.next()) {
+      appendWithAncestors(feedsModel_->indexById(q.value(0).toInt()));
     }
   }
 
@@ -1039,11 +976,7 @@ void MainWindow::markFeedRead()
   bool openFeed = false;
   bool isFolder = false;
 
-  QModelIndexList indexList = feedsView_->selectionModel()->selectedRows(0);
-  if (indexList.count() <= 1) {
-    indexList.clear();
-    indexList.append(feedsProxyModel_->mapFromSource(feedsView_->selectIndex()));
-  }
+  QModelIndexList indexList = selectedFeedIndexes();
   QList<int> idList;
   for (int i = indexList.count()-1; i >= 0; --i) {
     QModelIndex index = feedsProxyModel_->mapToSource(indexList[i]);
@@ -1641,36 +1574,8 @@ void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTa
 
     currentNewsTab->loadNewspaper();
 
-    // Search previous displayed news of the feed
-    int newsRow = -1;
-    if (openingFeedAction_ == 0) {
-      int newsIdCur = item->text(3).toInt();
-      QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("id"));
-      QModelIndexList indexList = newsModel_->match(index, Qt::EditRole, newsIdCur);
-
-      if (!indexList.isEmpty()) newsRow = indexList.first().row();
-    } else if (openingFeedAction_ == 1) {
-      newsRow = 0;
-    } else if (openingFeedAction_ == 3) {
-      QModelIndex index = newsModel_->index(0, newsModel_->fieldIndex("read"));
-      QModelIndexList indexList;
-      if (newsView_->header()->sortIndicatorOrder() == Qt::DescendingOrder)
-        indexList = newsModel_->match(index, Qt::EditRole, 0, -1);
-      else
-        indexList = newsModel_->match(index, Qt::EditRole, 0);
-
-      if (!indexList.isEmpty()) newsRow = indexList.last().row();
-    }
-
-    // Display previous displayed news of the feed
-    newsView_->setCurrentIndex(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-    if (newsRow == -1) newsView_->verticalScrollBar()->setValue(newsRow);
-
-    if ((openingFeedAction_ != 2) && openNewsWebViewOn_) {
-      currentNewsTab->slotNewsViewSelected(newsModel_->index(newsRow, newsModel_->fieldIndex("title")));
-    } else {
-      currentNewsTab->slotNewsViewSelected(newsModel_->index(-1, newsModel_->fieldIndex("title")));
-    }
+    // Search and display previous displayed news of the category
+    selectArticleOnOpen(currentNewsTab, item->text(3).toInt());
 
     if (createTab)
       emit signalSetCurrentTab(indexTab);
