@@ -1143,24 +1143,7 @@ void MainWindow::slotFeedsFilter()
       feedsFilterAction_->setChecked(true);
       setFeedsFilter();
     } else {
-      if (mainToolbar_->widgetForAction(feedsFilter_)) {
-        QWidget *widget = mainToolbar_->widgetForAction(feedsFilter_);
-        if (widget->underMouse()) {
-          feedsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, mainToolbar_->height()-1)));
-        }
-      }
-      if (feedsToolBar_->widgetForAction(feedsFilter_)) {
-        QWidget *widget = feedsToolBar_->widgetForAction(feedsFilter_);
-        if (widget->underMouse()) {
-          feedsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, feedsToolBar_->height()-1)));
-        }
-      }
-      if (currentNewsTab->newsToolBar_->widgetForAction(feedsFilter_)) {
-        QWidget *widget = currentNewsTab->newsToolBar_->widgetForAction(feedsFilter_);
-        if (widget->underMouse()) {
-          feedsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, currentNewsTab->newsToolBar_->height()-1)));
-        }
-      }
+      popupToolbarMenu(feedsFilter_, feedsFilterMenu_);
     }
   } else {
     filterFeedsAll_->setChecked(true);
@@ -1347,17 +1330,7 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
     QSqlQuery q;
     if (how == 2) {
       // Move to another folder
-      QList<int> idList;
-      q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-             arg(feedParIdWhat));
-      while (q.next()) {
-        if (feedIdWhat != q.value(0).toInt())
-          idList << q.value(0).toInt();
-      }
-      for (int i = 0; i < idList.count(); i++) {
-        q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-               arg(i).arg(idList.at(i)));
-      }
+      FeedCounters::renumberSiblings(db_, feedParIdWhat, feedIdWhat);
 
       int rowToParent = 0;
       q.exec(QString("SELECT count(id) FROM feeds WHERE parentId='%1'").
@@ -1373,52 +1346,27 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
     } else if (feedParIdWhat == feedParIdWhere) {
       // Move inside folder
       QList<int> idList;
-      q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-             arg(feedParIdWhat));
-      while (q.next()) {
-        idList << q.value(0).toInt();
-      }
-
-      int rowWhat = feedsModel_->dataField(indexWhat, "rowToParent").toInt();
-      int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
-      if ((rowWhat < rowWhere) && (how != 1)) rowWhere--;
-      else if (how == 1) rowWhere++;
-      idList.insert(rowWhere, idList.takeAt(rowWhat));
-
-      for (int i = 0; i < idList.count(); i++) {
-        q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-               arg(i).arg(idList.at(i)));
+      if (FeedCounters::siblingIds(db_, feedParIdWhat, idList) && !idList.isEmpty()) {
+        int rowWhat = feedsModel_->dataField(indexWhat, "rowToParent").toInt();
+        int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
+        if ((rowWhat < rowWhere) && (how != 1)) rowWhere--;
+        else if (how == 1) rowWhere++;
+        if (rowWhat >= 0 && rowWhat < idList.size()) {
+          const int movedId = idList.takeAt(rowWhat);
+          idList.insert(qBound(0, rowWhere, idList.size()), movedId);
+          FeedCounters::writeSiblingOrder(db_, idList);
+        }
       }
     } else {
       // Move in another folder beside feeds
+      FeedCounters::renumberSiblings(db_, feedParIdWhat, feedIdWhat);
+
       QList<int> idList;
-      q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-             arg(feedParIdWhat));
-      while (q.next()) {
-        if (feedIdWhat != q.value(0).toInt())
-          idList << q.value(0).toInt();
-      }
-      for (int i = 0; i < idList.count(); i++) {
-        q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-               arg(i).arg(idList.at(i)));
-      }
-
-      //
-
-      idList.clear();
-      q.exec(QString("SELECT id FROM feeds WHERE parentId='%1' ORDER BY rowToParent").
-             arg(feedParIdWhere));
-      while (q.next()) {
-        idList << q.value(0).toInt();
-      }
-
-      int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
-      if (how == 1) rowWhere++;
-      idList.insert(rowWhere, feedIdWhat);
-
-      for (int i = 0; i < idList.count(); i++) {
-        q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-               arg(i).arg(idList.at(i)));
+      if (FeedCounters::siblingIds(db_, feedParIdWhere, idList)) {
+        int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
+        if (how == 1) rowWhere++;
+        idList.insert(qBound(0, rowWhere, idList.size()), feedIdWhat);
+        FeedCounters::writeSiblingOrder(db_, idList);
       }
 
       q.exec(QString("UPDATE feeds SET parentId='%1' WHERE id=='%2'").

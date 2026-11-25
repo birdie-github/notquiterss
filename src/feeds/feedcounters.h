@@ -28,6 +28,19 @@ bool rollupParents(QSqlDatabase &db, const QList<int> &startFolderIds,
                    QList<FolderCounts> *updatedFolders = nullptr,
                    QSqlError *sqlError = nullptr, QString *error = nullptr);
 
+// Return child feed IDs of parentId ordered by rowToParent, optionally skipping excludeFeedId.
+bool siblingIds(QSqlDatabase &db, int parentId, QList<int> &siblingIds,
+                int excludeFeedId = -1,
+                QSqlError *sqlError = nullptr, QString *error = nullptr);
+
+// Rewrite sequential 0..N-1 rowToParent values for ordered feedIds.
+bool writeSiblingOrder(QSqlDatabase &db, const QList<int> &feedIds,
+                       QSqlError *sqlError = nullptr, QString *error = nullptr);
+
+// Re-number siblings under parentId in rowToParent order (optionally excluding excludeFeedId).
+bool renumberSiblings(QSqlDatabase &db, int parentId, int excludeFeedId = -1,
+                      QSqlError *sqlError = nullptr, QString *error = nullptr);
+
 } // namespace FeedCounters
 
 #endif // FEEDCOUNTERS_H

@@ -238,22 +238,7 @@ void CustomizeToolbarDialog::acceptDialog()
   }
 
   if (toolbar_->objectName() != "newsToolBar") {
-    for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
-      if (actionStr == "Separator") {
-        toolbar_->addSeparator();
-      } else {
-        QListIterator<QAction *> iter(mainWindow->actions());
-        while (iter.hasNext()) {
-          QAction *pAction = iter.next();
-          if (!pAction->icon().isNull()) {
-            if (pAction->objectName() == actionStr) {
-              toolbar_->addAction(pAction);
-              break;
-            }
-          }
-        }
-      }
-    }
+    MainWindow::populateToolbarActions(toolbar_, mainWindow->actions(), str);
   }
 
   if (toolbar_->objectName() == "ToolBar_General") {
@@ -290,22 +275,7 @@ void CustomizeToolbarDialog::acceptDialog()
 
     for (int i = 0; i < mainWindow->stackedWidget_->count(); i++) {
       NewsTabWidget *widget = static_cast<NewsTabWidget *>(mainWindow->stackedWidget_->widget(i));
-      for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
-        if (actionStr == "Separator") {
-          widget->newsToolBar_->addSeparator();
-        } else {
-          QListIterator<QAction *> iter(mainWindow->actions());
-          while (iter.hasNext()) {
-            QAction *pAction = iter.next();
-            if (!pAction->icon().isNull()) {
-              if (pAction->objectName() == actionStr) {
-                widget->newsToolBar_->addAction(pAction);
-                break;
-              }
-            }
-          }
-        }
-      }
+      MainWindow::populateToolbarActions(widget->newsToolBar_, mainWindow->actions(), str);
       widget->newsToolBar_->addAction(widget->separatorRAct_);
       widget->newsToolBar_->addAction(mainWindow->restoreNewsAct_);
 

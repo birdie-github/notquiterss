@@ -269,24 +269,7 @@ void MainWindow::slotNewsFilter()
       newsFilterAction_->setChecked(true);
       setNewsFilter(newsFilterAction_);
     } else {
-      if (mainToolbar_->widgetForAction(newsFilter_)) {
-        QWidget *widget = mainToolbar_->widgetForAction(newsFilter_);
-        if (widget->underMouse()) {
-          newsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, mainToolbar_->height()-1)));
-        }
-      }
-      if (feedsToolBar_->widgetForAction(newsFilter_)) {
-        QWidget *widget = feedsToolBar_->widgetForAction(newsFilter_);
-        if (widget->underMouse()) {
-          newsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, feedsToolBar_->height()-1)));
-        }
-      }
-      if (currentNewsTab->newsToolBar_->widgetForAction(newsFilter_)) {
-        QWidget *widget = currentNewsTab->newsToolBar_->widgetForAction(newsFilter_);
-        if (widget->underMouse()) {
-          newsFilterMenu_->popup(widget->mapToGlobal(QPoint(0, currentNewsTab->newsToolBar_->height()-1)));
-        }
-      }
+      popupToolbarMenu(newsFilter_, newsFilterMenu_);
     }
   } else {
     const auto filterActions = newsFilterGroup_->actions();
@@ -1059,26 +1042,8 @@ void MainWindow::slotShareNews(QAction *action)
 // ----------------------------------------------------------------------------
 void MainWindow::showMenuShareNews()
 {
-  if (mainToolbar_->widgetForAction(shareMenuAct_)) {
-    QWidget *widget = mainToolbar_->widgetForAction(shareMenuAct_);
-    if (widget->underMouse()) {
-      shareMenu_->popup(widget->mapToGlobal(QPoint(0, mainToolbar_->height()-1)));
-    }
-  }
-  if (feedsToolBar_->widgetForAction(shareMenuAct_)) {
-    QWidget *widget = feedsToolBar_->widgetForAction(shareMenuAct_);
-    if (widget->underMouse()) {
-      shareMenu_->popup(widget->mapToGlobal(QPoint(0, feedsToolBar_->height()-1)));
-    }
-  }
-  if (currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads) {
-    if (currentNewsTab->newsToolBar_->widgetForAction(shareMenuAct_)) {
-      QWidget *widget = currentNewsTab->newsToolBar_->widgetForAction(shareMenuAct_);
-      if (widget->underMouse()) {
-        shareMenu_->popup(widget->mapToGlobal(QPoint(0, currentNewsTab->newsToolBar_->height()-1)));
-      }
-    }
-  }
+  popupToolbarMenu(shareMenuAct_, shareMenu_,
+                   currentNewsTab && currentNewsTab->type_ < NewsTabWidget::TabTypeDownloads);
 }
 
 // ----------------------------------------------------------------------------

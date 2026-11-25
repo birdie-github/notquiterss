@@ -85,18 +85,11 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
     }
   }
 
-  for (int parent : std::as_const(parents)) {
-    QList<int> siblings;
-    if (!execute("SELECT id FROM feeds WHERE parentId=? ORDER BY rowToParent", {parent}))
-      return rollback();
-    while (q.next()) siblings.append(q.value(0).toInt());
-    if (!fetched()) return rollback();
-    for (int row = 0; row < siblings.size(); ++row) {
-      if (!execute("UPDATE feeds SET rowToParent=? WHERE id=?", {row, siblings.at(row)}))
-        return rollback();
-    }
-  }
   q.finish();
+  for (int parent : std::as_const(parents)) {
+    if (!FeedCounters::renumberSiblings(db, parent, -1, nullptr, &error))
+      return rollback();
+  }
   const QList<int> startParents(parents.cbegin(), parents.cend());
   if (!FeedCounters::rollupParents(db, startParents, false, true, nullptr, nullptr, &error))
     return rollback();

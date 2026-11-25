@@ -18,6 +18,7 @@
 * ============================================================ */
 #include "feeds/update/feedxml.h"
 #include "feeddiscovery.h"
+#include "feedcounters.h"
 #include "feeddeletion.h"
 #include "feedselectiontree.h"
 #include "common/logfile.h"
@@ -521,16 +522,8 @@ void AddFeedWizard::finish()
   feedParentId_ = foldersTree_->currentItem()->text(1).toInt();
 
   // Correct rowToParent field
-  QList<int> idList;
-  q.exec("SELECT id FROM feeds WHERE parentId=0 ORDER BY rowToParent");
-  while (q.next()) {
-    if (feedId_ != q.value(0).toInt())
-      idList << q.value(0).toInt();
-  }
-  for (int i = 0; i < idList.count(); i++) {
-    q.exec(QString("UPDATE feeds SET rowToParent='%1' WHERE id=='%2'").
-           arg(i).arg(idList.at(i)));
-  }
+  QSqlDatabase db = QSqlDatabase::database();
+  FeedCounters::renumberSiblings(db, 0, feedId_);
 
   // Calculate row number to insert feed
   int rowToParent = 0;

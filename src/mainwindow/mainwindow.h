@@ -100,6 +100,9 @@ public:
 
   void setToolBarStyle(const QString &styleStr);
   void setToolBarIconSize(QToolBar *toolbar, const QString &iconSizeStr);
+  static void populateToolbarActions(QToolBar *toolbar, const QList<QAction *> &actions,
+                                     const QString &spec);
+  void popupToolbarMenu(QAction *action, QMenu *menu, bool includeNewsToolBar = true);
   void showToolbarContextMenu(QWidget *anchor, const QPoint &pos, QToolBar *toolbar);
 
   static QStringList nameLabels() {

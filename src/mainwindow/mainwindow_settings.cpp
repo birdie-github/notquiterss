@@ -53,8 +53,9 @@ void selectComboData(QComboBox *combo, const QString &value)
     }
   }
 }
+}
 
-void populateToolbarActions(QToolBar *toolbar, const QList<QAction *> &actions, const QString &spec)
+void MainWindow::populateToolbarActions(QToolBar *toolbar, const QList<QAction *> &actions, const QString &spec)
 {
   for (const QString &actionStr : spec.split(",", Qt::SkipEmptyParts)) {
     if (actionStr == "Separator") {
@@ -68,7 +69,6 @@ void populateToolbarActions(QToolBar *toolbar, const QList<QAction *> &actions, 
       }
     }
   }
-}
 }
 
 struct MainWindow::SettingBindings {

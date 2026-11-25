@@ -186,3 +186,71 @@ bool FeedCounters::rollupParents(QSqlDatabase &db, const QList<int> &startFolder
 
   return true;
 }
+
+bool FeedCounters::siblingIds(QSqlDatabase &db, int parentId, QList<int> &siblingIds,
+                              int excludeFeedId,
+                              QSqlError *sqlError, QString *error)
+{
+  siblingIds.clear();
+  if (sqlError) *sqlError = QSqlError();
+  if (error) error->clear();
+
+  QSqlQuery q(db);
+  q.setForwardOnly(true);
+  if (!q.prepare(QStringLiteral("SELECT id FROM feeds WHERE parentId=? ORDER BY rowToParent"))) {
+    recordQueryError(q, QString(), sqlError, error);
+    return false;
+  }
+  q.addBindValue(parentId);
+  if (!q.exec()) {
+    recordQueryError(q, QString(), sqlError, error);
+    return false;
+  }
+
+  while (q.next()) {
+    const int id = q.value(0).toInt();
+    if (id != excludeFeedId)
+      siblingIds.append(id);
+  }
+  if (q.lastError().isValid()) {
+    recordQueryError(q, QString(), sqlError, error);
+    return false;
+  }
+
+  return true;
+}
+
+bool FeedCounters::writeSiblingOrder(QSqlDatabase &db, const QList<int> &feedIds,
+                                     QSqlError *sqlError, QString *error)
+{
+  if (sqlError) *sqlError = QSqlError();
+  if (error) error->clear();
+  if (feedIds.isEmpty())
+    return true;
+
+  QSqlQuery q(db);
+  if (!q.prepare(QStringLiteral("UPDATE feeds SET rowToParent=? WHERE id=?"))) {
+    recordQueryError(q, QString(), sqlError, error);
+    return false;
+  }
+
+  for (int row = 0; row < feedIds.size(); ++row) {
+    q.addBindValue(row);
+    q.addBindValue(feedIds.at(row));
+    if (!q.exec()) {
+      recordQueryError(q, QString(), sqlError, error);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool FeedCounters::renumberSiblings(QSqlDatabase &db, int parentId, int excludeFeedId,
+                                    QSqlError *sqlError, QString *error)
+{
+  QList<int> ids;
+  if (!siblingIds(db, parentId, ids, excludeFeedId, sqlError, error))
+    return false;
+  return writeSiblingOrder(db, ids, sqlError, error);
+}

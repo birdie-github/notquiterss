@@ -1297,6 +1297,24 @@ void MainWindow::showToolbarContextMenu(QWidget *anchor, const QPoint &pos, QToo
   }
 }
 // ----------------------------------------------------------------------------
+void MainWindow::popupToolbarMenu(QAction *action, QMenu *menu, bool includeNewsToolBar)
+{
+  const QList<QToolBar *> toolbars = {
+    mainToolbar_,
+    feedsToolBar_,
+    (includeNewsToolBar && currentNewsTab) ? currentNewsTab->newsToolBar_ : nullptr
+  };
+  for (QToolBar *toolbar : toolbars) {
+    if (!toolbar)
+      continue;
+    if (QWidget *widget = toolbar->widgetForAction(action)) {
+      if (widget->underMouse()) {
+        menu->popup(widget->mapToGlobal(QPoint(0, toolbar->height() - 1)));
+      }
+    }
+  }
+}
+// ----------------------------------------------------------------------------
 void MainWindow::lockMainToolbar(bool lock)
 {
   mainToolbar_->setMovable(!lock);

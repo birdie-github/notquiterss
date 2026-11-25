@@ -242,22 +242,7 @@ void NewsTabWidget::createNewsList()
                           "newsFilter,Separator,deleteNewsAct";
   QString str = settings.value("Settings/newsToolBar", actionListStr).toString();
 
-  for (const QString &actionStr : str.split(",", Qt::SkipEmptyParts)) {
-    if (actionStr == "Separator") {
-      newsToolBar_->addSeparator();
-    } else {
-      QListIterator<QAction *> iter(mainWindow_->actions());
-      while (iter.hasNext()) {
-        QAction *pAction = iter.next();
-        if (!pAction->icon().isNull()) {
-          if (pAction->objectName() == actionStr) {
-            newsToolBar_->addAction(pAction);
-            break;
-          }
-        }
-      }
-    }
-  }
+  MainWindow::populateToolbarActions(newsToolBar_, mainWindow_->actions(), str);
   separatorRAct_ = newsToolBar_->addSeparator();
   separatorRAct_->setObjectName("separatorRAct");
   newsToolBar_->addAction(mainWindow_->restoreNewsAct_);
