@@ -453,6 +453,12 @@ void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem *item, int)
 {
   if (!item) return;
   if (item == searchCategoryItem_) {
+    const QString query = searchEdit_->text().trimmed();
+    if (!query.isEmpty()) {
+      searchPanel_->updateResults(query, searchEntries_, [this](const OptionSearchEntry &entry) {
+        return searchEntrySection(entry);
+      });
+    }
     contentLabel_->setText(tr("Search Results"));
     contentStack_->setCurrentWidget(searchPanel_);
     return;

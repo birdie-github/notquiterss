@@ -42,6 +42,7 @@ public:
   void updateLabelAction(const QString &id, const QString &name, const QIcon &icon);
   void removeLabelAction(const QString &id);
   void swapLabelActions(const QString &idA, const QString &idB);
+  void syncSearchEntries();
 
 signals:
   void shortcutTreeUpDownPressed();
@@ -62,6 +63,8 @@ private:
 
   QList<QAction *> shortcutActions_;
   const QStringList *listDefaultShortcut_ = nullptr;
+  QVector<OptionSearchEntry> *searchEntries_ = nullptr;
+  int pageIndex_ = -1;
   bool loadShortcutsOk_ = false;
   LineEdit *filterShortcut_ = nullptr;
   QTreeView *shortcutTree_ = nullptr;

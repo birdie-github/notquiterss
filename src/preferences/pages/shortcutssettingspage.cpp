@@ -29,6 +29,8 @@ ShortcutsSettingsPage::ShortcutsSettingsPage(const QList<QAction *> &actions,
   : QWidget(parent)
   , shortcutActions_(actions)
   , listDefaultShortcut_(defaultShortcuts)
+  , searchEntries_(searchEntries)
+  , pageIndex_(pageIndex)
 {
   filterShortcut_ = new LineEdit(this, OptionsDialog::tr("Filter"));
 
@@ -167,6 +169,7 @@ bool ShortcutsSettingsPage::eventFilter(QObject *obj, QEvent *event)
           warningShortcut_->clear();
         }
       }
+      syncSearchEntries();
     }
     return true;
   }
@@ -277,6 +280,7 @@ void ShortcutsSettingsPage::addLabelAction(const QString &id, const QString &nam
     treeItems.append(item);
   }
   shortcutModel_->appendRow(treeItems);
+  syncSearchEntries();
 }
 
 void ShortcutsSettingsPage::updateLabelAction(const QString &id, const QString &name, const QIcon &icon)
@@ -288,6 +292,10 @@ void ShortcutsSettingsPage::updateLabelAction(const QString &id, const QString &
   item->setIcon(icon);
   item->setText(name);
   item->setData(name);
+  auto *descItem = shortcutModel_->item(shortcutRow, 1);
+  descItem->setText(name);
+  descItem->setData(name);
+  syncSearchEntries();
 }
 
 void ShortcutsSettingsPage::removeLabelAction(const QString &id)
@@ -296,6 +304,7 @@ void ShortcutsSettingsPage::removeLabelAction(const QString &id)
   const int shortcutRow = labelShortcutRow(id);
   if (shortcutRow >= 0) {
     shortcutModel_->removeRow(shortcutRow);
+    syncSearchEntries();
   }
 }
 
@@ -306,7 +315,48 @@ void ShortcutsSettingsPage::swapLabelActions(const QString &idA, const QString &
   const int rowB = labelShortcutRow(idB);
   if (rowA >= 0 && rowB >= 0) {
     shortcutModel_->insertRow(rowB, shortcutModel_->takeRow(rowA));
+    syncSearchEntries();
   }
+}
+
+void ShortcutsSettingsPage::syncSearchEntries()
+{
+  if (!searchEntries_ || pageIndex_ < 0 || !loadShortcutsOk_) return;
+
+  QVector<OptionSearchEntry> modelEntries;
+  modelEntries.reserve(shortcutModel_->rowCount());
+  for (int row = 0; row < shortcutModel_->rowCount(); ++row) {
+    const QString title = shortcutModel_->item(row, 0)->text();
+    if (title.isEmpty()) continue;
+    const QString desc = shortcutModel_->item(row, 1)->text();
+    const QString shortcut = shortcutModel_->item(row, 2)->text();
+    const QString objectName = shortcutModel_->item(row, 3)->text();
+    modelEntries.append({
+        pageIndex_, -1, title, desc, shortcut,
+        this, -1, objectName, true});
+  }
+
+  QVector<OptionSearchEntry> rebuilt;
+  rebuilt.reserve(searchEntries_->size() + modelEntries.size());
+  bool inserted = false;
+  for (const OptionSearchEntry &entry : std::as_const(*searchEntries_)) {
+    if (entry.target == this && entry.isShortcut) {
+      if (!inserted) {
+        rebuilt += modelEntries;
+        inserted = true;
+      }
+      continue;
+    }
+    rebuilt.append(entry);
+    if (!inserted && entry.target == this && !entry.isShortcut) {
+      rebuilt += modelEntries;
+      inserted = true;
+    }
+  }
+  if (!inserted) {
+    rebuilt += modelEntries;
+  }
+  *searchEntries_ = std::move(rebuilt);
 }
 
 int ShortcutsSettingsPage::labelShortcutRow(const QString &labelId) const
@@ -351,6 +401,7 @@ void ShortcutsSettingsPage::slotClearShortcut()
   shortcutModel_->item(row, 2)->setText(QString());
   shortcutModel_->item(row, 2)->setData(QString());
   warningShortcut_->clear();
+  syncSearchEntries();
 }
 
 void ShortcutsSettingsPage::slotResetShortcut()
@@ -382,6 +433,7 @@ void ShortcutsSettingsPage::slotResetShortcut()
       }
     }
   }
+  syncSearchEntries();
 }
 
 void ShortcutsSettingsPage::filterShortcutChanged(const QString &text)
