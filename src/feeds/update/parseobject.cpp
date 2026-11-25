@@ -25,6 +25,7 @@
 
 #include "app/mainapplication.h"
 #include "database/database.h"
+#include "feeds/feedcounters.h"
 #include "articles/cleanup/newsretention.h"
 #include "preferences/settings.h"
 
@@ -1207,15 +1208,16 @@ int ParseObject::recountFeedCounts(int feedId, const QString &feedUrl,
   int newNewsCount = 0;
 
   // Calculate all three counters in one scan of this feed's live articles.
-  qStr = QString("SELECT count(*), sum(read=0), sum(new=1) "
-                 "FROM news WHERE feedId=='%1' AND deleted==0").arg(feedId);
-  if (!checkQuery(q.exec(qStr), q)) return 0;
-  if (q.first()) {
-    undeleteCount = q.value(0).toInt();
-    unreadCount = q.value(1).toInt();
-    newNewsCount = q.value(2).toInt();
+  q.finish();
+  QSqlError queryError;
+  if (!FeedCounters::countFeedArticles(db_, feedId, undeleteCount, unreadCount, newNewsCount, &queryError)) {
+    if (!sqlError_.isValid()) {
+      sqlError_ = queryError.isValid()
+          ? queryError
+          : QSqlError(QString(), tr("Database query failed."), QSqlError::StatementError);
+    }
+    return 0;
   }
-  if (!checkQuery(!q.lastError().isValid(), q)) return 0;
 
   int unreadCountOld = 0;
   int newCountOld = 0;
@@ -1262,44 +1264,26 @@ int ParseObject::recountFeedCounts(int feedId, const QString &feedUrl,
   effects.counts.append(counts);
 
   // Recount counters for all feed parents
-  int l_feedParId = feedParId;
-  while (l_feedParId) {
-    QString updatedParent;
-    int newCount = 0;
-
-    qStr = QString("SELECT sum(unread), sum(newCount), sum(undeleteCount), "
-                   "max(updated) FROM feeds WHERE parentId=='%1'").
-        arg(l_feedParId);
-    if (!checkQuery(q.exec(qStr), q)) return 0;
-    if (q.first()) {
-      unreadCount   = q.value(0).toInt();
-      newCount      = q.value(1).toInt();
-      undeleteCount = q.value(2).toInt();
-      updatedParent = q.value(3).toString();
+  if (feedParId > 0) {
+    q.finish();
+    QList<FeedCounters::FolderCounts> parentCounts;
+    if (!FeedCounters::rollupParents(db_, {feedParId}, true, false, &parentCounts, &queryError)) {
+      if (!sqlError_.isValid()) {
+        sqlError_ = queryError.isValid()
+            ? queryError
+            : QSqlError(QString(), tr("Database query failed."), QSqlError::StatementError);
+      }
+      return 0;
     }
-    if (!checkQuery(!q.lastError().isValid(), q)) return 0;
-    if (!checkQuery(q.prepare("UPDATE feeds SET unread=?, newCount=?, undeleteCount=?, "
-                              "updated=? WHERE id==?"), q)) return 0;
-    q.addBindValue(unreadCount);
-    q.addBindValue(newCount);
-    q.addBindValue(undeleteCount);
-    q.addBindValue(updatedParent);
-    q.addBindValue(l_feedParId);
-    if (!checkQuery(q.exec(), q)) return 0;
-
-    FeedCountStruct counts;
-    counts.feedId = l_feedParId;
-
-    if (!checkQuery(q.exec(QString("SELECT parentId FROM feeds WHERE id==%1").arg(l_feedParId)), q)) return 0;
-    l_feedParId = q.first() ? q.value(0).toInt() : 0;
-    if (!checkQuery(!q.lastError().isValid(), q)) return 0;
-
-    counts.unreadCount = unreadCount;
-    counts.newCount = newCount;
-    counts.undeleteCount = undeleteCount;
-    counts.updated = updatedParent;
-
-    effects.counts.append(counts);
+    for (const auto &folder : std::as_const(parentCounts)) {
+      FeedCountStruct parentCount;
+      parentCount.feedId = folder.feedId;
+      parentCount.unreadCount = folder.unreadCount;
+      parentCount.newCount = folder.newCount;
+      parentCount.undeleteCount = folder.undeleteCount;
+      parentCount.updated = folder.updated;
+      effects.counts.append(parentCount);
+    }
   }
 
   return (newNewsCount - newCountOld);

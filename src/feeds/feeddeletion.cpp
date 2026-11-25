@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "feeddeletion.h"
+#include "feeds/feedcounters.h"
 
 #include <QCoreApplication>
 #include <QQueue>
@@ -94,37 +95,11 @@ bool FeedDeletion::apply(QSqlDatabase db, const QList<int> &ids, QString &error)
       if (!execute("UPDATE feeds SET rowToParent=? WHERE id=?", {row, siblings.at(row)}))
         return rollback();
     }
-
-    // Recount bottom-up on each affected branch. Shared ancestors may need
-    // recounting again after another branch has been repaired.
-    QSet<int> visited;
-    while (parent > 0) {
-      if (visited.contains(parent)) {
-        error = QCoreApplication::translate("FeedDeletion", "The feed folder hierarchy contains a cycle.");
-        return rollback();
-      }
-      visited.insert(parent);
-      if (!execute("SELECT parentId FROM feeds WHERE id=?", {parent})) return rollback();
-      if (!q.next()) {
-        error = q.lastError().isValid() ? q.lastError().text()
-            : QCoreApplication::translate("FeedDeletion", "A parent folder no longer exists.");
-        return rollback();
-      }
-      const int next = q.value(0).toInt();
-      if (!execute("SELECT sum(unread), sum(undeleteCount), sum(newCount) "
-                   "FROM feeds WHERE parentId=?", {parent})) return rollback();
-      if (!q.next()) {
-        error = q.lastError().isValid() ? q.lastError().text()
-            : QCoreApplication::translate("FeedDeletion", "Cannot recount the parent folder.");
-        return rollback();
-      }
-      const QVariantList counts{q.value(0).toInt(), q.value(1).toInt(), q.value(2).toInt(), parent};
-      if (!execute("UPDATE feeds SET unread=?, undeleteCount=?, newCount=? WHERE id=?", counts))
-        return rollback();
-      parent = next;
-    }
   }
   q.finish();
+  const QList<int> startParents(parents.cbegin(), parents.cend());
+  if (!FeedCounters::rollupParents(db, startParents, false, true, nullptr, nullptr, &error))
+    return rollback();
   if (!db.commit()) {
     error = db.lastError().text();
     return rollback();

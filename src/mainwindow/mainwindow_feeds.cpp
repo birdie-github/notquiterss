@@ -24,6 +24,7 @@
 #include "articles/rendering/articlecontent.h"
 #include "database/database.h"
 #include "backup/databasebackup.h"
+#include "feeds/feedcounters.h"
 #include "feeds/feeddeletion.h"
 #include "feeds/feedhealth.h"
 #include "feeds/feedsproxymodel.h"
@@ -338,43 +339,7 @@ void MainWindow::slotFeedCountsUpdate(FeedCountStruct counts)
  *---------------------------------------------------------------------------*/
 void MainWindow::recountFeedCategories(const QList<int> &categoriesList)
 {
-  QSqlQuery q;
-  QString qStr;
-
-  for (int categoryIdStart : std::as_const(categoriesList)) {
-    if (categoryIdStart < 1) continue;
-
-    int categoryId = categoryIdStart;
-    // Process all parents
-    while (0 < categoryId) {
-      int unreadCount = -1;
-      int undeleteCount = -1;
-      int newCount = -1;
-
-      // Calculate sum of all feeds with same parent
-      qStr = QString("SELECT sum(unread), sum(undeleteCount), sum(newCount) "
-                     "FROM feeds WHERE parentId=='%1'").arg(categoryId);
-      q.exec(qStr);
-      if (q.next()) {
-        unreadCount   = q.value(0).toInt();
-        undeleteCount = q.value(1).toInt();
-        newCount = q.value(2).toInt();
-      }
-
-      if (unreadCount != -1) {
-        qStr = QString("UPDATE feeds SET unread='%1', undeleteCount='%2', newCount='%3' WHERE id=='%4'").
-            arg(unreadCount).arg(undeleteCount).arg(newCount).arg(categoryId);
-        q.exec(qStr);
-      }
-
-      // go to next parent's parent
-      qStr = QString("SELECT parentId FROM feeds WHERE id=='%1'").
-          arg(categoryId);
-      categoryId = 0;
-      q.exec(qStr);
-      if (q.next()) categoryId = q.value(0).toInt();
-    }
-  }
+  FeedCounters::rollupParents(db_, categoriesList, false, false);
 }
 // ----------------------------------------------------------------------------
 void MainWindow::recountCategoryCounts()
@@ -1782,24 +1747,6 @@ void MainWindow::feedsSplitterMoved(int pos, int)
       categoriesTree_->show();
       recountCategoryCounts();
     }
-  }
-}
-
-/** @brief Get feeds ids list string of folder \a idFolder
- *---------------------------------------------------------------------------*/
-QString MainWindow::getIdFeedsString(int idFolder, int idException)
-{
-  QList<int> idList = UpdateObject::getIdFeedsInList(db_, idFolder);
-  if (idList.count()) {
-    QString str;
-    for (int id : std::as_const(idList)) {
-      if (id == idException) continue;
-      if (!str.isEmpty()) str.append(" OR ");
-      str.append(QString("feedId=%1").arg(id));
-    }
-    return str;
-  } else {
-    return QString("feedId=-1");
   }
 }
 

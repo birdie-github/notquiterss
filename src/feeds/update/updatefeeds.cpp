@@ -22,6 +22,7 @@
 #include <utility>
 #include "backup/databasebackup.h"
 #include "feeds/opml/opmlinput.h"
+#include "feeds/feedcounters.h"
 #include "feeds/feedhealth.h"
 #include <QTextCodec>
 #include "updatefeeds.h"
@@ -1312,26 +1313,15 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
       if (!removeArticles(readRemoveIds, feedId, fullCleanUp, !fullCleanUp)) return false;
 
       int undeleteCount = 0;
-      qStr = QString("SELECT count(id) FROM news WHERE feedId=='%1' AND deleted==0").
-          arg(feedId);
-      if (!execute(qStr)) return false;
-      if (!q.next()) return queryError(q);
-      undeleteCount = q.value(0).toInt();
-
       int unreadCount = 0;
-      qStr = QString("SELECT count(read) FROM news WHERE feedId=='%1' AND read==0 AND deleted==0").
-          arg(feedId);
-      if (!execute(qStr)) return false;
-      if (!q.next()) return queryError(q);
-      unreadCount = q.value(0).toInt();
-
       int newCount = 0;
+      if (!FeedCounters::countFeedArticles(db_, feedId.toInt(), undeleteCount, unreadCount,
+                                           newCount, nullptr, &error)) {
+        if (error.isEmpty()) error = tr("A cleanup query did not return its expected result.");
+        return false;
+      }
+
       if (!isShutdown) {
-        qStr = QString("SELECT count(new) FROM news WHERE feedId=='%1' AND new==1 AND deleted==0").
-            arg(feedId);
-        if (!execute(qStr)) return false;
-        if (!q.next()) return queryError(q);
-        newCount = q.value(0).toInt();
         qStr = QString("UPDATE feeds SET unread='%1', newCount='%2', undeleteCount='%3' WHERE id=='%4'").
             arg(unreadCount).arg(newCount).arg(undeleteCount).arg(feedId);
       } else {
@@ -1339,41 +1329,13 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
             arg(unreadCount).arg(undeleteCount).arg(feedId);
       }
       if (!execute(qStr)) return false;
+      q.finish();
     }
 
     // Run categories recount, because cleanup may change counts
-    for (int folderIdStart : std::as_const(foldersIdList)) {
-      if (folderIdStart < 1) continue;
-
-      int folderId = folderIdStart;
-      // Process all parents
-      while (0 < folderId) {
-        int unreadCount = -1;
-        int undeleteCount = -1;
-        int newCount = -1;
-
-        // Calculate sum of all feeds with same parent
-        qStr = QString("SELECT sum(unread), sum(undeleteCount), sum(newCount) "
-                       "FROM feeds WHERE parentId=='%1'").arg(folderId);
-        if (!execute(qStr)) return false;
-        if (!q.next()) return queryError(q);
-        unreadCount   = q.value(0).toInt();
-        undeleteCount = q.value(1).toInt();
-        newCount = q.value(2).toInt();
-
-        if (unreadCount != -1) {
-          qStr = QString("UPDATE feeds SET unread='%1', undeleteCount='%2', newCount='%3' WHERE id=='%4'").
-              arg(unreadCount).arg(undeleteCount).arg(newCount).arg(folderId);
-          if (!execute(qStr)) return false;
-        }
-
-        // go to next parent's parent
-        qStr = QString("SELECT parentId FROM feeds WHERE id=='%1'").arg(folderId);
-        folderId = 0;
-        if (!execute(qStr)) return false;
-        if (q.next()) folderId = q.value(0).toInt();
-        else if (q.lastError().isValid()) return queryError(q);
-      }
+    if (!FeedCounters::rollupParents(db_, foldersIdList, false, false, nullptr, nullptr, &error)) {
+      if (error.isEmpty()) error = tr("A cleanup query did not return its expected result.");
+      return false;
     }
 
     if (cleanUpDeleted) {

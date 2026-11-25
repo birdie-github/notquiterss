@@ -154,6 +154,7 @@ HEADERS += \
     src/database/database.h \
     src/database/pendingdatabase.h \
     src/feeds/feedbulksettings.h \
+    src/feeds/feedcounters.h \
     src/feeds/feeddeletion.h \
     src/common/common.h \
     src/feeds/update/feedxml.h \
@@ -246,6 +247,7 @@ SOURCES += \
     src/network/networkmanager.cpp \
     src/articles/rendering/articleview.cpp \
     src/database/database.cpp \
+    src/feeds/feedcounters.cpp \
     src/feeds/feeddeletion.cpp \
     src/database/pendingdatabase.cpp \
     src/common/common.cpp \

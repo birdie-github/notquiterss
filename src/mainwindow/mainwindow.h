@@ -96,7 +96,6 @@ public:
   bool isMinimizeToTray_;
   QSystemTrayIcon *trayIcon() const;
 
-  QString getIdFeedsString(int idFolder, int idException = -1);
   void recountCategoryCounts();
 
   void setToolBarStyle(const QString &styleStr);

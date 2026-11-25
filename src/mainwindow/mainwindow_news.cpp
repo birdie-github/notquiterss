@@ -19,6 +19,7 @@
 #include "mainwindow.h"
 
 #include "database/database.h"
+#include "articles/feedreadstate.h"
 #include "downloads/downloadmanager.h"
 #include "feeds/feedsproxymodel.h"
 #include "articles/findtext.h"
@@ -131,7 +132,7 @@ void MainWindow::setNewsFilter(QAction* pAct, bool clicked)
 
   // Create filter for category or for feed
   if (feedsModel_->isFolder(feedsModel_->indexById(feedId))) {
-    newsFilterStr = QString("(%1) AND ").arg(getIdFeedsString(feedId));
+    newsFilterStr = QString("(%1) AND ").arg(FeedReadState::getIdFeedsString(db_, feedId));
   } else {
     newsFilterStr = QString("feedId=%1 AND ").arg(feedId);
   }
@@ -536,7 +537,7 @@ void MainWindow::creatFeedTab(int feedId, int feedParId)
 
     QString feedIdFilter;
     if (feedsModel_->isFolder(feedsModel_->indexById(feedId))) {
-      feedIdFilter = QString("(%1) AND ").arg(getIdFeedsString(feedId));
+      feedIdFilter = QString("(%1) AND ").arg(FeedReadState::getIdFeedsString(db_, feedId));
     } else {
       feedIdFilter = QString("feedId=%1 AND ").arg(feedId);
     }
