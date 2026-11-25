@@ -193,6 +193,7 @@ void MainWindow::deleteItemFeedsTree()
     return;
   }
   DatabaseBackup::subscriptionsChanged("delete feeds or folders");
+  emit signalRefreshInfoTray();
 }
 
 /** @brief Import feeds from OPML-file

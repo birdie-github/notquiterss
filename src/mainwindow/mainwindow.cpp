@@ -248,6 +248,8 @@ MainWindow::MainWindow(QWidget *parent)
 
   addDefaultFeed();
 
+  slotRefreshInfoTray(FeedReadState::queryGlobalStats(db_));
+
   initUpdateFeeds();
 
   QTimer::singleShot(5000, this, &MainWindow::slotUpdateAppCheck);
@@ -626,10 +628,30 @@ void MainWindow::slotShowUpdateAppDlg()
   delete updateAppDialog;
 }
 
-/** @brief Update tray information: icon and tooltip text
+/** @brief Update tray information and global status bar counters
  *---------------------------------------------------------------------------*/
-void MainWindow::slotRefreshInfoTray(int newCount, int unreadCount)
+void MainWindow::updateGlobalStatusBar()
 {
+  const int autoUpdatedFeeds = globalStats_.customScheduledFeeds +
+      ((updateFeedsEnable_ && globalFeedIntervalSeconds() > 0)
+           ? globalStats_.globalScheduledFeeds : 0);
+  statusBarController_->setGlobalTexts(
+        QString(" " + tr("Total unread: %1") + " ").arg(globalStats_.unreadCount),
+        QString(" " + tr("Total: %1") + " ").arg(globalStats_.allCount),
+        QString(" " + tr("Feeds: %1") + " ").arg(autoUpdatedFeeds),
+        tr("Automatically updated feeds: %1 of %2\n"
+           "Only feeds with an active global or per-feed update schedule are counted.")
+            .arg(autoUpdatedFeeds)
+            .arg(globalStats_.totalFeeds));
+}
+
+void MainWindow::slotRefreshInfoTray(GlobalFeedStats stats)
+{
+  globalStats_ = stats;
+  updateGlobalStatusBar();
+
+  const int newCount = stats.newCount;
+  const int unreadCount = stats.unreadCount;
   if (!unreadCount)
     categoriesTree_->topLevelItem(CategoriesTreeWidget::UnreadItem)->setText(4, "");
   else

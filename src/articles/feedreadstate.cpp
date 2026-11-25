@@ -363,8 +363,7 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
     slotRecountFeedCounts(feedId);
     emit requestCategoryCounts();
 
-    if (readType != FeedReadPlaceToTray)
-      slotRefreshInfoTray();
+    slotRefreshInfoTray();
   } else {
     QString idStr;
     for (int newsId : std::as_const(idNewsList)) {
@@ -386,18 +385,33 @@ void FeedReadState::slotSetFeedRead(int readType, int feedId, int idException, Q
   emit signalSetFeedsFilter();
 }
 
+GlobalFeedStats FeedReadState::queryGlobalStats(const QSqlDatabase &db)
+{
+  GlobalFeedStats stats;
+  QSqlQuery q(db);
+  q.setForwardOnly(true);
+  if (q.exec(QStringLiteral(
+          "SELECT count(*), "
+          "COALESCE(sum(newCount), 0), "
+          "COALESCE(sum(unread), 0), "
+          "COALESCE(sum(undeleteCount), 0), "
+          "COALESCE(sum(CASE WHEN COALESCE(disableUpdate, 0) = 0 "
+          "AND updateIntervalEnable = 1 AND updateInterval > 0 THEN 1 ELSE 0 END), 0), "
+          "COALESCE(sum(CASE WHEN COALESCE(disableUpdate, 0) = 0 "
+          "AND (updateIntervalEnable IS NULL OR updateIntervalEnable = -1) THEN 1 ELSE 0 END), 0) "
+          "FROM feeds WHERE xmlUrl!=''")) && q.next()) {
+    stats.totalFeeds = q.value(0).toInt();
+    stats.newCount = q.value(1).toInt();
+    stats.unreadCount = q.value(2).toInt();
+    stats.allCount = q.value(3).toInt();
+    stats.customScheduledFeeds = q.value(4).toInt();
+    stats.globalScheduledFeeds = q.value(5).toInt();
+  }
+  return stats;
+}
+
 void FeedReadState::slotRefreshInfoTray()
 {
   auto databaseAccess = Database::backgroundAccess();
-  // Calculate new and unread news number
-  int newCount = 0;
-  int unreadCount = 0;
-  QSqlQuery q(db_);
-  q.exec("SELECT sum(newCount), sum(unread) FROM feeds WHERE xmlUrl!=''");
-  if (q.first()) {
-    newCount    = q.value(0).toInt();
-    unreadCount = q.value(1).toInt();
-  }
-
-  emit signalRefreshInfoTray(newCount, unreadCount);
+  emit signalRefreshInfoTray(queryGlobalStats(db_));
 }

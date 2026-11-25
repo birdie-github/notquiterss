@@ -111,6 +111,9 @@ StatusBarController::StatusBarController(QStatusBar *statusBar,
   , progressBar_(new FeedProgressBar(statusBar))
   , statusUnread_(new QLabel(statusBar))
   , statusAll_(new QLabel(statusBar))
+  , statusTotalUnread_(new QLabel(statusBar))
+  , statusTotalAll_(new QLabel(statusBar))
+  , statusFeeds_(new QLabel(statusBar))
 {
 #if defined(HAVE_X11) || defined(Q_OS_MAC)
   statusBar_->setStyleSheet(QString("QStatusBar::item {border-right: 1px solid %1;"
@@ -156,11 +159,17 @@ StatusBarController::StatusBarController(QStatusBar *statusBar,
   fullScreenButton->setStyleSheet(
         "QToolButton { border: none; padding: 0px; background: none; }");
 
-  statusBar_->addPermanentWidget(progressWidget_, 1);
   statusUnread_->hide();
-  statusBar_->addPermanentWidget(statusUnread_);
+  statusBar_->addWidget(statusUnread_);
   statusAll_->hide();
-  statusBar_->addPermanentWidget(statusAll_);
+  statusBar_->addWidget(statusAll_);
+  connect(statusBar_, &QStatusBar::messageChanged,
+          this, &StatusBarController::syncSelectionCountsVisibility);
+
+  statusBar_->addPermanentWidget(progressWidget_, 1);
+  statusBar_->addPermanentWidget(statusTotalUnread_);
+  statusBar_->addPermanentWidget(statusTotalAll_);
+  statusBar_->addPermanentWidget(statusFeeds_);
   statusBar_->addPermanentWidget(loadImagesButton);
   statusBar_->addPermanentWidget(fullScreenButton);
   statusBar_->show();
@@ -264,8 +273,27 @@ QString StatusBarController::allText() const
   return statusAll_->text();
 }
 
+void StatusBarController::syncSelectionCountsVisibility()
+{
+  const bool messageActive = !statusBar_->currentMessage().isEmpty();
+  statusUnread_->setVisible(!messageActive && unreadVisible_);
+  statusAll_->setVisible(!messageActive && allVisible_);
+}
+
 void StatusBarController::setCountsVisible(bool unreadVisible, bool allVisible)
 {
-  statusUnread_->setVisible(unreadVisible);
-  statusAll_->setVisible(allVisible);
+  unreadVisible_ = unreadVisible;
+  allVisible_ = allVisible;
+  syncSelectionCountsVisibility();
+}
+
+void StatusBarController::setGlobalTexts(const QString &totalUnreadText,
+                                         const QString &totalAllText,
+                                         const QString &feedsText,
+                                         const QString &feedsToolTip)
+{
+  statusTotalUnread_->setText(totalUnreadText);
+  statusTotalAll_->setText(totalAllText);
+  statusFeeds_->setText(feedsText);
+  statusFeeds_->setToolTip(feedsToolTip);
 }

@@ -1112,6 +1112,7 @@ void MainWindow::retranslateStrings()
   str = str.right(str.length() - str.indexOf(':') - 1).replace(" ", "");
   statusBarController_->setCountTexts(
         unreadText, QString(" " + tr("All: %1") + " ").arg(str));
+  updateGlobalStatusBar();
 
   str = trayIconController_->toolTip();
   QString info =

@@ -937,6 +937,7 @@ void MainWindow::showOptionDlg(int index)
   AppSettings::autoUpdatefeedsStartUp.set(updateFeedsStartUp);
 
   saveSettings();
+  updateGlobalStatusBar();
   emit articleSettingsChanged(markIdenticalNewsRead_, avoidOldNews_, avoidedOldNewsDate_);
   shortcutRegistry_.save();
 

@@ -244,6 +244,7 @@ UpdateFeeds::UpdateFeeds(QObject *parent, bool addFeed)
             updateObject_, &UpdateObject::slotRecountCategoryCounts);
     qRegisterMetaType<QList<int> >("QList<int>");
     qRegisterMetaType<CategoryCounts>("CategoryCounts");
+    qRegisterMetaType<GlobalFeedStats>("GlobalFeedStats");
     connectReadState(updateObject_, feedWindow);
     auto *navigationState = new FeedReadState(this);
     navigationState->setDatabase(QSqlDatabase::database());
@@ -724,6 +725,7 @@ void UpdateObject::slotImportFeeds(QByteArray xmlData, bool upgradeHttp)
 
   // This connection is blocking: the UI must be able to acquire access while
   // rebuilding its feed model. The import transaction and query are finished.
+  slotRefreshInfoTray();
   databaseAccess.unlock();
   emit signalUpdateFeedsModel();
 

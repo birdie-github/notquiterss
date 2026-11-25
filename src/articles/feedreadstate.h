@@ -20,6 +20,16 @@ struct CategoryCounts {
 };
 Q_DECLARE_METATYPE(CategoryCounts)
 
+struct GlobalFeedStats {
+  int newCount = 0;
+  int unreadCount = 0;
+  int allCount = 0;
+  int totalFeeds = 0;
+  int customScheduledFeeds = 0;
+  int globalScheduledFeeds = 0;
+};
+Q_DECLARE_METATYPE(GlobalFeedStats)
+
 // Shared read/count operations, executed using the owning object's connection.
 // The GUI instance handles synchronous navigation; UpdateObject uses its worker's.
 class FeedReadState : public QObject
@@ -28,6 +38,7 @@ class FeedReadState : public QObject
 public:
   explicit FeedReadState(QObject *parent = nullptr);
   void setDatabase(const QSqlDatabase &database);
+  static GlobalFeedStats queryGlobalStats(const QSqlDatabase &db);
   static QList<int> getIdFeedsInList(const QSqlDatabase &db, int idFolder,
                                      bool *ok = nullptr, QSqlError *sqlError = nullptr);
   static QString getIdFeedsString(const QSqlDatabase &db, int idFolder, int idException = -1);
@@ -44,7 +55,7 @@ signals:
   void requestCategoryCounts();
   void feedCountsUpdate(FeedCountStruct counts);
   void signalFeedsViewportUpdate();
-  void signalRefreshInfoTray(int newCount, int unreadCount);
+  void signalRefreshInfoTray(GlobalFeedStats stats);
   void signalSetFeedsFilter(bool clicked = false);
 
 protected:

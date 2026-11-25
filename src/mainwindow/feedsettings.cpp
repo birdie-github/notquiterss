@@ -73,6 +73,7 @@ void MainWindow::applyBulkFeedSettings(FeedPropertiesDialog *dialog)
                       changes.rightToLeft.has_value());
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged("apply bulk feed settings");
+  emit signalRefreshInfoTray();
   dialog->bulkApplySucceeded(ids.size());
 }
 
@@ -166,6 +167,8 @@ void MainWindow::saveFolderProperties(FeedPropertiesDialog *dialog, int folderId
   refreshFeedSettings({folderId}, columnsChanged, imagesChanged, directionChanged);
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged("save folder properties");
+  if (changeDisabled)
+    emit signalRefreshInfoTray();
 }
 
 void MainWindow::refreshFeedSettings(const QList<int> &ids, bool columns, bool images, bool direction)
@@ -853,4 +856,5 @@ void MainWindow::showFeedPropertiesDlg()
                       properties.display.layoutDirection != properties_tmp.display.layoutDirection);
   feedsView_->viewport()->update();
   DatabaseBackup::subscriptionsChanged("save feed properties");
+  emit signalRefreshInfoTray();
 }

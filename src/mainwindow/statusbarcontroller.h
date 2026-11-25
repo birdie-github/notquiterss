@@ -30,12 +30,15 @@ public:
   QString unreadText() const;
   QString allText() const;
   void setCountsVisible(bool unreadVisible, bool allVisible);
+  void setGlobalTexts(const QString &totalUnreadText, const QString &totalAllText,
+                      const QString &feedsText, const QString &feedsToolTip);
 
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
   void refreshProgress();
+  void syncSelectionCountsVisibility();
   struct FeedProgress {
     QString name;
     QString stage;
@@ -44,11 +47,16 @@ private:
   QList<int> activeFeeds_;
   int totalFeeds_ = 0;
   int completedFeeds_ = 0;
+  bool unreadVisible_ = false;
+  bool allVisible_ = false;
   QWidget *progressWidget_;
   QStatusBar *statusBar_;
   FeedProgressBar *progressBar_;
   QLabel *statusUnread_;
   QLabel *statusAll_;
+  QLabel *statusTotalUnread_;
+  QLabel *statusTotalAll_;
+  QLabel *statusFeeds_;
 };
 
 #endif // STATUSBARCONTROLLER_H

@@ -302,7 +302,8 @@ public slots:
   void slotIconFeedPreparing(QString feedUrl, QByteArray byteArray, QString format);
   void slotIconFeedUpdate(int feedId, QByteArray faviconData);
   void findText();
-  void slotRefreshInfoTray(int newCount, int unreadCount);
+  void slotRefreshInfoTray(GlobalFeedStats stats);
+  void updateGlobalStatusBar();
   void setTextTitle(const QString &text, NewsTabWidget *widget);
 
 signals:
@@ -685,6 +686,7 @@ private:
 
   StatusBarController *statusBarController_;
   TrayIconController *trayIconController_;
+  GlobalFeedStats globalStats_;
 
   QPushButton *pushButtonNull_;
 
