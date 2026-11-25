@@ -31,6 +31,7 @@ public:
   static QPixmap pickIconPixmap(QWidget *parent, const QString &imageFilesText,
                                 const QString &dialogTitle, const QString &errorText);
   static QIcon colorSwatchIcon(const QColor &color);
+  static QColor pickColor(QWidget *parent, const QColor &initial = QColor());
 
   QVBoxLayout *mainLayout;
   QVBoxLayout *pageLayout;

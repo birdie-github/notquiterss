@@ -134,6 +134,6 @@ void ItemAction::setColor(const QString &colorName)
 
 void ItemAction::selectColorText()
 {
-  const QColor color = QColorDialog::getColor(QColor(colorButton_->toolTip()), this);
+  const QColor color = Dialog::pickColor(this, QColor(colorButton_->toolTip()));
   if (color.isValid()) setColor(color.name());
 }

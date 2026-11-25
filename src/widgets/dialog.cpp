@@ -90,3 +90,11 @@ QIcon Dialog::colorSwatchIcon(const QColor &color)
   pixmap.fill(color.isValid() ? color : QColor(0, 0, 0, 0));
   return QIcon(pixmap);
 }
+
+QColor Dialog::pickColor(QWidget *parent, const QColor &initial)
+{
+  // Pass initial to the QColorDialog constructor rather than getColor(), whose
+  // default constructor seeds native color dialogs with Qt::white.
+  QColorDialog colorDialog(initial.isValid() ? initial : QColor(Qt::black), parent);
+  return colorDialog.exec() == QDialog::Accepted ? colorDialog.selectedColor() : QColor();
+}

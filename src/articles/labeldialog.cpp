@@ -59,8 +59,7 @@ LabelDialog::LabelDialog(QWidget *parent)
       button->setIcon(colorSwatchIcon(QColor()));
     });
     connect(selectAct, &QAction::triggered, this, [this, &colorStr, button]() {
-      const QColor initial = colorStr.isEmpty() ? Qt::black : QColor(colorStr);
-      const QColor color = QColorDialog::getColor(initial, this);
+      const QColor color = pickColor(this, QColor(colorStr));
       if (!color.isValid()) return;
       colorStr = color.name();
       button->setIcon(colorSwatchIcon(color));
