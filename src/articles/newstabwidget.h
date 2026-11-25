@@ -177,6 +177,18 @@ private:
     QSet<QUrl> allowedImages;
   };
 
+  struct SelectedBatch {
+    QVector<int> ids;
+    QSet<int> feedIds;
+  };
+
+  SelectedBatch collectNewsBatch(const QList<QModelIndex> &indexes, bool checkDeleteProtection) const;
+  bool isDeleteProtected(int row, int starredCol, int labelCol) const;
+  void execBatchNewsUpdate(const QString &sqlPrefix, const QVector<int> &ids,
+                           const QVariantList &bindValues = {});
+  void notifyFeedsUpdated(const QSet<int> &feedIds);
+  void refreshAfterRowRemoval(int previousRow);
+
   void createNewsList();
   void createArticleWidget();
   int effectivePreloadPages() const;
