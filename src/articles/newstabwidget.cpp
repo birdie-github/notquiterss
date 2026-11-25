@@ -24,6 +24,7 @@
 #include "app/mainapplication.h"
 #include "preferences/settings.h"
 #include "sharing/shareservice.h"
+#include "articles/cleanup/newsretention.h"
 #include "articles/rendering/articlecontent.h"
 #include <QElapsedTimer>
 #include <QNetworkRequest>
@@ -1106,11 +1107,8 @@ void NewsTabWidget::deleteNews()
 
     if (!idList.isEmpty()) {
       QSqlQuery q(db_);
-      q.exec(QStringLiteral("UPDATE news SET description='', content='', received='', "
-                            "author_name='', author_uri='', author_email='', "
-                            "category='', new='', read='', starred='', label='', "
-                            "deleteDate='', feedParentId='', deleted=2 WHERE id IN (%1)")
-             .arg(idList.join(QLatin1Char(','))));
+      q.exec(NewsRetention::clearArticleSql() +
+             QStringLiteral(" WHERE id IN (%1)").arg(idList.join(QLatin1Char(','))));
 
       newsModel_->select();
     }
@@ -1177,11 +1175,8 @@ void NewsTabWidget::deleteAllNewsList()
     q.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
     q.exec();
   } else {
-    q.exec(QStringLiteral("UPDATE news SET description='', content='', received='', "
-                          "author_name='', author_uri='', author_email='', "
-                          "category='', new='', read='', starred='', label='', "
-                          "deleteDate='', feedParentId='', deleted=2 WHERE id IN (%1)")
-           .arg(idList.join(QLatin1Char(','))));
+    q.exec(NewsRetention::clearArticleSql() +
+           QStringLiteral(" WHERE id IN (%1)").arg(idList.join(QLatin1Char(','))));
   }
 
   newsModel_->select();

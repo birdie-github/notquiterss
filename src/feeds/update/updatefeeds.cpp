@@ -1173,14 +1173,15 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
   } else {
     fullCleanUp = settings.value("fullCleanUp", false).toBool();
   }
-  int maxDayCleanUp = settings.value("maxDayClearUp", 30).toInt();
-  int maxNewsCleanUp = settings.value("maxNewsClearUp", 200).toInt();
-  bool dayCleanUpOn = settings.value("dayClearUpOn", true).toBool();
-  bool newsCleanUpOn = settings.value("newsClearUpOn", true).toBool();
-  bool readCleanUp = settings.value("readClearUp", false).toBool();
-  bool neverUnreadCleanUp = settings.value("neverUnreadClearUp", true).toBool();
-  bool neverStarCleanUp = settings.value("neverStarClearUp", true).toBool();
-  bool neverLabelCleanUp = settings.value("neverLabelClearUp", true).toBool();
+  NewsRetention::Policy policy;
+  policy.maxDayCleanUp = settings.value("maxDayClearUp", 30).toInt();
+  policy.maxNewsCleanUp = settings.value("maxNewsClearUp", 200).toInt();
+  policy.dayCleanUpOn = settings.value("dayClearUpOn", true).toBool();
+  policy.newsCleanUpOn = settings.value("newsClearUpOn", true).toBool();
+  policy.readCleanUp = settings.value("readClearUp", false).toBool();
+  policy.neverUnreadCleanUp = settings.value("neverUnreadClearUp", true).toBool();
+  policy.neverStarCleanUp = settings.value("neverStarClearUp", true).toBool();
+  policy.neverLabelCleanUp = settings.value("neverLabelClearUp", true).toBool();
   bool cleanUpDeleted = settings.value("cleanUpDeleted", false).toBool();
 
   QSqlQuery q(db_);
@@ -1193,9 +1194,7 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
   auto execute = [&](const QString &statement) {
     return q.exec(statement) || queryError(q);
   };
-  const QString clearArticle = QStringLiteral("UPDATE news SET description='', content='', received='', "
-      "author_name='', author_uri='', author_email='', category='', new='', read='', "
-      "starred='', label='', deleteDate='', feedParentId='', deleted=2");
+  const QString clearArticle = NewsRetention::clearArticleSql();
   auto removeArticles = [&](const QList<int> &ids, const QString &feedId,
                             bool hardDelete, bool onlyRead) {
     // Stay below SQLite's older parameter limit and bound each SQL statement.
@@ -1219,8 +1218,8 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
 
   // Only the automatic maximum-age policy also filters incoming entries.
   // The manual wizard must not purge identities using its independent limits.
-  const QDateTime retentionCutoff = isShutdown && cleanupOn && dayCleanUpOn
-      ? NewsRetention::cutoff(maxDayCleanUp) : QDateTime();
+  const QDateTime retentionCutoff = isShutdown && cleanupOn && policy.dayCleanUpOn
+      ? NewsRetention::cutoff(policy.maxDayCleanUp) : QDateTime();
 
   if (isShutdown) {
     if (!execute("UPDATE news SET new=0 WHERE new==1")) return false;
@@ -1235,18 +1234,18 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
       countDeleted = q.value(0).toInt();
     }
 
+    const QString eligibleClause = NewsRetention::eligibilitySql(policy);
+    const QDateTime currentDateTime = QDateTime::currentDateTime();
+
     // Run Cleanup for all feeds, except categories
     for (const QString &feedId : std::as_const(feedsIdList)) {
       int countDelNews = 0;
       int countAllNews = 0;
 
       if (retentionCutoff.isValid()) {
-        QString eligible = QStringLiteral("deleted>=2 OR (deleted<2");
-        if (neverUnreadCleanUp) eligible += QStringLiteral(" AND read!=0");
-        if (neverStarCleanUp) eligible += QStringLiteral(" AND starred==0");
-        if (neverLabelCleanUp)
-          eligible += QStringLiteral(" AND (label=='' OR label==',' OR label IS NULL)");
-        eligible += QLatin1Char(')');
+        const QString eligible = eligibleClause.isEmpty()
+            ? QStringLiteral("deleted>=2 OR deleted<2")
+            : QStringLiteral("deleted>=2 OR (deleted<2 AND %1)").arg(eligibleClause);
         if (!q.prepare("SELECT id, published FROM news WHERE feedId=? AND (" + eligible + ")"))
           return queryError(q);
         q.addBindValue(feedId);
@@ -1273,37 +1272,24 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
 
       qStr = QString("SELECT id, received, published FROM news WHERE feedId=='%1' AND deleted == 0").
           arg(feedId);
-      if (neverUnreadCleanUp) qStr.append(" AND read!=0");
-      if (neverStarCleanUp) qStr.append(" AND starred==0");
-      if (neverLabelCleanUp) qStr.append(" AND (label=='' OR label==',' OR label IS NULL)");
+      if (!eligibleClause.isEmpty()) qStr.append(QStringLiteral(" AND ") + eligibleClause);
       qStr.append(" ORDER BY published");
       if (!execute(qStr)) return false;
       QList<int> removeIds;
       QList<int> readRemoveIds;
       while (q.next()) {
-        int newsId = q.value(0).toInt();
-
-        if (newsCleanUpOn && (countDelNews < (countAllNews - maxNewsCleanUp))) {
+        const int newsId = q.value(0).toInt();
+        switch (NewsRetention::evaluateArticle(
+            policy, isShutdown, countAllNews, countDelNews,
+            q.value(1).toString(), q.value(2).toString(), currentDateTime)) {
+        case NewsRetention::Disposition::Remove:
           removeIds.append(newsId);
-          countDelNews++;
-          continue;
-        }
-
-        QDateTime dateTime = QDateTime::fromString(q.value(1).toString(), Qt::ISODate);
-        // Dated entries were handled above using publication age. Undated
-        // entries retain receipt-age cleanup and their duplicate identities.
-        const bool useReceiptAge = !isShutdown ||
-            !NewsRetention::publicationDate(q.value(2).toString()).isValid();
-        if (dayCleanUpOn && useReceiptAge &&
-            (dateTime.daysTo(QDateTime::currentDateTime()) > maxDayCleanUp)) {
-          removeIds.append(newsId);
-          countDelNews++;
-          continue;
-        }
-
-        if (readCleanUp) {
+          break;
+        case NewsRetention::Disposition::RemoveIfRead:
           readRemoveIds.append(newsId);
-          countDelNews++;
+          break;
+        case NewsRetention::Disposition::Keep:
+          break;
         }
       }
       if (q.lastError().isValid()) return queryError(q);
@@ -1339,10 +1325,7 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
     }
 
     if (cleanUpDeleted) {
-      if (!execute("UPDATE news SET description='', content='', received='', "
-             "author_name='', author_uri='', author_email='', "
-             "category='', new='', read='', starred='', label='', "
-             "deleteDate='', feedParentId='', deleted=2 WHERE deleted==1")) return false;
+      if (!execute(NewsRetention::purgeDeletedSql())) return false;
     }
     if (!isShutdown) {
       if (!execute("SELECT count(id) FROM news WHERE deleted < 2")) return false;

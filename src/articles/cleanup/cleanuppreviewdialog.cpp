@@ -172,13 +172,7 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
   const QDateTime currentDateTime = QDateTime::currentDateTime();
 
   auto isEligible = [&](const PreviewCandidate &article) {
-    if (config.neverUnreadCleanUp && article.read == 0) return false;
-    if (config.neverStarCleanUp && article.starred != 0) return false;
-    if (config.neverLabelCleanUp &&
-        !article.label.isEmpty() && article.label != QLatin1String(",")) {
-      return false;
-    }
-    return true;
+    return NewsRetention::isEligible(config, article.read, article.starred, article.label);
   };
 
   for (auto it = articlesByFeed.constBegin(); it != articlesByFeed.constEnd(); ++it) {
@@ -215,26 +209,17 @@ bool evaluate(QSqlDatabase db, const ShutdownCleanUpConfig &config,
     for (const PreviewCandidate &article : std::as_const(survivingDatedCleanup)) {
       if (!isEligible(article)) continue;
 
-      if (config.newsCleanUpOn && (countDelNews < (countAllNews - config.maxNewsCleanUp))) {
+      switch (NewsRetention::evaluateArticle(
+          config, true, countAllNews, countDelNews,
+          article.received, article.published, currentDateTime)) {
+      case NewsRetention::Disposition::Remove:
         removedForFeed.append(article.id);
-        countDelNews++;
-        continue;
-      }
-
-      const QDateTime receivedDateTime = QDateTime::fromString(article.received, Qt::ISODate);
-      const bool useReceiptAge = !NewsRetention::publicationDate(article.published).isValid();
-      if (config.dayCleanUpOn && useReceiptAge &&
-          (receivedDateTime.daysTo(currentDateTime) > config.maxDayCleanUp)) {
-        removedForFeed.append(article.id);
-        countDelNews++;
-        continue;
-      }
-
-      if (config.readCleanUp) {
-        if (article.read != 0) {
-          removedForFeed.append(article.id);
-        }
-        countDelNews++;
+        break;
+      case NewsRetention::Disposition::RemoveIfRead:
+        if (article.read != 0) removedForFeed.append(article.id);
+        break;
+      case NewsRetention::Disposition::Keep:
+        break;
       }
     }
 

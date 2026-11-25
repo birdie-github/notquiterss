@@ -21,6 +21,7 @@
 #include "network/feedurl.h"
 #include "feeds/addfeedwizard.h"
 #include "feeds/addfolderdialog.h"
+#include "articles/cleanup/newsretention.h"
 #include "articles/rendering/articlecontent.h"
 #include "database/database.h"
 #include "backup/databasebackup.h"
@@ -1688,10 +1689,7 @@ void MainWindow::slotCategoriesClicked(QTreeWidgetItem *item, int, bool createTa
 void MainWindow::clearDeleted()
 {
   QSqlQuery q;
-  q.exec("UPDATE news SET description='', content='', received='', "
-         "author_name='', author_uri='', author_email='', "
-         "category='', new='', read='', starred='', label='', "
-         "deleteDate='', feedParentId='', deleted=2 WHERE deleted==1");
+  q.exec(NewsRetention::purgeDeletedSql());
 
   if (currentNewsTab->type_ == NewsTabWidget::TabTypeDel) {
     currentNewsTab->newsModel_->select();

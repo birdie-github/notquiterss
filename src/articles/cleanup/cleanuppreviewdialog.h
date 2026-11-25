@@ -6,6 +6,7 @@
 #include <QSqlDatabase>
 #include <QVector>
 
+#include "newsretention.h"
 #include "widgets/dialog.h"
 
 class QSplitter;
@@ -15,17 +16,9 @@ class NewsHeader;
 class NewsModel;
 class NewsView;
 
-struct ShutdownCleanUpConfig
+struct ShutdownCleanUpConfig : NewsRetention::Policy
 {
   bool cleanupOn = true;
-  bool dayCleanUpOn = true;
-  int maxDayCleanUp = 30;
-  bool newsCleanUpOn = true;
-  int maxNewsCleanUp = 200;
-  bool readCleanUp = false;
-  bool neverUnreadCleanUp = true;
-  bool neverStarCleanUp = true;
-  bool neverLabelCleanUp = true;
   bool cleanUpDeleted = false;
 };
 
