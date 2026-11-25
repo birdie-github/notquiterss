@@ -21,6 +21,7 @@
 #include "feeddeletion.h"
 #include "feedselectiontree.h"
 #include "common/logfile.h"
+#include "database/credentialstore.h"
 #include "database/database.h"
 #include "network/credentialscope.h"
 #include "network/feedurl.h"
@@ -549,20 +550,8 @@ void AddFeedWizard::finish()
   q.exec();
 
   if (auth) {
-    QUrl url(feedUrlString_);
-    QString server = CredentialScope::feed(url);
-
-    q.prepare("SELECT * FROM passwords WHERE server=?");
-    q.addBindValue(server);
-    q.exec();
-    if (!q.next()) {
-      q.prepare("INSERT INTO passwords (server, username, password) "
-                "VALUES (:server, :username, :password)");
-      q.bindValue(":server", server);
-      q.bindValue(":username", user_->text());
-      q.bindValue(":password", pass_->text().toUtf8().toBase64());
-      q.exec();
-    }
+    CredentialStore::insertIfMissing(CredentialScope::feed(QUrl(feedUrlString_)),
+                                     user_->text(), pass_->text());
   }
 
   // Publish the subscription only after its properties and credentials are saved.

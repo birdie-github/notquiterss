@@ -151,6 +151,7 @@ HEADERS += \
     src/network/cookiesdialog.h \
     src/network/networkmanager.h \
     src/articles/rendering/articleview.h \
+    src/database/credentialstore.h \
     src/database/database.h \
     src/database/pendingdatabase.h \
     src/feeds/feedbulksettings.h \
@@ -246,6 +247,7 @@ SOURCES += \
     src/network/cookiesdialog.cpp \
     src/network/networkmanager.cpp \
     src/articles/rendering/articleview.cpp \
+    src/database/credentialstore.cpp \
     src/database/database.cpp \
     src/feeds/feedcounters.cpp \
     src/feeds/feeddeletion.cpp \

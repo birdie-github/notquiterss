@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "passwordssettingspage.h"
 
+#include "database/credentialstore.h"
 #include "preferences/optionsdialog.h"
 #include "preferences/optionspagebuilder.h"
 
-#include <QByteArray>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QSqlDatabase>
-#include <QSqlQuery>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -61,14 +60,9 @@ void PasswordsSettingsPage::load()
   if (loadPasswordsOk_) return;
   loadPasswordsOk_ = true;
 
-  QSqlQuery q;
-  q.exec(QStringLiteral("SELECT id, server, username, password FROM passwords"));
-  while (q.next()) {
-    const QString id = q.value(0).toString();
-    const QString server = q.value(1).toString();
-    const QString user = q.value(2).toString();
-    const QString pass = QString::fromUtf8(QByteArray::fromBase64(q.value(3).toByteArray()));
-    passTree_->addTopLevelItem(new QTreeWidgetItem(QStringList{id, server, user, pass}));
+  for (const auto &entry : CredentialStore::loadAll()) {
+    passTree_->addTopLevelItem(new QTreeWidgetItem(
+        QStringList{QString::number(entry.id), entry.server, entry.username, entry.password}));
   }
 }
 
@@ -76,11 +70,9 @@ void PasswordsSettingsPage::apply(QSqlDatabase &db)
 {
   if (!loadPasswordsOk_) return;
   db.transaction();
-  QSqlQuery q(db);
   for (int i = 0; i < passTree_->topLevelItemCount(); ++i) {
     if (passTree_->topLevelItem(i)->isHidden()) {
-      const QString id = passTree_->topLevelItem(i)->text(0);
-      q.exec(QStringLiteral("DELETE FROM passwords WHERE id=='%1'").arg(id));
+      CredentialStore::removeById(db, passTree_->topLevelItem(i)->text(0).toInt());
     }
   }
   db.commit();

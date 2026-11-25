@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "mainwindow.h"
+#include "database/credentialstore.h"
 #include "network/credentialscope.h"
 #include "backup/databasebackup.h"
 #include "feeds/update/faviconobject.h"
@@ -601,13 +602,10 @@ void MainWindow::showFeedPropertiesDlg()
     properties.authentication.on = true;
   }
   QUrl url(feedsModel_->dataField(index, "xmlUrl").toString());
-  QSqlQuery q;
-  q.prepare("SELECT username, password FROM passwords WHERE server=?");
-  q.addBindValue(CredentialScope::feed(url));
-  q.exec();
-  if (q.next()) {
-    properties.authentication.user = q.value(0).toString();
-    properties.authentication.pass = QString::fromUtf8(QByteArray::fromBase64(q.value(1).toByteArray()));
+  CredentialStore::Credentials creds;
+  if (CredentialStore::load(db_, CredentialScope::feed(url), creds)) {
+    properties.authentication.user = creds.username;
+    properties.authentication.pass = creds.password;
   }
 
   properties.status.feedStatus = feedsModel_->dataField(index, "status").toString();
@@ -770,24 +768,10 @@ void MainWindow::showFeedPropertiesDlg()
   if (currentNewsTab->feedId_ == feedId)
     currentNewsTab->newsHeader_->setColumns(index);
 
-  if (!(!feedsModel_->dataField(index, "authentication").toInt() && !properties.authentication.on)) {
-    q.prepare("SELECT * FROM passwords WHERE server=?");
-    q.addBindValue(CredentialScope::feed(QUrl(properties.general.url)));
-    q.exec();
-    if (q.next()) {
-      q.prepare("UPDATE passwords SET username = ?, password = ? WHERE server=?");
-      q.addBindValue(properties.authentication.user);
-      q.addBindValue(properties.authentication.pass.toUtf8().toBase64());
-      q.addBindValue(CredentialScope::feed(QUrl(properties.general.url)));
-      q.exec();
-    } else if (properties.authentication.on) {
-      q.prepare("INSERT INTO passwords (server, username, password) "
-                "VALUES (:server, :username, :password)");
-      q.bindValue(":server", CredentialScope::feed(QUrl(properties.general.url)));
-      q.bindValue(":username", properties.authentication.user);
-      q.bindValue(":password", properties.authentication.pass.toUtf8().toBase64());
-      q.exec();
-    }
+  if (feedsModel_->dataField(index, "authentication").toInt() || properties.authentication.on) {
+    CredentialStore::save(db_, CredentialScope::feed(QUrl(properties.general.url)),
+                          properties.authentication.user, properties.authentication.pass,
+                          properties.authentication.on);
   }
 
   QPersistentModelIndex indexText    = feedsModel_->indexSibling(index, "text");

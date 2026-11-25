@@ -18,8 +18,7 @@
 * ============================================================ */
 #include "authenticationdialog.h"
 #include "credentialscope.h"
-
-#include <QSqlQuery>
+#include "database/credentialstore.h"
 
 AuthenticationDialog::AuthenticationDialog(const QUrl &url,
                                            QAuthenticator *auth,
@@ -45,13 +44,10 @@ AuthenticationDialog::AuthenticationDialog(const QString &server, const QString 
   save_ = new QCheckBox(tr("Save password"), this);
   save_->setChecked(false);
 
-  QSqlQuery q;
-  q.prepare("SELECT username, password FROM passwords WHERE server=?");
-  q.addBindValue(scope_);
-  q.exec();
-  if (q.next()) {
-    auth_->setUser(q.value(0).toString());
-    auth_->setPassword(QString::fromUtf8(QByteArray::fromBase64(q.value(1).toByteArray())));
+  CredentialStore::Credentials creds;
+  if (CredentialStore::load(scope_, creds)) {
+    auth_->setUser(creds.username);
+    auth_->setPassword(creds.password);
     save_->setChecked(true);
   } else {
     setWindowTitle(tr("Authorization required"));
@@ -88,13 +84,7 @@ void AuthenticationDialog::acceptDialog()
   auth_->setPassword(pass_->text());
 
   if (save_->isChecked()) {
-    QSqlQuery q;
-    q.prepare("INSERT INTO passwords (server, username, password) "
-              "VALUES (:server, :username, :password)");
-    q.bindValue(":server", scope_);
-    q.bindValue(":username", user_->text());
-    q.bindValue(":password", pass_->text().toUtf8().toBase64());
-    q.exec();
+    CredentialStore::save(scope_, user_->text(), pass_->text(), true);
   }
 
   accept();

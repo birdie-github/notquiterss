@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "common/logfile.h"
+#include "database/credentialstore.h"
 #include "network/credentialscope.h"
 #include "network/feedurl.h"
 #include <utility>
@@ -779,14 +780,9 @@ bool UpdateObject::addFeedInQueue(int feedId, const QString &feedUrl,
     updateFeedsCount_ = updateFeedsCount_ + 2;
     QString userInfo;
     if (auth == 1) {
-      QSqlQuery q(db_);
-      QUrl url(feedUrl);
-      q.prepare("SELECT username, password FROM passwords WHERE server=?");
-      q.addBindValue(CredentialScope::feed(url));
-      q.exec();
-      if (q.next()) {
-        userInfo = QString("%1:%2").arg(q.value(0).toString()).
-            arg(QString::fromUtf8(QByteArray::fromBase64(q.value(1).toByteArray())));
+      CredentialStore::Credentials creds;
+      if (CredentialStore::load(db_, CredentialScope::feed(QUrl(feedUrl)), creds)) {
+        userInfo = QStringLiteral("%1:%2").arg(creds.username, creds.password);
       }
     }
     announceFeedProgress(feedId);
