@@ -73,6 +73,9 @@ public:
   bool isPageCreated(int pageIndex) const {
     return pageIndex >= 0 && pageIndex < pageWidgets_.size() && pageWidgets_.at(pageIndex) != nullptr;
   }
+  bool isPageSaveEligible(int pageIndex) const {
+    return pageIndex >= 0 && pageIndex < pageSaveEligible_.size() && pageSaveEligible_.at(pageIndex);
+  }
 
   GeneralSettingsPage *generalPage() const { return generalPage_; }
   SystemTraySettingsPage *traySystemPage() const { return traySystemPage_; }
@@ -159,6 +162,8 @@ private:
   int lastPageIndex_ = 0;
   bool searchIndexBuilt_ = false;
   QVector<QWidget *> pageWidgets_;
+  // Tracks pages actually opened by the user so search-indexed pages do not write back settings.
+  QVector<bool> pageSaveEligible_;
   QVector<QScrollArea *> pageScrollAreas_;
 
   GeneralSettingsPage *generalPage_ = nullptr;

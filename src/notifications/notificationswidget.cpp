@@ -83,7 +83,8 @@ NotificationWidget::NotificationWidget(QList<int> idFeedList,
     showButtonDeleteNotify = mainWindow->showButtonDeleteNotify_;
     closeNotify_ = mainWindow->closeNotify_;
   } else {
-    screen_ = notifier->screenNotify_->currentIndex()-1;
+    const int screenIdx = notifier->screenNotify_->currentIndex();
+    screen_ = screenIdx >= 0 ? screenIdx - 1 : mainWindow->screenNotify_;
     position_ = notifier->positionNotify_->currentIndex();
     transparency_ = notifier->transparencyNotify_->value();
     timeShowNews_ = notifier->timeShowNewsNotify_->value();

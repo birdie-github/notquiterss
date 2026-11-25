@@ -728,7 +728,8 @@ void MainWindow::showOptionDlg(int index)
     }
   }
 
-  if (optionsDialog_->labelsPage() && !optionsDialog_->labelsPage()->modifiedIds().isEmpty()) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageLabels) &&
+      optionsDialog_->labelsPage() && !optionsDialog_->labelsPage()->modifiedIds().isEmpty()) {
     QTreeWidgetItem *labelTreeItem = categoriesTree_->topLevelItem(CategoriesTreeWidget::LabelsItem);
     while (labelTreeItem->childCount()) {
       labelTreeItem->removeChild(labelTreeItem->child(0));
@@ -787,45 +788,50 @@ void MainWindow::showOptionDlg(int index)
   const bool wasTrayIconEnabled = showTrayIcon_;
 
   for (const auto &s : SettingBindings::kBoolCheck) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       this->*(s.member) = s.widget(optionsDialog_)->isChecked();
   }
   for (const auto &s : SettingBindings::kTrayHold) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       this->*(s.member) = s.widget(optionsDialog_)->isChecked();
   }
   for (const auto &s : SettingBindings::kBoolRadio) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       this->*(s.member) = s.widget(optionsDialog_)->isChecked();
   }
   for (const auto &s : SettingBindings::kBoolGroup) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       this->*(s.member) = s.widget(optionsDialog_)->isChecked();
   }
   for (const auto &s : SettingBindings::kIntSpin) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       this->*(s.member) = s.widget(optionsDialog_)->value();
   }
   for (const auto &s : SettingBindings::kIntCombo) {
-    if (optionsDialog_->isPageCreated(s.page))
-      this->*(s.member) = s.widget(optionsDialog_)->currentIndex() - s.indexOffset;
+    if (optionsDialog_->isPageSaveEligible(s.page)) {
+      const int idx = s.widget(optionsDialog_)->currentIndex();
+      // Preserve stored values (such as a disconnected notification monitor) when no entry is selected.
+      if (idx >= 0)
+        this->*(s.member) = idx - s.indexOffset;
+    }
   }
   for (const auto &s : SettingBindings::kComboData) {
-    if (optionsDialog_->isPageCreated(s.page)) {
+    if (optionsDialog_->isPageSaveEligible(s.page)) {
       QComboBox *combo = s.widget(optionsDialog_);
-      this->*(s.member) = combo->itemData(combo->currentIndex()).toString();
+      if (combo->currentIndex() >= 0)
+        this->*(s.member) = combo->itemData(combo->currentIndex()).toString();
     }
   }
   for (const auto &s : SettingBindings::kAppBoolCheck) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       s.setting->set(s.widget(optionsDialog_)->isChecked());
   }
   for (const auto &s : SettingBindings::kAppIntSpin) {
-    if (optionsDialog_->isPageCreated(s.page))
+    if (optionsDialog_->isPageSaveEligible(s.page))
       s.setting->set(s.widget(optionsDialog_)->value());
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageGeneral)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageGeneral)) {
     auto *p = optionsDialog_->generalPage();
     showSplashScreen_ = p->showSplashScreen_->isChecked();
     feedsModel_->defaultIconFeeds_ = defaultIconFeeds_;
@@ -842,7 +848,7 @@ void MainWindow::showOptionDlg(int index)
     }
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageSystemTray)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageSystemTray)) {
     behaviorIconTray_ = optionsDialog_->traySystemPage()->behaviorIconTray();
   }
   if (behaviorIconTray_ > CHANGE_ICON_TRAY) {
@@ -858,11 +864,11 @@ void MainWindow::showOptionDlg(int index)
       showWindows();
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageNetwork)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageNetwork)) {
     mainApp->proxySaveSettings(optionsDialog_->networkPage()->proxy());
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageBrowser)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageBrowser)) {
     auto *p = optionsDialog_->browserPage();
     preloadNewspaperPages_ = p->preloadNewspaperPages_->value();
     AppSettings::externalBrowserOn.set(p->customExternalBrowser_->isChecked() ? 2 : 1);
@@ -873,7 +879,7 @@ void MainWindow::showOptionDlg(int index)
     downloadLocation_ = p->downloadLocationEdit_->text();
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageFeeds)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageFeeds)) {
     auto *p = optionsDialog_->feedsPage();
     updateFeedsStartUp = p->updateFeedsStartUp_->isChecked();
     openingFeedAction_ = p->getOpeningFeed();
@@ -893,18 +899,18 @@ void MainWindow::showOptionDlg(int index)
     settings.setValue("Settings/styleSheetNews", styleSheetNews);
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageNotifications)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageNotifications)) {
     soundNotifyPath_ = optionsDialog_->notifierPage()->editSoundNotifier_->text();
     reloadNotificationFeeds();
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageLanguage) &&
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageLanguage) &&
       mainApp->language() != optionsDialog_->languagePage()->language()) {
     mainApp->setLanguage(optionsDialog_->languagePage()->language());
     mainApp->setTranslateApplication();
   }
 
-  if (optionsDialog_->isPageCreated(OptionsDialog::PageFontsColors)) {
+  if (optionsDialog_->isPageSaveEligible(OptionsDialog::PageFontsColors)) {
     auto *p = optionsDialog_->fontsColorsPage();
     for (int row = 0; row < kFontOptionCount; ++row) {
       const QFont selected = p->fontOptionValue(row);

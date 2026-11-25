@@ -116,6 +116,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
   // Scroll only the current page, not a stack sized for its tallest hidden page.
   // Pages themselves are created and initialized on demand in ensurePageCreated().
   pageWidgets_.fill(nullptr, PageCount);
+  pageSaveEligible_.fill(false, PageCount);
   pageScrollAreas_.reserve(PageCount);
   categoryItems_.reserve(PageCount);
   for (int i = 0; i < PageCount; ++i) {
@@ -241,14 +242,14 @@ void OptionsDialog::showEvent(QShowEvent *event)
 
 void OptionsDialog::acceptDialog()
 {
-  if (networkPage_ && !networkPage_->validate()) return;
-  if (browserPage_ && !browserPage_->validate()) return;
+  if (isPageSaveEligible(PageNetwork) && networkPage_ && !networkPage_->validate()) return;
+  if (isPageSaveEligible(PageBrowser) && browserPage_ && !browserPage_->validate()) return;
 
-  if (generalPage_) generalPage_->save();
-  if (networkPage_) networkPage_->save();
-  if (labelsPage_) labelsPage_->apply(db_);
-  if (feedsNotifierDlg_) feedsNotifierDlg_->apply(db_);
-  if (passwordsPage_) passwordsPage_->apply(db_);
+  if (isPageSaveEligible(PageGeneral) && generalPage_) generalPage_->save();
+  if (isPageSaveEligible(PageNetwork) && networkPage_) networkPage_->save();
+  if (isPageSaveEligible(PageLabels) && labelsPage_) labelsPage_->apply(db_);
+  if (isPageSaveEligible(PageNotifications) && feedsNotifierDlg_) feedsNotifierDlg_->apply(db_);
+  if (isPageSaveEligible(PagePasswords) && passwordsPage_) passwordsPage_->apply(db_);
   accept();
 }
 
@@ -436,7 +437,9 @@ void OptionsDialog::loadShortcuts()
 QWidget *OptionsDialog::createBackupWidget()
 {
   auto *backupPage = new BackupSettingsPage(this, &searchEntries_, PageBackup);
-  connect(this, &QDialog::accepted, backupPage, &BackupSettingsPage::save);
+  connect(this, &QDialog::accepted, backupPage, [this, backupPage]() {
+    if (isPageSaveEligible(PageBackup)) backupPage->save();
+  });
   backupWidget_ = backupPage;
   return backupWidget_;
 }
@@ -458,6 +461,7 @@ void OptionsDialog::slotCategoriesItemClicked(QTreeWidgetItem *item, int)
   if (pageIndex < 0 || pageIndex >= PageCount) return;
   lastPageIndex_ = pageIndex;
   ensurePageCreated(pageIndex);
+  pageSaveEligible_[pageIndex] = true;
 
   contentLabel_->setText(item->data(1, Qt::DisplayRole).toString());
   contentStack_->setCurrentIndex(pageIndex);
