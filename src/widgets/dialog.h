@@ -30,6 +30,9 @@ public:
 
   static QPixmap pickIconPixmap(QWidget *parent, const QString &imageFilesText,
                                 const QString &dialogTitle, const QString &errorText);
+  static QByteArray prepareFaviconIcoData(const QPixmap &pixmap);
+  static QByteArray prepareFaviconIcoData(const QByteArray &byteArray,
+                                          const QString &format = QString());
   static QIcon colorSwatchIcon(const QColor &color);
   static QColor pickColor(QWidget *parent, const QColor &initial = QColor());
 

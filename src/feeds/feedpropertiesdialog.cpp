@@ -463,10 +463,8 @@ void FeedPropertiesDialog::selectIcon()
                                         tr("Could not open the icon file."));
   if (pixmap.isNull()) return;
 
-  QByteArray faviconData;
-  QBuffer    buffer(&faviconData);
-  buffer.open(QIODevice::WriteOnly);
-  if (pixmap.save(&buffer, "ICO")) {
+  const QByteArray faviconData = prepareFaviconIcoData(pixmap);
+  if (!faviconData.isEmpty()) {
     slotFaviconUpdate(feedProperties.general.url, faviconData);
   }
 }

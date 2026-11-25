@@ -1173,23 +1173,8 @@ void MainWindow::slotFeedsFilter()
 void MainWindow::slotIconFeedPreparing(QString feedUrl, QByteArray byteArray,
                                        QString format)
 {
-  QPixmap icon;
-  if (!icon.loadFromData(byteArray) &&
-      (format.isEmpty() || !icon.loadFromData(byteArray, format.toUtf8().constData()))) {
-    return;
-  }
-  icon = icon.scaled(16, 16, Qt::IgnoreAspectRatio,
-                     Qt::SmoothTransformation);
-  QByteArray faviconData;
-  QBuffer    buffer(&faviconData);
-  buffer.open(QIODevice::WriteOnly);
-  if (icon.save(&buffer, "ICO")) {
-    if (faviconData.size() == 1150) {
-      for (int y = 0; y < 16; ++y) {
-        faviconData[1086 + y * 4 + 2] = 0;
-        faviconData[1086 + y * 4 + 3] = 0;
-      }
-    }
+  const QByteArray faviconData = Dialog::prepareFaviconIcoData(byteArray, format);
+  if (!faviconData.isEmpty()) {
     emit signalIconFeedReady(feedUrl, faviconData);
   }
 }

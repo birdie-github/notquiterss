@@ -19,6 +19,7 @@
 #include "dialog.h"
 #include "preferences/settings.h"
 
+#include <QBuffer>
 #include <QImageReader>
 
 Dialog::Dialog(QWidget *parent, Qt::WindowFlags flag)
@@ -82,6 +83,39 @@ QPixmap Dialog::pickIconPixmap(QWidget *parent, const QString &imageFilesText,
   }
 
   return pixmap.scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
+
+QByteArray Dialog::prepareFaviconIcoData(const QPixmap &pixmap)
+{
+  if (pixmap.isNull()) return QByteArray();
+
+  const QPixmap icon = (pixmap.size() == QSize(16, 16))
+      ? pixmap
+      : pixmap.scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+  QByteArray faviconData;
+  QBuffer buffer(&faviconData);
+  buffer.open(QIODevice::WriteOnly);
+  if (!icon.save(&buffer, "ICO"))
+    return QByteArray();
+  // Qt's ICO writer leaves the 2-byte row-alignment padding in each 16-pixel
+  // 1-bit AND-mask scanline (offset 1086 + y * 4 + 2..3) uninitialized.
+  if (faviconData.size() == 1150) {
+    for (int y = 0; y < 16; ++y) {
+      faviconData[1086 + y * 4 + 2] = 0;
+      faviconData[1086 + y * 4 + 3] = 0;
+    }
+  }
+  return faviconData;
+}
+
+QByteArray Dialog::prepareFaviconIcoData(const QByteArray &byteArray, const QString &format)
+{
+  QPixmap icon;
+  if (!icon.loadFromData(byteArray) &&
+      (format.isEmpty() || !icon.loadFromData(byteArray, format.toUtf8().constData()))) {
+    return QByteArray();
+  }
+  return prepareFaviconIcoData(icon);
 }
 
 QIcon Dialog::colorSwatchIcon(const QColor &color)

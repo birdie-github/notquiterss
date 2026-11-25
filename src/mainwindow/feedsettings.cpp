@@ -8,37 +8,12 @@
 #include "app/mainapplication.h"
 #include "preferences/settings.h"
 #include "feeds/update/updatefeeds.h"
-#include <QBuffer>
 #include <QImage>
 #include <QTimeZone>
 #include <QUuid>
 #include <utility>
 
 namespace {
-QByteArray prepareFaviconIcoData(const QByteArray &byteArray, const QString &format)
-{
-  QPixmap icon;
-  if (!icon.loadFromData(byteArray) &&
-      (format.isEmpty() || !icon.loadFromData(byteArray, format.toUtf8().constData()))) {
-    return QByteArray();
-  }
-  icon = icon.scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-  QByteArray faviconData;
-  QBuffer buffer(&faviconData);
-  buffer.open(QIODevice::WriteOnly);
-  if (!icon.save(&buffer, "ICO"))
-    return QByteArray();
-  // Qt's ICO writer leaves the 2-byte row-alignment padding in each 16-pixel
-  // 1-bit AND-mask scanline (offset 1086 + y * 4 + 2..3) uninitialized.
-  if (faviconData.size() == 1150) {
-    for (int y = 0; y < 16; ++y) {
-      faviconData[1086 + y * 4 + 2] = 0;
-      faviconData[1086 + y * 4 + 3] = 0;
-    }
-  }
-  return faviconData;
-}
-
 bool sameFaviconImage(const QByteArray &first, const QByteArray &second)
 {
   if (first == second)
@@ -426,7 +401,7 @@ void MainWindow::showBulkFeedSettings()
     dialog.appendFaviconLog(tr(" Downloaded."), false);
 
     const BulkFaviconTarget &target = session.targets.at(session.currentIndex);
-    const QByteArray faviconData = prepareFaviconIcoData(byteArray, format);
+    const QByteArray faviconData = Dialog::prepareFaviconIcoData(byteArray, format);
     if (faviconData.isEmpty()) {
       ++session.failed;
       dialog.appendFaviconLog(tr(" Invalid icon data. Favicon unchanged."), false);
