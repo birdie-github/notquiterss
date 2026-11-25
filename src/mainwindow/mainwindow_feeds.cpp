@@ -932,16 +932,23 @@ void MainWindow::setFeedsFilter(bool clicked)
       NewsTabWidget *widget = static_cast<NewsTabWidget *>(stackedWidget_->widget(i));
       appendWithAncestors(feedsModel_->indexById(widget->feedId_));
     }
-  } else if ((filterName == QLatin1String("filterFeedsStarred_")) ||
-             (filterName == QLatin1String("filterFeedsError_"))) {
-    const QString predicate = (filterName == QLatin1String("filterFeedsStarred_"))
-        ? QStringLiteral("label LIKE '%starred%'")
-        : QStringLiteral("status!=0 AND status!=''");
+  } else if (filterName == QLatin1String("filterFeedsStarred_")) {
     QSqlQuery q(db_);
     q.setForwardOnly(true);
-    q.exec(QStringLiteral("SELECT id FROM feeds WHERE ") + predicate);
+    q.exec(QStringLiteral("SELECT id FROM feeds WHERE label LIKE '%starred%'"));
     while (q.next()) {
       appendWithAncestors(feedsModel_->indexById(q.value(0).toInt()));
+    }
+  } else if (filterName == QLatin1String("filterFeedsError_")) {
+    QSqlQuery q(db_);
+    q.setForwardOnly(true);
+    q.exec(QStringLiteral(
+        "SELECT id, status FROM feeds "
+        "WHERE xmlUrl!='' AND COALESCE(disableUpdate, 0)==0 AND status!='' AND status!='0' AND status!='1'"));
+    while (q.next()) {
+      if (FeedHealth::read(q.value(1).toString()).warning) {
+        appendWithAncestors(feedsModel_->indexById(q.value(0).toInt()));
+      }
     }
   }
 
