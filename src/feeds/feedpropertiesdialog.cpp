@@ -459,44 +459,16 @@ void FeedPropertiesDialog::loadDefaultIcon()
 
 void FeedPropertiesDialog::selectIcon()
 {
-  QString filter;
-  for (const QByteArray &imageFormat : QImageReader::supportedImageFormats()) {
-    if (!filter.isEmpty()) filter.append(" ");
-    filter.append("*.").append(imageFormat);
+  const QPixmap pixmap = pickIconPixmap(this, tr("Image files"), tr("Select Image"),
+                                        tr("Could not open the icon file."));
+  if (pixmap.isNull()) return;
+
+  QByteArray faviconData;
+  QBuffer    buffer(&faviconData);
+  buffer.open(QIODevice::WriteOnly);
+  if (pixmap.save(&buffer, "ICO")) {
+    slotFaviconUpdate(feedProperties.general.url, faviconData);
   }
-  filter = tr("Image files") + QString(" (%1)").arg(filter);
-
-  QString fileName = QFileDialog::getOpenFileName(this, tr("Select Image"),
-                                                  QDir::homePath(),
-                                                  filter);
-
-  if (fileName.isNull()) return;
-
-  QMessageBox msgBox(this);
-  msgBox.setText(tr("Could not open the icon file."));
-  msgBox.setIcon(QMessageBox::Warning);
-
-  QFile file(fileName);
-  if (!file.open(QIODevice::ReadOnly)) {
-    msgBox.exec();
-    return;
-  }
-
-  QPixmap pixmap;
-  if (pixmap.loadFromData(file.readAll())) {
-    pixmap = pixmap.scaled(16, 16, Qt::IgnoreAspectRatio,
-                           Qt::SmoothTransformation);
-    QByteArray faviconData;
-    QBuffer    buffer(&faviconData);
-    buffer.open(QIODevice::WriteOnly);
-    if (pixmap.save(&buffer, "ICO")) {
-      slotFaviconUpdate(feedProperties.general.url, faviconData);
-    }
-  } else {
-    msgBox.exec();
-  }
-
-  file.close();
 }
 
 void FeedPropertiesDialog::slotFaviconUpdate(const QString &feedUrl, const QByteArray &faviconData)

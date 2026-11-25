@@ -17,6 +17,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * ============================================================ */
 #include "itemaction.h"
+#include "widgets/dialog.h"
 
 ItemAction::ItemAction(QWidget * parent)
   : QWidget(parent)
@@ -53,10 +54,7 @@ ItemAction::ItemAction(QWidget * parent)
 
   colorButton_ = new ToolButton(this);
   colorButton_->setIconSize(QSize(16, 16));
-  colorButton_->setToolTip("#000000");
-  QPixmap pixmap(14, 14);
-  pixmap.fill(QColor("#000000"));
-  colorButton_->setIcon(pixmap);
+  setColor(QStringLiteral("#000000"));
   colorButton_->setVisible(false);
 
   addButton_ = new ToolButton(this);
@@ -128,20 +126,14 @@ void ItemAction::slotPlaySound()
     emit signalPlaySound(soundPathEdit_->text());
 }
 
+void ItemAction::setColor(const QString &colorName)
+{
+  colorButton_->setToolTip(colorName);
+  colorButton_->setIcon(Dialog::colorSwatchIcon(QColor(colorName)));
+}
+
 void ItemAction::selectColorText()
 {
-  QColorDialog *colorDialog = new QColorDialog(this);
-
-  if (colorDialog->exec() == QDialog::Rejected) {
-    delete colorDialog;
-    return;
-  }
-
-  QColor color = colorDialog->selectedColor();
-  delete colorDialog;
-
-  colorButton_->setToolTip(color.name());
-  QPixmap pixmap(14, 14);
-  pixmap.fill(color);
-  colorButton_->setIcon(pixmap);
+  const QColor color = QColorDialog::getColor(QColor(colorButton_->toolTip()), this);
+  if (color.isValid()) setColor(color.name());
 }

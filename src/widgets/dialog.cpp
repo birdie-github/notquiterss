@@ -19,6 +19,8 @@
 #include "dialog.h"
 #include "preferences/settings.h"
 
+#include <QImageReader>
+
 Dialog::Dialog(QWidget *parent, Qt::WindowFlags flag)
   : QDialog(parent, flag)
 {
@@ -56,4 +58,35 @@ void Dialog::bindGeometrySetting(const QString &key)
     Settings out;
     out.setValue(key, saveGeometry());
   });
+}
+
+QPixmap Dialog::pickIconPixmap(QWidget *parent, const QString &imageFilesText,
+                               const QString &dialogTitle, const QString &errorText)
+{
+  QString filter;
+  for (const QByteArray &imageFormat : QImageReader::supportedImageFormats()) {
+    if (!filter.isEmpty()) filter.append(QLatin1Char(' '));
+    filter.append(QLatin1String("*.")).append(QString::fromLatin1(imageFormat));
+  }
+  filter = imageFilesText + QStringLiteral(" (%1)").arg(filter);
+
+  const QString fileName = QFileDialog::getOpenFileName(
+      parent, dialogTitle, QDir::homePath(), filter);
+  if (fileName.isNull()) return QPixmap();
+
+  QFile file(fileName);
+  QPixmap pixmap;
+  if (!file.open(QIODevice::ReadOnly) || !pixmap.loadFromData(file.readAll())) {
+    QMessageBox::warning(parent, QString(), errorText);
+    return QPixmap();
+  }
+
+  return pixmap.scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
+
+QIcon Dialog::colorSwatchIcon(const QColor &color)
+{
+  QPixmap pixmap(14, 14);
+  pixmap.fill(color.isValid() ? color : QColor(0, 0, 0, 0));
+  return QIcon(pixmap);
 }

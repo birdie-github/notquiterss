@@ -28,6 +28,10 @@ public:
   explicit Dialog(QWidget *parent, Qt::WindowFlags flag = Qt::WindowFlags());
   void bindGeometrySetting(const QString &key);
 
+  static QPixmap pickIconPixmap(QWidget *parent, const QString &imageFilesText,
+                                const QString &dialogTitle, const QString &errorText);
+  static QIcon colorSwatchIcon(const QColor &color);
+
   QVBoxLayout *mainLayout;
   QVBoxLayout *pageLayout;
   QHBoxLayout *buttonsLayout;

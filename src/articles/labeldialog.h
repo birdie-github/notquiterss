@@ -39,10 +39,6 @@ private slots:
   void nameEditChanged(const QString&);
   void selectIcon(QAction *action);
   void loadIcon();
-  void defaultColorText();
-  void selectColorText();
-  void defaultColorBg();
-  void selectColorBg();
 
 private:
   QToolButton *iconButton_;

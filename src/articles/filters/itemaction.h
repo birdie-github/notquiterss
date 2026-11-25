@@ -29,6 +29,7 @@ class ItemAction : public QWidget
   Q_OBJECT
 public:
   explicit ItemAction(QWidget * parent = 0);
+  void setColor(const QString &colorName);
 
   QComboBox *comboBox1_;
   QComboBox *comboBox2_;

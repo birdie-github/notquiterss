@@ -109,14 +109,19 @@ AboutDialog::AboutDialog(QWidget *parent) :
   });
 #endif
 
-  QTextEdit *authorsTextEdit = new QTextEdit(this);
-  authorsTextEdit->setReadOnly(true);
-  authorsTextEdit->setText(Common::readAllFileContents(":/file/AUTHORS"));
+  tabWidget->addTab(mainWidget, tr("Version"));
 
-  QHBoxLayout *authorsLayout = new QHBoxLayout();
-  authorsLayout->addWidget(authorsTextEdit);
-  QWidget *authorsWidget = new QWidget();
-  authorsWidget->setLayout(authorsLayout);
+  auto addReadOnlyTextTab = [&tabWidget](const QString &title) {
+    auto *tab = new QWidget(tabWidget);
+    auto *layout = new QHBoxLayout(tab);
+    auto *edit = new QTextEdit(tab);
+    edit->setReadOnly(true);
+    layout->addWidget(edit);
+    tabWidget->addTab(tab, title);
+    return edit;
+  };
+
+  addReadOnlyTextTab(tr("Authors"))->setText(Common::readAllFileContents(":/file/AUTHORS"));
 
   QString supportersText = tr("Thank you to everyone who has supported NotQuiteRSS with a donation.");
   supportersText += QStringLiteral("\n");
@@ -126,22 +131,9 @@ AboutDialog::AboutDialog(QWidget *parent) :
     if (!name.isEmpty())
       supportersText += QStringLiteral("\n• ") + name;
   }
+  addReadOnlyTextTab(tr("Supporters"))->setPlainText(supportersText);
 
-  QWidget *supportersWidget = new QWidget();
-  auto *supportersLayout = new QHBoxLayout(supportersWidget);
-  auto *supportersTextEdit = new QTextEdit(supportersWidget);
-  supportersTextEdit->setReadOnly(true);
-  supportersTextEdit->setPlainText(supportersText);
-  supportersLayout->addWidget(supportersTextEdit);
-
-  QTextEdit *licenseTextEdit = new QTextEdit();
-  licenseTextEdit->setReadOnly(true);
-  licenseTextEdit->setPlainText(Common::readAllFileContents(":/file/COPYING"));
-
-  QHBoxLayout *licenseLayout = new QHBoxLayout();
-  licenseLayout->addWidget(licenseTextEdit);
-  QWidget *licenseWidget = new QWidget();
-  licenseWidget->setLayout(licenseLayout);
+  addReadOnlyTextTab(tr("License"))->setPlainText(Common::readAllFileContents(":/file/COPYING"));
 
   QString portable;
   if (mainApp->isPortable()) {
@@ -194,8 +186,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
       "<td>" + mainApp->dataDir() + ("/" + ProjectMetadata::log()) + "</td>"
       "</tr></table>";
 
-  QTextEdit *informationTextEdit = new QTextEdit();
-  informationTextEdit->setReadOnly(true);
+  QTextEdit *informationTextEdit = addReadOnlyTextTab(tr("Information"));
   informationTextEdit->setText(information);
   // QTextEdit displays character-format tooltips on hover. Keep the path
   // selectable and avoid making it a link merely to provide a tooltip.
@@ -208,18 +199,6 @@ AboutDialog::AboutDialog(QWidget *parent) :
                         overridesTooltip.toHtmlEscaped() + QStringLiteral("</qt>"));
     overridesCursor.mergeCharFormat(format);
   }
-
-  QHBoxLayout *informationLayout = new QHBoxLayout();
-  informationLayout->addWidget(informationTextEdit);
-
-  QWidget *informationWidget = new QWidget();
-  informationWidget->setLayout(informationLayout);
-
-  tabWidget->addTab(mainWidget, tr("Version"));
-  tabWidget->addTab(authorsWidget, tr("Authors"));
-  tabWidget->addTab(supportersWidget, tr("Supporters"));
-  tabWidget->addTab(licenseWidget, tr("License"));
-  tabWidget->addTab(informationWidget, tr("Information"));
 
   pageLayout->addWidget(tabWidget);
 

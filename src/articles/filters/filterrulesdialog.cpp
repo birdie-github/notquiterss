@@ -246,10 +246,7 @@ void FilterRulesDialog::setData()
       } else if (action == 4) {
         itemAction->soundPathEdit_->setText(q.value(1).toString());
       } else if (action == 5) {
-        itemAction->colorButton_->setToolTip(q.value(1).toString());
-        QPixmap pixmap(14, 14);
-        pixmap.fill(QColor(q.value(1).toString()));
-        itemAction->colorButton_->setIcon(pixmap);
+        itemAction->setColor(q.value(1).toString());
       }
     }
     if (actionsLayout_->count() == 0)
