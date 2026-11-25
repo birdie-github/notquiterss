@@ -867,12 +867,10 @@ void MainWindow::slotSavePageAs()
 {
   if (currentNewsTab->type_ == NewsTabWidget::TabTypeDownloads) return;
 
-  QString fileName = "news_descriptions";
+  QString fileName;
   if (newsLayout_ == 0) {
-    if (fileName == "news_descriptions") {
-      int row = currentNewsTab->newsView_->currentIndex().row();
-      fileName = currentNewsTab->newsModel_->dataField(row, "title").toString();
-    }
+    int row = currentNewsTab->newsView_->currentIndex().row();
+    fileName = currentNewsTab->newsModel_->dataField(row, "title").toString();
   } else {
     if (currentNewsTab->type_ == NewsTabWidget::TabTypeFeed) {
       QModelIndex feedIndex = feedsView_->currentIndex();

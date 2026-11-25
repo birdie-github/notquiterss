@@ -135,18 +135,16 @@ NewsTabWidget::NewsTabWidget(QWidget *parent, TabType type, int feedId, int feed
     createNewsList();
     createArticleWidget();
 
-    if (type_ != TabTypeDownloads) {
-      newsTabWidgetSplitter_ = new QSplitter(this);
-      newsTabWidgetSplitter_->setObjectName("newsTabWidgetSplitter");
+    newsTabWidgetSplitter_ = new QSplitter(this);
+    newsTabWidgetSplitter_->setObjectName("newsTabWidgetSplitter");
 
-      if ((mainWindow_->browserPosition_ == TOP_POSITION) ||
-          (mainWindow_->browserPosition_ == LEFT_POSITION)) {
-        newsTabWidgetSplitter_->addWidget(webWidget_);
-        newsTabWidgetSplitter_->addWidget(newsWidget_);
-      } else {
-        newsTabWidgetSplitter_->addWidget(newsWidget_);
-        newsTabWidgetSplitter_->addWidget(webWidget_);
-      }
+    if ((mainWindow_->browserPosition_ == TOP_POSITION) ||
+        (mainWindow_->browserPosition_ == LEFT_POSITION)) {
+      newsTabWidgetSplitter_->addWidget(webWidget_);
+      newsTabWidgetSplitter_->addWidget(newsWidget_);
+    } else {
+      newsTabWidgetSplitter_->addWidget(newsWidget_);
+      newsTabWidgetSplitter_->addWidget(webWidget_);
     }
   }
 
@@ -515,12 +513,8 @@ void NewsTabWidget::retranslateStrings() {
   newspaperCache_.clear();
   if (type_ != TabTypeDownloads) {
     webViewProgress_->setFormat(tr("Loading... (%p%)"));
-
-    if (type_ != TabTypeDownloads) {
-      findText_->retranslateStrings();
-      newsHeader_->retranslateStrings();
-    }
-
+    findText_->retranslateStrings();
+    newsHeader_->retranslateStrings();
     setAutoLoadImages(false);
   }
 
@@ -1610,37 +1604,35 @@ void NewsTabWidget::openInExternalBrowserNews()
 {
   if (type_ == TabTypeDownloads) return;
 
-  if (type_ != TabTypeDownloads) {
-    QList<QModelIndex> indexes = newsView_->selectionModel()->selectedRows(0);
-    QSet<int> feedIds;
-    QVector<int> unreadIds;
+  QList<QModelIndex> indexes = newsView_->selectionModel()->selectedRows(0);
+  QSet<int> feedIds;
+  QVector<int> unreadIds;
 
-    int cnt = indexes.count();
-    if (cnt == 0) return;
+  int cnt = indexes.count();
+  if (cnt == 0) return;
 
-    const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
-    const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
-    const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
-    const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int feedIdCol = newsModel_->fieldIndex(QStringLiteral("feedId"));
+  const int readCol = newsModel_->fieldIndex(QStringLiteral("read"));
+  const int newCol = newsModel_->fieldIndex(QStringLiteral("new"));
 
-    for (int i = cnt-1; i >= 0; --i) {
-      QModelIndex curIndex = indexes.at(i);
-      if (newsModel_->index(curIndex.row(), readCol).data(Qt::EditRole).toInt() == 0) {
-        newsModel_->setData(newsModel_->index(curIndex.row(), newCol), 0);
-        newsModel_->setData(newsModel_->index(curIndex.row(), readCol), 1);
+  for (int i = cnt-1; i >= 0; --i) {
+    QModelIndex curIndex = indexes.at(i);
+    if (newsModel_->index(curIndex.row(), readCol).data(Qt::EditRole).toInt() == 0) {
+      newsModel_->setData(newsModel_->index(curIndex.row(), newCol), 0);
+      newsModel_->setData(newsModel_->index(curIndex.row(), readCol), 1);
 
-        unreadIds.append(newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt());
-        feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
-      }
-
-      openUrl(articleUrl(curIndex.row()));
+      unreadIds.append(newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt());
+      feedIds.insert(newsModel_->index(curIndex.row(), feedIdCol).data(Qt::EditRole).toInt());
     }
 
-    if (!unreadIds.isEmpty()) {
-      execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=1"), unreadIds);
-      notifyFeedsUpdated(feedIds);
-      newsView_->viewport()->update();
-    }
+    openUrl(articleUrl(curIndex.row()));
+  }
+
+  if (!unreadIds.isEmpty()) {
+    execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=1"), unreadIds);
+    notifyFeedsUpdated(feedIds);
+    newsView_->viewport()->update();
   }
 }
 

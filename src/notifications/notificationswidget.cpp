@@ -506,8 +506,3 @@ void NotificationWidget::slotOpenNew(int feedId, int newsId)
     emit signalClose();
   emit signalOpenNews(feedId, newsId);
 }
-
-void NotificationWidget::slotMarkAllRead()
-{
-
-}

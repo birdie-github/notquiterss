@@ -53,6 +53,9 @@ private slots:
 
 private:
   void createMenu();
+  void applyIconHeaders();
+  bool isIconColumn(int logicalIdx) const;
+  int totalSectionWidth() const;
 
   /**
    * @brief Adjust width for all columns
