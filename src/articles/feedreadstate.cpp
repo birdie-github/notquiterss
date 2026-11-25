@@ -73,10 +73,15 @@ void FeedReadState::slotRecountCategoryCounts()
 void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
 {
   auto databaseAccess = Database::backgroundAccess();
-  db_.transaction();
+  if (!db_.transaction()) {
+    qWarning() << "Cannot start feed recount transaction:" << db_.lastError();
+    return;
+  }
 
   QList<int> rollupStarts;
-  bool recounted = false;
+  QList<FeedCountStruct> pendingUpdates;
+  QSqlError sqlError;
+  bool ok = true;
   {
     QSqlQuery q(db_);
     q.setForwardOnly(true);
@@ -86,15 +91,24 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
     int unreadCountOld = 0;
     int newCountOld = 0;
     int undeleteCountOld = 0;
-    if (q.prepare(QStringLiteral(
+    if (!q.prepare(QStringLiteral(
             "SELECT parentId, xmlUrl, unread, newCount, undeleteCount FROM feeds WHERE id=?"))) {
+      ok = false;
+      sqlError = q.lastError();
+    } else {
       q.addBindValue(feedId);
-      if (q.exec() && q.next()) {
+      if (!q.exec()) {
+        ok = false;
+        sqlError = q.lastError();
+      } else if (q.next()) {
         feedParId = q.value(0).toInt();
         isFolder = q.value(1).toString().isEmpty();
         unreadCountOld = q.value(2).toInt();
         newCountOld = q.value(3).toInt();
         undeleteCountOld = q.value(4).toInt();
+      } else if (q.lastError().isValid()) {
+        ok = false;
+        sqlError = q.lastError();
       }
     }
     q.finish();
@@ -103,108 +117,145 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
     int unreadCount = 0;
     int newCount = 0;
 
-    if (!isFolder) {
-      if (FeedCounters::countFeedArticles(db_, feedId, undeleteCount, unreadCount, newCount) &&
-          ((unreadCount != unreadCountOld) || (newCount != newCountOld) ||
-           (undeleteCount != undeleteCountOld))) {
-        if (q.prepare(QStringLiteral("UPDATE feeds SET unread=?, newCount=?, undeleteCount=? WHERE id=?"))) {
+    if (ok && !isFolder) {
+      if (!FeedCounters::countFeedArticles(db_, feedId, undeleteCount, unreadCount, newCount, &sqlError)) {
+        ok = false;
+      } else if ((unreadCount != unreadCountOld) || (newCount != newCountOld) ||
+                 (undeleteCount != undeleteCountOld)) {
+        if (!q.prepare(QStringLiteral("UPDATE feeds SET unread=?, newCount=?, undeleteCount=? WHERE id=?"))) {
+          ok = false;
+          sqlError = q.lastError();
+        } else {
           q.addBindValue(unreadCount);
           q.addBindValue(newCount);
           q.addBindValue(undeleteCount);
           q.addBindValue(feedId);
-          q.exec();
+          if (!q.exec()) {
+            ok = false;
+            sqlError = q.lastError();
+          } else {
+            FeedCountStruct counts;
+            counts.feedId = feedId;
+            counts.unreadCount = unreadCount;
+            counts.newCount = newCount;
+            counts.undeleteCount = undeleteCount;
+            pendingUpdates.append(counts);
+            if (feedParId > 0) rollupStarts.append(feedParId);
+          }
         }
         q.finish();
-
-        FeedCountStruct counts;
-        counts.feedId = feedId;
-        counts.unreadCount = unreadCount;
-        counts.newCount = newCount;
-        counts.undeleteCount = undeleteCount;
-        emit feedCountsUpdate(counts);
-
-        if (feedParId > 0) rollupStarts.append(feedParId);
-        recounted = true;
       }
-    } else {
+    } else if (ok) {
       const QList<int> idList = getIdFeedsInList(db_, feedId);
       if (!idList.isEmpty()) {
-        bool changed = false;
         QSqlQuery selectFeed(db_);
         selectFeed.setForwardOnly(true);
         QSqlQuery updateFeed(db_);
         updateFeed.setForwardOnly(true);
-        const bool ready =
-            selectFeed.prepare(QStringLiteral(
-                "SELECT parentId, unread, newCount, undeleteCount FROM feeds WHERE id=?")) &&
-            updateFeed.prepare(QStringLiteral(
-                "UPDATE feeds SET unread=?, newCount=?, undeleteCount=? WHERE id=?"));
-
-        if (ready) {
+        if (!selectFeed.prepare(QStringLiteral(
+                "SELECT parentId, unread, newCount, undeleteCount FROM feeds WHERE id=?"))) {
+          ok = false;
+          sqlError = selectFeed.lastError();
+        } else if (!updateFeed.prepare(QStringLiteral(
+                       "UPDATE feeds SET unread=?, newCount=?, undeleteCount=? WHERE id=?"))) {
+          ok = false;
+          sqlError = updateFeed.lastError();
+        } else {
           for (int id : idList) {
             int parId = 0;
             int childUnreadOld = 0;
             int childNewOld = 0;
             int childUndeleteOld = 0;
             selectFeed.addBindValue(id);
-            if (selectFeed.exec() && selectFeed.next()) {
+            if (!selectFeed.exec()) {
+              ok = false;
+              sqlError = selectFeed.lastError();
+              break;
+            }
+            if (selectFeed.next()) {
               parId = selectFeed.value(0).toInt();
               childUnreadOld = selectFeed.value(1).toInt();
               childNewOld = selectFeed.value(2).toInt();
               childUndeleteOld = selectFeed.value(3).toInt();
+            } else if (selectFeed.lastError().isValid()) {
+              ok = false;
+              sqlError = selectFeed.lastError();
+              break;
             }
             selectFeed.finish();
 
-            if (!FeedCounters::countFeedArticles(db_, id, undeleteCount, unreadCount, newCount))
-              continue;
+            if (!FeedCounters::countFeedArticles(db_, id, undeleteCount, unreadCount, newCount, &sqlError)) {
+              ok = false;
+              break;
+            }
 
             if ((unreadCount == childUnreadOld) && (newCount == childNewOld) &&
                 (undeleteCount == childUndeleteOld)) {
               continue;
-            }
-            changed = true;
-
-            if (parId > 0 && !rollupStarts.contains(parId)) {
-              rollupStarts.append(parId);
             }
 
             updateFeed.addBindValue(unreadCount);
             updateFeed.addBindValue(newCount);
             updateFeed.addBindValue(undeleteCount);
             updateFeed.addBindValue(id);
-            updateFeed.exec();
+            if (!updateFeed.exec()) {
+              ok = false;
+              sqlError = updateFeed.lastError();
+              break;
+            }
             updateFeed.finish();
+
+            if (parId > 0 && !rollupStarts.contains(parId)) {
+              rollupStarts.append(parId);
+            }
 
             FeedCountStruct counts;
             counts.feedId = id;
             counts.unreadCount = unreadCount;
             counts.newCount = newCount;
             counts.undeleteCount = undeleteCount;
-            emit feedCountsUpdate(counts);
+            pendingUpdates.append(counts);
           }
         }
-        recounted = changed;
       }
     }
   }
 
-  if (!recounted) {
-    db_.commit();
+  if (ok && !pendingUpdates.isEmpty()) {
+    QList<FeedCounters::FolderCounts> parentCounts;
+    if (!FeedCounters::rollupParents(db_, rollupStarts, true, false, &parentCounts, &sqlError)) {
+      ok = false;
+    } else {
+      for (const auto &folder : std::as_const(parentCounts)) {
+        FeedCountStruct counts;
+        counts.feedId = folder.feedId;
+        counts.unreadCount = folder.unreadCount;
+        counts.newCount = folder.newCount;
+        counts.undeleteCount = folder.undeleteCount;
+        counts.updated = folder.updated;
+        pendingUpdates.append(counts);
+      }
+    }
+  }
+
+  if (!ok) {
+    qWarning() << "Feed recount failed:" << sqlError;
+    if (!db_.rollback())
+      qCritical() << "Feed recount rollback failed:" << db_.lastError();
     return;
   }
 
-  QList<FeedCounters::FolderCounts> parentCounts;
-  FeedCounters::rollupParents(db_, rollupStarts, true, false, &parentCounts);
-  for (const auto &folder : std::as_const(parentCounts)) {
-    FeedCountStruct counts;
-    counts.feedId = folder.feedId;
-    counts.unreadCount = folder.unreadCount;
-    counts.newCount = folder.newCount;
-    counts.undeleteCount = folder.undeleteCount;
-    counts.updated = folder.updated;
-    emit feedCountsUpdate(counts);
+  if (!db_.commit()) {
+    qWarning() << "Feed recount commit failed:" << db_.lastError();
+    if (!db_.rollback())
+      qCritical() << "Feed recount rollback failed:" << db_.lastError();
+    return;
   }
-  db_.commit();
+
+  if (pendingUpdates.isEmpty()) return;
+
+  for (const auto &counts : std::as_const(pendingUpdates))
+    emit feedCountsUpdate(counts);
 
   if (updateViewport) emit signalFeedsViewportUpdate();
 }
