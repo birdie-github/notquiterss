@@ -630,6 +630,7 @@ void MainWindow::showFeedPropertiesDlg()
 
   properties.status.feedsCount = 0;
   if (!isFeed) {
+    QSqlQuery q;
     QQueue<int> parentIds;
     parentIds.enqueue(feedId);
     while (!parentIds.empty()) {
@@ -721,6 +722,7 @@ void MainWindow::showFeedPropertiesDlg()
   index = feedsModel_->indexById(feedId);
 
   const int preloadMode = properties.display.useGlobalPreload ? -1 : properties.display.preloadPages;
+  QSqlQuery q;
   q.prepare("UPDATE feeds SET text = ?, xmlUrl = ?, displayOnStartup = ?, "
             "displayEmbeddedImages = ?, preloadImages = ?, displayNews = ?, layoutDirection = ?, "
             "label = ?, duplicateNewsMode = ?, addSingleNewsAnyDateOn = ?, avoidedOldSingleNewsDateOn = ?, avoidedOldSingleNewsDate = ?,"
