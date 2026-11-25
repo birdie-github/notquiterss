@@ -1325,6 +1325,17 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
     int feedParIdWhat = feedsModel_->paridByIndex(indexWhat);
     int feedIdWhere = feedsModel_->idByIndex(indexWhere);
     int feedParIdWhere = feedsModel_->paridByIndex(indexWhere);
+    if (feedIdWhat == feedIdWhere)
+      continue;
+
+    auto insertBesideTarget = [&](QList<int> &idList) {
+      int targetRow = idList.indexOf(feedIdWhere);
+      if (targetRow < 0)
+        targetRow = idList.size();
+      else if (how == 1)
+        ++targetRow;
+      idList.insert(qBound(0, targetRow, idList.size()), feedIdWhat);
+    };
 
     // Repair rowToParent
     QSqlQuery q;
@@ -1347,15 +1358,9 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
       // Move inside folder
       QList<int> idList;
       if (FeedCounters::siblingIds(db_, feedParIdWhat, idList) && !idList.isEmpty()) {
-        int rowWhat = feedsModel_->dataField(indexWhat, "rowToParent").toInt();
-        int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
-        if ((rowWhat < rowWhere) && (how != 1)) rowWhere--;
-        else if (how == 1) rowWhere++;
-        if (rowWhat >= 0 && rowWhat < idList.size()) {
-          const int movedId = idList.takeAt(rowWhat);
-          idList.insert(qBound(0, rowWhere, idList.size()), movedId);
-          FeedCounters::writeSiblingOrder(db_, idList);
-        }
+        idList.removeOne(feedIdWhat);
+        insertBesideTarget(idList);
+        FeedCounters::writeSiblingOrder(db_, idList);
       }
     } else {
       // Move in another folder beside feeds
@@ -1363,9 +1368,7 @@ void MainWindow::slotMoveIndex(const QModelIndex &indexWhere, int how)
 
       QList<int> idList;
       if (FeedCounters::siblingIds(db_, feedParIdWhere, idList)) {
-        int rowWhere = feedsModel_->dataField(indexWhere, "rowToParent").toInt();
-        if (how == 1) rowWhere++;
-        idList.insert(qBound(0, rowWhere, idList.size()), feedIdWhat);
+        insertBesideTarget(idList);
         FeedCounters::writeSiblingOrder(db_, idList);
       }
 
