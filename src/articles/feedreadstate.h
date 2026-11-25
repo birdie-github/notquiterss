@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QMap>
 #include <QSqlDatabase>
+#include <QSqlError>
 #include "feeds/update/parseobject.h"
 
 class MainWindow;
@@ -27,7 +28,8 @@ class FeedReadState : public QObject
 public:
   explicit FeedReadState(QObject *parent = nullptr);
   void setDatabase(const QSqlDatabase &database);
-  static QList<int> getIdFeedsInList(const QSqlDatabase &db, int idFolder);
+  static QList<int> getIdFeedsInList(const QSqlDatabase &db, int idFolder,
+                                     bool *ok = nullptr, QSqlError *sqlError = nullptr);
   static QString getIdFeedsString(const QSqlDatabase &db, int idFolder, int idException = -1);
 
 public slots:

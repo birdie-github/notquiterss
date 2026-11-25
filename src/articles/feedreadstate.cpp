@@ -146,8 +146,11 @@ void FeedReadState::slotRecountFeedCounts(int feedId, bool updateViewport)
         q.finish();
       }
     } else if (ok) {
-      const QList<int> idList = getIdFeedsInList(db_, feedId);
-      if (!idList.isEmpty()) {
+      bool listOk = true;
+      const QList<int> idList = getIdFeedsInList(db_, feedId, &listOk, &sqlError);
+      if (!listOk) {
+        ok = false;
+      } else if (!idList.isEmpty()) {
         QSqlQuery selectFeed(db_);
         selectFeed.setForwardOnly(true);
         QSqlQuery updateFeed(db_);
@@ -277,15 +280,29 @@ QString FeedReadState::getIdFeedsString(int idFolder, int idException)
   return getIdFeedsString(db_, idFolder, idException);
 }
 
-QList<int> FeedReadState::getIdFeedsInList(const QSqlDatabase &db, int idFolder)
+QList<int> FeedReadState::getIdFeedsInList(const QSqlDatabase &db, int idFolder,
+                                           bool *ok, QSqlError *sqlError)
 {
+  if (ok) *ok = true;
+  if (sqlError) *sqlError = QSqlError();
+
   QList<int> idList;
   if (idFolder <= 0) return idList;
 
   QSqlQuery q(db);
   q.setForwardOnly(true);
-  if (!q.prepare(QStringLiteral("SELECT id, xmlUrl FROM feeds WHERE parentId=?")))
+  if (!q.prepare(QStringLiteral("SELECT id, xmlUrl FROM feeds WHERE parentId=?"))) {
+    if (ok) *ok = false;
+    if (sqlError) *sqlError = q.lastError();
     return idList;
+  }
+
+  auto fail = [&]() {
+    if (ok) *ok = false;
+    if (sqlError) *sqlError = q.lastError();
+    q.finish();
+    return QList<int>{};
+  };
 
   QQueue<int> parentIds;
   QSet<int> visited;
@@ -294,7 +311,8 @@ QList<int> FeedReadState::getIdFeedsInList(const QSqlDatabase &db, int idFolder)
   while (!parentIds.empty()) {
     const int parentId = parentIds.dequeue();
     q.addBindValue(parentId);
-    if (!q.exec()) break;
+    if (!q.exec())
+      return fail();
     while (q.next()) {
       const int feedId = q.value(0).toInt();
       if (!q.value(1).toString().isEmpty()) {
@@ -304,6 +322,8 @@ QList<int> FeedReadState::getIdFeedsInList(const QSqlDatabase &db, int idFolder)
         parentIds.enqueue(feedId);
       }
     }
+    if (q.lastError().isValid())
+      return fail();
     q.finish();
   }
   return idList;
