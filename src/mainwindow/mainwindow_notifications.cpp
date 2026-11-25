@@ -68,6 +68,12 @@ void MainWindow::showNotification(bool bShowRecentNews/*=false*/)
 
   timerTrayOpenNotify.stop();
 
+  if (!bShowRecentNews && notificationWidget != nullptr)
+  {
+    pendingNotification_ = true;
+    return;
+  }
+
   if (notificationWidget != nullptr)
   {
     delete notificationWidget;
@@ -100,12 +106,19 @@ void MainWindow::showNotification(bool bShowRecentNews/*=false*/)
  *---------------------------------------------------------------------------*/
 void MainWindow::deleteNotification()
 {
-  notificationWidget->deleteLater();
-  notificationWidget = nullptr;
+  if (notificationWidget) {
+    notificationWidget->deleteLater();
+    notificationWidget = nullptr;
+  }
+  if (pendingNotification_ && !mainApp->isClosing()) {
+    pendingNotification_ = false;
+    emit signalShowNotification();
+  }
 }
 
 void MainWindow::clearNotification(bool bClearRecentNews/*=false*/)
 {
+  pendingNotification_ = false;
   newNews.idFeedList_.clear();
   newNews.cntNewsList_.clear();
 

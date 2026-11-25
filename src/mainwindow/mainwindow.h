@@ -753,6 +753,7 @@ private:
   bool updateCurrentTab_;
 
   NotificationWidget *notificationWidget;
+  bool pendingNotification_ = false;
 
   FindFeed *findFeeds_;
   QWidget *findFeedsWidget_;

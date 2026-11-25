@@ -498,7 +498,7 @@ void MainWindow::slotUpdateFeed(int feedId, bool changed, int newCount, bool fin
 
       if (-1 < newFeedIdIndex)
       {
-        newNews.cntNewsList_[newFeedIdIndex] = newCount;
+        newNews.cntNewsList_[newFeedIdIndex] += newCount;
       }
       else
       {

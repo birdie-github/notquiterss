@@ -527,6 +527,7 @@ void MainWindow::slotActivationTray(QSystemTrayIcon::ActivationReason reason)
       {
         delete notificationWidget;
         notificationWidget = nullptr;
+        pendingNotification_ = false;
       }
     }
 
