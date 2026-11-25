@@ -41,7 +41,8 @@ struct FeedItemStruct {
   QString description;
 };
 
-struct NewsItemStruct {
+struct ParsedNewsItem {
+  bool isAtom = false;
   QString id;
   QString title;
   QString updated;
@@ -103,8 +104,6 @@ private slots:
   void getQueuedXml();
   void slotParse(const QByteArray &xmlData, const int &feedId,
                  const QDateTime &dtReply, const QString &codecName);
-  void addAtomNewsIntoBase(NewsItemStruct *newsItem);
-  void addRssNewsIntoBase(NewsItemStruct *newsItem);
 
 private:
   struct FilterEffects {
@@ -122,6 +121,14 @@ private:
   void publishEffects(const UpdateEffects &effects);
   void parseAtom(const QString &feedUrl, const QDomDocument &doc);
   void parseRss(const QString &feedUrl, const QDomDocument &doc);
+  bool updateFeedMetadata(const FeedItemStruct &feedItem);
+  void parseAtomAuthor(const QDomNode &parent, QString &author,
+                       QString &authorUri, QString &authorEmail);
+  void applyMediaAndBody(const QDomNode &itemNode, ParsedNewsItem &newsItem,
+                         bool preferContentOverSummary);
+  void parseEnclosure(const QDomNode &itemNode, ParsedNewsItem &newsItem);
+  bool isDuplicateArticle(const ParsedNewsItem &newsItem) const;
+  void insertParsedNews(const ParsedNewsItem &newsItem);
   QString toPlainText(const QString &text);
   QString fromPlainText(QString text);
   QString getCommunity(const QDomNode &nodeContent);
