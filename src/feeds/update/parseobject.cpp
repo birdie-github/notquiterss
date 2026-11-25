@@ -136,7 +136,6 @@ QString buildColumnPredicate(const char *column, FilterMatchOp op, bool caseInse
   return {};
 }
 }
-}
 
 ParseObject::ParseObject(QObject *parent)
   : QObject(parent)
