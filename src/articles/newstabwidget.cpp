@@ -26,9 +26,11 @@
 #include "sharing/shareservice.h"
 #include "articles/cleanup/newsretention.h"
 #include "articles/rendering/articlecontent.h"
+#include <QDebug>
 #include <QElapsedTimer>
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QSqlError>
 #include <QTextBlock>
 #include <QTextBlockFormat>
 #include <QTextCursor>
@@ -848,14 +850,25 @@ bool NewsTabWidget::isDeleteProtected(int row, int starredCol, int labelCol) con
   return false;
 }
 
-void NewsTabWidget::execBatchNewsUpdate(const QString &sqlPrefix,
+bool NewsTabWidget::execBatchNewsUpdate(const QString &sqlPrefix,
                                         const QVector<int> &ids,
                                         const QVariantList &bindValues)
 {
-  if (ids.isEmpty()) return;
+  if (ids.isEmpty()) return true;
+  if (!db_.transaction()) {
+    qWarning() << "execBatchNewsUpdate: failed to begin transaction:" << db_.lastError().text();
+    return false;
+  }
+
   constexpr int batchSize = 500;
   QSqlQuery q(db_);
-  db_.transaction();
+  auto rollback = [&]() {
+    q.finish();
+    if (!db_.rollback()) {
+      qWarning() << "execBatchNewsUpdate: failed to roll back transaction:" << db_.lastError().text();
+    }
+    return false;
+  };
   for (int offset = 0; offset < ids.size(); offset += batchSize) {
     const int count = qMin(batchSize, ids.size() - offset);
     QStringList idStrings;
@@ -866,14 +879,53 @@ void NewsTabWidget::execBatchNewsUpdate(const QString &sqlPrefix,
     const QString sql = sqlPrefix + QStringLiteral(" WHERE id IN (") +
         idStrings.join(QLatin1Char(',')) + QLatin1Char(')');
     if (bindValues.isEmpty()) {
-      q.exec(sql);
+      if (!q.exec(sql)) {
+        qWarning() << "execBatchNewsUpdate: exec failed:" << q.lastError().text();
+        return rollback();
+      }
     } else {
-      q.prepare(sql);
+      if (!q.prepare(sql)) {
+        qWarning() << "execBatchNewsUpdate: prepare failed:" << q.lastError().text();
+        return rollback();
+      }
       for (const QVariant &value : bindValues) q.addBindValue(value);
-      q.exec();
+      if (!q.exec()) {
+        qWarning() << "execBatchNewsUpdate: bound exec failed:" << q.lastError().text();
+        return rollback();
+      }
+    }
+    q.finish();
+  }
+  if (!db_.commit()) {
+    qWarning() << "execBatchNewsUpdate: commit failed:" << db_.lastError().text();
+    return rollback();
+  }
+  return true;
+}
+
+void NewsTabWidget::revertAndRefreshNewsModel()
+{
+  const QModelIndex currentIdx = newsView_->currentIndex();
+  const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
+  const int currentNewsId = currentIdx.isValid()
+      ? newsModel_->index(currentIdx.row(), idCol).data(Qt::EditRole).toInt()
+      : -1;
+
+  newsModel_->revertAll();
+  newsModel_->select();
+  while (newsModel_->canFetchMore())
+    newsModel_->fetchMore();
+
+  if (currentNewsId > 0) {
+    const int titleCol = newsModel_->fieldIndex(QStringLiteral("title"));
+    for (int row = 0; row < newsModel_->rowCount(); ++row) {
+      if (newsModel_->index(row, idCol).data(Qt::EditRole).toInt() == currentNewsId) {
+        newsView_->setCurrentIndex(newsModel_->index(row, titleCol));
+        break;
+      }
     }
   }
-  db_.commit();
+  newsView_->viewport()->update();
 }
 
 void NewsTabWidget::notifyFeedsUpdated(const QSet<int> &feedIds)
@@ -945,7 +997,10 @@ void NewsTabWidget::markNewsRead()
     feedIds.insert(newsModel_->index(row, feedIdCol).data(Qt::EditRole).toInt());
   }
 
-  execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=?"), updatedIds, {markRead ? 1 : 0});
+  if (!execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=?"), updatedIds, {markRead ? 1 : 0})) {
+    revertAndRefreshNewsModel();
+    return;
+  }
   notifyFeedsUpdated(feedIds);
   newsView_->viewport()->update();
 
@@ -992,8 +1047,10 @@ void NewsTabWidget::markAllNewsRead()
 
   if (updatedIds.isEmpty()) return;
 
-  execBatchNewsUpdate(QStringLiteral("UPDATE news SET read = CASE WHEN read = 0 THEN 1 ELSE read END, new = 0"),
-                      updatedIds);
+  if (!execBatchNewsUpdate(QStringLiteral("UPDATE news SET read = CASE WHEN read = 0 THEN 1 ELSE read END, new = 0"),
+                           updatedIds)) {
+    return;
+  }
 
   const int currentRow = newsView_->currentIndex().row();
 
@@ -1062,7 +1119,10 @@ void NewsTabWidget::markNewsStar()
     updatedIds.append(newsModel_->index(curIndex.row(), idCol).data(Qt::EditRole).toInt());
   }
 
-  execBatchNewsUpdate(QStringLiteral("UPDATE news SET starred=?"), updatedIds, {markStar ? 1 : 0});
+  if (!execBatchNewsUpdate(QStringLiteral("UPDATE news SET starred=?"), updatedIds, {markStar ? 1 : 0})) {
+    revertAndRefreshNewsModel();
+    return;
+  }
   mainWindow_->recountCategoryCounts();
 
   if (mainWindow_->newsLayout_ == 1) {
@@ -1111,12 +1171,12 @@ void NewsTabWidget::deleteNews()
     const SelectedBatch batch = collectNewsBatch(indexes, type_ != TabTypeDel);
     feedIds = batch.feedIds;
     if (!batch.ids.isEmpty()) {
-      if (type_ != TabTypeDel) {
-        execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=?"),
-                            batch.ids, {QDateTime::currentDateTime().toString(Qt::ISODate)});
-      } else {
-        execBatchNewsUpdate(NewsRetention::clearArticleSql(), batch.ids);
-      }
+      const bool updated = (type_ != TabTypeDel)
+          ? execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=?"),
+                                batch.ids, {QDateTime::currentDateTime().toString(Qt::ISODate)})
+          : execBatchNewsUpdate(NewsRetention::clearArticleSql(), batch.ids);
+      if (!updated)
+        return;
       newsModel_->select();
     }
   }
@@ -1154,12 +1214,12 @@ void NewsTabWidget::deleteAllNewsList()
 
   if (ids.isEmpty()) return;
 
-  if (type_ != TabTypeDel) {
-    execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=?"),
-                        ids, {QDateTime::currentDateTime().toString(Qt::ISODate)});
-  } else {
-    execBatchNewsUpdate(NewsRetention::clearArticleSql(), ids);
-  }
+  const bool updated = (type_ != TabTypeDel)
+      ? execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=2, deleted=1, deleteDate=?"),
+                            ids, {QDateTime::currentDateTime().toString(Qt::ISODate)})
+      : execBatchNewsUpdate(NewsRetention::clearArticleSql(), ids);
+  if (!updated)
+    return;
 
   newsModel_->select();
   while (newsModel_->canFetchMore()) newsModel_->fetchMore();
@@ -1197,7 +1257,8 @@ void NewsTabWidget::restoreNews()
     const SelectedBatch batch = collectNewsBatch(indexes, false);
     feedIds.unite(batch.feedIds);
     if (!batch.ids.isEmpty()) {
-      execBatchNewsUpdate(QStringLiteral("UPDATE news SET deleted=0, deleteDate=''"), batch.ids);
+      if (!execBatchNewsUpdate(QStringLiteral("UPDATE news SET deleted=0, deleteDate=''"), batch.ids))
+        return;
       newsModel_->select();
     }
   }
@@ -1630,7 +1691,10 @@ void NewsTabWidget::openInExternalBrowserNews()
   }
 
   if (!unreadIds.isEmpty()) {
-    execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=1"), unreadIds);
+    if (!execBatchNewsUpdate(QStringLiteral("UPDATE news SET new=0, read=1"), unreadIds)) {
+      revertAndRefreshNewsModel();
+      return;
+    }
     notifyFeedsUpdated(feedIds);
     newsView_->viewport()->update();
   }
@@ -1855,9 +1919,26 @@ void NewsTabWidget::setLabelNews(int labelId)
   }
 
   const int idCol = newsModel_->fieldIndex(QStringLiteral("id"));
-  db_.transaction();
+  if (!db_.transaction()) {
+    qWarning() << "setLabelNews: failed to begin transaction:" << db_.lastError().text();
+    return;
+  }
   QSqlQuery q(db_);
-  q.prepare(QStringLiteral("UPDATE news SET label=? WHERE id=?"));
+  auto rollback = [&]() {
+    q.finish();
+    if (!db_.rollback()) {
+      qWarning() << "setLabelNews: failed to roll back transaction:" << db_.lastError().text();
+    }
+    revertAndRefreshNewsModel();
+  };
+
+  if (!q.prepare(QStringLiteral("UPDATE news SET label=? WHERE id=?"))) {
+    qWarning() << "setLabelNews: prepare failed:" << q.lastError().text();
+    rollback();
+    return;
+  }
+
+  QList<QModelIndex> deselectIndexes;
   for (int i = cnt - 1; i >= 0; --i) {
     const QModelIndex index = indexes.at(i);
     QString strIdLabels = index.data(Qt::EditRole).toString();
@@ -1874,13 +1955,25 @@ void NewsTabWidget::setLabelNews(int labelId)
     const int newsId = newsModel_->index(index.row(), idCol).data(Qt::EditRole).toInt();
     q.bindValue(0, strIdLabels);
     q.bindValue(1, newsId);
-    q.exec();
+    if (!q.exec()) {
+      qWarning() << "setLabelNews: exec failed:" << q.lastError().text();
+      rollback();
+      return;
+    }
     if (newsId != currentNewsIdOld) {
-      newsView_->selectionModel()->select(
-            index, QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
+      deselectIndexes.append(index);
     }
   }
-  db_.commit();
+  q.finish();
+  if (!db_.commit()) {
+    qWarning() << "setLabelNews: commit failed:" << db_.lastError().text();
+    rollback();
+    return;
+  }
+  for (const QModelIndex &index : std::as_const(deselectIndexes)) {
+    newsView_->selectionModel()->select(
+          index, QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
+  }
 
   newsView_->viewport()->update();
   mainWindow_->recountCategoryCounts();

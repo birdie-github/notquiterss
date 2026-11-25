@@ -184,8 +184,9 @@ private:
 
   SelectedBatch collectNewsBatch(const QList<QModelIndex> &indexes, bool checkDeleteProtection) const;
   bool isDeleteProtected(int row, int starredCol, int labelCol) const;
-  void execBatchNewsUpdate(const QString &sqlPrefix, const QVector<int> &ids,
-                           const QVariantList &bindValues = {});
+  [[nodiscard]] bool execBatchNewsUpdate(const QString &sqlPrefix, const QVector<int> &ids,
+                                         const QVariantList &bindValues = {});
+  void revertAndRefreshNewsModel();
   void notifyFeedsUpdated(const QSet<int> &feedIds);
   void refreshAfterRowRemoval(int previousRow);
 
