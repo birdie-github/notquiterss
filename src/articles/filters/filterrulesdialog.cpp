@@ -293,55 +293,14 @@ void FilterRulesDialog::acceptDialog()
 
   QSqlQuery q;
   if (filterId_ == -1) {
-    QString qStr = QString("INSERT INTO filters (name, type, feeds) "
-                           "VALUES (?, ?, ?)");
-    q.prepare(qStr);
+    q.prepare(QStringLiteral("INSERT INTO filters (name, type, feeds) VALUES (?, ?, ?)"));
     q.addBindValue(filterName_->text());
     q.addBindValue(matchComboBox_->currentIndex());
     q.addBindValue(strIdFeeds);
     q.exec();
 
     filterId_ = q.lastInsertId().toInt();
-    qStr = QString("UPDATE filters SET num='%1' WHERE id=='%1'").
-        arg(filterId_);
-    q.exec(qStr);
-
-    for (int i = 0; i < conditionLayout_->count()-2; i++) {
-      ItemCondition *itemCondition =
-          qobject_cast<ItemCondition*>(conditionLayout_->itemAt(i)->widget());
-      qStr = QString("INSERT INTO filterConditions "
-                     "(idFilter, field, condition, content) "
-                     "VALUES (?, ?, ?, ?)");
-      q.prepare(qStr);
-      q.addBindValue(filterId_);
-      q.addBindValue(itemCondition->comboBox1_->currentIndex());
-      q.addBindValue(itemCondition->comboBox2_->currentIndex());
-      if (itemCondition->comboBox1_->currentIndex() == 4)
-        q.addBindValue(itemCondition->comboBox3_->currentIndex());
-      else
-        q.addBindValue(itemCondition->lineEdit_->text());
-      q.exec();
-    }
-
-    for (int i = 0; i < actionsLayout_->count()-2; i++) {
-      ItemAction *itemAction =
-          qobject_cast<ItemAction*>(actionsLayout_->itemAt(i)->widget());
-      qStr = QString("INSERT INTO filterActions "
-                     "(idFilter, action, params) "
-                     "VALUES (?, ?, ?)");
-      q.prepare(qStr);
-      q.addBindValue(filterId_);
-      q.addBindValue(itemAction->comboBox1_->currentIndex());
-      if (itemAction->comboBox1_->currentIndex() == 3)
-        q.addBindValue(itemAction->comboBox2_->itemData(itemAction->comboBox2_->currentIndex()));
-      else if (itemAction->comboBox1_->currentIndex() == 4)
-        q.addBindValue(itemAction->soundPathEdit_->text());
-      else if (itemAction->comboBox1_->currentIndex() == 5)
-        q.addBindValue(itemAction->colorButton_->toolTip());
-      else
-        q.addBindValue(0);
-      q.exec();
-    }
+    q.exec(QString("UPDATE filters SET num='%1' WHERE id=='%1'").arg(filterId_));
   } else {
     q.prepare("UPDATE filters SET name=?, type=?, feeds=? WHERE id=?");
     q.addBindValue(filterName_->text());
@@ -352,43 +311,44 @@ void FilterRulesDialog::acceptDialog()
 
     q.exec(QString("DELETE FROM filterConditions WHERE idFilter='%1'").arg(filterId_));
     q.exec(QString("DELETE FROM filterActions WHERE idFilter='%1'").arg(filterId_));
+  }
 
-    for (int i = 0; i < conditionLayout_->count()-2; i++) {
-      ItemCondition *itemCondition =
-          qobject_cast<ItemCondition*>(conditionLayout_->itemAt(i)->widget());
-      QString qStr = QString("INSERT INTO filterConditions "
-                             "(idFilter, field, condition, content) "
-                             "VALUES (?, ?, ?, ?)");
-      q.prepare(qStr);
-      q.addBindValue(filterId_);
-      q.addBindValue(itemCondition->comboBox1_->currentIndex());
-      q.addBindValue(itemCondition->comboBox2_->currentIndex());
-      if (itemCondition->comboBox1_->currentIndex() == 4)
-        q.addBindValue(itemCondition->comboBox3_->currentIndex());
-      else
-        q.addBindValue(itemCondition->lineEdit_->text());
-      q.exec();
-    }
+  q.prepare(QStringLiteral("INSERT INTO filterConditions "
+                           "(idFilter, field, condition, content) "
+                           "VALUES (?, ?, ?, ?)"));
+  for (int i = 0; i < conditionLayout_->count() - 2; ++i) {
+    ItemCondition *itemCondition =
+        qobject_cast<ItemCondition *>(conditionLayout_->itemAt(i)->widget());
+    if (!itemCondition) continue;
+    q.addBindValue(filterId_);
+    q.addBindValue(itemCondition->comboBox1_->currentIndex());
+    q.addBindValue(itemCondition->comboBox2_->currentIndex());
+    if (itemCondition->comboBox1_->currentIndex() == 4)
+      q.addBindValue(itemCondition->comboBox3_->currentIndex());
+    else
+      q.addBindValue(itemCondition->lineEdit_->text());
+    q.exec();
+  }
 
-    for (int i = 0; i < actionsLayout_->count()-2; i++) {
-      ItemAction *itemAction =
-          qobject_cast<ItemAction*>(actionsLayout_->itemAt(i)->widget());
-      QString qStr = QString("INSERT INTO filterActions "
-                             "(idFilter, action, params) "
-                             "VALUES (?, ?, ?)");
-      q.prepare(qStr);
-      q.addBindValue(filterId_);
-      q.addBindValue(itemAction->comboBox1_->currentIndex());
-      if (itemAction->comboBox1_->currentIndex() == 3)
-        q.addBindValue(itemAction->comboBox2_->itemData(itemAction->comboBox2_->currentIndex()));
-      else if (itemAction->comboBox1_->currentIndex() == 4)
-        q.addBindValue(itemAction->soundPathEdit_->text());
-      else if (itemAction->comboBox1_->currentIndex() == 5)
-        q.addBindValue(itemAction->colorButton_->toolTip());
-      else
-        q.addBindValue(0);
-      q.exec();
-    }
+  q.prepare(QStringLiteral("INSERT INTO filterActions "
+                           "(idFilter, action, params) "
+                           "VALUES (?, ?, ?)"));
+  for (int i = 0; i < actionsLayout_->count() - 2; ++i) {
+    ItemAction *itemAction =
+        qobject_cast<ItemAction *>(actionsLayout_->itemAt(i)->widget());
+    if (!itemAction) continue;
+    const int action = itemAction->comboBox1_->currentIndex();
+    q.addBindValue(filterId_);
+    q.addBindValue(action);
+    if (action == 3)
+      q.addBindValue(itemAction->comboBox2_->itemData(itemAction->comboBox2_->currentIndex()));
+    else if (action == 4)
+      q.addBindValue(itemAction->soundPathEdit_->text());
+    else if (action == 5)
+      q.addBindValue(itemAction->colorButton_->toolTip());
+    else
+      q.addBindValue(0);
+    q.exec();
   }
   accept();
 }

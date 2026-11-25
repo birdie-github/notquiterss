@@ -37,7 +37,7 @@ ItemCondition::ItemCondition(QWidget * parent)
   itemList << tr("New") << tr("Read") << tr("Starred");
   comboBox3_->addItems(itemList);
 
-  currentIndexChanged(tr("Title"));
+  currentIndexChanged(comboBox1_->currentIndex());
 
   addButton_ = new ToolButton(this);
   addButton_->setIcon(QIcon(":/images/addT"));
@@ -63,7 +63,7 @@ ItemCondition::ItemCondition(QWidget * parent)
 
   connect(deleteButton_, &QAbstractButton::clicked, this, &ItemCondition::deleteFilterRules);
   connect(comboBox1_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          this, [this](int) { currentIndexChanged(comboBox1_->currentText()); });
+          this, &ItemCondition::currentIndexChanged);
 }
 
 void ItemCondition::deleteFilterRules()
@@ -71,56 +71,36 @@ void ItemCondition::deleteFilterRules()
   emit signalDeleteCondition(this);
 }
 
-void ItemCondition::currentIndexChanged(const QString &str)
+void ItemCondition::currentIndexChanged(int index)
 {
-  QStringList itemList;
-
+  const bool isState = (index == 4);
   comboBox2_->clear();
-  comboBox3_->setVisible(false);
-  lineEdit_->setVisible(true);
-  if (str == tr("Title")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("is") << tr("isn't")
-             << tr("begins with") << tr("ends with")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } else if (str == tr("Description")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } else if (str == tr("Author")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("is") << tr("isn't")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } else if (str == tr("Category")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("is") << tr("isn't")
-             << tr("begins with") << tr("ends with")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } else if (str == tr("State")) {
-    itemList << tr("is") << tr("isn't");
-    comboBox2_->addItems(itemList);
-    comboBox3_->setVisible(true);
-    lineEdit_->setVisible(false);
-  } else if (str == tr("Link")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("is") << tr("isn't")
-             << tr("begins with") << tr("ends with")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } else if (str == tr("News")) {
-    itemList << tr("contains") << tr("doesn't contain")
-             << tr("Regular expressions");
-    comboBox2_->addItems(itemList);
-  } /*else if (str == "Published") {
-    itemList << tr("is") << tr("isn't")
-             << tr("is before") << tr("is after");
-    comboBox2->addItems(itemList);
-  } else if (str == "Received") {
-    itemList << tr("is") << tr("isn't")
-             << tr("is before") << tr("is after");
-    comboBox2->addItems(itemList);
-  }*/
+  comboBox3_->setVisible(isState);
+  lineEdit_->setVisible(!isState);
+
+  switch (index) {
+  case 0: // Title
+  case 3: // Category
+  case 5: // Link
+    comboBox2_->addItems({tr("contains"), tr("doesn't contain"),
+                          tr("is"), tr("isn't"),
+                          tr("begins with"), tr("ends with"),
+                          tr("Regular expressions")});
+    break;
+  case 1: // Description
+  case 6: // News
+    comboBox2_->addItems({tr("contains"), tr("doesn't contain"),
+                          tr("Regular expressions")});
+    break;
+  case 2: // Author
+    comboBox2_->addItems({tr("contains"), tr("doesn't contain"),
+                          tr("is"), tr("isn't"),
+                          tr("Regular expressions")});
+    break;
+  case 4: // State
+    comboBox2_->addItems({tr("is"), tr("isn't")});
+    break;
+  default:
+    break;
+  }
 }

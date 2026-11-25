@@ -57,6 +57,85 @@ bool hasCommonArticle(const QHash<QString, QSet<int>> &first, const QString &fir
   return firstRows != first.cend() && secondRows != second.cend() &&
       firstRows.value().intersects(secondRows.value());
 }
+
+enum class FilterMatchOp {
+  Contains,
+  NotContains,
+  Is,
+  IsNot,
+  BeginsWith,
+  EndsWith,
+  RegExp,
+};
+
+struct FilterFieldSpec {
+  const char *column;
+  const char *secondaryColumn;
+  bool caseInsensitive;
+  int opCount;
+  FilterMatchOp ops[7];
+};
+
+constexpr FilterFieldSpec kFilterFields[] = {
+  // 0: Title
+  {"title", nullptr, true, 7,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::Is,
+    FilterMatchOp::IsNot, FilterMatchOp::BeginsWith, FilterMatchOp::EndsWith,
+    FilterMatchOp::RegExp}},
+  // 1: Description
+  {"description", nullptr, true, 3,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::RegExp}},
+  // 2: Author
+  {"author_name", nullptr, true, 5,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::Is,
+    FilterMatchOp::IsNot, FilterMatchOp::RegExp}},
+  // 3: Category
+  {"category", nullptr, true, 7,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::Is,
+    FilterMatchOp::IsNot, FilterMatchOp::BeginsWith, FilterMatchOp::EndsWith,
+    FilterMatchOp::RegExp}},
+  // 4: State (handled separately via kStatePredicates)
+  {nullptr, nullptr, false, 0, {}},
+  // 5: Link
+  {"link_href", nullptr, false, 7,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::Is,
+    FilterMatchOp::IsNot, FilterMatchOp::BeginsWith, FilterMatchOp::EndsWith,
+    FilterMatchOp::RegExp}},
+  // 6: News (title + description)
+  {"title", "description", true, 3,
+   {FilterMatchOp::Contains, FilterMatchOp::NotContains, FilterMatchOp::RegExp}},
+};
+
+QString buildColumnPredicate(const char *column, FilterMatchOp op, bool caseInsensitive,
+                             const QString &content, const QString &likeContent,
+                             const QString &upperLikeContent)
+{
+  const QString col = QLatin1String(column);
+  if (op == FilterMatchOp::RegExp) {
+    return col + QLatin1String(" REGEXP '") + content + QLatin1Char('\'');
+  }
+
+  const QString lhs = caseInsensitive ? QStringLiteral("UPPER(%1)").arg(col) : col;
+  const QString &val = caseInsensitive ? upperLikeContent : likeContent;
+  switch (op) {
+  case FilterMatchOp::Contains:
+    return lhs + QLatin1String(" LIKE '%") + val + QLatin1String("%' ESCAPE '!'");
+  case FilterMatchOp::NotContains:
+    return lhs + QLatin1String(" NOT LIKE '%") + val + QLatin1String("%' ESCAPE '!'");
+  case FilterMatchOp::Is:
+    return lhs + QLatin1String(" LIKE '") + val + QLatin1String("' ESCAPE '!'");
+  case FilterMatchOp::IsNot:
+    return lhs + QLatin1String(" NOT LIKE '") + val + QLatin1String("' ESCAPE '!'");
+  case FilterMatchOp::BeginsWith:
+    return lhs + QLatin1String(" LIKE '") + val + QLatin1String("%' ESCAPE '!'");
+  case FilterMatchOp::EndsWith:
+    return lhs + QLatin1String(" LIKE '%") + val + QLatin1String("' ESCAPE '!'");
+  case FilterMatchOp::RegExp:
+    break;
+  }
+  return {};
+}
+}
 }
 
 ParseObject::ParseObject(QObject *parent)
@@ -965,154 +1044,35 @@ void ParseObject::applyUserFilter(int feedId, int filterId, UpdateEffects &effec
         QString content = q1.value(2).toString().replace("'", "''");
         const QString likeContent = literalTitlePattern(content);
         const QString upperLikeContent = likeContent.toUpper();
-        switch (q1.value(0).toInt()) {
-        case 0: // field -> Title
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("UPPER(title) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("UPPER(title) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 2: // condition -> is
-            qStr1.append(QString("UPPER(title) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 3: // condition -> isn't
-            qStr1.append(QString("UPPER(title) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 4: // condition -> begins with
-            qStr1.append(QString("UPPER(title) LIKE '%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 5: // condition -> ends with
-            qStr1.append(QString("UPPER(title) LIKE '%%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 6: // condition -> regExp
-            qStr1.append(QString("title REGEXP '%1' ").arg(content));
-            break;
+        const int field = q1.value(0).toInt();
+        const int cond = q1.value(1).toInt();
+        if (field == 4) { // field -> Status
+          static constexpr const char *kStatePredicates[2][3] = {
+            {"new==1 ", "read>=1 ", "starred==1 "},
+            {"new==0 ", "read==0 ", "starred==0 "}
+          };
+          const int stateIndex = q1.value(2).toInt();
+          if (stateIndex >= 0 && stateIndex < 3) {
+            qStr1.append(QLatin1String(kStatePredicates[cond == 0 ? 0 : 1][stateIndex]));
           }
-          break;
-        case 1: // field -> Description
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("UPPER(description) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("UPPER(description) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 2: // condition -> regExp
-            qStr1.append(QString("description REGEXP '%1' ").arg(content));
-            break;
-          }
-          break;
-        case 2: // field -> Author
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("UPPER(author_name) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("UPPER(author_name) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 2: // condition -> is
-            qStr1.append(QString("UPPER(author_name) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 3: // condition -> isn't
-            qStr1.append(QString("UPPER(author_name) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 4: // condition -> regExp
-            qStr1.append(QString("author_name REGEXP '%1' ").arg(content));
-            break;
-          }
-          break;
-        case 3: // field -> Category
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("UPPER(category) LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("UPPER(category) NOT LIKE '%%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 2: // condition -> is
-            qStr1.append(QString("UPPER(category) LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 3: // condition -> isn't
-            qStr1.append(QString("UPPER(category) NOT LIKE '%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 4: // condition -> begins with
-            qStr1.append(QString("UPPER(category) LIKE '%1%' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 5: // condition -> ends with
-            qStr1.append(QString("UPPER(category) LIKE '%%1' ESCAPE '!' ").arg(upperLikeContent));
-            break;
-          case 6: // condition -> regExp
-            qStr1.append(QString("category REGEXP '%1' ").arg(content));
-            break;
-          }
-          break;
-        case 4: // field -> Status
-          if (q1.value(1).toInt() == 0) { // Status -> is
-            switch (q1.value(2).toInt()) {
-            case 0:
-              qStr1.append("new==1 ");
-              break;
-            case 1:
-              qStr1.append("read>=1 ");
-              break;
-            case 2:
-              qStr1.append("starred==1 ");
-              break;
-            }
-          } else { // Status -> isn't
-            switch (q1.value(2).toInt()) {
-            case 0:
-              qStr1.append("new==0 ");
-              break;
-            case 1:
-              qStr1.append("read==0 ");
-              break;
-            case 2:
-              qStr1.append("starred==0 ");
-              break;
+        } else if (field >= 0 &&
+                   field < static_cast<int>(sizeof(kFilterFields) / sizeof(kFilterFields[0]))) {
+          const FilterFieldSpec &spec = kFilterFields[field];
+          if (cond >= 0 && cond < spec.opCount) {
+            const FilterMatchOp op = spec.ops[cond];
+            const QString primary = buildColumnPredicate(
+                spec.column, op, spec.caseInsensitive, content, likeContent, upperLikeContent);
+            if (spec.secondaryColumn) {
+              const QString secondary = buildColumnPredicate(
+                  spec.secondaryColumn, op, spec.caseInsensitive, content, likeContent,
+                  upperLikeContent);
+              const QLatin1String joiner = (op == FilterMatchOp::NotContains)
+                  ? QLatin1String(" AND ") : QLatin1String(" OR ");
+              qStr1.append(QLatin1Char('(') + primary + joiner + secondary + QLatin1String(") "));
+            } else {
+              qStr1.append(primary + QLatin1Char(' '));
             }
           }
-          break;
-        case 5: // field -> Link
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("link_href LIKE '%%1%' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("link_href NOT LIKE '%%1%' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 2: // condition -> is
-            qStr1.append(QString("link_href LIKE '%1' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 3: // condition -> isn't
-            qStr1.append(QString("link_href NOT LIKE '%1' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 4: // condition -> begins with
-            qStr1.append(QString("link_href LIKE '%1%' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 5: // condition -> ends with
-            qStr1.append(QString("link_href LIKE '%%1' ESCAPE '!' ").arg(likeContent));
-            break;
-          case 6: // condition -> regExp
-            qStr1.append(QString("link_href REGEXP '%1' ").arg(content));
-            break;
-          }
-          break;
-        case 6: // field -> News
-          switch (q1.value(1).toInt()) {
-          case 0: // condition -> contains
-            qStr1.append(QString("(UPPER(title) LIKE '%%1%' ESCAPE '!' OR UPPER(description) LIKE '%%1%' ESCAPE '!') ").arg(upperLikeContent));
-            break;
-          case 1: // condition -> doesn't contain
-            qStr1.append(QString("(UPPER(title) NOT LIKE '%%1%' ESCAPE '!' AND UPPER(description) NOT LIKE '%%1%' ESCAPE '!') ").arg(upperLikeContent));
-            break;
-          case 2: // condition -> regExp
-            qStr1.append(QString("(title REGEXP '%1' OR description REGEXP '%1') ").arg(content));
-            break;
-          }
-          break;
         }
       }
       if (!checkQuery(!q1.lastError().isValid(), q1)) return;

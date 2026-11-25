@@ -42,7 +42,7 @@ signals:
 
 private slots:
   void deleteFilterRules();
-  void currentIndexChanged(const QString &str);
+  void currentIndexChanged(int index);
 
 private:
   ToolButton *deleteButton_;
