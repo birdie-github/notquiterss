@@ -1296,7 +1296,7 @@ bool UpdateObject::cleanUpArticles(bool isShutdown, const QStringList &feedsIdLi
       // Complete selection before any DELETE or UPDATE of the selected rows.
       q.finish();
       if (!removeArticles(removeIds, feedId, fullCleanUp, false)) return false;
-      if (!removeArticles(readRemoveIds, feedId, fullCleanUp, !fullCleanUp)) return false;
+      if (!removeArticles(readRemoveIds, feedId, fullCleanUp, true)) return false;
 
       int undeleteCount = 0;
       int unreadCount = 0;
