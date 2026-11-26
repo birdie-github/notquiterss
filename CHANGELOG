@@ -1,4 +1,4 @@
-Version 0.95.11 BETA (2026-11-26)
+Version 0.95.11 alpha (2026-11-26)
 * NEW FEATURE: Add a search bar to Options (with keyword synonyms and a live Search Results view; press Escape to clear the search before closing).
 * NEW FEATURE: Show permanent Total unread, Total, and auto-updated Feeds counts on the right side of the status bar, while keeping the current selection's Unread and All counts on the left.
 * NEW FEATURE: Add a right-click context menu to the Feeds and News toolbars to open Customize Toolbar or hide the toolbar.
