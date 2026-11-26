@@ -24,9 +24,6 @@ that history helps answer the question.
 
 ## Patch delivery
 
-- Deliver a downloadable Git-compatible patch numbered sequentially within
-  the chat, starting with `001-short-description.patch`. Wait for the
-  maintainer's local results before starting the next independent change.
 - Give the base commit, patch dependencies, and the `git apply` command.
   Verify clean application against the recorded base with any prerequisites
   applied. Check whitespace and affected references, declarations, and
