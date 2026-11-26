@@ -1,3 +1,24 @@
+Version 0.95.11 BETA (2026-11-26)
+* NEW FEATURE: Add a search bar to Options (with keyword synonyms and a live Search Results view; press Escape to clear the search before closing).
+* NEW FEATURE: Show permanent Total unread, Total, and auto-updated Feeds counts on the right side of the status bar, while keeping the current selection's Unread and All counts on the left.
+* NEW FEATURE: Add a right-click context menu to the Feeds and News toolbars to open Customize Toolbar or hide the toolbar.
+* NEW FEATURE: Warn inline in Options -> Feeds -> Clean Up when raising the maximum article retention age above the current limit, since older articles still in feeds may reappear as unread.
+* CHANGE: Refactor the Options pages.
+* CHANGE: Refactor Feed Properties, Bulk configure feeds, Add Feed, Add Folder, Clean Up, News Filters, Filter Rules, Labels, Customize Toolbar, Website cookies, and About.
+* CHANGE: Refactor and consolidate feed downloading and retries, Atom/RSS feed parsing, article filters, feed/folder counter updates, article cleanup rules, saved credentials, and bulk article actions.
+* CHANGE: Keep an active incoming-article notification popup visible while new updates arrive, accumulating them into a queued notification shown after the popup closes.
+* BUG FIX: Fix article title, author, and Feed Properties homepage links keeping &amp; instead of & when opened in an external browser or copied.
+* BUG FIX: Fix "Find by Link" in the feeds search box hiding matching feeds inside folders.
+* BUG FIX: Fix the "Show Feeds With Errors" filter displaying healthy feeds alongside feeds with warnings.
+* BUG FIX: Fix Clean Up deleting unread articles when "Delete read articles" and "Purge database" were enabled without "Never delete unread articles" or age/count limits.
+* BUG FIX: Fix an off-by-one position shift when dragging feeds or folders downward in the feeds list.
+* BUG FIX: Fix dismissing an incoming-article notification popup from the system tray icon leaving queued feeds to reappear on a later update with no new articles.
+* BUG FIX: Fix the Feed Properties dialog jumping in size after opening and clipping the bottom row of its date picker calendar.
+* BUG FIX: Fix lost row highlight and phantom top-row focus when reordering items in Customize Toolbar, Feed Properties -> Columns, and Options -> Labels.
+* BUG FIX: Fix a missing folder icon when creating a new folder in the Add Feed wizard, and seed the color picker with the existing color in Labels and Filter Rules.
+* BUG FIX: Prevent failed feed counter recalculations and bulk article actions (mark read, star, label, delete, restore) from committing partial changes or leaving stale counts in the UI.
+* BUG FIX: Fix a 1-second startup stall when showing the splash screen on Qt 6.11, and restore translation coverage across Options pages.
+
 Version 0.95.10 BETA (2026-11-22)
 * NEW FEATURE: "Reset all" individually for both Fonts and Colors in Options.
 * NEW FEATURE: Live font previews and color swatches with color hex values the Fonts & Colors dialog.
