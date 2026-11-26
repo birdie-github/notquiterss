@@ -65,14 +65,14 @@ QString formatAuthorLinks(QString authorName, const QString &authorEmail,
         QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
     const QRegularExpressionMatch match = emailRx.match(authorName);
     if (match.hasMatch()) {
-      authorName.replace(match.captured(1), QString(" <a href='mailto:%1'>%1</a>").arg(match.captured(1)));
+      authorName.replace(match.captured(1), QString(" <a href=\"mailto:%1\">%1</a>").arg(match.captured(1)));
     }
   }
   QString authorString = authorName;
   if (!authorEmail.isEmpty())
-    authorString.append(QString(" <a href='mailto:%1'>e-mail</a>").arg(authorEmail));
+    authorString.append(QString(" <a href=\"mailto:%1\">e-mail</a>").arg(authorEmail));
   if (!authorUri.isEmpty())
-    authorString.append(QString(" <a href='%1'>page</a>").arg(authorUri));
+    authorString.append(QString(" <a href=\"%1\">page</a>").arg(authorUri));
   return authorString;
 }
 }
@@ -1435,7 +1435,7 @@ void NewsTabWidget::updateArticleView(QModelIndex index, bool preservePosition)
 
   QString titleString = escapeHtmlAttr(newsModel_->dataField(row, "title").toString());
   if (!linkString.isEmpty()) {
-    titleString = QString("<a href='%1' class='unread'>%2</a>").
+    titleString = QString("<a href=\"%1\" class=\"unread\">%2</a>").
         arg(linkString, titleString);
   }
 
@@ -1547,7 +1547,7 @@ void NewsTabWidget::loadNewspaper(int refresh)
 
     QString titleString = escapeHtmlAttr(newsModel_->dataField(idx, "title").toString());
     if (!linkString.isEmpty()) {
-      titleString = QString("<a href='%1' class='%2' id='title%3'>%4</a>").
+      titleString = QString("<a href=\"%1\" class=\"%2\" id=\"title%3\">%4</a>").
           arg(linkString, titleStyle, newsId, titleString);
     }
 

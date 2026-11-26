@@ -535,7 +535,8 @@ void FeedPropertiesDialog::setFeedProperties(FEED_PROPERTIES properties)
   if (!bulk_) {
     editTitle->setText(feedProperties.general.text);
     editURL->setText(feedProperties.general.url);
-    labelHomepage->setText(QString("<a href='%1'>%1</a>").arg(feedProperties.general.homepage));
+    const QString homepage = feedProperties.general.homepage.toHtmlEscaped();
+    labelHomepage->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(homepage));
     selectIconButton_->setIcon(windowIcon());
   }
 
