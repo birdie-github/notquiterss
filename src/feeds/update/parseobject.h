@@ -121,7 +121,7 @@ private:
   void publishEffects(const UpdateEffects &effects);
   void parseAtom(const QString &feedUrl, const QDomDocument &doc);
   void parseRss(const QString &feedUrl, const QDomDocument &doc);
-  bool updateFeedMetadata(const FeedItemStruct &feedItem);
+  bool updateFeedMetadata(const FeedItemStruct &feedItem, bool includeAuthorDetails);
   void parseAtomAuthor(const QDomNode &parent, QString &author,
                        QString &authorUri, QString &authorEmail);
   void applyMediaAndBody(const QDomNode &itemNode, ParsedNewsItem &newsItem,

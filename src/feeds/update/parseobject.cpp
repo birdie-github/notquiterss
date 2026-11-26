@@ -427,7 +427,7 @@ void ParseObject::parseAtom(const QString &feedUrl, const QDomDocument &doc)
     url.setScheme(QUrl(feedUrl).scheme());
   feedItem.link = url.toString();
 
-  if (!updateFeedMetadata(feedItem)) return;
+  if (!updateFeedMetadata(feedItem, true)) return;
 
   QDomNodeList newsList = doc.elementsByTagName("entry");
   for (int i = 0; i < newsList.size(); i++) {
@@ -532,7 +532,7 @@ void ParseObject::parseRss(const QString &feedUrl, const QDomDocument &doc)
   if (feedItem.language.isEmpty())
     feedItem.language = channel.namedItem("dc:language").toElement().text();
 
-  if (!updateFeedMetadata(feedItem)) return;
+  if (!updateFeedMetadata(feedItem, false)) return;
 
   QDomNodeList newsList = doc.elementsByTagName("item");
   if (newsList.isEmpty())
@@ -607,24 +607,30 @@ void ParseObject::parseRss(const QString &feedUrl, const QDomDocument &doc)
   }
 }
 
-bool ParseObject::updateFeedMetadata(const FeedItemStruct &feedItem)
+bool ParseObject::updateFeedMetadata(const FeedItemStruct &feedItem, bool includeAuthorDetails)
 {
   QSqlQuery q(db_);
   q.setForwardOnly(true);
-  if (!checkQuery(q.prepare(QStringLiteral(
-          "UPDATE feeds "
-          "SET title=?, description=?, htmlUrl=?, "
-          "author_name=?, author_email=?, "
-          "author_uri=?, pubdate=?, language=? "
-          "WHERE id==?")), q)) {
+  const QString sql = includeAuthorDetails
+      ? QStringLiteral("UPDATE feeds "
+                       "SET title=?, description=?, htmlUrl=?, "
+                       "author_name=?, author_email=?, "
+                       "author_uri=?, pubdate=?, language=? "
+                       "WHERE id==?")
+      : QStringLiteral("UPDATE feeds "
+                       "SET title=?, description=?, htmlUrl=?, "
+                       "author_name=?, pubdate=?, language=? "
+                       "WHERE id==?");
+  if (!checkQuery(q.prepare(sql), q))
     return false;
-  }
   q.addBindValue(feedItem.title);
   q.addBindValue(feedItem.description);
   q.addBindValue(feedItem.link);
   q.addBindValue(feedItem.author);
-  q.addBindValue(feedItem.authorEmail);
-  q.addBindValue(feedItem.authorUri);
+  if (includeAuthorDetails) {
+    q.addBindValue(feedItem.authorEmail);
+    q.addBindValue(feedItem.authorUri);
+  }
   q.addBindValue(feedItem.updated);
   q.addBindValue(feedItem.language);
   q.addBindValue(parseFeedId_);
